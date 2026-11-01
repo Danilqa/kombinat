@@ -61,19 +61,23 @@ pnpm cli uninstall      # stop and remove the daemon
 
 ## Writing a routine
 
+`routines/umbrella-check.md` runs every weekday at 8:00:
+
 ```markdown
 ---
-name: fix-e2e-tests
-description: Finds the failing e2e test and fixes it
-schedule: '30 11 * * *'
-cwd: ~/projects/app
+name: umbrella-check
+description: Says if you need an umbrella today
+schedule: '0 8 * * 1-5'
+cwd: ~/
 agent: claude
-model: claude-opus-5-5
-effort: high
-timeoutMinutes: 55
+model: claude-haiku-5-5
+effort: low
+timeoutMinutes: 5
 ---
 
-1. Open the latest failed e2e run on GitHub ...
+Check today's weather forecast for where I am. wttr.in works without an API key.
+
+Answer in one short line: do I need an umbrella today, and why.
 ```
 
 - `name` must match the file name.
