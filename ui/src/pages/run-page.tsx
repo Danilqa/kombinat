@@ -6,13 +6,14 @@ import { Breadcrumbs, PageTitle, SectionAside, SectionTitle } from '@/components
 import { ErrorState, LoadingState } from '@/components/page-states';
 import { RelativeTime } from '@/components/relative-time';
 import { StatusBadge, getTriggerLabel } from '@/components/status-badge';
-import { Transcript } from '@/components/transcript';
-import { Card, CardContent } from '@/components/ui/card';
+import { Transcript, codeBlockClassName } from '@/components/transcript';
+import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { getRun, getRunTranscript } from '@/lib/api';
 import type { RunRecord, Transcript as RunTranscript } from '@/lib/api';
 import { formatDuration, getRunDurationMs, formatShort } from '@/lib/format';
 import { usePolledData } from '@/lib/use-polled-data';
+import { cn } from '@/lib/utils';
 
 interface RunWithTranscript {
   run: RunRecord;
@@ -30,8 +31,8 @@ function getIsRunActive(data: RunWithTranscript): boolean {
 
 function formatOptionalTime(iso: string | null) {
   return iso ? (
-    <span>
-      {formatShort(iso)} <RelativeTime iso={iso} className="ml-1 text-grey-60" />
+    <span className="tabular-nums">
+      {formatShort(iso)} <RelativeTime iso={iso} className="ml-1 text-fg-muted" />
     </span>
   ) : (
     '-'
@@ -65,36 +66,47 @@ interface RunViewProps extends RunWithTranscript {}
 
 function RunView({ run, transcript }: RunViewProps) {
   const isRunning = isMatching({ status: 'running' }, run);
+  const hasOutput = Boolean(run.error) || Boolean(run.resultText);
   return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <PageTitle className="font-mono font-medium tracking-normal">{run.id}</PageTitle>
-        <Link
-          to={`/routines/${encodeURIComponent(run.routine)}`}
-          className="text-title-16 text-grey-70 hover:text-black hover:underline"
-        >
-          {run.routine}
-        </Link>
-      </header>
-      <Card className="py-6">
-        <CardContent className="space-y-6 px-6">
-          <DetailList entries={getSummaryEntries(run)} layout="grid" />
-          {run.error && (
-            <pre className="rounded-8 bg-light-red-20 p-3 font-mono text-paragraph-12 whitespace-pre-wrap text-dark-red">
-              {run.error}
-            </pre>
-          )}
-          {run.resultText && (
+    <div className="space-y-10">
+      <div className="space-y-6">
+        <header className="flex min-w-0 flex-col items-start gap-1">
+          <PageTitle className="max-w-full font-mono">{run.id}</PageTitle>
+          <Link
+            to={`/routines/${encodeURIComponent(run.routine)}`}
+            className="text-body font-medium text-fg-secondary transition-colors hover:text-fg"
+          >
+            {run.routine}
+          </Link>
+        </header>
+        <Card className="gap-0 py-0">
+          <DetailList entries={getSummaryEntries(run)} />
+          {hasOutput && (
             <>
               <Separator />
-              <div>
-                <div className="eyebrow mb-2">Result</div>
-                <Markdown source={run.resultText} />
+              <div className="space-y-4 p-4">
+                {run.error && (
+                  <pre
+                    className={cn(
+                      codeBlockClassName,
+                      'max-h-80 border-transparent bg-negative-soft text-negative',
+                    )}
+                  >
+                    {run.error}
+                  </pre>
+                )}
+                {run.error && run.resultText && <Separator />}
+                {run.resultText && (
+                  <div>
+                    <div className="eyebrow mb-2">Result</div>
+                    <Markdown source={run.resultText} />
+                  </div>
+                )}
               </div>
             </>
           )}
-        </CardContent>
-      </Card>
+        </Card>
+      </div>
       <section>
         <SectionTitle aside={<SectionAside>{transcript.eventCount} events</SectionAside>}>
           Transcript
@@ -116,7 +128,11 @@ export function RunPage() {
   return (
     <div>
       <Breadcrumbs
-        crumbs={[{ label: routine, to: `/routines/${encodeURIComponent(routine)}` }, { label: id }]}
+        crumbs={[
+          { label: routine, to: `/routines/${encodeURIComponent(routine)}` },
+          { label: id, isMono: true },
+        ]}
+        aside={data && <StatusBadge status={data.run.status} />}
       />
       {error && <ErrorState message={error} />}
       {!data && !error && <LoadingState />}

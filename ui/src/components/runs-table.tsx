@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/table';
 import type { RunRecord } from '@/lib/api';
 import { formatDuration, getRunDurationMs } from '@/lib/format';
+import { cn } from '@/lib/utils';
 
 interface RunsTableProps {
   runs: RunRecord[];
@@ -19,7 +20,7 @@ interface RunsTableProps {
 
 export function RunsTable({ runs, hasRoutineColumn }: RunsTableProps) {
   if (runs.length === 0)
-    return <p className="py-8 text-center text-paragraph-14 text-grey-60">No runs yet.</p>;
+    return <p className="py-10 text-center text-body text-fg-muted">No runs yet.</p>;
   return (
     <Table>
       <TableHeader>
@@ -40,7 +41,7 @@ export function RunsTable({ runs, hasRoutineColumn }: RunsTableProps) {
               <TableCell>
                 <Link
                   to={`/routines/${encodeURIComponent(run.routine)}`}
-                  className="text-title-14 text-black hover:underline"
+                  className="text-body font-medium text-fg underline-offset-4 hover:underline"
                 >
                   {run.routine}
                 </Link>
@@ -49,7 +50,10 @@ export function RunsTable({ runs, hasRoutineColumn }: RunsTableProps) {
             <TableCell>
               <Link
                 to={`/runs/${encodeURIComponent(run.routine)}/${encodeURIComponent(run.id)}`}
-                className="font-mono text-paragraph-12 text-black hover:underline"
+                className={cn(
+                  'font-mono text-body-sm underline-offset-4 transition-colors hover:underline',
+                  hasRoutineColumn ? 'text-fg-secondary hover:text-fg' : 'text-fg',
+                )}
               >
                 {run.id}
               </Link>
@@ -57,14 +61,14 @@ export function RunsTable({ runs, hasRoutineColumn }: RunsTableProps) {
             <TableCell>
               <StatusBadge status={run.status} />
             </TableCell>
-            <TableCell className="text-grey-70">{getTriggerLabel(run.trigger)}</TableCell>
-            <TableCell>
+            <TableCell className="text-fg-secondary">{getTriggerLabel(run.trigger)}</TableCell>
+            <TableCell className="text-fg-secondary">
               <RelativeTime iso={run.startedAt} />
             </TableCell>
-            <TableCell className="text-right tabular-nums">
+            <TableCell className="text-right text-fg tabular-nums">
               {formatDuration(getRunDurationMs(run))}
             </TableCell>
-            <TableCell className="text-right tabular-nums">{run.numTurns ?? '-'}</TableCell>
+            <TableCell className="text-right text-fg tabular-nums">{run.numTurns ?? '-'}</TableCell>
           </TableRow>
         ))}
       </TableBody>

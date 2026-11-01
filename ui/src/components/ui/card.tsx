@@ -8,7 +8,7 @@ function Card({ className, ...props }: CardProps) {
     <div
       data-slot="card"
       className={cn(
-        'flex flex-col gap-6 overflow-hidden rounded-16 border border-grey-10 bg-card py-6 text-card-foreground',
+        'flex flex-col gap-6 overflow-hidden rounded-xl border border-line bg-surface py-6 text-fg',
         className,
       )}
       {...props}
@@ -34,7 +34,9 @@ function CardHeader({ className, ...props }: CardHeaderProps) {
 interface CardTitleProps extends React.ComponentProps<'div'> {}
 
 function CardTitle({ className, ...props }: CardTitleProps) {
-  return <div data-slot="card-title" className={cn('text-title-16', className)} {...props} />;
+  return (
+    <div data-slot="card-title" className={cn('text-title-sm text-fg', className)} {...props} />
+  );
 }
 
 interface CardDescriptionProps extends React.ComponentProps<'div'> {}
@@ -43,7 +45,7 @@ function CardDescription({ className, ...props }: CardDescriptionProps) {
   return (
     <div
       data-slot="card-description"
-      className={cn('text-paragraph-14 text-muted-foreground', className)}
+      className={cn('text-body text-fg-muted', className)}
       {...props}
     />
   );

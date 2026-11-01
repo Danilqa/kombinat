@@ -20,6 +20,7 @@ import type {
 import { readResponse } from '@shared/http';
 
 export type {
+  AgentName,
   CalendarEntry,
   DaemonStatus,
   HookItem,

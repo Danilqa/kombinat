@@ -7,25 +7,24 @@ import type { HookItem, InitItem, ResultItem, TextItem, ToolItem, TranscriptItem
 import { formatDuration } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
+export const codeBlockClassName =
+  'overflow-auto rounded-lg border border-line-faint bg-raised p-3 font-mono text-body-sm break-words whitespace-pre-wrap text-fg-prose';
+
 interface HookRowProps {
   item: HookItem;
 }
 
 function HookRow({ item }: HookRowProps) {
   return (
-    <div className="space-y-2 text-paragraph-12 text-grey-60">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span className="text-title-14 text-black">Before hook</span>
+    <div className="space-y-2 text-body-sm text-fg-muted">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span className="text-body font-medium text-fg">Before hook</span>
         <span className="font-mono">{item.command}</span>
-        <span className={cn('font-mono', item.exitCode !== 0 && 'text-dark-red')}>
+        <span className={cn('font-mono tabular-nums', item.exitCode !== 0 && 'text-negative')}>
           exit {item.exitCode ?? '?'}
         </span>
       </div>
-      {item.output && (
-        <pre className="max-h-60 overflow-auto rounded-8 bg-grey-5 p-3 font-mono break-words whitespace-pre-wrap text-black">
-          {item.output}
-        </pre>
-      )}
+      {item.output && <pre className={cn(codeBlockClassName, 'max-h-60')}>{item.output}</pre>}
     </div>
   );
 }
@@ -36,12 +35,16 @@ interface InitRowProps {
 
 function InitRow({ item }: InitRowProps) {
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-paragraph-12 text-grey-60">
-      <span className="text-title-14 text-black">Session started</span>
+    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-body-sm text-fg-muted">
+      <span className="text-body font-medium text-fg">Session started</span>
       {item.model !== null && <span className="font-mono">{item.model}</span>}
       {item.cwd !== null && <span className="font-mono">{item.cwd}</span>}
-      {item.toolCount !== null && <span>{item.toolCount} tools</span>}
-      {item.permissionMode !== null && <span>permission mode {item.permissionMode}</span>}
+      {item.toolCount !== null && <span className="tabular-nums">{item.toolCount} tools</span>}
+      {item.permissionMode !== null && (
+        <span>
+          permission mode <span className="font-mono">{item.permissionMode}</span>
+        </span>
+      )}
     </div>
   );
 }
@@ -65,47 +68,46 @@ const ToolRow = memo(function ToolRow({ item, isPending }: ToolRowProps) {
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-8 border border-grey-10 bg-white',
+        'relative overflow-hidden rounded-lg border border-line bg-surface has-[:focus-visible]:border-fg-muted',
         isOpen &&
-          'before:absolute before:inset-y-0 before:left-0 before:z-10 before:w-[3px] before:bg-black',
+          'before:absolute before:inset-y-0 before:left-0 before:z-10 before:w-0.5 before:bg-fg-muted',
       )}
     >
       <button
         type="button"
         onClick={() => setIsOpen(open => !open)}
-        className="flex w-full items-center gap-2 py-2 pr-3 pl-3 text-left hover:bg-grey-2"
+        className="flex h-9 w-full items-center gap-2 px-3 text-left transition-colors hover:bg-hover focus-visible:bg-hover"
       >
         <ChevronRight
           className={cn(
-            'size-3.5 shrink-0 text-grey-40 transition-transform',
-            isOpen && 'rotate-90 text-black',
+            'size-3.5 shrink-0 text-fg-faint transition-transform',
+            isOpen && 'rotate-90 text-fg',
           )}
         />
-        <span className="shrink-0 font-mono text-paragraph-12 font-medium text-black">
-          {item.name}
-        </span>
-        <span className="min-w-0 flex-1 truncate font-mono text-paragraph-12 text-grey-60">
+        <span className="shrink-0 font-mono text-body-sm font-medium text-fg">{item.name}</span>
+        <span className="min-w-0 flex-1 truncate font-mono text-body-sm text-fg-muted">
           {item.preview}
         </span>
-        {hasError && <CircleAlert className="size-3.5 shrink-0 text-dark-red" />}
+        {hasError && <CircleAlert className="size-3.5 shrink-0 text-negative" />}
         {isPending && !item.result && (
-          <Loader className="size-3.5 shrink-0 animate-spin text-grey-60" />
+          <Loader className="size-3.5 shrink-0 animate-spin text-fg-muted" />
         )}
       </button>
       {isOpen && (
-        <div className="space-y-3 border-t border-grey-10 p-3 pl-4">
+        <div className="space-y-3 border-t border-line-faint p-3">
           <div>
-            <div className="eyebrow mb-2">Input</div>
-            <pre className="max-h-80 overflow-auto rounded-8 bg-grey-5 p-3 font-mono text-paragraph-12 break-words whitespace-pre-wrap text-black">
+            <div className="eyebrow mb-1.5">Input</div>
+            <pre className={cn(codeBlockClassName, 'max-h-80')}>
               {JSON.stringify(item.input, null, 2)}
             </pre>
           </div>
           <div>
-            <div className="eyebrow mb-2">{hasError ? 'Error' : 'Result'}</div>
+            <div className="eyebrow mb-1.5">{hasError ? 'Error' : 'Result'}</div>
             <pre
               className={cn(
-                'max-h-96 overflow-auto rounded-8 bg-grey-5 p-3 font-mono text-paragraph-12 break-words whitespace-pre-wrap text-black',
-                hasError && 'bg-light-red-20 text-dark-red',
+                codeBlockClassName,
+                'max-h-96',
+                hasError && 'border-transparent bg-negative-soft text-negative',
               )}
             >
               {item.result ? item.result.content || '(empty)' : 'No result yet'}
@@ -121,7 +123,7 @@ interface ResultAppearance {
   label: string;
   className: string;
   labelClassName: string;
-  dotClassName: string;
+  iconClassName: string;
   icon: typeof Check;
 }
 
@@ -129,16 +131,16 @@ function getResultAppearance(isError: boolean): ResultAppearance {
   return match(isError)
     .with(true, () => ({
       label: 'Finished with error',
-      className: 'bg-light-red-20',
-      labelClassName: 'text-dark-red',
-      dotClassName: 'bg-dark-red',
+      className: 'bg-negative-soft',
+      labelClassName: 'text-negative',
+      iconClassName: 'bg-negative',
       icon: X,
     }))
     .with(false, () => ({
       label: 'Finished',
-      className: 'bg-grey-5',
-      labelClassName: 'text-black',
-      dotClassName: 'bg-dark-green',
+      className: 'bg-positive-soft',
+      labelClassName: 'text-positive',
+      iconClassName: 'bg-positive',
       icon: Check,
     }))
     .exhaustive();
@@ -154,15 +156,15 @@ function ResultRow({ item }: ResultRowProps) {
   return (
     <div
       className={cn(
-        'flex flex-wrap items-center gap-x-4 gap-y-1 rounded-8 px-4 py-3 text-paragraph-14 text-grey-60',
+        'flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg px-4 py-3 text-body text-fg-muted',
         appearance.className,
       )}
     >
-      <span className={cn('flex items-center gap-2 text-title-14', appearance.labelClassName)}>
+      <span className={cn('flex items-center gap-2 font-medium', appearance.labelClassName)}>
         <span
           className={cn(
-            'grid size-4 place-items-center rounded-full text-white',
-            appearance.dotClassName,
+            'grid size-4 place-items-center rounded-full text-page',
+            appearance.iconClassName,
           )}
         >
           <Icon className="size-2.5" strokeWidth={3.5} />
@@ -170,9 +172,9 @@ function ResultRow({ item }: ResultRowProps) {
         {appearance.label}
       </span>
       <span className="tabular-nums">
-        <span className="font-mono text-black">{item.numTurns ?? '-'}</span> turns
+        <span className="font-medium text-fg">{item.numTurns ?? '-'}</span> turns
       </span>
-      <span className="font-mono text-black tabular-nums">{formatDuration(item.durationMs)}</span>
+      <span className="font-medium text-fg tabular-nums">{formatDuration(item.durationMs)}</span>
     </div>
   );
 }
@@ -199,7 +201,7 @@ interface TranscriptProps {
 export function Transcript({ items, isRunning }: TranscriptProps) {
   if (items.length === 0)
     return (
-      <p className="py-8 text-center text-paragraph-14 text-grey-60">
+      <p className="py-10 text-center text-body text-fg-muted">
         {isRunning ? 'Waiting for the first events…' : 'No transcript events.'}
       </p>
     );
@@ -208,7 +210,7 @@ export function Transcript({ items, isRunning }: TranscriptProps) {
       {items.map(item => (
         <div
           key={item.key}
-          className={cn(getIsSubagent(item) && 'ml-5 border-l-2 border-grey-15 pl-3')}
+          className={cn(getIsSubagent(item) && 'ml-5 border-l border-line-strong pl-3')}
         >
           {renderItem(item, isRunning)}
         </div>

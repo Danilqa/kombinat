@@ -17,31 +17,31 @@ function getStatusAppearance(status: RunStatus): StatusAppearance {
     .with('running', (): StatusAppearance => ({
       label: 'Running',
       variant: 'warning',
-      dotClassName: 'bg-dark-yellow',
+      dotClassName: 'bg-warning',
       isPulsing: true,
     }))
     .with('succeeded', (): StatusAppearance => ({
       label: 'Succeeded',
       variant: 'positive',
-      dotClassName: 'bg-dark-green',
+      dotClassName: 'bg-positive',
       isPulsing: false,
     }))
     .with('failed', (): StatusAppearance => ({
       label: 'Failed',
       variant: 'negative',
-      dotClassName: 'bg-dark-red',
+      dotClassName: 'bg-negative',
       isPulsing: false,
     }))
     .with('timed_out', (): StatusAppearance => ({
       label: 'Timed out',
       variant: 'negative',
-      dotClassName: 'bg-dark-red',
+      dotClassName: 'bg-negative',
       isPulsing: false,
     }))
     .with('aborted', (): StatusAppearance => ({
       label: 'Aborted',
       variant: 'ghost',
-      dotClassName: 'bg-grey-60',
+      dotClassName: 'bg-fg-faint',
       isPulsing: false,
     }))
     .exhaustive();
@@ -62,8 +62,8 @@ interface StatusBadgeProps {
 export function StatusBadge({ status }: StatusBadgeProps) {
   const appearance = getStatusAppearance(status);
   return (
-    <Badge variant={appearance.variant}>
-      <span className="relative flex size-2">
+    <Badge variant={appearance.variant} size="medium">
+      <span className="relative flex size-1.5 shrink-0">
         {appearance.isPulsing && (
           <span
             className={cn(
@@ -72,7 +72,9 @@ export function StatusBadge({ status }: StatusBadgeProps) {
             )}
           />
         )}
-        <span className={cn('relative inline-flex size-2 rounded-full', appearance.dotClassName)} />
+        <span
+          className={cn('relative inline-flex size-1.5 rounded-full', appearance.dotClassName)}
+        />
       </span>
       {appearance.label}
     </Badge>
