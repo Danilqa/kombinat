@@ -1,0 +1,37 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+
+import { buildRoutine } from '../routines';
+import type { RunRecord } from '../state';
+import { commandAgent } from './command';
+import { buildTranscript } from './index';
+
+test('pipes the prompt into a shell command', () => {
+  const routine = buildRoutine(
+    '/tmp/demo.md',
+    '---\nname: demo\nagent: command\ncommand: gemini --yolo\ncwd: /tmp\n---\nHello',
+  );
+  const { command, args, input, env } = commandAgent.buildInvocation({
+    routine,
+    runId: 'r1',
+    trigger: 'manual',
+  });
+  assert.equal(command, '/bin/sh');
+  assert.deepEqual(args, ['-c', 'gemini --yolo']);
+  assert.equal(input, 'Hello\n');
+  assert.equal(env['PAPA_CARLO_RUN_ID'], 'r1');
+});
+
+test('collects the output lines as the result and the transcript', () => {
+  const first = { type: 'output', text: '# Report' };
+  const second = { type: 'output', text: 'All good' };
+  const afterFirst = commandAgent.readEvent(first, { resultText: null } as RunRecord);
+  assert.deepEqual(afterFirst, { resultText: '# Report' });
+  assert.deepEqual(commandAgent.readEvent(second, { resultText: '# Report' } as RunRecord), {
+    resultText: '# Report\nAll good',
+  });
+  assert.deepEqual(buildTranscript('command', [first, second]).items, [
+    { kind: 'text', key: 'output', text: '# Report\nAll good', isSubagent: false },
+  ]);
+  assert.equal(commandAgent.getResumeCommand('x'), null);
+});

@@ -1,0 +1,111 @@
+export const HOUR_HEIGHT = 26;
+export const DAY_HEIGHT = HOUR_HEIGHT * 24;
+export const MIN_BLOCK_HEIGHT = 14;
+
+const HOUR_MS = 3_600_000;
+
+export type TimedEntry = {
+  id: string;
+  start: string;
+  end: string;
+  overlaps: string[];
+};
+
+export type PositionedEntry<T extends TimedEntry> = {
+  entry: T;
+  top: number;
+  height: number;
+  left: number;
+  width: number;
+};
+
+type Placement<T extends TimedEntry> = {
+  entry: T;
+  top: number;
+  height: number;
+  column: number;
+};
+
+export function addDays(date: Date, days: number): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
+}
+
+export function getDayStart(date: Date): Date {
+  return addDays(date, 0);
+}
+
+export function getWeekStart(date: Date): Date {
+  const mondayOffset = (date.getDay() + 6) % 7;
+  return addDays(date, -mondayOffset);
+}
+
+export function getIsSameDay(a: Date, b: Date): boolean {
+  return getDayStart(a).getTime() === getDayStart(b).getTime();
+}
+
+export function getTopForTime(time: Date, dayStart: Date): number {
+  return ((time.getTime() - dayStart.getTime()) / HOUR_MS) * HOUR_HEIGHT;
+}
+
+function placeInDay<T extends TimedEntry>(
+  entry: T,
+  dayStart: Date,
+  dayEnd: Date,
+): Omit<Placement<T>, 'column'> | null {
+  const start = Math.max(new Date(entry.start).getTime(), dayStart.getTime());
+  const end = Math.min(new Date(entry.end).getTime(), dayEnd.getTime());
+  if (end <= start) return null;
+  const height = Math.max(MIN_BLOCK_HEIGHT, ((end - start) / HOUR_MS) * HOUR_HEIGHT);
+  const top = Math.min(getTopForTime(new Date(start), dayStart), DAY_HEIGHT - height);
+  return { entry, top, height };
+}
+
+function assignColumns<T extends TimedEntry>(
+  cluster: Array<Omit<Placement<T>, 'column'>>,
+): Array<PositionedEntry<T>> {
+  const columnBottoms: number[] = [];
+  const placements = cluster.map(item => {
+    const freeColumn = columnBottoms.findIndex(bottom => bottom <= item.top);
+    const column = freeColumn === -1 ? columnBottoms.length : freeColumn;
+    columnBottoms[column] = item.top + item.height;
+    return { ...item, column };
+  });
+  const columns = columnBottoms.length;
+  return placements.map(({ entry, top, height, column }) => ({
+    entry,
+    top,
+    height,
+    left: column / columns,
+    width: 1 / columns,
+  }));
+}
+
+export function layoutDay<T extends TimedEntry>(
+  entries: T[],
+  dayStart: Date,
+): Array<PositionedEntry<T>> {
+  const dayEnd = addDays(dayStart, 1);
+  const items = entries
+    .map(entry => placeInDay(entry, dayStart, dayEnd))
+    .filter(item => item !== null)
+    .sort((a, b) => a.top - b.top || b.height - a.height);
+  const clusters: Array<typeof items> = [];
+  let clusterBottom = -Infinity;
+  for (const item of items) {
+    const isNewCluster = item.top >= clusterBottom;
+    const current = clusters.at(-1);
+    if (isNewCluster || current === undefined) clusters.push([item]);
+    else current.push(item);
+    clusterBottom = isNewCluster
+      ? item.top + item.height
+      : Math.max(clusterBottom, item.top + item.height);
+  }
+  return clusters.flatMap(cluster => assignColumns(cluster));
+}
+
+export function countOverlapPairs(entries: TimedEntry[]): number {
+  const pairs = new Set(
+    entries.flatMap(entry => entry.overlaps.map(other => [entry.id, other].sort().join('\u0000'))),
+  );
+  return pairs.size;
+}

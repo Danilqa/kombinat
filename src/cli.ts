@@ -1,0 +1,227 @@
+import { spawn } from 'node:child_process';
+import { parseArgs } from 'node:util';
+
+import { match, P } from 'ts-pattern';
+
+import { config } from './config';
+import { describeCron } from './cron';
+import {
+  getLaunchdStatus,
+  install,
+  isLaunchdLoaded,
+  startLaunchd,
+  stopLaunchd,
+  uninstall,
+} from './install';
+import { updateReadme } from './readme';
+import {
+  buildUiIfStale,
+  installDepsIfStale,
+  pullLatest,
+  startAutoPull,
+  startReloadWatchers,
+} from './reload';
+import { getRoutine, loadRoutines } from './routines';
+import { runRoutine } from './run';
+import { getNextRun, startSchedulerLoop } from './scheduler';
+import { startServer } from './server';
+import { ensureStateDirs, listRuns, readSchedulerState } from './state';
+import type { RunTrigger } from './state';
+import { runTui } from './tui';
+
+const USAGE = `papa-carlo
+
+  tui                       keyboard dashboard in the terminal (works over ssh), talks to the
+                            running daemon
+  list                      show routines from ./routines with next run and last status
+  validate                  parse every routine file and report errors
+  readme                    regenerate the routines table in README.md
+  run <name>                run one routine now in the foreground (what the scheduler spawns)
+  serve                     run scheduler + web UI (what launchd runs); pulls the main branch
+                            every 5 min, installs deps and builds the UI when stale, restarts
+                            itself when src/ changes
+  pull                      git pull once, the way serve does it (ff-only, clean tree)
+  dev                       take over from launchd: scheduler + API from this checkout with no
+                            auto-restart, plus the Vite dev server; Ctrl-C hands back to launchd
+  install                   write the LaunchAgent plist and start the daemon
+  uninstall                 stop the daemon and remove the plist
+  status                    daemon and scheduler state
+`;
+
+interface CliOptions {
+  trigger: RunTrigger;
+  scheduledFor: string | null;
+  watch: boolean;
+  scheduler: boolean;
+}
+
+function log(line: string): void {
+  console.log(`${new Date().toISOString()} ${line}`);
+}
+
+function formatTime(iso: string | null | undefined): string {
+  return iso ? new Date(iso).toLocaleString() : '-';
+}
+
+function parseTrigger(value: string): RunTrigger {
+  return match(value)
+    .with(P.union('schedule', 'manual', 'catch_up'), trigger => trigger)
+    .otherwise(() => {
+      throw new Error('--trigger must be one of schedule, manual, catch_up');
+    });
+}
+
+function startScheduler(options: CliOptions): () => void {
+  return options.scheduler ? startSchedulerLoop(log) : () => undefined;
+}
+
+async function showTui(): Promise<void> {
+  await runTui();
+  process.exit(0);
+}
+
+function listRoutines(): void {
+  for (const routine of loadRoutines()) {
+    const last = listRuns(routine.name)[0];
+    const when = routine.schedule === null ? 'manual' : describeCron(routine.schedule);
+    console.log(
+      [
+        `${routine.enabled ? '●' : '○'} ${routine.name.padEnd(28)}`,
+        routine.agent.padEnd(8),
+        when.padEnd(32),
+        `next ${formatTime(getNextRun(routine)).padEnd(22)}`,
+        `last ${last ? `${last.status} ${formatTime(last.startedAt)}` : '-'}`,
+      ].join(' '),
+    );
+  }
+}
+
+async function runOne(name: string | undefined, options: CliOptions): Promise<void> {
+  if (name === undefined) throw new Error('run needs a routine name');
+  ensureStateDirs();
+  const record = await runRoutine(getRoutine(name), {
+    trigger: options.trigger,
+    scheduledFor: options.scheduledFor,
+  });
+  console.log(JSON.stringify(record, null, 2));
+  process.exitCode = record.status === 'succeeded' ? 0 : 1;
+}
+
+function serve(options: CliOptions): void {
+  ensureStateDirs();
+  const managed = config.managed ? ', managed by launchd' : '';
+  log(
+    `papa-carlo serve pid ${process.pid}, routines ${config.routinesDir}, state ${config.stateDir}${managed}`,
+  );
+  installDepsIfStale(log);
+  buildUiIfStale(log);
+  const stopScheduler = startScheduler(options);
+  const server = startServer(log);
+  const shutdown = (): void => {
+    stopScheduler();
+    server.close();
+    process.exit(0);
+  };
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
+  if (!options.watch) return;
+  if (config.managed) startAutoPull(log);
+  startReloadWatchers(log, reason => {
+    if (!config.managed) {
+      log(`${reason}, restart serve to pick it up`);
+      return;
+    }
+    log(`${reason}, exiting so launchd restarts with the new code`);
+    shutdown();
+  });
+}
+
+function pull(): void {
+  const result = pullLatest();
+  console.log(`${result.status}: ${result.detail}`);
+  process.exitCode = result.status === 'failed' ? 1 : 0;
+}
+
+function dev(options: CliOptions): void {
+  ensureStateDirs();
+  const hadLaunchd = isLaunchdLoaded();
+  if (hadLaunchd) {
+    stopLaunchd();
+    log('stopped the launchd daemon, this process takes over until Ctrl-C');
+  }
+  const stopScheduler = startScheduler(options);
+  const server = startServer(log);
+  const vite = spawn('pnpm', ['-s', 'ui:dev'], { cwd: config.repoRoot, stdio: 'inherit' });
+  let closing = false;
+  const handBack = (): void => {
+    if (closing) return;
+    closing = true;
+    vite.kill('SIGTERM');
+    stopScheduler();
+    server.close();
+    if (hadLaunchd) {
+      startLaunchd();
+      log('launchd daemon started again');
+    }
+    process.exit(0);
+  };
+  process.on('SIGINT', handBack);
+  process.on('SIGTERM', handBack);
+  vite.on('exit', handBack);
+}
+
+function showStatus(): void {
+  const launchd = getLaunchdStatus()
+    .split('\n')
+    .filter(line => /state|pid|last exit|runs/.test(line))
+    .join('\n');
+  console.log(launchd || 'not loaded');
+  console.log(JSON.stringify(readSchedulerState(), null, 2));
+}
+
+function showUsage(command: string | undefined): void {
+  console.log(USAGE);
+  process.exitCode = command === undefined ? 0 : 1;
+}
+
+async function main(): Promise<void> {
+  const { positionals, values } = parseArgs({
+    allowPositionals: true,
+    options: {
+      trigger: { type: 'string', default: 'manual' },
+      'scheduled-for': { type: 'string' },
+      'no-watch': { type: 'boolean', default: false },
+      'no-scheduler': { type: 'boolean', default: false },
+    },
+  });
+  const [command, name] = positionals;
+  const options: CliOptions = {
+    trigger: parseTrigger(values.trigger),
+    scheduledFor: values['scheduled-for'] ?? null,
+    watch: !values['no-watch'],
+    scheduler: !values['no-scheduler'],
+  };
+
+  await match(command)
+    .with('tui', showTui)
+    .with('list', listRoutines)
+    .with('validate', () => console.log(`${loadRoutines().length} routine(s) ok`))
+    .with('readme', () =>
+      console.log(updateReadme() ? 'README.md updated' : 'README.md already up to date'),
+    )
+    .with('run', () => runOne(name, options))
+    .with('serve', () => serve(options))
+    .with('pull', pull)
+    .with('dev', () => dev(options))
+    .with('install', () =>
+      console.log(`installed ${install()}\nui: http://localhost:${config.port}`),
+    )
+    .with('uninstall', () => console.log(`removed ${uninstall()}`))
+    .with('status', showStatus)
+    .otherwise(showUsage);
+}
+
+main().catch((error: unknown) => {
+  console.error(error instanceof Error ? error.message : error);
+  process.exit(1);
+});

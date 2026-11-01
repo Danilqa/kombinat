@@ -1,0 +1,243 @@
+import fs from 'node:fs';
+import http from 'node:http';
+import path from 'node:path';
+
+import { match, P } from 'ts-pattern';
+
+import { buildTranscript } from './agents';
+import type { AgentName } from './agents/types';
+import { buildCalendar } from './calendar';
+import { config } from './config';
+import { describeCron } from './cron';
+import { loadRoutines } from './routines';
+import type { Routine } from './routines';
+import { startDetachedRun } from './run';
+import { getNextRun } from './scheduler';
+import { listAllRuns, listRuns, readRunRecord, readSchedulerState } from './state';
+import type { RunRecord, Skip } from './state';
+import { parseJsonLine } from './transcript';
+
+export interface RoutineSummary {
+  name: string;
+  description: string;
+  schedule: string | null;
+  scheduleHuman: string;
+  nextRunAt: string | null;
+  enabled: boolean;
+  agent: AgentName;
+  model: string | null;
+  effort: string | null;
+  permissionMode: string | null;
+  command: string | null;
+  cwd: string;
+  timeoutMinutes: number;
+  maxBudgetUsd: number | null;
+  file: string;
+  running: boolean;
+  lastRun: RunRecord | null;
+  lastSkip: Skip | null;
+}
+
+export interface RoutineDetail extends RoutineSummary {
+  prompt: string;
+  runs: RunRecord[];
+  skips: Skip[];
+}
+
+export interface DaemonStatus {
+  pid: number;
+  startedAt: string;
+  lastTickAt: string | null;
+  routinesDir: string;
+  stateDir: string;
+  claudeBin: string;
+  codexBin: string;
+  maxConcurrentRuns: number;
+  running: number;
+  timezone: string;
+  now: string;
+}
+
+interface ApiResponse {
+  status: number;
+  body: unknown;
+}
+
+type ApiRequest = [method: string, segments: string[]];
+
+const MIME: Record<string, string> = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.ico': 'image/x-icon',
+  '.json': 'application/json; charset=utf-8',
+  '.woff2': 'font/woff2',
+};
+
+const MAX_CALENDAR_DAYS = 32;
+
+const ok = (body: unknown): ApiResponse => ({ status: 200, body });
+const fail = (status: number, error: string): ApiResponse => ({ status, body: { error } });
+
+function getSkips(routine: string): Skip[] {
+  return readSchedulerState()?.routines[routine]?.skips ?? [];
+}
+
+function toRoutineSummary(routine: Routine, runs: RunRecord[]): RoutineSummary {
+  return {
+    name: routine.name,
+    description: routine.description,
+    schedule: routine.schedule,
+    scheduleHuman: routine.schedule === null ? 'Manual' : describeCron(routine.schedule),
+    nextRunAt: getNextRun(routine),
+    enabled: routine.enabled,
+    agent: routine.agent,
+    model: routine.model,
+    effort: routine.effort,
+    permissionMode: routine.permissionMode,
+    command: routine.command,
+    cwd: routine.cwd,
+    timeoutMinutes: routine.timeoutMinutes,
+    maxBudgetUsd: routine.maxBudgetUsd,
+    file: path.relative(config.repoRoot, routine.file),
+    running: runs.some(run => run.status === 'running'),
+    lastRun: runs[0] ?? null,
+    lastSkip: getSkips(routine.name).at(-1) ?? null,
+  };
+}
+
+function readEvents(record: RunRecord): unknown[] {
+  if (!fs.existsSync(record.logFile)) return [];
+  return fs
+    .readFileSync(record.logFile, 'utf8')
+    .split('\n')
+    .filter(Boolean)
+    .map(parseJsonLine)
+    .filter(event => event !== undefined);
+}
+
+function getStatus(startedAt: Date): DaemonStatus {
+  return {
+    pid: process.pid,
+    startedAt: startedAt.toISOString(),
+    lastTickAt: readSchedulerState()?.lastTickAt ?? null,
+    routinesDir: config.routinesDir,
+    stateDir: config.stateDir,
+    claudeBin: config.claudeBin,
+    codexBin: config.codexBin,
+    maxConcurrentRuns: config.maxConcurrentRuns,
+    running: listAllRuns().filter(run => run.status === 'running').length,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    now: new Date().toISOString(),
+  };
+}
+
+function withRoutine(name: string, respond: (routine: Routine) => ApiResponse): ApiResponse {
+  const routine = loadRoutines().find(candidate => candidate.name === name);
+  return routine === undefined ? fail(404, `Unknown routine ${name}`) : respond(routine);
+}
+
+function withRun(
+  routine: string,
+  id: string,
+  respond: (record: RunRecord) => ApiResponse,
+): ApiResponse {
+  const record = readRunRecord(routine, id);
+  return record === null ? fail(404, 'Run not found') : respond(record);
+}
+
+function getRoutineDetail(routine: Routine): ApiResponse {
+  const runs = listRuns(routine.name);
+  const detail: RoutineDetail = {
+    ...toRoutineSummary(routine, runs),
+    prompt: routine.prompt,
+    runs,
+    skips: getSkips(routine.name),
+  };
+  return ok(detail);
+}
+
+function startRun(routine: Routine): ApiResponse {
+  if (listRuns(routine.name).some(run => run.status === 'running')) {
+    return fail(409, `${routine.name} is already running`);
+  }
+  startDetachedRun(routine.name, { trigger: 'manual' });
+  return { status: 202, body: { ok: true } };
+}
+
+function getCalendar(url: URL): ApiResponse {
+  const from = new Date(url.searchParams.get('from') ?? '');
+  const to = new Date(url.searchParams.get('to') ?? '');
+  const isValid =
+    !Number.isNaN(from.getTime()) &&
+    !Number.isNaN(to.getTime()) &&
+    to > from &&
+    to.getTime() - from.getTime() <= MAX_CALENDAR_DAYS * 86_400_000;
+  if (!isValid) {
+    return fail(400, `from and to must be ISO dates spanning at most ${MAX_CALENDAR_DAYS} days`);
+  }
+  return ok(buildCalendar(loadRoutines(), listAllRuns(), from, to));
+}
+
+function routeApi(request: ApiRequest, url: URL, startedAt: Date): ApiResponse {
+  return match(request)
+    .with(['GET', ['status']], () => ok(getStatus(startedAt)))
+    .with(['GET', ['routines']], () =>
+      ok(loadRoutines().map(routine => toRoutineSummary(routine, listRuns(routine.name)))),
+    )
+    .with(['GET', ['routines', P.string]], ([, [, name]]) => withRoutine(name, getRoutineDetail))
+    .with(['POST', ['routines', P.string, 'run']], ([, [, name]]) => withRoutine(name, startRun))
+    .with(['GET', ['calendar']], () => getCalendar(url))
+    .with(['GET', ['runs']], () =>
+      ok(listAllRuns().slice(0, Number(url.searchParams.get('limit') ?? 50))),
+    )
+    .with(['GET', ['runs', P.string, P.string]], ([, [, routine, id]]) => withRun(routine, id, ok))
+    .with(['GET', ['runs', P.string, P.string, 'transcript']], ([, [, routine, id]]) =>
+      withRun(routine, id, record => ok(buildTranscript(record.agent, readEvents(record)))),
+    )
+    .otherwise(() => fail(404, 'Not found'));
+}
+
+function sendJson(res: http.ServerResponse, { status, body }: ApiResponse): void {
+  res.writeHead(status, {
+    'content-type': 'application/json; charset=utf-8',
+    'cache-control': 'no-store',
+  });
+  res.end(JSON.stringify(body));
+}
+
+function serveStatic(res: http.ServerResponse, url: URL): void {
+  if (!fs.existsSync(config.uiDist)) {
+    res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' });
+    res.end('papa-carlo API is up. Build the UI with `pnpm ui:build` to get the dashboard here.\n');
+    return;
+  }
+  const requested = path.normalize(decodeURIComponent(url.pathname));
+  const candidate = path.join(config.uiDist, requested);
+  const isFile =
+    candidate.startsWith(config.uiDist) &&
+    fs.existsSync(candidate) &&
+    fs.statSync(candidate).isFile();
+  const file = isFile ? candidate : path.join(config.uiDist, 'index.html');
+  res.writeHead(200, { 'content-type': MIME[path.extname(file)] ?? 'application/octet-stream' });
+  fs.createReadStream(file).pipe(res);
+}
+
+export function startServer(log: (line: string) => void): http.Server {
+  const startedAt = new Date();
+  const server = http.createServer((req, res) => {
+    const url = new URL(req.url ?? '/', `http://localhost:${config.port}`);
+    const [root, ...segments] = url.pathname.split('/').filter(Boolean);
+    try {
+      if (root === 'api') sendJson(res, routeApi([req.method ?? 'GET', segments], url, startedAt));
+      else serveStatic(res, url);
+    } catch (error) {
+      log(`request failed ${url.pathname}: ${(error as Error).message}`);
+      sendJson(res, fail(500, (error as Error).message));
+    }
+  });
+  server.listen(config.port, '127.0.0.1', () => log(`ui at http://localhost:${config.port}`));
+  return server;
+}
