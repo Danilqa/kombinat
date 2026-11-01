@@ -34,58 +34,61 @@ interface BlockStyle {
   label: string;
 }
 
+const blockSurfaceClassNames: Record<BlockVariant, string> = {
+  planned: 'border border-line-strong bg-raised',
+  plannedDefault: 'border border-dashed border-line-strong bg-raised',
+  succeeded: 'bg-positive-soft shadow-[inset_2px_0_0_var(--positive)]',
+  failed: 'bg-negative-soft shadow-[inset_2px_0_0_var(--negative)]',
+  timed_out: 'bg-negative-soft shadow-[inset_2px_0_0_var(--negative)]',
+  aborted: 'bg-neutral-soft shadow-[inset_2px_0_0_var(--fg-faint)]',
+  running: 'bg-warning-soft shadow-[inset_2px_0_0_var(--warning)]',
+};
+
+const outlinedBlockClassName = 'hover:border-fg-faint';
+const tintedBlockClassName = 'pl-[7px] hover:brightness-125 focus-visible:shadow-focus';
+
 const blockStyles: Record<BlockVariant, BlockStyle> = {
-  planned: { className: 'border border-grey-20 bg-white hover:border-grey-40', label: 'planned' },
+  planned: {
+    className: cn(blockSurfaceClassNames.planned, outlinedBlockClassName),
+    label: 'planned',
+  },
   plannedDefault: {
-    className: 'border border-dashed border-grey-20 bg-white hover:border-grey-40',
+    className: cn(blockSurfaceClassNames.plannedDefault, outlinedBlockClassName),
     label: 'planned',
   },
   succeeded: {
-    className:
-      'bg-light-green-30 pl-[7px] shadow-[inset_3px_0_0_var(--dark-green)] hover:brightness-[.97]',
+    className: cn(blockSurfaceClassNames.succeeded, tintedBlockClassName),
     label: 'succeeded',
   },
   failed: {
-    className:
-      'bg-light-red-20 pl-[7px] shadow-[inset_3px_0_0_var(--dark-red)] hover:brightness-[.97]',
+    className: cn(blockSurfaceClassNames.failed, tintedBlockClassName),
     label: 'failed',
   },
   timed_out: {
-    className:
-      'bg-light-red-20 pl-[7px] shadow-[inset_3px_0_0_var(--dark-red)] hover:brightness-[.97]',
+    className: cn(blockSurfaceClassNames.timed_out, tintedBlockClassName),
     label: 'timed out',
   },
   aborted: {
-    className: 'bg-grey-5 pl-[7px] shadow-[inset_3px_0_0_var(--grey-30)] hover:brightness-[.97]',
+    className: cn(blockSurfaceClassNames.aborted, tintedBlockClassName),
     label: 'aborted',
   },
   running: {
-    className:
-      'animate-soft-pulse bg-light-yellow-60 pl-[7px] shadow-[inset_3px_0_0_var(--dark-yellow)] hover:brightness-[.97]',
+    className: cn(blockSurfaceClassNames.running, tintedBlockClassName, 'animate-soft-pulse'),
     label: 'running',
   },
 };
 
 interface LegendItem {
   label: string;
-  swatchClassName: string;
+  variant: BlockVariant;
 }
 
 const legendItems: LegendItem[] = [
-  { label: 'Planned', swatchClassName: 'border border-grey-20 bg-white' },
-  {
-    label: 'Planned, default length',
-    swatchClassName: 'border border-dashed border-grey-20 bg-white',
-  },
-  {
-    label: 'Succeeded',
-    swatchClassName: 'bg-light-green-30 shadow-[inset_3px_0_0_var(--dark-green)]',
-  },
-  { label: 'Failed', swatchClassName: 'bg-light-red-20 shadow-[inset_3px_0_0_var(--dark-red)]' },
-  {
-    label: 'Running',
-    swatchClassName: 'bg-light-yellow-60 shadow-[inset_3px_0_0_var(--dark-yellow)]',
-  },
+  { label: 'Planned', variant: 'planned' },
+  { label: 'Planned, default length', variant: 'plannedDefault' },
+  { label: 'Succeeded', variant: 'succeeded' },
+  { label: 'Failed', variant: 'failed' },
+  { label: 'Running', variant: 'running' },
 ];
 
 function getBlockVariant(entry: CalendarEntry): BlockVariant {
@@ -142,6 +145,10 @@ function formatHour(hour: number): string {
   return `${String(hour).padStart(2, '0')}:00`;
 }
 
+function getIsWeekend(day: Date): boolean {
+  return day.getDay() === 0 || day.getDay() === 6;
+}
+
 function getHasRunningEntry(entries: CalendarEntry[]): boolean {
   return entries.some(isMatching({ status: 'running' }));
 }
@@ -155,23 +162,25 @@ function useNow(intervalMs: number): Date {
   return now;
 }
 
-type DayTone = 'today' | 'other';
+type DayTone = 'today' | 'weekday' | 'weekend';
 
 const dayHeaderTextClassNames: Record<DayTone, string> = {
-  today: 'text-black',
-  other: 'text-grey-60',
+  today: 'text-fg',
+  weekday: 'text-fg-muted',
+  weekend: 'text-fg-muted',
 };
 
 const dayNumberClassNames: Record<DayTone, string> = {
-  today: 'bg-black text-white',
-  other: 'text-black',
+  today: 'bg-fg text-page',
+  weekday: 'text-fg',
+  weekend: 'text-fg-muted',
 };
 
-function getDayTone(isToday: boolean): DayTone {
-  return match(isToday)
-    .with(true, () => 'today' as const)
-    .with(false, () => 'other' as const)
-    .exhaustive();
+function getDayTone(day: Date, isToday: boolean): DayTone {
+  return match({ isToday, isWeekend: getIsWeekend(day) })
+    .with({ isToday: true }, () => 'today' as const)
+    .with({ isWeekend: true }, () => 'weekend' as const)
+    .otherwise(() => 'weekday' as const);
 }
 
 interface CalendarBlockProps {
@@ -188,7 +197,7 @@ function CalendarBlock({ positioned, overlapLabel }: CalendarBlockProps) {
       to={getEntryHref(entry)}
       title={getEntryTitle(entry, overlapLabel)}
       className={cn(
-        'absolute z-10 flex flex-col overflow-hidden rounded-4 px-1.5 text-black transition-[filter,border-color] hover:z-20',
+        'absolute z-10 flex flex-col overflow-hidden rounded-sm px-1.5 text-fg transition-[filter,border-color] hover:z-20',
         style.className,
       )}
       style={{
@@ -199,23 +208,18 @@ function CalendarBlock({ positioned, overlapLabel }: CalendarBlockProps) {
         paddingTop: hasTimeLabel ? 3 : 0,
       }}
     >
-      <span
-        className={cn(
-          'truncate text-[11px] leading-[12px] font-semibold',
-          overlapLabel && 'pr-2.5',
-        )}
-      >
+      <span className={cn('truncate text-caption leading-3', overlapLabel && 'pr-2.5')}>
         {entry.routine}
       </span>
       {hasTimeLabel && (
-        <span className="truncate text-[10px] leading-[12px] text-grey-60 tabular-nums">
+        <span className="truncate text-caption leading-3 font-normal text-fg-secondary tabular-nums">
           {formatClock(new Date(entry.start))}
         </span>
       )}
       {overlapLabel && (
         <span
           title={overlapLabel}
-          className="absolute top-[3px] right-[3px] size-1.5 rounded-full bg-white shadow-[0_0_0_1.5px_var(--dark-red)]"
+          className="absolute top-[3px] right-[3px] size-1.5 rounded-full bg-surface shadow-[0_0_0_1.5px_var(--negative)]"
         />
       )}
     </Link>
@@ -231,10 +235,10 @@ function CurrentTimeLine({ now, dayStart }: CurrentTimeLineProps) {
   return (
     <div
       aria-hidden
-      className="pointer-events-none absolute inset-x-0 z-30 h-0.5 bg-black"
+      className="pointer-events-none absolute inset-x-0 z-[5] h-0.5 bg-warning"
       style={{ top: getTopForTime(now, dayStart) - 1 }}
     >
-      <span className="absolute -top-[3px] -left-1 size-2 rounded-full bg-black" />
+      <span className="absolute -top-[3px] -left-1 size-2 rounded-full bg-warning" />
     </div>
   );
 }
@@ -245,15 +249,16 @@ interface DayHeaderProps {
 }
 
 function DayHeader({ day, isToday }: DayHeaderProps) {
+  const tone = getDayTone(day, isToday);
   return (
     <div className="flex flex-col items-center gap-1 py-2.5">
-      <span className={cn('text-label-13 uppercase', dayHeaderTextClassNames[getDayTone(isToday)])}>
+      <span className={cn('text-caption', dayHeaderTextClassNames[tone])}>
         {formatWeekday(day)}
       </span>
       <span
         className={cn(
-          'flex size-8 items-center justify-center rounded-full text-title-16 tabular-nums',
-          dayNumberClassNames[getDayTone(isToday)],
+          'flex size-7 items-center justify-center rounded-full text-title-sm tabular-nums',
+          dayNumberClassNames[tone],
         )}
       >
         {day.getDate()}
@@ -272,12 +277,11 @@ interface DayColumnProps {
 
 function DayColumn({ day, entries, now, isToday, routinesById }: DayColumnProps) {
   const positioned = useMemo(() => layoutDay(entries, day), [entries, day]);
-  const isWeekend = day.getDay() === 0 || day.getDay() === 6;
   return (
     <div
-      className={cn('relative border-l border-grey-10', isWeekend && 'bg-grey-2')}
+      className={cn('relative border-l border-line-faint', getIsWeekend(day) && 'bg-hover')}
       style={{
-        backgroundImage: `linear-gradient(to bottom, var(--grey-10) 1px, transparent 1px)`,
+        backgroundImage: `linear-gradient(to bottom, var(--line-faint) 1px, transparent 1px)`,
         backgroundSize: `100% ${HOUR_HEIGHT}px`,
       }}
     >
@@ -306,21 +310,21 @@ interface OverlapChipProps {
 function OverlapChip({ count }: OverlapChipProps) {
   return match(count > 0)
     .with(true, () => <Badge variant="negative">{formatOverlapCount(count)}</Badge>)
-    .with(false, () => <Badge variant="neutral">no overlaps</Badge>)
+    .with(false, () => <Badge variant="neutral">No overlaps</Badge>)
     .exhaustive();
 }
 
 function CalendarLegend() {
   return (
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-grey-10 px-4 py-3 text-paragraph-12 text-grey-60">
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-line px-4 py-3 text-body-sm text-fg-muted">
       {legendItems.map(item => (
         <span key={item.label} className="flex items-center gap-1.5">
-          <span className={cn('h-2.5 w-4 rounded-[2px]', item.swatchClassName)} />
+          <span className={cn('h-2.5 w-4 rounded-xs', blockSurfaceClassNames[item.variant])} />
           {item.label}
         </span>
       ))}
       <span className="flex items-center gap-1.5">
-        <span className="size-1.5 rounded-full bg-white shadow-[0_0_0_1.5px_var(--dark-red)]" />
+        <span className="size-1.5 rounded-full bg-surface shadow-[0_0_0_1.5px_var(--negative)]" />
         Overlaps another routine
       </span>
     </div>
@@ -352,44 +356,44 @@ export function WeekCalendar() {
   return (
     <section>
       <SectionTitle>Calendar</SectionTitle>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="tertiary"
-            size="icon-small"
-            aria-label="Previous week"
-            onClick={() => setWeekStart(addDays(weekStart, -7))}
-          >
-            <ChevronLeft />
-          </Button>
-          <Button
-            variant="tertiary"
-            size="small"
-            isActive={isCurrentWeek}
-            aria-pressed={isCurrentWeek}
-            onClick={() => setWeekStart(getWeekStart(new Date()))}
-          >
-            Today
-          </Button>
-          <Button
-            variant="tertiary"
-            size="icon-small"
-            aria-label="Next week"
-            onClick={() => setWeekStart(addDays(weekStart, 7))}
-          >
-            <ChevronRight />
-          </Button>
-          <span className="ml-2 text-headline-h3 text-black tabular-nums">
-            {formatWeekRange(weekStart)}
-          </span>
-          {error && (
-            <span className="ml-3 text-paragraph-12 font-medium text-dark-red">{error}</span>
-          )}
-        </div>
-        {data && <OverlapChip count={overlapCount} />}
-      </div>
       <Card className="gap-0 py-0">
-        <div className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] border-b border-grey-10">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
+          <div className="flex min-w-0 items-baseline gap-3">
+            <span className="text-title-md text-fg tabular-nums">{formatWeekRange(weekStart)}</span>
+            {error && <span className="text-body-sm text-negative">{error}</span>}
+          </div>
+          <div className="flex items-center gap-3">
+            {data && <OverlapChip count={overlapCount} />}
+            <div className="flex items-center gap-1">
+              <Button
+                variant="tertiary"
+                size="icon-small"
+                aria-label="Previous week"
+                onClick={() => setWeekStart(addDays(weekStart, -7))}
+              >
+                <ChevronLeft />
+              </Button>
+              <Button
+                variant="tertiary"
+                size="small"
+                isActive={isCurrentWeek}
+                aria-pressed={isCurrentWeek}
+                onClick={() => setWeekStart(getWeekStart(new Date()))}
+              >
+                Today
+              </Button>
+              <Button
+                variant="tertiary"
+                size="icon-small"
+                aria-label="Next week"
+                onClick={() => setWeekStart(addDays(weekStart, 7))}
+              >
+                <ChevronRight />
+              </Button>
+            </div>
+          </div>
+        </div>
+        <div className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] border-b border-line pr-2">
           <div />
           {days.map(day => (
             <DayHeader key={day.toISOString()} day={day} isToday={getIsSameDay(day, now)} />
@@ -397,14 +401,14 @@ export function WeekCalendar() {
         </div>
         <div className="py-2 pr-2">
           <div
-            className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] border-b border-grey-10"
+            className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] border-b border-line-faint"
             style={{ height: DAY_HEIGHT }}
           >
             <div className="relative">
               {HOURS.map(hour => (
                 <span
                   key={hour}
-                  className="absolute right-2 -translate-y-1/2 text-[11px] leading-none font-medium tracking-[0.03em] text-grey-40 tabular-nums"
+                  className="absolute right-2 -translate-y-1/2 text-caption font-normal text-fg-muted tabular-nums"
                   style={{ top: hour * HOUR_HEIGHT }}
                 >
                   {formatHour(hour)}

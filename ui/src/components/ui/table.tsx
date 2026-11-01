@@ -5,10 +5,10 @@ interface TableProps extends React.ComponentProps<'table'> {}
 
 function Table({ className, ...props }: TableProps) {
   return (
-    <div data-slot="table-container" className="relative w-full overflow-x-auto px-4 pt-2 pb-2">
+    <div data-slot="table-container" className="relative w-full overflow-x-auto">
       <table
         data-slot="table"
-        className={cn('w-full caption-bottom bg-white text-paragraph-14', className)}
+        className={cn('w-full caption-bottom text-body tabular-nums', className)}
         {...props}
       />
     </div>
@@ -21,7 +21,7 @@ function TableHeader({ className, ...props }: TableHeaderProps) {
   return (
     <thead
       data-slot="table-header"
-      className={cn('bg-white [&_tr]:border-b [&_tr]:hover:bg-transparent', className)}
+      className={cn('[&_tr]:border-b [&_tr]:border-line [&_tr]:hover:bg-transparent', className)}
       {...props}
     />
   );
@@ -45,7 +45,7 @@ function TableFooter({ className, ...props }: TableFooterProps) {
   return (
     <tfoot
       data-slot="table-footer"
-      className={cn('border-t border-grey-10 font-medium [&>tr]:last:border-b-0', className)}
+      className={cn('border-t border-line font-medium [&>tr]:last:border-b-0', className)}
       {...props}
     />
   );
@@ -58,7 +58,7 @@ function TableRow({ className, ...props }: TableRowProps) {
     <tr
       data-slot="table-row"
       className={cn(
-        'border-b border-grey-10 transition-colors hover:bg-grey-2 has-aria-expanded:bg-grey-2 data-[state=selected]:bg-light-blue-40',
+        'border-b border-line-faint transition-colors hover:bg-hover has-aria-expanded:bg-hover data-[state=selected]:bg-overlay',
         className,
       )}
       {...props}
@@ -73,7 +73,7 @@ function TableHead({ className, ...props }: TableHeadProps) {
     <th
       data-slot="table-head"
       className={cn(
-        'h-14 px-2 text-left align-middle text-label-16 whitespace-nowrap text-grey-60 first:pl-4 last:pr-4 [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]',
+        'h-9 px-2 text-left align-middle text-body-sm font-normal whitespace-nowrap text-fg-muted first:pl-4 last:pr-4 [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]',
         className,
       )}
       {...props}
@@ -88,7 +88,7 @@ function TableCell({ className, ...props }: TableCellProps) {
     <td
       data-slot="table-cell"
       className={cn(
-        'h-16 px-2 py-2 align-middle whitespace-nowrap text-black first:pl-4 last:pr-4 [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]',
+        'h-11 px-2 py-2 align-middle text-body whitespace-nowrap text-fg first:pl-4 last:pr-4 [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]',
         className,
       )}
       {...props}
@@ -102,7 +102,7 @@ function TableCaption({ className, ...props }: TableCaptionProps) {
   return (
     <caption
       data-slot="table-caption"
-      className={cn('mt-4 text-paragraph-14 text-muted-foreground', className)}
+      className={cn('mt-4 text-body-sm text-fg-muted', className)}
       {...props}
     />
   );

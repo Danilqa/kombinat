@@ -1,15 +1,15 @@
 import { useParams } from 'react-router';
 import { match } from 'ts-pattern';
-import { Breadcrumbs, PageTitle, SectionTitle } from '@/components/page-header';
-import { DetailList } from '@/components/detail-list';
+import { DetailList, type DetailEntry } from '@/components/detail-list';
 import { Markdown } from '@/components/markdown';
+import { Breadcrumbs, PageTitle, SectionAside, SectionTitle } from '@/components/page-header';
 import { ErrorState, LoadingState } from '@/components/page-states';
 import { RelativeTime } from '@/components/relative-time';
 import { RunNowButton } from '@/components/run-now-button';
 import { RunsTable } from '@/components/runs-table';
 import { getSkipReasonLabel } from '@/components/status-badge';
 import { Badge, type BadgeVariant } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -19,7 +19,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { getRoutine, type RoutineDetail, type Skip } from '@/lib/api';
+import { getRoutine, type AgentName, type RoutineDetail, type Skip } from '@/lib/api';
 import { usePolledData } from '@/lib/use-polled-data';
 import { cn } from '@/lib/utils';
 
@@ -30,14 +30,23 @@ function getIsRoutineRunning(routine: RoutineDetail): boolean {
 type EnabledState = 'enabled' | 'disabled';
 
 interface EnabledBadge {
+  label: string;
   variant: BadgeVariant;
   dotClassName: string;
 }
 
 const enabledBadges: Record<EnabledState, EnabledBadge> = {
-  enabled: { variant: 'positive', dotClassName: 'bg-dark-green' },
-  disabled: { variant: 'ghost', dotClassName: 'bg-grey-40' },
+  enabled: { label: 'Enabled', variant: 'positive', dotClassName: 'bg-positive' },
+  disabled: { label: 'Disabled', variant: 'ghost', dotClassName: 'bg-fg-faint' },
 };
+
+function getAgentLabel(agent: AgentName): string {
+  return match(agent)
+    .with('claude', () => 'Claude')
+    .with('codex', () => 'Codex')
+    .with('command', () => 'Command')
+    .exhaustive();
+}
 
 function getEnabledState(routine: RoutineDetail): EnabledState {
   return match(routine.enabled)
@@ -51,32 +60,48 @@ interface RoutineBadgesProps {
 }
 
 function RoutineBadges({ routine }: RoutineBadgesProps) {
-  const enabledState = getEnabledState(routine);
-  const enabledBadge = enabledBadges[enabledState];
+  const enabledBadge = enabledBadges[getEnabledState(routine)];
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-1.5">
+      <Badge size="small" variant={enabledBadge.variant}>
+        <span className={cn('size-1.5 rounded-full', enabledBadge.dotClassName)} />
+        {enabledBadge.label}
+      </Badge>
       <Badge size="small">{routine.scheduleHuman}</Badge>
       {routine.schedule && (
-        <Badge size="small" className="font-mono normal-case">
+        <Badge size="small" className="font-mono">
           {routine.schedule}
         </Badge>
       )}
-      <Badge size="small">{routine.agent}</Badge>
+      <Badge size="small">{getAgentLabel(routine.agent)}</Badge>
       {routine.model !== null && (
-        <Badge size="small" className="font-mono normal-case">
+        <Badge size="small" className="font-mono">
           {routine.model}
         </Badge>
       )}
-      {routine.effort !== null && <Badge size="small">effort {routine.effort}</Badge>}
+      {routine.effort !== null && <Badge size="small">Effort {routine.effort}</Badge>}
       {routine.permissionMode !== null && (
-        <Badge size="small">permission {routine.permissionMode}</Badge>
+        <Badge size="small">Permission {routine.permissionMode}</Badge>
       )}
-      <Badge size="small" variant={enabledBadge.variant}>
-        <span className={cn('size-2 rounded-full', enabledBadge.dotClassName)} />
-        {enabledState}
-      </Badge>
     </div>
   );
+}
+
+function getStatEntries(routine: RoutineDetail): DetailEntry[] {
+  return [
+    { label: 'Next run', value: <RelativeTime iso={routine.nextRunAt} /> },
+    { label: 'Last run', value: <RelativeTime iso={routine.lastRun?.startedAt ?? null} /> },
+    { label: 'Timeout', value: `${routine.timeoutMinutes} min` },
+    {
+      label: 'Budget',
+      value: routine.maxBudgetUsd === null ? 'None' : `$${routine.maxBudgetUsd.toFixed(2)}`,
+    },
+    { label: 'Working directory', value: routine.cwd, isMono: true, span: 'wide' },
+    { label: 'File', value: routine.file, isMono: true, span: 'wide' },
+    ...(routine.command === null
+      ? []
+      : [{ label: 'Command', value: routine.command, isMono: true, span: 'full' as const }]),
+  ];
 }
 
 interface SkipsTableProps {
@@ -99,10 +124,10 @@ function SkipsTable({ skips }: SkipsTableProps) {
             <TableCell>
               <RelativeTime iso={skip.at} />
             </TableCell>
-            <TableCell>
+            <TableCell className="text-fg-secondary">
               <RelativeTime iso={skip.scheduledFor} />
             </TableCell>
-            <TableCell>{getSkipReasonLabel(skip.reason)}</TableCell>
+            <TableCell className="text-fg-secondary">{getSkipReasonLabel(skip.reason)}</TableCell>
           </TableRow>
         ))}
       </TableBody>
@@ -112,60 +137,51 @@ function SkipsTable({ skips }: SkipsTableProps) {
 
 interface RoutineViewProps {
   routine: RoutineDetail;
-  onStarted: () => void;
 }
 
-function RoutineView({ routine, onStarted }: RoutineViewProps) {
+function RoutineView({ routine }: RoutineViewProps) {
   return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0 space-y-3">
-          <PageTitle>{routine.name}</PageTitle>
-          <p className="text-paragraph-14 text-grey-70">{routine.description}</p>
+    <div className="space-y-10">
+      <div className="space-y-6">
+        <header className="min-w-0 space-y-3">
+          <div className="space-y-1">
+            <PageTitle>{routine.name}</PageTitle>
+            {routine.description && (
+              <p className="max-w-3xl text-body text-fg-secondary">{routine.description}</p>
+            )}
+          </div>
           <RoutineBadges routine={routine} />
-        </div>
-        <RunNowButton routine={routine.name} isRunning={routine.running} onStarted={onStarted} />
-      </header>
-      <div>
-        <DetailList
-          entries={[
-            { label: 'cwd', value: routine.cwd, isMono: true },
-            ...(routine.command === null
-              ? []
-              : [{ label: 'command', value: routine.command, isMono: true }]),
-            { label: 'file', value: routine.file, isMono: true },
-            { label: 'next run', value: <RelativeTime iso={routine.nextRunAt} /> },
-            { label: 'timeout', value: `${routine.timeoutMinutes} min` },
-            {
-              label: 'budget',
-              value: routine.maxBudgetUsd === null ? 'none' : `$${routine.maxBudgetUsd.toFixed(2)}`,
-            },
-          ]}
-        />
+        </header>
+        <Card className="gap-0 py-0">
+          <DetailList entries={getStatEntries(routine)} />
+        </Card>
       </div>
-      <Tabs defaultValue="runs">
+      <Tabs defaultValue="runs" className="gap-4">
         <TabsList>
-          <TabsTrigger value="runs">Runs ({routine.runs.length})</TabsTrigger>
+          <TabsTrigger value="runs">
+            Runs
+            <span className="text-fg-muted tabular-nums">{routine.runs.length}</span>
+          </TabsTrigger>
           <TabsTrigger value="prompt">Prompt</TabsTrigger>
         </TabsList>
-        <TabsContent value="runs" className="space-y-8 pt-4">
+        <TabsContent value="runs" className="space-y-10">
           <Card className="gap-0 py-0">
             <RunsTable runs={routine.runs} hasRoutineColumn={false} />
           </Card>
           {routine.skips.length > 0 && (
             <section>
-              <SectionTitle>Skipped runs</SectionTitle>
+              <SectionTitle aside={<SectionAside>{routine.skips.length} skipped</SectionAside>}>
+                Skipped runs
+              </SectionTitle>
               <Card className="gap-0 py-0">
                 <SkipsTable skips={routine.skips} />
               </Card>
             </section>
           )}
         </TabsContent>
-        <TabsContent value="prompt" className="pt-4">
-          <Card className="py-6">
-            <CardContent className="px-6">
-              <Markdown source={routine.prompt} />
-            </CardContent>
+        <TabsContent value="prompt">
+          <Card className="gap-0 p-6">
+            <Markdown source={routine.prompt} />
           </Card>
         </TabsContent>
       </Tabs>
@@ -183,10 +199,15 @@ export function RoutinePage() {
 
   return (
     <div>
-      <Breadcrumbs crumbs={[{ label: name }]} />
+      <Breadcrumbs
+        crumbs={[{ label: name }]}
+        aside={
+          data && <RunNowButton routine={data.name} isRunning={data.running} onStarted={reload} />
+        }
+      />
       {error && <ErrorState message={error} />}
       {!data && !error && <LoadingState />}
-      {data && <RoutineView routine={data} onStarted={reload} />}
+      {data && <RoutineView routine={data} />}
     </div>
   );
 }

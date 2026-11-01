@@ -6,21 +6,10 @@ const twMerge = extendTailwindMerge({
     classGroups: {
       'font-size': [
         {
-          text: [
-            'headline-h1',
-            'headline-h3',
-            'title-16',
-            'title-14',
-            'paragraph-16',
-            'paragraph-14',
-            'paragraph-12',
-            'label-16',
-            'label-13',
-          ],
+          text: ['title-lg', 'title-md', 'title-sm', 'body', 'body-sm', 'caption'],
         },
       ],
-      rounded: [{ rounded: ['4', '8', '16'] }],
-      shadow: [{ shadow: ['elevation-100', 'elevation-200', 'focus'] }],
+      shadow: [{ shadow: ['popover', 'focus'] }],
     },
   },
 });

@@ -4,13 +4,21 @@ import { Button } from '@/components/ui/button';
 import { startRoutineRun } from '@/lib/api';
 import { getErrorMessage } from '@shared/errors';
 
+type RunNowVariant = 'primary' | 'secondary';
+
 interface RunNowButtonProps {
   routine: string;
   isRunning: boolean;
   onStarted: () => void;
+  variant?: RunNowVariant;
 }
 
-export function RunNowButton({ routine, isRunning, onStarted }: RunNowButtonProps) {
+export function RunNowButton({
+  routine,
+  isRunning,
+  onStarted,
+  variant = 'primary',
+}: RunNowButtonProps) {
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,12 +38,12 @@ export function RunNowButton({ routine, isRunning, onStarted }: RunNowButtonProp
   return (
     <div className="flex items-center justify-end gap-2">
       {error && (
-        <span className="max-w-56 truncate text-paragraph-12 text-dark-red" title={error}>
+        <span className="max-w-56 truncate text-body-sm text-negative" title={error}>
           {error}
         </span>
       )}
       <Button
-        variant="primary"
+        variant={variant}
         size="small"
         disabled={isRunning || isStarting}
         onClick={() => void startRun()}
