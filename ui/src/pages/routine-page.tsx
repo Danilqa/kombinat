@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getRoutine, type AgentName, type RoutineDetail, type Skip } from '@/lib/api';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { usePolledData } from '@/lib/use-polled-data';
 import { cn } from '@/lib/utils';
 
@@ -89,8 +90,11 @@ function RoutineBadges({ routine }: RoutineBadgesProps) {
 
 function getStatEntries(routine: RoutineDetail): DetailEntry[] {
   return [
-    { label: 'Next run', value: <RelativeTime iso={routine.nextRunAt} /> },
-    { label: 'Last run', value: <RelativeTime iso={routine.lastRun?.startedAt ?? null} /> },
+    { label: 'Next run', value: <RelativeTime iso={routine.nextRunAt} isFocusable /> },
+    {
+      label: 'Last run',
+      value: <RelativeTime iso={routine.lastRun?.startedAt ?? null} isFocusable />,
+    },
     { label: 'Timeout', value: `${routine.timeoutMinutes} min` },
     {
       label: 'Budget',
@@ -122,16 +126,36 @@ function SkipsTable({ skips }: SkipsTableProps) {
         {[...skips].reverse().map(skip => (
           <TableRow key={`${skip.at}-${skip.scheduledFor}`}>
             <TableCell>
-              <RelativeTime iso={skip.at} />
+              <RelativeTime iso={skip.at} isFocusable />
             </TableCell>
             <TableCell className="text-fg-secondary">
-              <RelativeTime iso={skip.scheduledFor} />
+              <RelativeTime iso={skip.scheduledFor} isFocusable />
             </TableCell>
             <TableCell className="text-fg-secondary">{getSkipReasonLabel(skip.reason)}</TableCell>
           </TableRow>
         ))}
       </TableBody>
     </Table>
+  );
+}
+
+interface RoutineHeaderProps {
+  name: string;
+  routine: RoutineDetail | null;
+}
+
+// The title comes from the route, so the page has its heading while loading and on errors too.
+function RoutineHeader({ name, routine }: RoutineHeaderProps) {
+  return (
+    <header className="mb-6 min-w-0 space-y-3">
+      <div className="space-y-1">
+        <PageTitle>{name}</PageTitle>
+        {routine?.description && (
+          <p className="max-w-3xl text-body text-fg-secondary">{routine.description}</p>
+        )}
+      </div>
+      {routine && <RoutineBadges routine={routine} />}
+    </header>
   );
 }
 
@@ -142,25 +166,14 @@ interface RoutineViewProps {
 function RoutineView({ routine }: RoutineViewProps) {
   return (
     <div className="space-y-10">
-      <div className="space-y-6">
-        <header className="min-w-0 space-y-3">
-          <div className="space-y-1">
-            <PageTitle>{routine.name}</PageTitle>
-            {routine.description && (
-              <p className="max-w-3xl text-body text-fg-secondary">{routine.description}</p>
-            )}
-          </div>
-          <RoutineBadges routine={routine} />
-        </header>
-        <Card className="gap-0 py-0">
-          <DetailList entries={getStatEntries(routine)} />
-        </Card>
-      </div>
+      <Card className="gap-0 py-0">
+        <DetailList entries={getStatEntries(routine)} />
+      </Card>
       <Tabs defaultValue="runs" className="gap-4">
         <TabsList>
           <TabsTrigger value="runs">
             Runs
-            <span className="text-fg-muted tabular-nums">{routine.runs.length}</span>
+            <span className="text-fg-secondary tabular-nums">{routine.runs.length}</span>
           </TabsTrigger>
           <TabsTrigger value="prompt">Prompt</TabsTrigger>
         </TabsList>
@@ -181,7 +194,7 @@ function RoutineView({ routine }: RoutineViewProps) {
         </TabsContent>
         <TabsContent value="prompt">
           <Card className="gap-0 p-6">
-            <Markdown source={routine.prompt} />
+            <Markdown source={routine.prompt} minHeadingLevel={2} />
           </Card>
         </TabsContent>
       </Tabs>
@@ -191,6 +204,7 @@ function RoutineView({ routine }: RoutineViewProps) {
 
 export function RoutinePage() {
   const { name = '' } = useParams();
+  useDocumentTitle(name);
   const { data, error, reload } = usePolledData(
     `routine/${name}`,
     () => getRoutine(name),
@@ -200,11 +214,12 @@ export function RoutinePage() {
   return (
     <div>
       <Breadcrumbs
-        crumbs={[{ label: name }]}
+        crumbs={[{ label: 'Routines', to: '/' }]}
         aside={
           data && <RunNowButton routine={data.name} isRunning={data.running} onStarted={reload} />
         }
       />
+      <RoutineHeader name={name} routine={data} />
       {error && <ErrorState message={error} />}
       {!data && !error && <LoadingState />}
       {data && <RoutineView routine={data} />}

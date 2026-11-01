@@ -1,14 +1,12 @@
 import { Check, ChevronRight, CircleAlert, Loader, X } from 'lucide-react';
-import { memo, useState } from 'react';
+import { memo, useId, useState } from 'react';
 import { match } from 'ts-pattern';
 
+import { CodeBlock } from '@/components/code-block';
 import { Markdown } from '@/components/markdown';
 import type { HookItem, InitItem, ResultItem, TextItem, ToolItem, TranscriptItem } from '@/lib/api';
 import { formatDuration } from '@/lib/format';
 import { cn } from '@/lib/utils';
-
-export const codeBlockClassName =
-  'overflow-auto rounded-lg border border-line-faint bg-raised p-3 font-mono text-body-sm break-words whitespace-pre-wrap text-fg-prose';
 
 interface HookRowProps {
   item: HookItem;
@@ -24,7 +22,11 @@ function HookRow({ item }: HookRowProps) {
           exit {item.exitCode ?? '?'}
         </span>
       </div>
-      {item.output && <pre className={cn(codeBlockClassName, 'max-h-60')}>{item.output}</pre>}
+      {item.output && (
+        <CodeBlock label="Hook output" className="max-h-60">
+          {item.output}
+        </CodeBlock>
+      )}
     </div>
   );
 }
@@ -54,7 +56,7 @@ interface TextRowProps {
 }
 
 function TextRow({ item }: TextRowProps) {
-  return <Markdown source={item.text} />;
+  return <Markdown source={item.text} minHeadingLevel={3} />;
 }
 
 interface ToolRowProps {
@@ -64,6 +66,7 @@ interface ToolRowProps {
 
 const ToolRow = memo(function ToolRow({ item, isPending }: ToolRowProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const panelId = useId();
   const hasError = item.result?.isError === true;
   return (
     <div
@@ -75,12 +78,15 @@ const ToolRow = memo(function ToolRow({ item, isPending }: ToolRowProps) {
     >
       <button
         type="button"
+        aria-expanded={isOpen}
+        aria-controls={panelId}
         onClick={() => setIsOpen(open => !open)}
-        className="flex h-9 w-full items-center gap-2 px-3 text-left transition-colors hover:bg-hover focus-visible:bg-hover"
+        className="flex h-9 w-full items-center gap-2 px-3 text-left transition-colors hover:bg-hover focus-visible:bg-hover focus-visible:-outline-offset-2"
       >
         <ChevronRight
+          aria-hidden="true"
           className={cn(
-            'size-3.5 shrink-0 text-fg-faint transition-transform',
+            'size-3.5 shrink-0 text-fg-muted transition-transform',
             isOpen && 'rotate-90 text-fg',
           )}
         />
@@ -88,30 +94,38 @@ const ToolRow = memo(function ToolRow({ item, isPending }: ToolRowProps) {
         <span className="min-w-0 flex-1 truncate font-mono text-body-sm text-fg-muted">
           {item.preview}
         </span>
-        {hasError && <CircleAlert className="size-3.5 shrink-0 text-negative" />}
+        {hasError && (
+          <>
+            <CircleAlert className="size-3.5 shrink-0 text-negative" />
+            <span className="sr-only">Failed</span>
+          </>
+        )}
         {isPending && !item.result && (
-          <Loader className="size-3.5 shrink-0 animate-spin text-fg-muted" />
+          <>
+            <Loader className="size-3.5 shrink-0 animate-spin text-fg-muted" />
+            <span className="sr-only">In progress</span>
+          </>
         )}
       </button>
       {isOpen && (
-        <div className="space-y-3 border-t border-line-faint p-3">
+        <div id={panelId} className="space-y-3 border-t border-line-faint p-3">
           <div>
             <div className="eyebrow mb-1.5">Input</div>
-            <pre className={cn(codeBlockClassName, 'max-h-80')}>
+            <CodeBlock label="Tool input" className="max-h-80">
               {JSON.stringify(item.input, null, 2)}
-            </pre>
+            </CodeBlock>
           </div>
           <div>
             <div className="eyebrow mb-1.5">{hasError ? 'Error' : 'Result'}</div>
-            <pre
+            <CodeBlock
+              label={hasError ? 'Tool error' : 'Tool result'}
               className={cn(
-                codeBlockClassName,
                 'max-h-96',
                 hasError && 'border-transparent bg-negative-soft text-negative',
               )}
             >
               {item.result ? item.result.content || '(empty)' : 'No result yet'}
-            </pre>
+            </CodeBlock>
           </div>
         </div>
       )}
@@ -156,7 +170,7 @@ function ResultRow({ item }: ResultRowProps) {
   return (
     <div
       className={cn(
-        'flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg px-4 py-3 text-body text-fg-muted',
+        'flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg px-4 py-3 text-body text-fg-secondary',
         appearance.className,
       )}
     >

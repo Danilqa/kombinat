@@ -1,19 +1,20 @@
-import { Link, useParams } from 'react-router';
+import { useParams } from 'react-router';
 import { isMatching } from 'ts-pattern';
+import { CodeBlock } from '@/components/code-block';
 import { DetailList, type DetailEntry } from '@/components/detail-list';
 import { Markdown } from '@/components/markdown';
 import { Breadcrumbs, PageTitle, SectionAside, SectionTitle } from '@/components/page-header';
 import { ErrorState, LoadingState } from '@/components/page-states';
 import { RelativeTime } from '@/components/relative-time';
 import { StatusBadge, getTriggerLabel } from '@/components/status-badge';
-import { Transcript, codeBlockClassName } from '@/components/transcript';
+import { Transcript } from '@/components/transcript';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { getRun, getRunTranscript } from '@/lib/api';
 import type { RunRecord, Transcript as RunTranscript } from '@/lib/api';
 import { formatDuration, getRunDurationMs, formatShort } from '@/lib/format';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { usePolledData } from '@/lib/use-polled-data';
-import { cn } from '@/lib/utils';
 
 interface RunWithTranscript {
   run: RunRecord;
@@ -41,7 +42,6 @@ function formatOptionalTime(iso: string | null) {
 
 function getSummaryEntries(run: RunRecord): DetailEntry[] {
   return [
-    { label: 'Status', value: <StatusBadge status={run.status} /> },
     { label: 'Trigger', value: getTriggerLabel(run.trigger) },
     ...(run.scheduledFor
       ? [{ label: 'Scheduled for', value: formatOptionalTime(run.scheduledFor) }]
@@ -69,44 +69,34 @@ function RunView({ run, transcript }: RunViewProps) {
   const hasOutput = Boolean(run.error) || Boolean(run.resultText);
   return (
     <div className="space-y-10">
-      <div className="space-y-6">
-        <header className="flex min-w-0 flex-col items-start gap-1">
-          <PageTitle className="max-w-full font-mono">{run.id}</PageTitle>
-          <Link
-            to={`/routines/${encodeURIComponent(run.routine)}`}
-            className="text-body font-medium text-fg-secondary transition-colors hover:text-fg"
-          >
-            {run.routine}
-          </Link>
-        </header>
-        <Card className="gap-0 py-0">
-          <DetailList entries={getSummaryEntries(run)} />
-          {hasOutput && (
-            <>
-              <Separator />
-              <div className="space-y-4 p-4">
-                {run.error && (
-                  <pre
-                    className={cn(
-                      codeBlockClassName,
-                      'max-h-80 border-transparent bg-negative-soft text-negative',
-                    )}
+      <Card className="gap-0 py-0">
+        <DetailList entries={getSummaryEntries(run)} />
+        {hasOutput && (
+          <>
+            <Separator />
+            <div className="space-y-4 p-4">
+              {run.error && (
+                <div>
+                  <div className="eyebrow mb-2">Error</div>
+                  <CodeBlock
+                    label="Run error"
+                    className="max-h-80 border-transparent bg-negative-soft text-negative"
                   >
                     {run.error}
-                  </pre>
-                )}
-                {run.error && run.resultText && <Separator />}
-                {run.resultText && (
-                  <div>
-                    <div className="eyebrow mb-2">Result</div>
-                    <Markdown source={run.resultText} />
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </Card>
-      </div>
+                  </CodeBlock>
+                </div>
+              )}
+              {run.error && run.resultText && <Separator />}
+              {run.resultText && (
+                <div>
+                  <div className="eyebrow mb-2">Result</div>
+                  <Markdown source={run.resultText} minHeadingLevel={2} />
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </Card>
       <section>
         <SectionTitle aside={<SectionAside>{transcript.eventCount} events</SectionAside>}>
           Transcript
@@ -119,6 +109,7 @@ function RunView({ run, transcript }: RunViewProps) {
 
 export function RunPage() {
   const { routine = '', id = '' } = useParams();
+  useDocumentTitle(`${routine} run ${id}`);
   const { data, error } = usePolledData(
     `run/${routine}/${id}`,
     () => loadRun(routine, id),
@@ -129,11 +120,15 @@ export function RunPage() {
     <div>
       <Breadcrumbs
         crumbs={[
+          { label: 'Runs', to: '/runs' },
           { label: routine, to: `/routines/${encodeURIComponent(routine)}` },
-          { label: id, isMono: true },
         ]}
-        aside={data && <StatusBadge status={data.run.status} />}
       />
+      {/* The title comes from the route, so the page has its heading while loading and on errors too. */}
+      <header className="mb-6 flex max-w-full flex-wrap items-center gap-3">
+        <PageTitle className="max-w-full font-mono">{id}</PageTitle>
+        {data && <StatusBadge status={data.run.status} />}
+      </header>
       {error && <ErrorState message={error} />}
       {!data && !error && <LoadingState />}
       {data && <RunView run={data.run} transcript={data.transcript} />}

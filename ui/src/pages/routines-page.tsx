@@ -1,10 +1,8 @@
 import { Link } from 'react-router';
-import { match } from 'ts-pattern';
-import { Breadcrumbs, SectionAside, SectionTitle } from '@/components/page-header';
+import { PageHeader, SectionAside } from '@/components/page-header';
 import { ErrorState, LoadingState } from '@/components/page-states';
 import { RelativeTime } from '@/components/relative-time';
 import { RunNowButton } from '@/components/run-now-button';
-import { RunsTable } from '@/components/runs-table';
 import { StatusBadge, getSkipReasonLabel } from '@/components/status-badge';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -16,97 +14,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { WeekCalendar } from '@/components/week-calendar';
-import {
-  getRoutines,
-  getRuns,
-  getStatus,
-  type DaemonStatus,
-  type RoutineSummary,
-  type RunRecord,
-} from '@/lib/api';
+import { getRoutines, type RoutineSummary } from '@/lib/api';
+import { useDocumentTitle } from '@/lib/use-document-title';
 import { usePolledData } from '@/lib/use-polled-data';
 import { cn } from '@/lib/utils';
 
-const STALE_TICK_MS = 5 * 60_000;
-
-interface Overview {
-  status: DaemonStatus;
-  routines: RoutineSummary[];
-  runs: RunRecord[];
-}
-
-async function loadOverview(): Promise<Overview> {
-  const [status, routines, runs] = await Promise.all([getStatus(), getRoutines(), getRuns(20)]);
-  return { status, routines, runs };
-}
-
-function getHasActiveRuns(overview: Overview): boolean {
-  return overview.status.running > 0 || overview.routines.some(routine => routine.running);
-}
-
-type DaemonHealth = 'healthy' | 'stale' | 'unreachable';
-
-interface DaemonHealthAppearance {
-  label: string;
-  dotClassName: string;
-}
-
-const daemonHealthAppearances: Record<DaemonHealth, DaemonHealthAppearance> = {
-  healthy: { label: 'Scheduler is ticking', dotClassName: 'bg-positive' },
-  stale: { label: 'Scheduler has not ticked recently', dotClassName: 'bg-warning' },
-  unreachable: { label: 'Daemon is unreachable', dotClassName: 'bg-negative' },
-};
-
-function getIsTickStale(status: DaemonStatus): boolean {
-  if (status.lastTickAt === null) return true;
-  return new Date(status.now).getTime() - new Date(status.lastTickAt).getTime() > STALE_TICK_MS;
-}
-
-function getDaemonHealth(status: DaemonStatus, hasError: boolean): DaemonHealth {
-  return match({ hasError, isStale: getIsTickStale(status) })
-    .with({ hasError: true }, () => 'unreachable' as const)
-    .with({ isStale: true }, () => 'stale' as const)
-    .otherwise(() => 'healthy' as const);
-}
-
-const statusValueClassName = 'text-fg-secondary tabular-nums';
-
-function StatusSeparator() {
-  return (
-    <span aria-hidden="true" className="mx-1.5 text-fg-faint">
-      ·
-    </span>
-  );
-}
-
-interface DaemonStatusLineProps {
-  status: DaemonStatus;
-  hasError: boolean;
-}
-
-function DaemonStatusLine({ status, hasError }: DaemonStatusLineProps) {
-  const health = daemonHealthAppearances[getDaemonHealth(status, hasError)];
-  return (
-    <div className="flex min-w-0 items-center gap-2 text-body-sm text-fg-muted">
-      <span
-        role="img"
-        aria-label={health.label}
-        title={health.label}
-        className={cn('size-1.5 shrink-0 rounded-full', health.dotClassName)}
-      />
-      <p className="min-w-0 truncate">
-        Daemon pid <span className={cn(statusValueClassName, 'font-mono')}>{status.pid}</span>
-        <StatusSeparator />
-        last tick <RelativeTime iso={status.lastTickAt} className={statusValueClassName} />
-        <StatusSeparator />
-        <span className={cn(statusValueClassName, 'font-mono')}>{status.timezone}</span>
-        <StatusSeparator />
-        <span className={statusValueClassName}>{status.running}</span> of{' '}
-        <span className={statusValueClassName}>{status.maxConcurrentRuns}</span> running
-      </p>
-    </div>
-  );
+function getHasRunningRoutine(routines: RoutineSummary[]): boolean {
+  return routines.some(routine => routine.running);
 }
 
 interface LastRunCellProps {
@@ -147,28 +61,31 @@ interface RoutinesTableProps {
 function RoutinesTable({ routines, onStarted }: RoutinesTableProps) {
   if (routines.length === 0)
     return <p className="py-10 text-center text-body text-fg-muted">No routines yet.</p>;
+  // The routine link covers the whole row; the cells with their own controls sit above it.
   return (
     <Table>
       <TableHeader>
         <TableRow>
           <TableHead>Routine</TableHead>
-          <TableHead>Description</TableHead>
+          <TableHead className="max-md:hidden">Description</TableHead>
           <TableHead>Schedule</TableHead>
           <TableHead>Next run</TableHead>
           <TableHead>Agent</TableHead>
           <TableHead>Last run</TableHead>
-          <TableHead className="w-0" />
+          <TableHead className="w-0">
+            <span className="sr-only">Actions</span>
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {routines.map(routine => (
-          <TableRow key={routine.name}>
+          <TableRow key={routine.name} className="relative">
             <TableCell>
               <div className="flex items-center gap-2">
                 <Link
                   to={`/routines/${encodeURIComponent(routine.name)}`}
                   className={cn(
-                    'text-body font-medium underline-offset-4 hover:underline',
+                    "text-body font-medium underline-offset-4 after:absolute after:inset-0 after:content-[''] hover:underline",
                     routine.enabled ? 'text-fg' : 'text-fg-secondary',
                   )}
                 >
@@ -181,7 +98,7 @@ function RoutinesTable({ routines, onStarted }: RoutinesTableProps) {
                 )}
               </div>
             </TableCell>
-            <TableCell className="max-w-56 min-w-36 whitespace-normal text-fg-secondary">
+            <TableCell className="max-w-56 min-w-36 whitespace-normal text-fg-secondary max-md:hidden">
               <div className="line-clamp-2" title={routine.description}>
                 {routine.description}
               </div>
@@ -193,7 +110,7 @@ function RoutinesTable({ routines, onStarted }: RoutinesTableProps) {
               )}
             </TableCell>
             <TableCell className="text-fg-secondary tabular-nums">
-              <RelativeTime iso={routine.nextRunAt} />
+              <RelativeTime iso={routine.nextRunAt} className="relative z-10" />
             </TableCell>
             <TableCell>
               <div
@@ -207,10 +124,10 @@ function RoutinesTable({ routines, onStarted }: RoutinesTableProps) {
                 {routine.effort !== null && ` · effort ${routine.effort}`}
               </div>
             </TableCell>
-            <TableCell>
+            <TableCell className="relative z-10">
               <LastRunCell routine={routine} />
             </TableCell>
-            <TableCell>
+            <TableCell className="relative z-10">
               <RunNowButton
                 routine={routine.name}
                 isRunning={routine.running}
@@ -226,38 +143,22 @@ function RoutinesTable({ routines, onStarted }: RoutinesTableProps) {
 }
 
 export function RoutinesPage() {
-  const { data, error, reload } = usePolledData('overview', loadOverview, getHasActiveRuns);
+  useDocumentTitle('Routines');
+  const { data, error, reload } = usePolledData('routines', getRoutines, getHasRunningRoutine);
 
   return (
     <div>
-      <Breadcrumbs
-        crumbs={[]}
-        aside={data && <DaemonStatusLine status={data.status} hasError={error !== null} />}
+      <PageHeader
+        title="Routines"
+        aside={data && <SectionAside>{data.length} routines</SectionAside>}
       />
-      <h1 className="sr-only">Routines</h1>
-      <div className="space-y-10">
-        <WeekCalendar />
-        {error && <ErrorState message={error} />}
-        {!data && !error && <LoadingState />}
-        {data && (
-          <>
-            <section>
-              <SectionTitle aside={<SectionAside>{data.routines.length} routines</SectionAside>}>
-                Routines
-              </SectionTitle>
-              <Card className="gap-0 py-0">
-                <RoutinesTable routines={data.routines} onStarted={reload} />
-              </Card>
-            </section>
-            <section>
-              <SectionTitle>Recent runs</SectionTitle>
-              <Card className="gap-0 py-0">
-                <RunsTable runs={data.runs} hasRoutineColumn />
-              </Card>
-            </section>
-          </>
-        )}
-      </div>
+      {error && <ErrorState message={error} />}
+      {!data && !error && <LoadingState />}
+      {data && (
+        <Card className="gap-0 py-0">
+          <RoutinesTable routines={data} onStarted={reload} />
+        </Card>
+      )}
     </div>
   );
 }

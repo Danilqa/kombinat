@@ -21,12 +21,18 @@ export function RunNowButton({
 }: RunNowButtonProps) {
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [announcement, setAnnouncement] = useState('');
+  // aria-disabled instead of disabled keeps keyboard focus on the button after it is pressed.
+  const isUnavailable = isRunning || isStarting;
 
   async function startRun() {
+    if (isUnavailable) return;
     setIsStarting(true);
     setError(null);
+    setAnnouncement('');
     try {
       await startRoutineRun(routine);
+      setAnnouncement(`Started a run of ${routine}`);
       onStarted();
     } catch (err) {
       setError(getErrorMessage(err));
@@ -37,19 +43,23 @@ export function RunNowButton({
 
   return (
     <div className="flex items-center justify-end gap-2">
+      <span role="status" className="sr-only">
+        {announcement}
+      </span>
       {error && (
-        <span className="max-w-56 truncate text-body-sm text-negative" title={error}>
+        <span role="alert" className="max-w-56 truncate text-body-sm text-negative" title={error}>
           {error}
         </span>
       )}
       <Button
         variant={variant}
         size="small"
-        disabled={isRunning || isStarting}
+        aria-disabled={isUnavailable || undefined}
         onClick={() => void startRun()}
       >
-        <Play className="size-3.5 fill-current" />
+        <Play aria-hidden="true" className="size-3.5 fill-current" />
         {isRunning ? 'Running' : 'Run now'}
+        <span className="sr-only"> {routine}</span>
       </Button>
     </div>
   );
