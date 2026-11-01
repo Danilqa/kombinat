@@ -9,7 +9,7 @@ const plistPath = () =>
   path.join(os.homedir(), 'Library', 'LaunchAgents', `${config.launchdLabel}.plist`);
 const domain = () => `gui/${os.userInfo().uid}`;
 
-const PASSED_ENV = [/^PAPA_CARLO_/, /^CLAUDE_BIN$/, /^CODEX_BIN$/];
+const PASSED_ENV = [/^KOMBINAT_/, /^CLAUDE_BIN$/, /^CODEX_BIN$/];
 
 function escapeXml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -42,7 +42,7 @@ export function renderPlist(): string {
     HOME: os.homedir(),
     LANG: process.env['LANG'] ?? 'en_US.UTF-8',
     ...Object.fromEntries(passed),
-    PAPA_CARLO_MANAGED: '1',
+    KOMBINAT_MANAGED: '1',
   };
   const envXml = Object.entries(env)
     .map(

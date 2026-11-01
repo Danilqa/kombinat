@@ -4,11 +4,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 
-const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'papa-carlo-test-'));
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kombinat-test-'));
 const routinesDir = path.join(tmp, 'routines');
 const stateDir = path.join(tmp, 'state');
-process.env['PAPA_CARLO_ROUTINES_DIR'] = routinesDir;
-process.env['PAPA_CARLO_STATE_DIR'] = stateDir;
+process.env['KOMBINAT_ROUTINES_DIR'] = routinesDir;
+process.env['KOMBINAT_STATE_DIR'] = stateDir;
 fs.mkdirSync(routinesDir);
 
 const { tick } = await import('./scheduler');

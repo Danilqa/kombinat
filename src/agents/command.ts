@@ -21,9 +21,9 @@ export const commandAgent: Agent = {
       args: ['-c', routine.command ?? ''],
       env: {
         ...process.env,
-        PAPA_CARLO_ROUTINE: routine.name,
-        PAPA_CARLO_RUN_ID: runId,
-        PAPA_CARLO_TRIGGER: trigger,
+        KOMBINAT_ROUTINE: routine.name,
+        KOMBINAT_RUN_ID: runId,
+        KOMBINAT_TRIGGER: trigger,
       },
       input: `${routine.prompt}\n`,
     };

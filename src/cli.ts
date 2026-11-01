@@ -29,7 +29,7 @@ import { ensureStateDirs, listRuns, readSchedulerState } from './state';
 import type { RunTrigger } from './state';
 import { runTui } from './tui';
 
-const USAGE = `papa-carlo
+const USAGE = `kombinat
 
   tui                       keyboard dashboard in the terminal (works over ssh), talks to the
                             running daemon
@@ -111,7 +111,7 @@ function serve(options: CliOptions): void {
   ensureStateDirs();
   const managed = config.managed ? ', managed by launchd' : '';
   log(
-    `papa-carlo serve pid ${process.pid}, routines ${config.routinesDir}, state ${config.stateDir}${managed}`,
+    `kombinat serve pid ${process.pid}, routines ${config.routinesDir}, state ${config.stateDir}${managed}`,
   );
   installDepsIfStale(log);
   buildUiIfStale(log);

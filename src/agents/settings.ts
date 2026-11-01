@@ -31,7 +31,7 @@ export function withoutEnv(names: readonly string[]): NodeJS.ProcessEnv {
 
 export function getUnattendedNote({ routine, runId, trigger }: RunContext): string {
   return [
-    `This session was started unattended by the papa-carlo scheduler for routine "${routine.name}" (run ${runId}, trigger ${trigger}).`,
+    `This session was started unattended by the kombinat scheduler for routine "${routine.name}" (run ${runId}, trigger ${trigger}).`,
     'Nobody is watching and nobody can answer questions, so make sensible calls, record them, and finish on your own.',
   ].join(' ');
 }

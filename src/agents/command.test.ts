@@ -19,7 +19,7 @@ test('pipes the prompt into a shell command', () => {
   assert.equal(command, '/bin/sh');
   assert.deepEqual(args, ['-c', 'gemini --yolo']);
   assert.equal(input, 'Hello\n');
-  assert.equal(env['PAPA_CARLO_RUN_ID'], 'r1');
+  assert.equal(env['KOMBINAT_RUN_ID'], 'r1');
 });
 
 test('collects the output lines as the result and the transcript', () => {

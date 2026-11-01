@@ -162,7 +162,7 @@ export function RoutinesPage() {
   return (
     <div className="space-y-10">
       <header className="space-y-2">
-        <PageTitle>Papa Carlo</PageTitle>
+        <PageTitle>Kombinat</PageTitle>
         {data && <DaemonStatusLine status={data.status} />}
       </header>
       <WeekCalendar />

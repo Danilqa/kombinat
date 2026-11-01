@@ -48,7 +48,7 @@ function runBeforeHook({ command, cwd, env, logFile }: BeforeHook): string | nul
     cwd,
     env: {
       ...env,
-      PAPA_CARLO_REPO: config.repoRoot,
+      KOMBINAT_REPO: config.repoRoot,
       PATH: `${path.join(config.repoRoot, 'scripts')}:${env['PATH'] ?? ''}`,
     },
     timeout: BEFORE_HOOK_TIMEOUT_MS,

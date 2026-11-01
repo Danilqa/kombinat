@@ -125,6 +125,6 @@ test('passes the routine settings to codex exec', () => {
     'model_reasoning_effort="high"',
     '-',
   ]);
-  assert.match(input, /unattended by the papa-carlo scheduler[\s\S]*\n\nHello$/);
+  assert.match(input, /unattended by the kombinat scheduler[\s\S]*\n\nHello$/);
   assert.equal(env['OPENAI_API_KEY'], undefined);
 });

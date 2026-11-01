@@ -1,4 +1,4 @@
-# Papa Carlo
+# Kombinat
 
 Coding agent routines defined in this repo instead of a desktop UI. They run on your Mac under launchd with Claude Code, Codex or any other CLI agent, using your normal subscription login.
 
@@ -19,7 +19,7 @@ Times are Europe/London. Each row is a file in [`routines/`](routines/), the tab
 - `routines/*.md`: one file per routine. YAML frontmatter for the schedule and settings, markdown body is the prompt.
 - `pnpm cli serve`: a small daemon. Every 30s it checks which routines are due and starts the routine's agent for each (`claude -p`, `codex exec` or your own command). It also serves a dashboard at http://localhost:7433.
 - launchd keeps the daemon alive and restarts it after reboot or login. Runs only happen while the Mac is awake and you are logged in (the keychain has to be unlocked).
-- Run logs and history live in `~/.papa-carlo/` (outside the repo).
+- Run logs and history live in `~/.kombinat/` (outside the repo).
 
 No API key anywhere. `claude -p` and `codex exec` read the same login you use in the terminal. `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` and `CODEX_API_KEY` are dropped from the run env on purpose.
 
@@ -36,7 +36,7 @@ pnpm ui:build
 pnpm cli install
 ```
 
-That writes `~/Library/LaunchAgents/com.papa-carlo.daemon.plist` and starts the daemon. Open http://localhost:7433.
+That writes `~/Library/LaunchAgents/com.kombinat.daemon.plist` and starts the daemon. Open http://localhost:7433.
 
 Handy commands:
 
@@ -64,7 +64,7 @@ After a pull (or your own edits):
 - a change under `ui/src` rebuilds the dashboard in place
 - a change to the lockfile runs `pnpm install`, then restarts
 
-A run in progress is a separate process, so a restart never interrupts it. `PAPA_CARLO_PULL_MINUTES=0` turns the auto-pull off, `PAPA_CARLO_PULL_BRANCH` changes the branch.
+A run in progress is a separate process, so a restart never interrupts it. `KOMBINAT_PULL_MINUTES=0` turns the auto-pull off, `KOMBINAT_PULL_BRANCH` changes the branch.
 
 ## Hacking on it
 
@@ -118,13 +118,13 @@ Edits take effect on the next tick, no restart needed. Write prompts as if nobod
 
 - `claude` runs `claude -p` with `--permission-prompts none`, so anything that would need a human is denied, never blocked.
 - `codex` runs `codex exec --json`, and `permissionMode` is its sandbox. It never asks for approval in `exec`.
-- `command` runs any other CLI agent: `command: gemini --yolo` is started with `/bin/sh -c` in `cwd`, gets the prompt on stdin, and its output becomes the result. `PAPA_CARLO_ROUTINE`, `PAPA_CARLO_RUN_ID` and `PAPA_CARLO_TRIGGER` are set for it.
+- `command` runs any other CLI agent: `command: gemini --yolo` is started with `/bin/sh -c` in `cwd`, gets the prompt on stdin, and its output becomes the result. `KOMBINAT_ROUTINE`, `KOMBINAT_RUN_ID` and `KOMBINAT_TRIGGER` are set for it.
 
 A setting the agent does not support fails validation instead of being ignored.
 
 ## Missed runs
 
-If the Mac was asleep, the daemon runs each routine once for the latest missed slot (up to 7 days back) and marks it `catch_up`. A routine never overlaps itself: if it is still running when the next slot comes, that slot is skipped and shown on the dashboard. At most 3 runs go in parallel (`PAPA_CARLO_MAX_CONCURRENT`).
+If the Mac was asleep, the daemon runs each routine once for the latest missed slot (up to 7 days back) and marks it `catch_up`. A routine never overlaps itself: if it is still running when the next slot comes, that slot is skipped and shown on the dashboard. At most 3 runs go in parallel (`KOMBINAT_MAX_CONCURRENT`).
 
 ## Dashboard
 
@@ -132,7 +132,7 @@ The week calendar at the top shows what ran and what is planned. Past blocks are
 
 `pnpm ui:build` puts the static build into `ui/dist`, which the daemon serves. The daemon does this itself when the sources are newer than the build.
 
-Each run keeps the agent's full output in `~/.papa-carlo/runs/<routine>/<run-id>.jsonl`, and the dashboard turns it into a transcript with every tool call. The session id is stored too, so the run page shows how to pick it up in your terminal (`claude --resume <session-id>` or `codex resume <session-id>`).
+Each run keeps the agent's full output in `~/.kombinat/runs/<routine>/<run-id>.jsonl`, and the dashboard turns it into a transcript with every tool call. The session id is stored too, so the run page shows how to pick it up in your terminal (`claude --resume <session-id>` or `codex resume <session-id>`).
 
 ## Terminal UI
 
@@ -157,17 +157,17 @@ It needs a terminal of at least 60x16 and looks best at 140 columns or more.
 
 ## Env
 
-| Variable                    | Default               | What                                   |
-| --------------------------- | --------------------- | -------------------------------------- |
-| `PAPA_CARLO_PORT`           | `7433`                | dashboard port                         |
-| `PAPA_CARLO_STATE_DIR`      | `~/.papa-carlo`       | logs and history                       |
-| `PAPA_CARLO_ROUTINES_DIR`   | `./routines`          | routine files                          |
-| `PAPA_CARLO_MAX_CONCURRENT` | `3`                   | parallel runs                          |
-| `PAPA_CARLO_TICK_SECONDS`   | `30`                  | scheduler interval                     |
-| `PAPA_CARLO_PULL_MINUTES`   | `5`                   | auto `git pull` interval, 0 to disable |
-| `PAPA_CARLO_PULL_BRANCH`    | `main`                | branch the daemon pulls and stays on   |
-| `CLAUDE_BIN`                | `~/.local/bin/claude` | claude binary                          |
-| `CODEX_BIN`                 | `codex`               | codex binary, looked up on the `PATH`  |
+| Variable                  | Default               | What                                   |
+| ------------------------- | --------------------- | -------------------------------------- |
+| `KOMBINAT_PORT`           | `7433`                | dashboard port                         |
+| `KOMBINAT_STATE_DIR`      | `~/.kombinat`         | logs and history                       |
+| `KOMBINAT_ROUTINES_DIR`   | `./routines`          | routine files                          |
+| `KOMBINAT_MAX_CONCURRENT` | `3`                   | parallel runs                          |
+| `KOMBINAT_TICK_SECONDS`   | `30`                  | scheduler interval                     |
+| `KOMBINAT_PULL_MINUTES`   | `5`                   | auto `git pull` interval, 0 to disable |
+| `KOMBINAT_PULL_BRANCH`    | `main`                | branch the daemon pulls and stays on   |
+| `CLAUDE_BIN`              | `~/.local/bin/claude` | claude binary                          |
+| `CODEX_BIN`               | `codex`               | codex binary, looked up on the `PATH`  |
 
 Set them before `pnpm cli install`, they get baked into the plist.
 

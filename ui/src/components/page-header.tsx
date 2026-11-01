@@ -8,7 +8,7 @@ export function Breadcrumbs({ crumbs }: { crumbs: Crumb[] }) {
   return (
     <nav className="mb-4 flex items-center gap-2 text-paragraph-14 text-grey-60">
       <Link to="/" className="hover:text-black hover:underline">
-        Papa Carlo
+        Kombinat
       </Link>
       {crumbs.map(crumb => (
         <span key={crumb.label} className="flex items-center gap-2">
