@@ -5,19 +5,19 @@ import { getErrorMessage } from '@shared/errors';
 const ACTIVE_INTERVAL_MS = 5000;
 const IDLE_INTERVAL_MS = 15000;
 
-type PollIntervals = {
+interface PollIntervals {
   activeMs: number;
   idleMs: number;
-};
+}
 
 const defaultIntervals: PollIntervals = { activeMs: ACTIVE_INTERVAL_MS, idleMs: IDLE_INTERVAL_MS };
 
-type PolledData<T> = {
+interface PolledData<T> {
   data: T | null;
   error: string | null;
   isLoading: boolean;
   reload: () => void;
-};
+}
 
 export function usePolledData<T>(
   key: string,

@@ -2,7 +2,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { formatAbsolute, formatRelative } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
-export function RelativeTime({ iso, className }: { iso: string | null; className?: string }) {
+interface RelativeTimeProps {
+  iso: string | null;
+  className?: string;
+}
+
+export function RelativeTime({ iso, className }: RelativeTimeProps) {
   if (!iso) return <span className={cn('text-muted-foreground', className)}>-</span>;
   return (
     <Tooltip>

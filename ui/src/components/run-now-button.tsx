@@ -4,11 +4,11 @@ import { Button } from '@/components/ui/button';
 import { startRoutineRun } from '@/lib/api';
 import { getErrorMessage } from '@shared/errors';
 
-type RunNowButtonProps = {
+interface RunNowButtonProps {
   routine: string;
   isRunning: boolean;
   onStarted: () => void;
-};
+}
 
 export function RunNowButton({ routine, isRunning, onStarted }: RunNowButtonProps) {
   const [isStarting, setIsStarting] = useState(false);

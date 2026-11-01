@@ -39,7 +39,12 @@ function markScheduled(state: SchedulerState, routine: Routine, scheduledFor: Da
   state.routines[routine.name] = entry;
 }
 
-export function tick(now = new Date()): { started: string[]; skipped: string[] } {
+export interface TickResult {
+  started: string[];
+  skipped: string[];
+}
+
+export function tick(now = new Date()): TickResult {
   const state = loadState(now);
   const started: string[] = [];
   const skipped: string[] = [];

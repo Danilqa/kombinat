@@ -6,13 +6,12 @@ import { cn } from '@/lib/utils';
 
 const remarkPlugins = [remarkGfm, remarkBreaks];
 
-export const Markdown = memo(function Markdown({
-  source,
-  className,
-}: {
+interface MarkdownProps {
   source: string;
   className?: string;
-}) {
+}
+
+export const Markdown = memo(function Markdown({ source, className }: MarkdownProps) {
   return (
     <div
       className={cn(

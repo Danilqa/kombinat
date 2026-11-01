@@ -1,3 +1,5 @@
+import type { RunRecord } from '@/lib/api';
+
 const absoluteFormatter = new Intl.DateTimeFormat('en-GB', {
   weekday: 'short',
   day: 'numeric',
@@ -84,7 +86,7 @@ export function formatDuration(ms: number | null): string {
 }
 
 export function getRunDurationMs(
-  run: { startedAt: string; endedAt: string | null },
+  run: Pick<RunRecord, 'startedAt' | 'endedAt'>,
   now: number = Date.now(),
 ): number {
   const end = run.endedAt ? new Date(run.endedAt).getTime() : now;

@@ -1,7 +1,11 @@
 import { stripVTControlCharacters } from 'node:util';
 
 // `style` holds SGR parameters ("1;32" = bold green), `link` becomes an OSC 8 hyperlink.
-export type Span = { text: string; style?: string; link?: string };
+export interface Span {
+  text: string;
+  style?: string;
+  link?: string;
+}
 export type Line = Span[];
 
 export const S = {

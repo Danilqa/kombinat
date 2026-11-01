@@ -55,7 +55,11 @@ export function getTriggerLabel(trigger: RunTrigger): string {
     .exhaustive();
 }
 
-export function StatusBadge({ status }: { status: RunStatus }) {
+interface StatusBadgeProps {
+  status: RunStatus;
+}
+
+export function StatusBadge({ status }: StatusBadgeProps) {
   const appearance = getStatusAppearance(status);
   return (
     <Badge variant={appearance.variant}>

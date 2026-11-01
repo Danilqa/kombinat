@@ -61,7 +61,9 @@ function getSummaryEntries(run: RunRecord): DetailEntry[] {
   ];
 }
 
-function RunView({ run, transcript }: RunWithTranscript) {
+interface RunViewProps extends RunWithTranscript {}
+
+function RunView({ run, transcript }: RunViewProps) {
   const isRunning = isMatching({ status: 'running' }, run);
   return (
     <div className="space-y-6">

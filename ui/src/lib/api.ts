@@ -22,6 +22,9 @@ import { readResponse } from '@shared/http';
 export type {
   CalendarEntry,
   DaemonStatus,
+  HookItem,
+  InitItem,
+  ResultItem,
   RoutineDetail,
   RoutineSummary,
   RunRecord,
@@ -29,6 +32,8 @@ export type {
   RunTrigger,
   Skip,
   SkipReason,
+  TextItem,
+  ToolItem,
   Transcript,
   TranscriptItem,
 } from '@shared/contract';

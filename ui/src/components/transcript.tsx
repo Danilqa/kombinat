@@ -3,13 +3,15 @@ import { memo, useState } from 'react';
 import { match } from 'ts-pattern';
 
 import { Markdown } from '@/components/markdown';
-import type { TranscriptItem } from '@/lib/api';
+import type { HookItem, InitItem, ResultItem, TextItem, ToolItem, TranscriptItem } from '@/lib/api';
 import { formatDuration } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
-type ItemOf<K extends TranscriptItem['kind']> = Extract<TranscriptItem, { kind: K }>;
+interface HookRowProps {
+  item: HookItem;
+}
 
-function HookRow({ item }: { item: ItemOf<'hook'> }) {
+function HookRow({ item }: HookRowProps) {
   return (
     <div className="space-y-2 text-paragraph-12 text-grey-60">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -28,7 +30,11 @@ function HookRow({ item }: { item: ItemOf<'hook'> }) {
   );
 }
 
-function InitRow({ item }: { item: ItemOf<'init'> }) {
+interface InitRowProps {
+  item: InitItem;
+}
+
+function InitRow({ item }: InitRowProps) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-paragraph-12 text-grey-60">
       <span className="text-title-14 text-black">Session started</span>
@@ -40,17 +46,20 @@ function InitRow({ item }: { item: ItemOf<'init'> }) {
   );
 }
 
-function TextRow({ item }: { item: ItemOf<'text'> }) {
+interface TextRowProps {
+  item: TextItem;
+}
+
+function TextRow({ item }: TextRowProps) {
   return <Markdown source={item.text} />;
 }
 
-const ToolRow = memo(function ToolRow({
-  item,
-  isPending,
-}: {
-  item: ItemOf<'tool'>;
+interface ToolRowProps {
+  item: ToolItem;
   isPending: boolean;
-}) {
+}
+
+const ToolRow = memo(function ToolRow({ item, isPending }: ToolRowProps) {
   const [isOpen, setIsOpen] = useState(false);
   const hasError = item.result?.isError === true;
   return (
@@ -108,13 +117,13 @@ const ToolRow = memo(function ToolRow({
   );
 });
 
-type ResultAppearance = {
+interface ResultAppearance {
   label: string;
   className: string;
   labelClassName: string;
   dotClassName: string;
   icon: typeof Check;
-};
+}
 
 function getResultAppearance(isError: boolean): ResultAppearance {
   return match(isError)
@@ -135,7 +144,11 @@ function getResultAppearance(isError: boolean): ResultAppearance {
     .exhaustive();
 }
 
-function ResultRow({ item }: { item: ItemOf<'result'> }) {
+interface ResultRowProps {
+  item: ResultItem;
+}
+
+function ResultRow({ item }: ResultRowProps) {
   const appearance = getResultAppearance(item.isError);
   const Icon = appearance.icon;
   return (
@@ -178,7 +191,12 @@ function getIsSubagent(item: TranscriptItem): boolean {
   return 'isSubagent' in item && item.isSubagent;
 }
 
-export function Transcript({ items, isRunning }: { items: TranscriptItem[]; isRunning: boolean }) {
+interface TranscriptProps {
+  items: TranscriptItem[];
+  isRunning: boolean;
+}
+
+export function Transcript({ items, isRunning }: TranscriptProps) {
   if (items.length === 0)
     return (
       <p className="py-8 text-center text-paragraph-14 text-grey-60">

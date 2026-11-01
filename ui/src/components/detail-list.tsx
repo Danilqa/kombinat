@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
-export type DetailEntry = {
+export interface DetailEntry {
   label: string;
   value: ReactNode;
   isMono?: boolean;
   span?: DetailSpan;
-};
+}
 
 type DetailSpan = 'single' | 'wide' | 'full';
 
@@ -32,13 +32,12 @@ const labelClassNames: Record<DetailLayout, string> = {
   grid: 'eyebrow',
 };
 
-export function DetailList({
-  entries,
-  layout = 'rows',
-}: {
+interface DetailListProps {
   entries: DetailEntry[];
   layout?: DetailLayout;
-}) {
+}
+
+export function DetailList({ entries, layout = 'rows' }: DetailListProps) {
   return (
     <dl className={listClassNames[layout]}>
       {entries.map(entry => (

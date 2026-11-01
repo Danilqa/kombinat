@@ -25,11 +25,11 @@ import {
 } from '@/lib/api';
 import { usePolledData } from '@/lib/use-polled-data';
 
-type Overview = {
+interface Overview {
   status: DaemonStatus;
   routines: RoutineSummary[];
   runs: RunRecord[];
-};
+}
 
 async function loadOverview(): Promise<Overview> {
   const [status, routines, runs] = await Promise.all([getStatus(), getRoutines(), getRuns(20)]);
@@ -40,7 +40,11 @@ function getHasActiveRuns(overview: Overview): boolean {
   return overview.status.running > 0 || overview.routines.some(routine => routine.running);
 }
 
-function DaemonStatusLine({ status }: { status: DaemonStatus }) {
+interface DaemonStatusLineProps {
+  status: DaemonStatus;
+}
+
+function DaemonStatusLine({ status }: DaemonStatusLineProps) {
   return (
     <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1 text-paragraph-14 text-grey-60">
       <span>
@@ -58,7 +62,11 @@ function DaemonStatusLine({ status }: { status: DaemonStatus }) {
   );
 }
 
-function LastRunCell({ routine }: { routine: RoutineSummary }) {
+interface LastRunCellProps {
+  routine: RoutineSummary;
+}
+
+function LastRunCell({ routine }: LastRunCellProps) {
   const { lastRun, lastSkip } = routine;
   return (
     <div className="space-y-1">
@@ -84,13 +92,12 @@ function LastRunCell({ routine }: { routine: RoutineSummary }) {
   );
 }
 
-function RoutinesTable({
-  routines,
-  onStarted,
-}: {
+interface RoutinesTableProps {
   routines: RoutineSummary[];
   onStarted: () => void;
-}) {
+}
+
+function RoutinesTable({ routines, onStarted }: RoutinesTableProps) {
   return (
     <Table>
       <TableHeader>

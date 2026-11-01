@@ -397,14 +397,14 @@ function skipsTable(skips: Skip[], now: number): ContentLine[] {
   return toContent([header, ...rows]);
 }
 
-type RoutinePageInput = {
+interface RoutinePageInput {
   summary: RoutineSummary;
   detail: RoutineDetail | undefined;
   tab: RoutineTab;
   width: number;
   now: number;
   error: string | undefined;
-};
+}
 
 export function routinePage({
   summary,

@@ -80,6 +80,8 @@ This stops the launchd daemon, runs the scheduler and API from your checkout wit
 - TypeScript is strict, including `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`.
 - ESLint (`pnpm lint`) runs typescript-eslint's `strictTypeChecked` and bans `any`, every type assertion except `as const` (so no `as unknown as`), non-null assertions, `@ts-` comments, `switch`, `enum` and `===` on string-literal unions (use `ts-pattern`). Inline `eslint-disable` comments are ignored.
 - Data from outside the process (run records on disk, agent output, API responses) is parsed with the zod schemas in `src/shared/contract.ts`, which the daemon, the TUI and the web UI share (`@shared/*` in the UI).
+- No inline object types: declare a named `interface` (`interface` over `type` for object shapes). Interfaces are PascalCase, never just `Props` or `I`-prefixed.
+- A component's props are a named `<ComponentName>Props` interface: `function RunNowButton(props: RunNowButtonProps)`. A small local rule in `eslint.config.js` checks the name.
 - File names are kebab-case, React components included.
 - `tsc` is TypeScript 7 (the `typescript7` package). typescript-eslint still needs the TypeScript 6 compiler API, so `typescript` is an alias of `@typescript/typescript6`.
 

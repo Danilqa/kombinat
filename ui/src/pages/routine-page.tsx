@@ -29,7 +29,12 @@ function getIsRoutineRunning(routine: RoutineDetail): boolean {
 
 type EnabledState = 'enabled' | 'disabled';
 
-const enabledBadges: Record<EnabledState, { variant: BadgeVariant; dotClassName: string }> = {
+interface EnabledBadge {
+  variant: BadgeVariant;
+  dotClassName: string;
+}
+
+const enabledBadges: Record<EnabledState, EnabledBadge> = {
   enabled: { variant: 'positive', dotClassName: 'bg-dark-green' },
   disabled: { variant: 'ghost', dotClassName: 'bg-grey-40' },
 };
@@ -41,7 +46,11 @@ function getEnabledState(routine: RoutineDetail): EnabledState {
     .exhaustive();
 }
 
-function RoutineBadges({ routine }: { routine: RoutineDetail }) {
+interface RoutineBadgesProps {
+  routine: RoutineDetail;
+}
+
+function RoutineBadges({ routine }: RoutineBadgesProps) {
   const enabledState = getEnabledState(routine);
   const enabledBadge = enabledBadges[enabledState];
   return (
@@ -70,7 +79,11 @@ function RoutineBadges({ routine }: { routine: RoutineDetail }) {
   );
 }
 
-function SkipsTable({ skips }: { skips: Skip[] }) {
+interface SkipsTableProps {
+  skips: Skip[];
+}
+
+function SkipsTable({ skips }: SkipsTableProps) {
   return (
     <Table>
       <TableHeader>
@@ -97,7 +110,12 @@ function SkipsTable({ skips }: { skips: Skip[] }) {
   );
 }
 
-function RoutineView({ routine, onStarted }: { routine: RoutineDetail; onStarted: () => void }) {
+interface RoutineViewProps {
+  routine: RoutineDetail;
+  onStarted: () => void;
+}
+
+function RoutineView({ routine, onStarted }: RoutineViewProps) {
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-start justify-between gap-4">

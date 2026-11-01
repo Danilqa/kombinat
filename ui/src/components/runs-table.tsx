@@ -12,10 +12,10 @@ import {
 import type { RunRecord } from '@/lib/api';
 import { formatDuration, getRunDurationMs } from '@/lib/format';
 
-type RunsTableProps = {
+interface RunsTableProps {
   runs: RunRecord[];
   hasRoutineColumn: boolean;
-};
+}
 
 export function RunsTable({ runs, hasRoutineColumn }: RunsTableProps) {
   if (runs.length === 0)

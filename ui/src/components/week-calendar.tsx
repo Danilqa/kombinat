@@ -29,10 +29,10 @@ const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
 
 type BlockVariant = 'planned' | 'plannedDefault' | RunStatus;
 
-type BlockStyle = {
+interface BlockStyle {
   className: string;
   label: string;
-};
+}
 
 const blockStyles: Record<BlockVariant, BlockStyle> = {
   planned: { className: 'border border-grey-20 bg-white hover:border-grey-40', label: 'planned' },
@@ -66,10 +66,10 @@ const blockStyles: Record<BlockVariant, BlockStyle> = {
   },
 };
 
-type LegendItem = {
+interface LegendItem {
   label: string;
   swatchClassName: string;
-};
+}
 
 const legendItems: LegendItem[] = [
   { label: 'Planned', swatchClassName: 'border border-grey-20 bg-white' },
@@ -174,13 +174,12 @@ function getDayTone(isToday: boolean): DayTone {
     .exhaustive();
 }
 
-function CalendarBlock({
-  positioned,
-  overlapLabel,
-}: {
+interface CalendarBlockProps {
   positioned: PositionedEntry<CalendarEntry>;
   overlapLabel: string | null;
-}) {
+}
+
+function CalendarBlock({ positioned, overlapLabel }: CalendarBlockProps) {
   const { entry, top, height, left, width } = positioned;
   const style = blockStyles[getBlockVariant(entry)];
   const hasTimeLabel = height >= MIN_TIME_LABEL_HEIGHT;
@@ -223,7 +222,12 @@ function CalendarBlock({
   );
 }
 
-function CurrentTimeLine({ now, dayStart }: { now: Date; dayStart: Date }) {
+interface CurrentTimeLineProps {
+  now: Date;
+  dayStart: Date;
+}
+
+function CurrentTimeLine({ now, dayStart }: CurrentTimeLineProps) {
   return (
     <div
       aria-hidden
@@ -235,7 +239,12 @@ function CurrentTimeLine({ now, dayStart }: { now: Date; dayStart: Date }) {
   );
 }
 
-function DayHeader({ day, isToday }: { day: Date; isToday: boolean }) {
+interface DayHeaderProps {
+  day: Date;
+  isToday: boolean;
+}
+
+function DayHeader({ day, isToday }: DayHeaderProps) {
   return (
     <div className="flex flex-col items-center gap-1 py-2.5">
       <span className={cn('text-label-13 uppercase', dayHeaderTextClassNames[getDayTone(isToday)])}>
@@ -253,19 +262,15 @@ function DayHeader({ day, isToday }: { day: Date; isToday: boolean }) {
   );
 }
 
-function DayColumn({
-  day,
-  entries,
-  now,
-  isToday,
-  routinesById,
-}: {
+interface DayColumnProps {
   day: Date;
   entries: CalendarEntry[];
   now: Date;
   isToday: boolean;
   routinesById: Map<string, string>;
-}) {
+}
+
+function DayColumn({ day, entries, now, isToday, routinesById }: DayColumnProps) {
   const positioned = useMemo(() => layoutDay(entries, day), [entries, day]);
   const isWeekend = day.getDay() === 0 || day.getDay() === 6;
   return (
@@ -294,7 +299,11 @@ function formatOverlapCount(count: number): string {
     .otherwise(total => `${total} overlaps this week`);
 }
 
-function OverlapChip({ count }: { count: number }) {
+interface OverlapChipProps {
+  count: number;
+}
+
+function OverlapChip({ count }: OverlapChipProps) {
   return match(count > 0)
     .with(true, () => <Badge variant="negative">{formatOverlapCount(count)}</Badge>)
     .with(false, () => <Badge variant="neutral">no overlaps</Badge>)

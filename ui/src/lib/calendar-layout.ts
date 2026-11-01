@@ -4,27 +4,27 @@ export const MIN_BLOCK_HEIGHT = 14;
 
 const HOUR_MS = 3_600_000;
 
-export type TimedEntry = {
+export interface TimedEntry {
   id: string;
   start: string;
   end: string;
   overlaps: string[];
-};
+}
 
-export type PositionedEntry<T extends TimedEntry> = {
+export interface PositionedEntry<T extends TimedEntry> {
   entry: T;
   top: number;
   height: number;
   left: number;
   width: number;
-};
+}
 
-type Placement<T extends TimedEntry> = {
+interface Placement<T extends TimedEntry> {
   entry: T;
   top: number;
   height: number;
   column: number;
-};
+}
 
 export function addDays(date: Date, days: number): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);

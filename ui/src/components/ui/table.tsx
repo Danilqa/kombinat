@@ -1,7 +1,9 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 
-function Table({ className, ...props }: React.ComponentProps<'table'>) {
+interface TableProps extends React.ComponentProps<'table'> {}
+
+function Table({ className, ...props }: TableProps) {
   return (
     <div data-slot="table-container" className="relative w-full overflow-x-auto px-4 pt-2 pb-2">
       <table
@@ -13,7 +15,9 @@ function Table({ className, ...props }: React.ComponentProps<'table'>) {
   );
 }
 
-function TableHeader({ className, ...props }: React.ComponentProps<'thead'>) {
+interface TableHeaderProps extends React.ComponentProps<'thead'> {}
+
+function TableHeader({ className, ...props }: TableHeaderProps) {
   return (
     <thead
       data-slot="table-header"
@@ -23,7 +27,9 @@ function TableHeader({ className, ...props }: React.ComponentProps<'thead'>) {
   );
 }
 
-function TableBody({ className, ...props }: React.ComponentProps<'tbody'>) {
+interface TableBodyProps extends React.ComponentProps<'tbody'> {}
+
+function TableBody({ className, ...props }: TableBodyProps) {
   return (
     <tbody
       data-slot="table-body"
@@ -33,7 +39,9 @@ function TableBody({ className, ...props }: React.ComponentProps<'tbody'>) {
   );
 }
 
-function TableFooter({ className, ...props }: React.ComponentProps<'tfoot'>) {
+interface TableFooterProps extends React.ComponentProps<'tfoot'> {}
+
+function TableFooter({ className, ...props }: TableFooterProps) {
   return (
     <tfoot
       data-slot="table-footer"
@@ -43,7 +51,9 @@ function TableFooter({ className, ...props }: React.ComponentProps<'tfoot'>) {
   );
 }
 
-function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
+interface TableRowProps extends React.ComponentProps<'tr'> {}
+
+function TableRow({ className, ...props }: TableRowProps) {
   return (
     <tr
       data-slot="table-row"
@@ -56,7 +66,9 @@ function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
   );
 }
 
-function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
+interface TableHeadProps extends React.ComponentProps<'th'> {}
+
+function TableHead({ className, ...props }: TableHeadProps) {
   return (
     <th
       data-slot="table-head"
@@ -69,7 +81,9 @@ function TableHead({ className, ...props }: React.ComponentProps<'th'>) {
   );
 }
 
-function TableCell({ className, ...props }: React.ComponentProps<'td'>) {
+interface TableCellProps extends React.ComponentProps<'td'> {}
+
+function TableCell({ className, ...props }: TableCellProps) {
   return (
     <td
       data-slot="table-cell"
@@ -82,7 +96,9 @@ function TableCell({ className, ...props }: React.ComponentProps<'td'>) {
   );
 }
 
-function TableCaption({ className, ...props }: React.ComponentProps<'caption'>) {
+interface TableCaptionProps extends React.ComponentProps<'caption'> {}
+
+function TableCaption({ className, ...props }: TableCaptionProps) {
   return (
     <caption
       data-slot="table-caption"

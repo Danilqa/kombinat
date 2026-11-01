@@ -115,10 +115,10 @@ function runGit(args: string[]): string {
   ).trim();
 }
 
-export type PullResult = {
+export interface PullResult {
   status: 'updated' | 'up_to_date' | 'skipped' | 'failed';
   detail: string;
-};
+}
 
 export function pullLatest(): PullResult {
   try {
