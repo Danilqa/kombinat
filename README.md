@@ -1,4 +1,11 @@
-# Kombinat
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/logo-dark.svg" />
+    <img src=".github/assets/logo-light.svg" alt="" width="96" height="96" />
+  </picture>
+  <br />
+  Kombinat
+</h1>
 
 Background AI agents that run routines defined in your repository, 24/7. They run on your machine under launchd with Claude Code, Codex or any other CLI agent, using your normal subscription login.
 
