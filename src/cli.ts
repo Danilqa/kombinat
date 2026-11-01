@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { parseArgs } from 'node:util';
 
-import { match, P } from 'ts-pattern';
+import { isMatching, match, P } from 'ts-pattern';
 
 import { config } from './config';
 import { describeCron } from './cron';
@@ -26,7 +26,7 @@ import { runRoutine } from './run';
 import { getNextRun, startSchedulerLoop } from './scheduler';
 import { startServer } from './server';
 import { ensureStateDirs, listRuns, readSchedulerState } from './state';
-import type { RunTrigger } from './state';
+import type { RunTrigger } from './shared/contract';
 import { runTui } from './tui';
 
 const USAGE = `kombinat
@@ -104,7 +104,7 @@ async function runOne(name: string | undefined, options: CliOptions): Promise<vo
     scheduledFor: options.scheduledFor,
   });
   console.log(JSON.stringify(record, null, 2));
-  process.exitCode = record.status === 'succeeded' ? 0 : 1;
+  process.exitCode = isMatching({ status: 'succeeded' }, record) ? 0 : 1;
 }
 
 function serve(options: CliOptions): void {
@@ -139,7 +139,7 @@ function serve(options: CliOptions): void {
 function pull(): void {
   const result = pullLatest();
   console.log(`${result.status}: ${result.detail}`);
-  process.exitCode = result.status === 'failed' ? 1 : 0;
+  process.exitCode = isMatching({ status: 'failed' }, result) ? 1 : 0;
 }
 
 function dev(options: CliOptions): void {

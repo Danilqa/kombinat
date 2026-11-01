@@ -6,6 +6,7 @@ import { getAgent, parseAgentName } from './agents';
 import type { AgentName, AgentSettings } from './agents/types';
 import { config } from './config';
 import { parseCron } from './cron';
+import { getErrorMessage } from './shared/errors';
 
 export interface Routine extends AgentSettings {
   name: string;
@@ -75,7 +76,7 @@ function withFile<T>(file: string, read: () => T): T {
   try {
     return read();
   } catch (error) {
-    throw new Error(`${file}: ${(error as Error).message}`);
+    throw new Error(`${file}: ${getErrorMessage(error)}`, { cause: error });
   }
 }
 

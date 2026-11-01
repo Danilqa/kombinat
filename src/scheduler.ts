@@ -1,14 +1,11 @@
 import { config } from './config';
 import { cronRunsBetween, nextCronRun } from './cron';
-import { loadRoutines, type Routine } from './routines';
-import {
-  getRunningRuns,
-  readSchedulerState,
-  writeSchedulerState,
-  type SchedulerState,
-  type SkipReason,
-} from './state';
+import { loadRoutines } from './routines';
+import type { Routine } from './routines';
 import { startDetachedRun } from './run';
+import type { SchedulerState, SkipReason } from './shared/contract';
+import { getErrorMessage } from './shared/errors';
+import { getRunningRuns, readSchedulerState, writeSchedulerState } from './state';
 
 function loadState(now: Date): SchedulerState {
   return (
@@ -105,7 +102,7 @@ export function startSchedulerLoop(log: (line: string) => void): () => void {
       for (const name of started) log(`started ${name}`);
       for (const name of skipped) log(`skipped ${name}`);
     } catch (err) {
-      log(`tick failed: ${(err as Error).message}`);
+      log(`tick failed: ${getErrorMessage(err)}`);
     }
   };
   run();

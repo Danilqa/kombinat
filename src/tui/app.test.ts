@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { buildTranscript } from '../agents';
-import type { RunRecord } from '../state';
-import type { DaemonClient, Overview, RoutineDetail, RoutineSummary } from './api';
+import type { RunRecord } from '../shared/contract';
+import type { RoutineDetail, RoutineSummary } from '../shared/contract';
+import type { DaemonClient, Overview } from './api';
 import { TuiApp } from './app';
 import { lineWidth, plain } from './text';
 
@@ -128,28 +129,30 @@ function makeClient(overview: Overview, options: FakeOptions) {
   const started: string[] = [];
   const client: DaemonClient = {
     baseUrl: 'http://127.0.0.1:7433',
-    async getOverview() {
-      if (options.isDown) throw new Error('daemon not reachable at http://127.0.0.1:7433');
-      return overview;
+    getOverview() {
+      return options.isDown
+        ? Promise.reject(new Error('daemon not reachable at http://127.0.0.1:7433'))
+        : Promise.resolve(overview);
     },
-    async getRoutine(name) {
+    getRoutine(name) {
       const summary = overview.routines.find(r => r.name === name);
-      if (!summary) throw new Error(`Unknown routine ${name}`);
+      if (!summary) return Promise.reject(new Error(`Unknown routine ${name}`));
       const detail: RoutineDetail = {
         ...summary,
         prompt: '# Steps\n\n- look at the queue',
         runs: overview.runs.filter(r => r.routine === name),
         skips: [],
       };
-      return detail;
+      return Promise.resolve(detail);
     },
-    async getRun(routine, id) {
+    getRun(routine, id) {
       const run = overview.runs.find(r => r.routine === routine && r.id === id);
-      if (!run) throw new Error('Run not found');
-      return { run, transcript: buildTranscript('claude', events) };
+      if (!run) return Promise.reject(new Error('Run not found'));
+      return Promise.resolve({ run, transcript: buildTranscript('claude', events) });
     },
-    async startRun(name) {
+    startRun(name) {
       started.push(name);
+      return Promise.resolve();
     },
   };
   return { client, started };
@@ -291,7 +294,7 @@ test('q quits and ? toggles help', async () => {
   assert.match(await press('?'), /toggle this help/);
   assert.match(
     app.render(WIDTH, 18).map(plain).join('\n'),
-    /q  ctrl-c\s+quit/,
+    /q {2}ctrl-c\s+quit/,
     'help fits a minimum-height terminal',
   );
   assert.doesNotMatch(await press('?'), /toggle this help/);

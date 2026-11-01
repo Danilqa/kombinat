@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
+import { isMatching } from 'ts-pattern';
+
 import { buildCalendar, estimatePlannedMinutes } from './calendar';
 import { buildRoutine } from './routines';
-import type { RunRecord } from './state';
+import type { RunRecord, RunStatus } from './shared/contract';
+import { makeRunRecord } from './testing';
 
 const routine = (name: string, schedule: string, timeout = 55) =>
   buildRoutine(
@@ -15,28 +18,8 @@ const run = (
   name: string,
   startedAt: string,
   endedAt: string | null,
-  status: RunRecord['status'] = 'succeeded',
-): RunRecord => ({
-  id: startedAt,
-  routine: name,
-  agent: 'claude',
-  trigger: 'schedule',
-  scheduledFor: null,
-  startedAt,
-  endedAt,
-  status,
-  pid: null,
-  exitCode: 0,
-  sessionId: null,
-  resumeCommand: null,
-  model: 'x',
-  costUsd: null,
-  numTurns: null,
-  durationMs: null,
-  resultText: null,
-  error: null,
-  logFile: '/tmp/x',
-});
+  status: RunStatus = 'succeeded',
+): RunRecord => makeRunRecord({ id: startedAt, routine: name, startedAt, endedAt, status });
 
 test('planned length uses the median of past runs, capped by the timeout', () => {
   const r = routine('a', '0 9 * * *', 30);
@@ -55,11 +38,13 @@ test('calendar has past runs and future planned occurrences only after now', () 
   const to = new Date('2026-10-05T00:00:00');
   const runs = [run('a', '2026-09-29T09:00:12', '2026-09-29T09:20:00')];
   const entries = buildCalendar([routine('a', '0 9 * * *')], runs, from, to, now);
-  assert.equal(entries.filter(e => e.kind === 'run').length, 1);
-  const planned = entries.filter(e => e.kind === 'planned');
+  assert.equal(entries.filter(isMatching({ kind: 'run' })).length, 1);
+  const planned = entries.filter(isMatching({ kind: 'planned' }));
   assert.equal(planned.length, 4);
-  assert.equal(planned[0]?.start, new Date('2026-10-01T09:00:00').toISOString());
-  assert.equal(planned[0]?.estimated, true);
+  const [first] = planned;
+  assert.ok(first);
+  assert.equal(first.start, new Date('2026-10-01T09:00:00').toISOString());
+  assert.equal(first.estimated, true);
 });
 
 test('overlaps between different routines are marked both ways', () => {
@@ -73,8 +58,9 @@ test('overlaps between different routines are marked both ways', () => {
   );
   const daily = entries.find(e => e.routine === 'daily');
   const hourly = entries.find(e => e.start === new Date('2026-09-30T09:10:00').toISOString());
-  assert.deepEqual(daily?.overlaps, [hourly?.id]);
-  assert.ok(daily !== undefined && hourly?.overlaps.includes(daily.id));
+  assert.ok(daily && hourly);
+  assert.deepEqual(daily.overlaps, [hourly.id]);
+  assert.ok(hourly.overlaps.includes(daily.id));
   assert.equal(
     entries.find(e => e.start === new Date('2026-09-30T10:10:00').toISOString())?.overlaps.length,
     0,

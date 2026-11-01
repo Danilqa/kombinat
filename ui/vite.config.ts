@@ -11,6 +11,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.join(uiRoot, 'src'),
+      '@shared': path.join(uiRoot, '..', 'src', 'shared'),
     },
   },
   build: {

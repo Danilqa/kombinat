@@ -1,4 +1,5 @@
 import { Link, useParams } from 'react-router';
+import { isMatching } from 'ts-pattern';
 import { DetailList, type DetailEntry } from '@/components/detail-list';
 import { Markdown } from '@/components/markdown';
 import { Breadcrumbs, PageTitle, SectionAside, SectionTitle } from '@/components/page-header';
@@ -24,7 +25,7 @@ async function loadRun(routine: string, id: string): Promise<RunWithTranscript> 
 }
 
 function getIsRunActive(data: RunWithTranscript): boolean {
-  return data.run.status === 'running';
+  return isMatching({ status: 'running' }, data.run);
 }
 
 function formatOptionalTime(iso: string | null) {
@@ -61,7 +62,7 @@ function getSummaryEntries(run: RunRecord): DetailEntry[] {
 }
 
 function RunView({ run, transcript }: RunWithTranscript) {
-  const isRunning = run.status === 'running';
+  const isRunning = isMatching({ status: 'running' }, run);
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-center gap-x-4 gap-y-2">

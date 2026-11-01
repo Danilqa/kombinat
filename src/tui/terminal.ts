@@ -14,11 +14,11 @@ export class Terminal {
   private isActive = false;
 
   get width(): number {
-    return process.stdout.columns ?? 80;
+    return process.stdout.columns;
   }
 
   get height(): number {
-    return process.stdout.rows ?? 24;
+    return process.stdout.rows;
   }
 
   start(onKeys: (keys: string[]) => void, onResize: () => void): void {

@@ -24,7 +24,8 @@
     "erasableSyntaxOnly": true,
     "forceConsistentCasingInFileNames": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@shared/*": ["../src/shared/*"]
     }
   },
   "include": ["src", "vite.config.ts"]

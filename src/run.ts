@@ -1,4 +1,5 @@
 import { spawn, spawnSync } from 'node:child_process';
+import type { ChildProcess } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
@@ -9,9 +10,9 @@ import { getAgent } from './agents';
 import type { Agent } from './agents/types';
 import { config, getCliArgs } from './config';
 import type { Routine } from './routines';
+import { parseJson } from './json';
+import type { RunRecord, RunTrigger } from './shared/contract';
 import { createRunId, getRunsDir, writeRunRecord } from './state';
-import type { RunRecord, RunTrigger } from './state';
-import { parseJsonLine } from './transcript';
 import type { BeforeHookEvent, OutputEvent } from './transcript';
 
 export interface RunOptions {
@@ -64,9 +65,25 @@ function runBeforeHook({ command, cwd, env, logFile }: BeforeHook): string | nul
   return null;
 }
 
+interface KillTimer {
+  clear: () => void;
+  hasFired: () => boolean;
+}
+
+// Ctrl-C first so the agent can wrap up, SIGTERM if it is still around a minute later.
+function killAfter(child: ChildProcess, minutes: number): KillTimer {
+  let fired = false;
+  const timer = setTimeout(() => {
+    fired = true;
+    child.kill('SIGINT');
+    setTimeout(() => child.kill('SIGTERM'), KILL_GRACE_MS).unref();
+  }, minutes * 60_000);
+  return { clear: () => clearTimeout(timer), hasFired: () => fired };
+}
+
 function toEvent(agent: Agent, line: string): unknown {
   return match(agent.output)
-    .with('jsonl', () => parseJsonLine(line))
+    .with('jsonl', () => parseJson(line))
     .with('text', (): OutputEvent => ({ type: 'output', text: line }))
     .exhaustive();
 }
@@ -154,12 +171,7 @@ export async function runRoutine(routine: Routine, options: RunOptions): Promise
     }
   });
 
-  let timedOut = false;
-  const timeout = setTimeout(() => {
-    timedOut = true;
-    child.kill('SIGINT');
-    setTimeout(() => child.kill('SIGTERM'), KILL_GRACE_MS).unref();
-  }, routine.timeoutMinutes * 60_000);
+  const killTimer = killAfter(child, routine.timeoutMinutes);
 
   child.stdin.end(invocation.input);
 
@@ -170,10 +182,10 @@ export async function runRoutine(routine: Routine, options: RunOptions): Promise
       resolve(-1);
     });
   });
-  clearTimeout(timeout);
+  killTimer.clear();
   log.end();
 
-  if (timedOut) {
+  if (killTimer.hasFired()) {
     return finishRecord(record, {
       status: 'timed_out',
       exitCode,

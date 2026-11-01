@@ -1,8 +1,10 @@
-import { match, P } from 'ts-pattern';
+import { isMatching, match, P } from 'ts-pattern';
 
-import type { RunRecord } from '../state';
-import type { TranscriptItem } from '../transcript';
-import type { DaemonClient, Overview, RoutineDetail, RunWithTranscript } from './api';
+import type { RunRecord } from '../shared/contract';
+import type { TranscriptItem } from '../shared/contract';
+import type { RoutineDetail } from '../shared/contract';
+import { getErrorMessage } from '../shared/errors';
+import type { DaemonClient, Overview, RunWithTranscript } from './api';
 import { formatRelative } from './format';
 import { fitLine, S } from './text';
 import type { Line } from './text';
@@ -20,7 +22,7 @@ import {
   statusLines,
   transcriptLines,
 } from './views';
-import type { ContentLine, PageContent, RoutineTab } from './views';
+import type { Action, ContentLine, PageContent, RoutineTab } from './views';
 
 type ListFocus = 'routines' | 'runs';
 type Focus = ListFocus | 'detail';
@@ -101,11 +103,23 @@ const MESSAGE_MS = 6000;
 const RUN_CACHE_SIZE = 4;
 
 const runKey = (routine: string, id: string) => `${routine}/${id}`;
-const pageKey = (page: Page) =>
-  page.kind === 'routine' ? `routine:${page.name}` : `run:${runKey(page.routine, page.id)}`;
+const pageKey = (page: Page): string =>
+  match(page)
+    .with({ kind: 'routine' }, ({ name }) => `routine:${name}`)
+    .with({ kind: 'run' }, run => `run:${runKey(run.routine, run.id)}`)
+    .exhaustive();
+const pageTitle = (page: Page): string =>
+  match(page)
+    .with({ kind: 'routine' }, ({ name }) => `[0] ${name}`)
+    .with({ kind: 'run' }, run => `[0] ${run.routine} › ${run.id}`)
+    .exhaustive();
+const OPEN_KEYS = new Set(['enter', 'space', 'l', 'right']);
+const BACK_KEYS = new Set(['escape', 'h', 'left', 'backspace']);
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
-const actionLines = (content: PageContent) =>
+const actionLines = (content: PageContent): number[] =>
   content.lines.flatMap((line, index) => (line.action ? [index] : []));
+const getSelectTargets = (content: PageContent): number[] | null =>
+  isMatching({ mode: 'select' }, content) ? actionLines(content) : null;
 const messageContent = (text: string, isError = false): PageContent => ({
   mode: 'scroll',
   lines: [{ line: [{ text, style: isError ? S.red : S.dim }] }],
@@ -113,10 +127,15 @@ const messageContent = (text: string, isError = false): PageContent => ({
 
 function getAnchor(content: PageContent, line: number, cursor: number): Anchor | null {
   const current = content.lines[line];
-  if (content.mode === 'select')
-    return current?.action?.kind === 'open-run'
-      ? { cursor, key: runKey(current.action.routine, current.action.id), offset: 0 }
-      : null;
+  if (isMatching({ mode: 'select' }, content)) {
+    return match(current?.action)
+      .with({ kind: 'open-run' }, ({ routine, id }) => ({
+        cursor,
+        key: runKey(routine, id),
+        offset: 0,
+      }))
+      .otherwise(() => null);
+  }
   if (!current?.itemKey) return null;
   let start = line;
   while (
@@ -232,7 +251,7 @@ export class TuiApp {
       this.overviewError = null;
       this.loadedAt = this.now();
     } catch (err) {
-      this.overviewError = (err as Error).message;
+      this.overviewError = getErrorMessage(err);
     }
     this.syncSelection();
     this.onChange();
@@ -244,19 +263,24 @@ export class TuiApp {
     if (!page) return;
     const key = pageKey(page);
     try {
-      if (page.kind === 'routine') {
-        this.routineDetails.set(page.name, await this.client.getRoutine(page.name));
-      } else {
-        const id = runKey(page.routine, page.id);
-        const cached = this.runData.get(id);
-        if (cached && cached.run.status !== 'running') return;
-        this.storeRun(id, await this.client.getRun(page.routine, page.id), cached);
-      }
+      await match(page)
+        .with({ kind: 'routine' }, async ({ name }) => {
+          this.routineDetails.set(name, await this.client.getRoutine(name));
+        })
+        .with({ kind: 'run' }, async run => this.loadRun(run))
+        .exhaustive();
       this.pageErrors.delete(key);
     } catch (err) {
-      this.pageErrors.set(key, (err as Error).message);
+      this.pageErrors.set(key, getErrorMessage(err));
     }
     this.onChange();
+  }
+
+  private async loadRun(page: RunPage): Promise<void> {
+    const key = runKey(page.routine, page.id);
+    const cached = this.runData.get(key);
+    if (cached && !isMatching({ status: 'running' }, cached.run)) return;
+    this.storeRun(key, await this.client.getRun(page.routine, page.id), cached);
   }
 
   private storeRun(
@@ -289,9 +313,10 @@ export class TuiApp {
   }
 
   private listKeys(list: ListFocus): string[] {
-    return list === 'routines'
-      ? this.routines.map(routine => routine.name)
-      : this.runs.map(run => runKey(run.routine, run.id));
+    return match(list)
+      .with('routines', () => this.routines.map(routine => routine.name))
+      .with('runs', () => this.runs.map(run => runKey(run.routine, run.id)))
+      .exhaustive();
   }
 
   // Keeps the cursor on the same routine or run when the lists change under it.
@@ -310,24 +335,28 @@ export class TuiApp {
   }
 
   private basePage(): Page | null {
-    if (this.listFocus === 'routines') {
-      const routine = this.routines[this.cursors.routines];
-      return routine
-        ? { kind: 'routine', name: routine.name, tab: 'runs', cursor: 0, scroll: 0, anchor: null }
-        : null;
-    }
-    const run = this.runs[this.cursors.runs];
-    return run
-      ? {
-          kind: 'run',
-          routine: run.routine,
-          id: run.id,
-          cursor: 0,
-          scroll: 0,
-          anchor: null,
-          follow: false,
-        }
-      : null;
+    return match(this.listFocus)
+      .with('routines', (): Page | null => {
+        const routine = this.routines[this.cursors.routines];
+        return routine
+          ? { kind: 'routine', name: routine.name, tab: 'runs', cursor: 0, scroll: 0, anchor: null }
+          : null;
+      })
+      .with('runs', (): Page | null => {
+        const run = this.runs[this.cursors.runs];
+        return run
+          ? {
+              kind: 'run',
+              routine: run.routine,
+              id: run.id,
+              cursor: 0,
+              scroll: 0,
+              anchor: null,
+              follow: false,
+            }
+          : null;
+      })
+      .exhaustive();
   }
 
   private resetStack(): void {
@@ -351,9 +380,17 @@ export class TuiApp {
     let index = FOCUS_ORDER.indexOf(this.focus);
     for (let i = 0; i < FOCUS_ORDER.length; i++) {
       index = (index + direction + FOCUS_ORDER.length) % FOCUS_ORDER.length;
-      const next = FOCUS_ORDER[index] ?? 'routines';
-      if (next !== 'detail') return this.focusList(next);
-      if (this.page) return this.focusDetail();
+      const moved = match(FOCUS_ORDER[index] ?? 'routines')
+        .with(P.union('routines', 'runs'), list => {
+          this.focusList(list);
+          return true;
+        })
+        .with('detail', () => {
+          this.focusDetail();
+          return this.page !== undefined;
+        })
+        .exhaustive();
+      if (moved) return;
     }
   }
 
@@ -391,21 +428,26 @@ export class TuiApp {
       .with('0', () => this.focusDetail())
       .with('r', () => this.askToRun())
       .with(P.union('R', 'C-r'), () => void this.refresh())
-      .otherwise(() => {
-        if (this.focus === 'detail') this.handleDetailKey(key);
-        else this.handleListKey(this.focus, key);
-      });
+      .otherwise(() =>
+        match(this.focus)
+          .with('detail', () => this.handleDetailKey(key))
+          .with(P.union('routines', 'runs'), list => this.handleListKey(list, key))
+          .exhaustive(),
+      );
     return undefined;
   }
 
   private handleOverlayKey(overlay: Overlay, key: string): void {
     this.overlay = null;
-    if (overlay.kind === 'confirm-run' && key === 'y') void this.startRun(overlay.routine);
+    if (key === 'y' && isMatching({ kind: 'confirm-run' }, overlay))
+      void this.startRun(overlay.routine);
   }
 
   private handleListKey(list: ListFocus, key: string): void {
-    if (key === 'enter' || key === 'space' || key === 'l' || key === 'right')
-      return this.focusDetail();
+    if (OPEN_KEYS.has(key)) {
+      this.focusDetail();
+      return;
+    }
     const step = getStep(key, this.listHeights[list]);
     if (step === null) return;
     const keys = this.listKeys(list);
@@ -419,27 +461,54 @@ export class TuiApp {
   private handleDetailKey(key: string): void {
     const page = this.page;
     if (!page) return;
-    if (key === 'escape' || key === 'h' || key === 'left' || key === 'backspace')
-      return this.back();
+    if (BACK_KEYS.has(key)) {
+      this.back();
+      return;
+    }
     if (!this.viewport) return;
     const { content, height } = this.viewport;
-    if ((key === '[' || key === ']') && page.kind === 'routine')
-      return this.switchTab(page, key === ']' ? 1 : -1);
-    if (key === 'e' && page.kind === 'run') return this.toggleAll(page);
-    if (key === 'enter' || key === 'space' || key === 'l' || key === 'right')
-      return this.activate(page, content);
-    if ((key === '{' || key === '}') && content.mode === 'line')
-      return this.jumpItem(page, content, key === '}' ? 1 : -1);
+    if (OPEN_KEYS.has(key)) {
+      this.activate(page, content);
+      return;
+    }
+    if (this.handlePageKey(page, content, key)) return;
     const step = getStep(key, height);
-    if (step === null) return;
-    if (content.mode === 'scroll') {
+    if (step !== null) this.moveCursor(page, content, step, height);
+  }
+
+  private handlePageKey(page: Page, content: PageContent, key: string): boolean {
+    return match([page, key, content.mode] as const)
+      .with([{ kind: 'routine' }, ']', P._], ([routinePage]) => {
+        this.switchTab(routinePage, 1);
+        return true;
+      })
+      .with([{ kind: 'routine' }, '[', P._], ([routinePage]) => {
+        this.switchTab(routinePage, -1);
+        return true;
+      })
+      .with([{ kind: 'run' }, 'e', P._], ([runPage]) => {
+        this.toggleAll(runPage);
+        return true;
+      })
+      .with([P._, '}', 'line'], () => {
+        this.jumpItem(page, content, 1);
+        return true;
+      })
+      .with([P._, '{', 'line'], () => {
+        this.jumpItem(page, content, -1);
+        return true;
+      })
+      .otherwise(() => false);
+  }
+
+  private moveCursor(page: Page, content: PageContent, step: number, height: number): void {
+    if (isMatching({ mode: 'scroll' }, content)) {
       page.scroll = clamp(page.scroll + step, 0, Math.max(0, content.lines.length - height));
       return;
     }
-    const last =
-      (content.mode === 'select' ? actionLines(content).length : content.lines.length) - 1;
+    const last = (getSelectTargets(content) ?? content.lines).length - 1;
     page.cursor = clamp(page.cursor + step, 0, Math.max(0, last));
-    if (page.kind === 'run') page.follow = step > 0 && page.cursor === last;
+    if (isMatching({ kind: 'run' }, page)) page.follow = step > 0 && page.cursor === last;
   }
 
   private switchTab(page: RoutinePage, direction: 1 | -1): void {
@@ -450,23 +519,12 @@ export class TuiApp {
   }
 
   private activate(page: Page, content: PageContent): void {
-    if (content.mode === 'select') {
-      const action = content.lines[actionLines(content)[page.cursor] ?? -1]?.action;
-      if (action?.kind !== 'open-run') return;
-      this.stack.push({
-        kind: 'run',
-        routine: action.routine,
-        id: action.id,
-        cursor: 0,
-        scroll: 0,
-        anchor: null,
-        follow: false,
-      });
-      this.requestPageLoad();
+    if (isMatching({ mode: 'select' }, content)) {
+      this.openRun(content.lines[actionLines(content)[page.cursor] ?? -1]?.action);
       return;
     }
     const action = content.lines[page.cursor]?.action;
-    if (page.kind !== 'run' || action?.kind !== 'toggle') return;
+    if (!isMatching({ kind: 'run' }, page) || !isMatching({ kind: 'toggle' }, action)) return;
     const data = this.runData.get(runKey(page.routine, page.id));
     if (!data) return;
     const isExpanding = !data.expanded.has(action.key);
@@ -476,6 +534,20 @@ export class TuiApp {
     const updated = this.moveCursorToItem(page, action.key);
     if (isExpanding && updated && this.viewport)
       this.revealItem(page, updated, action.key, this.viewport.height);
+  }
+
+  private openRun(action: Action | undefined): void {
+    if (!isMatching({ kind: 'open-run' }, action)) return;
+    this.stack.push({
+      kind: 'run',
+      routine: action.routine,
+      id: action.id,
+      cursor: 0,
+      scroll: 0,
+      anchor: null,
+      follow: false,
+    });
+    this.requestPageLoad();
   }
 
   private revealItem(page: RunPage, content: PageContent, itemKey: string, height: number): void {
@@ -513,24 +585,31 @@ export class TuiApp {
     for (let i = page.cursor + direction; i >= 0 && i < content.lines.length; i += direction) {
       if (content.lines[i]?.isItemStart !== true) continue;
       page.cursor = i;
-      if (page.kind === 'run') page.follow = false;
+      if (isMatching({ kind: 'run' }, page)) page.follow = false;
       return;
     }
   }
 
   private contextRoutine(): string | null {
-    if (this.focus === 'routines') return this.routines[this.cursors.routines]?.name ?? null;
-    if (this.focus === 'runs') return this.runs[this.cursors.runs]?.routine ?? null;
-    const page = this.page;
-    if (!page) return null;
-    return page.kind === 'routine' ? page.name : page.routine;
+    return match(this.focus)
+      .with('routines', () => this.routines[this.cursors.routines]?.name ?? null)
+      .with('runs', () => this.runs[this.cursors.runs]?.routine ?? null)
+      .with('detail', () =>
+        match(this.page)
+          .with({ kind: 'routine' }, ({ name }) => name)
+          .with({ kind: 'run' }, ({ routine }) => routine)
+          .otherwise(() => null),
+      )
+      .exhaustive();
   }
 
   private askToRun(): void {
     const name = this.contextRoutine();
     if (!name) return;
-    if (this.routines.find(routine => routine.name === name)?.running)
-      return this.flash(`${name} is already running`, 'error');
+    if (this.routines.find(routine => routine.name === name)?.running) {
+      this.flash(`${name} is already running`, 'error');
+      return;
+    }
     this.overlay = { kind: 'confirm-run', routine: name };
   }
 
@@ -539,7 +618,7 @@ export class TuiApp {
       await this.client.startRun(name);
       this.flash(`started ${name}`, 'ok');
     } catch (err) {
-      this.flash((err as Error).message, 'error');
+      this.flash(getErrorMessage(err), 'error');
     }
     await this.refreshing;
     await this.refresh();
@@ -627,7 +706,7 @@ export class TuiApp {
 
   private renderDetail(width: number, height: number, now: number): Line[] {
     const page = this.page;
-    const isFocused = this.focus === 'detail';
+    const isFocused = isMatching('detail', this.focus);
     if (!page) {
       this.viewport = null;
       return box({ title: '[0] Detail', width, height, body: [], isFocused });
@@ -646,16 +725,15 @@ export class TuiApp {
       : null;
     const body = content.lines.slice(page.scroll, page.scroll + visible).map(({ line }) => line);
     const isFollowing =
-      page.kind === 'run' &&
-      page.follow &&
-      this.runData.get(runKey(page.routine, page.id))?.run.status === 'running';
+      isMatching({ kind: 'run', follow: true }, page) &&
+      isMatching({ status: 'running' }, this.runData.get(runKey(page.routine, page.id))?.run);
     const percent =
       content.lines.length > visible
         ? `${Math.round((100 * Math.min(content.lines.length, page.scroll + visible)) / content.lines.length)}%`
         : '';
     const footer = [isFollowing ? 'following' : '', percent].filter(Boolean).join(' · ');
     return box({
-      title: page.kind === 'routine' ? `[0] ${page.name}` : `[0] ${page.routine} › ${page.id}`,
+      title: pageTitle(page),
       width,
       height,
       body,
@@ -667,49 +745,68 @@ export class TuiApp {
 
   private buildPageContent(page: Page, width: number, now: number): PageContent {
     const error = this.pageErrors.get(pageKey(page));
-    if (page.kind === 'routine') {
-      const summary =
-        this.routines.find(routine => routine.name === page.name) ??
-        this.routineDetails.get(page.name);
-      if (!summary) return messageContent(error ?? `Unknown routine ${page.name}`, true);
-      return routinePage({
-        summary,
-        detail: this.routineDetails.get(page.name),
-        tab: page.tab,
-        width,
-        now,
-        error,
-      });
-    }
+    return match(page)
+      .with({ kind: 'routine' }, routine => this.buildRoutineContent(routine, error, width, now))
+      .with({ kind: 'run' }, run => this.buildRunContent(run, error, width, now))
+      .exhaustive();
+  }
+
+  private buildRoutineContent(
+    page: RoutinePage,
+    error: string | undefined,
+    width: number,
+    now: number,
+  ): PageContent {
+    const summary =
+      this.routines.find(routine => routine.name === page.name) ??
+      this.routineDetails.get(page.name);
+    if (!summary) return messageContent(error ?? `Unknown routine ${page.name}`, true);
+    return routinePage({
+      summary,
+      detail: this.routineDetails.get(page.name),
+      tab: page.tab,
+      width,
+      now,
+      error,
+    });
+  }
+
+  private buildRunContent(
+    page: RunPage,
+    error: string | undefined,
+    width: number,
+    now: number,
+  ): PageContent {
     const data = this.runData.get(runKey(page.routine, page.id));
     if (!data) return messageContent(error ?? 'loading…', Boolean(error));
-    const isRunning = data.run.status === 'running';
-    const cacheKey = `${width}|${data.eventCount}|${data.expandedVersion}|${isRunning}`;
+    const isRunning = isMatching({ status: 'running' }, data.run);
+    const cacheKey = `${width}|${data.eventCount}|${data.expandedVersion}|${String(isRunning)}`;
     if (data.transcript?.key !== cacheKey) {
       data.transcript = {
         key: cacheKey,
         lines: transcriptLines(data.items, data.eventCount, data.expanded, width, isRunning),
       };
     }
-    const init = data.items.find(item => item.kind === 'init');
+    const cwd = data.items.flatMap(item =>
+      match(item)
+        .with({ kind: 'init' }, init => [init.cwd])
+        .otherwise(() => []),
+    )[0];
     return {
       mode: 'line',
-      lines: [
-        ...runHeaderLines(data.run, init?.kind === 'init' ? init.cwd : null, width, now),
-        ...data.transcript.lines,
-      ],
+      lines: [...runHeaderLines(data.run, cwd ?? null, width, now), ...data.transcript.lines],
     };
   }
 
   private clampPage(page: Page, content: PageContent, height: number, isFocused: boolean): void {
     const maxScroll = Math.max(0, content.lines.length - height);
-    if (content.mode === 'scroll') {
+    if (isMatching({ mode: 'scroll' }, content)) {
       page.scroll = clamp(page.scroll, 0, maxScroll);
       return;
     }
-    const targets = content.mode === 'select' ? actionLines(content) : null;
-    const last = (targets ? targets.length : content.lines.length) - 1;
-    if (page.kind === 'run' && page.follow) page.cursor = last;
+    const targets = getSelectTargets(content);
+    const last = (targets ?? content.lines).length - 1;
+    if (isMatching({ kind: 'run', follow: true }, page)) page.cursor = last;
     else if (isFocused) this.restoreAnchor(page, content, targets);
     page.cursor = clamp(page.cursor, 0, Math.max(0, last));
     const line = targets ? targets[page.cursor] : page.cursor;
@@ -745,19 +842,22 @@ export class TuiApp {
       ['?', 'help'],
       ['q', 'quit'],
     ];
-    const page = this.page;
-    if (this.focus !== 'detail') {
-      return [
+    return match({ focus: this.focus, page: this.page })
+      .with({ focus: P.union('routines', 'runs') }, ({ focus }): Hint[] => [
         ['↑↓', 'move'],
         ['enter', 'open'],
-        ['r', this.focus === 'runs' ? 'run again' : 'run now'],
+        [
+          'r',
+          match(focus)
+            .with('runs', () => 'run again')
+            .with('routines', () => 'run now')
+            .exhaustive(),
+        ],
         ['tab', 'panels'],
         ['R', 'refresh'],
         ...tail,
-      ];
-    }
-    if (page?.kind === 'run') {
-      return [
+      ])
+      .with({ page: { kind: 'run' } }, (): Hint[] => [
         ['↑↓', 'move'],
         ['enter', 'expand'],
         ['e', 'expand all'],
@@ -766,23 +866,34 @@ export class TuiApp {
         ['esc', 'back'],
         ['r', 'run now'],
         ...tail,
-      ];
-    }
-    const isRunsTab = page?.tab === 'runs';
-    return [
-      ['↑↓', isRunsTab ? 'move' : 'scroll'],
-      ...(isRunsTab ? ([['enter', 'open run']] as Hint[]) : []),
-      ['[ ]', 'tabs'],
-      ['esc', 'back'],
-      ['r', 'run now'],
-      ...tail,
-    ];
+      ])
+      .with({ page: { kind: 'routine', tab: 'runs' } }, (): Hint[] => [
+        ['↑↓', 'move'],
+        ['enter', 'open run'],
+        ['[ ]', 'tabs'],
+        ['esc', 'back'],
+        ['r', 'run now'],
+        ...tail,
+      ])
+      .otherwise((): Hint[] => [
+        ['↑↓', 'scroll'],
+        ['[ ]', 'tabs'],
+        ['esc', 'back'],
+        ['r', 'run now'],
+        ...tail,
+      ]);
   }
 
   private statusRight(now: number): Line {
     if (this.message && now - this.message.at < MESSAGE_MS)
       return [
-        { text: this.message.text, style: this.message.tone === 'ok' ? S.boldGreen : S.boldRed },
+        {
+          text: this.message.text,
+          style: match(this.message.tone)
+            .with('ok', () => S.boldGreen)
+            .with('error', () => S.boldRed)
+            .exhaustive(),
+        },
       ];
     if (this.overviewError) return [{ text: this.overviewError, style: S.red }];
     if (this.loadedAt === null) return [];

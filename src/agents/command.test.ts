@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { buildRoutine } from '../routines';
-import type { RunRecord } from '../state';
+import { makeRunRecord } from '../testing';
 import { commandAgent } from './command';
 import { buildTranscript } from './index';
 
@@ -25,9 +25,9 @@ test('pipes the prompt into a shell command', () => {
 test('collects the output lines as the result and the transcript', () => {
   const first = { type: 'output', text: '# Report' };
   const second = { type: 'output', text: 'All good' };
-  const afterFirst = commandAgent.readEvent(first, { resultText: null } as RunRecord);
+  const afterFirst = commandAgent.readEvent(first, makeRunRecord());
   assert.deepEqual(afterFirst, { resultText: '# Report' });
-  assert.deepEqual(commandAgent.readEvent(second, { resultText: '# Report' } as RunRecord), {
+  assert.deepEqual(commandAgent.readEvent(second, makeRunRecord({ resultText: '# Report' })), {
     resultText: '# Report\nAll good',
   });
   assert.deepEqual(buildTranscript('command', [first, second]).items, [

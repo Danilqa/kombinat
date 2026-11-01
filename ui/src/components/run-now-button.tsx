@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { startRoutineRun } from '@/lib/api';
+import { getErrorMessage } from '@shared/errors';
 
 type RunNowButtonProps = {
   routine: string;
@@ -20,7 +21,7 @@ export function RunNowButton({ routine, isRunning, onStarted }: RunNowButtonProp
       await startRoutineRun(routine);
       onStarted();
     } catch (err) {
-      setError((err as Error).message);
+      setError(getErrorMessage(err));
     } finally {
       setIsStarting(false);
     }
@@ -33,7 +34,12 @@ export function RunNowButton({ routine, isRunning, onStarted }: RunNowButtonProp
           {error}
         </span>
       )}
-      <Button variant="primary" size="small" disabled={isRunning || isStarting} onClick={startRun}>
+      <Button
+        variant="primary"
+        size="small"
+        disabled={isRunning || isStarting}
+        onClick={() => void startRun()}
+      >
         <Play className="size-3.5 fill-current" />
         {isRunning ? 'Running' : 'Run now'}
       </Button>

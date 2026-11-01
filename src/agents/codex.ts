@@ -1,8 +1,9 @@
 import { match, P } from 'ts-pattern';
+import { z } from 'zod';
 
 import { config } from '../config';
-import { isRecord, toPreview } from '../transcript';
-import type { ToolResult, TranscriptItem } from '../transcript';
+import type { ToolResult, TranscriptItem } from '../shared/contract';
+import { toPreview } from '../transcript';
 import { getUnattendedNote, pickOne, rejectUnsupported, withoutEnv } from './settings';
 import type { Agent, RunUpdate } from './types';
 
@@ -12,58 +13,60 @@ const SANDBOX_MODES = ['read-only', 'workspace-write', 'danger-full-access'] as 
 // Runs use the ChatGPT login, never an API key.
 const DROPPED_ENV = ['OPENAI_API_KEY', 'CODEX_API_KEY'];
 
-interface CodexError {
-  message?: string;
-}
+const codexErrorSchema = z.object({ message: z.string().optional() });
 
-interface FileChange {
-  path?: string;
-  kind?: string;
-}
+const codexItemSchema = z.object({
+  id: z.string().optional(),
+  type: z.string().optional(),
+  text: z.string().optional(),
+  command: z.string().optional(),
+  aggregated_output: z.string().optional(),
+  exit_code: z.number().nullable().optional(),
+  status: z.string().optional(),
+  changes: z
+    .array(z.object({ path: z.string().optional(), kind: z.string().optional() }))
+    .optional(),
+  server: z.string().optional(),
+  tool: z.string().optional(),
+  arguments: z.unknown().optional(),
+  result: z.unknown().optional(),
+  error: codexErrorSchema.nullable().optional(),
+  query: z.string().optional(),
+  items: z
+    .array(z.object({ text: z.string().optional(), completed: z.boolean().optional() }))
+    .optional(),
+  message: z.string().optional(),
+});
+type CodexItem = z.infer<typeof codexItemSchema>;
+type TodoEntry = NonNullable<CodexItem['items']>[number];
 
-interface TodoEntry {
-  text?: string;
-  completed?: boolean;
-}
+const codexEventSchema = z.object({
+  type: z.string().optional(),
+  thread_id: z.string().optional(),
+  item: codexItemSchema.optional(),
+  error: codexErrorSchema.optional(),
+  message: z.string().optional(),
+});
+type CodexEvent = z.infer<typeof codexEventSchema>;
 
-interface CodexItem {
-  id?: string;
-  type?: string;
-  text?: string;
-  command?: string;
-  aggregated_output?: string;
-  exit_code?: number | null;
-  status?: string;
-  changes?: FileChange[];
-  server?: string;
-  tool?: string;
-  arguments?: unknown;
-  result?: unknown;
-  error?: CodexError | null;
-  query?: string;
-  items?: TodoEntry[];
-  message?: string;
-}
-
-interface CodexEvent {
-  type?: string;
-  thread_id?: string;
-  item?: CodexItem;
-  error?: CodexError;
-  message?: string;
-}
+const mcpResultSchema = z.object({ content: z.array(z.unknown()) });
+const textPartSchema = z.object({ text: z.string() });
 
 function toCodexEvents(events: unknown[]): CodexEvent[] {
-  return events.flatMap(event => (isRecord(event) ? [event as CodexEvent] : []));
+  return events.flatMap(event => {
+    const parsed = codexEventSchema.safeParse(event);
+    return parsed.success ? [parsed.data] : [];
+  });
 }
 
 function stringifyMcpResult(result: unknown): string {
-  const content = isRecord(result) ? result['content'] : undefined;
-  if (!Array.isArray(content)) return JSON.stringify(result ?? null, null, 2);
-  return content
-    .map(part =>
-      isRecord(part) && typeof part['text'] === 'string' ? part['text'] : JSON.stringify(part),
-    )
+  const parsed = mcpResultSchema.safeParse(result);
+  if (!parsed.success) return JSON.stringify(result ?? null, null, 2);
+  return parsed.data.content
+    .map(part => {
+      const textPart = textPartSchema.safeParse(part);
+      return textPart.success ? textPart.data.text : JSON.stringify(part);
+    })
     .join('\n');
 }
 
@@ -208,8 +211,9 @@ export const codexAgent: Agent = {
   },
 
   readEvent(event, record) {
-    if (!isRecord(event)) return {};
-    return match(event as CodexEvent)
+    const parsed = codexEventSchema.safeParse(event);
+    if (!parsed.success) return {};
+    return match(parsed.data)
       .with({ type: 'thread.started', thread_id: P.string }, ({ thread_id }): RunUpdate => ({
         sessionId: thread_id,
       }))

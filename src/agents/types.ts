@@ -1,8 +1,7 @@
 import type { Routine } from '../routines';
-import type { RunRecord, RunTrigger } from '../state';
-import type { TranscriptItem } from '../transcript';
+import type { AgentName, RunRecord, RunTrigger, TranscriptItem } from '../shared/contract';
 
-export type AgentName = 'claude' | 'codex' | 'command';
+export type { AgentName } from '../shared/contract';
 
 export interface AgentSettings {
   model: string | null;

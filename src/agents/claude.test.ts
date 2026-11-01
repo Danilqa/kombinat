@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { buildRoutine } from '../routines';
-import type { RunRecord } from '../state';
+import { expectInit, expectResult, expectText, expectTool, makeRunRecord } from '../testing';
 import { buildTranscript } from './index';
 import { claudeAgent } from './claude';
 
@@ -58,7 +58,6 @@ test('builds transcript items from the stream-json events', () => {
     ['hook', 'init', 'text', 'tool', 'tool', 'result'],
   );
   const [hook, init, text, bash, read, result] = items;
-  assert.ok(init && text && bash && read && result);
   assert.deepEqual(hook, {
     kind: 'hook',
     key: 'hook-0',
@@ -66,22 +65,22 @@ test('builds transcript items from the stream-json events', () => {
     exitCode: 0,
     output: '',
   });
-  assert.equal(init.kind === 'init' && init.toolCount, 3);
-  assert.equal(text.kind === 'text' && text.text, 'Looking at the logs');
-  assert.equal(bash.kind === 'tool' && bash.preview, 'git status');
-  assert.deepEqual(bash.kind === 'tool' && bash.result, { content: 'clean', isError: false });
-  assert.equal(read.kind === 'tool' && read.isSubagent, true);
-  assert.deepEqual(read.kind === 'tool' && read.result, { content: 'boom', isError: true });
-  assert.equal(result.kind === 'result' && result.numTurns, 3);
+  assert.equal(expectInit(init).toolCount, 3);
+  assert.equal(expectText(text).text, 'Looking at the logs');
+  assert.equal(expectTool(bash).preview, 'git status');
+  assert.deepEqual(expectTool(bash).result, { content: 'clean', isError: false });
+  assert.equal(expectTool(read).isSubagent, true);
+  assert.deepEqual(expectTool(read).result, { content: 'boom', isError: true });
+  assert.equal(expectResult(result).numTurns, 3);
 });
 
 test('tool calls without a result yet have a null result', () => {
   const bash = buildTranscript('claude', events.slice(0, 4)).items[3];
-  assert.equal(bash?.kind === 'tool' && bash.result, null);
+  assert.equal(expectTool(bash).result, null);
 });
 
 test('reads the session and the result into the run record', () => {
-  const record = { numTurns: null } as RunRecord;
+  const record = makeRunRecord();
   assert.deepEqual(claudeAgent.readEvent(events[1], record), { model: 'claude-opus-5-5' });
   assert.deepEqual(
     claudeAgent.readEvent({ type: 'system', subtype: 'init', session_id: 's1' }, record),

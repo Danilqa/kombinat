@@ -24,7 +24,7 @@ export function renderInline(text: string, baseStyle?: string): Line {
         spans.push({ text: label, style: withBase(`${S.underline};${S.blue}`), link: href });
       }
     }
-    last = (match.index ?? 0) + token.length;
+    last = match.index + token.length;
   }
   pushPlain(text.slice(last));
   return spans;

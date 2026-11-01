@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { buildRoutine } from '../routines';
-import type { RunRecord } from '../state';
+import { expectResult, expectText, expectTool, makeRunRecord } from '../testing';
 import { codexAgent } from './codex';
 import { buildTranscript } from './index';
 
@@ -61,20 +61,19 @@ test('builds transcript items from codex exec --json events', () => {
     ['init', 'tool', 'tool', 'tool', 'text', 'text', 'result'],
   );
   const [, shell, edit, mcp, todo, message, result] = items;
-  assert.ok(shell?.kind === 'tool' && edit?.kind === 'tool' && mcp?.kind === 'tool');
-  assert.equal(shell.preview, 'ls');
-  assert.deepEqual(shell.result, { content: 'a.ts', isError: false });
-  assert.equal(edit.preview, 'update a.ts');
-  assert.equal(mcp.name, 'github.get_pr');
-  assert.deepEqual(mcp.result, { content: 'PR 1', isError: false });
-  assert.equal(todo?.kind === 'text' && todo.text, '- [x] Fix');
-  assert.equal(message?.kind === 'text' && message.text, 'Done');
-  assert.equal(result?.kind === 'result' && result.numTurns, 1);
+  assert.equal(expectTool(shell).preview, 'ls');
+  assert.deepEqual(expectTool(shell).result, { content: 'a.ts', isError: false });
+  assert.equal(expectTool(edit).preview, 'update a.ts');
+  assert.equal(expectTool(mcp).name, 'github.get_pr');
+  assert.deepEqual(expectTool(mcp).result, { content: 'PR 1', isError: false });
+  assert.equal(expectText(todo).text, '- [x] Fix');
+  assert.equal(expectText(message).text, 'Done');
+  assert.equal(expectResult(result).numTurns, 1);
 });
 
 test('a running command has no result yet', () => {
   const shell = buildTranscript('codex', events.slice(0, 4)).items[1];
-  assert.equal(shell?.kind === 'tool' && shell.result, null);
+  assert.equal(expectTool(shell).result, null);
 });
 
 test('a failed turn ends the transcript with an error result', () => {
@@ -93,7 +92,7 @@ test('a failed turn ends the transcript with an error result', () => {
 });
 
 test('reads the thread, the last message, turns and failures into the run record', () => {
-  const record = { numTurns: null } as RunRecord;
+  const record = makeRunRecord();
   assert.deepEqual(codexAgent.readEvent(events[0], record), { sessionId: 'thread-1' });
   assert.deepEqual(codexAgent.readEvent(events[8], record), { resultText: 'Done' });
   assert.deepEqual(codexAgent.readEvent(events[9], record), { numTurns: 1 });

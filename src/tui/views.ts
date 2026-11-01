@@ -1,8 +1,9 @@
-import { match } from 'ts-pattern';
+import { isMatching, match, P } from 'ts-pattern';
 
-import type { RunRecord, RunStatus, RunTrigger, Skip, SkipReason } from '../state';
-import type { ToolItem, TranscriptItem } from '../transcript';
-import type { Overview, RoutineDetail, RoutineSummary } from './api';
+import type { RunRecord, RunStatus, RunTrigger, Skip, SkipReason } from '../shared/contract';
+import type { ToolItem, TranscriptItem } from '../shared/contract';
+import type { RoutineDetail, RoutineSummary } from '../shared/contract';
+import type { Overview } from './api';
 import {
   formatDuration,
   formatRelative,
@@ -92,7 +93,7 @@ export function spinner(now: number): string {
 
 export function statusIcon(status: RunStatus, now: number): Span {
   const look = getStatusLook(status);
-  return text(status === 'running' ? spinner(now) : look.icon, look.style);
+  return text(isMatching('running', status) ? spinner(now) : look.icon, look.style);
 }
 
 export function statusBadge(status: RunStatus, now: number): Line {
@@ -687,7 +688,10 @@ function itemLines(
 }
 
 export function isExpandable(item: TranscriptItem): boolean {
-  return item.kind === 'tool' || (item.kind === 'hook' && Boolean(item.output));
+  return match(item)
+    .with({ kind: 'tool' }, () => true)
+    .with({ kind: 'hook' }, hook => hook.output !== '')
+    .otherwise(() => false);
 }
 
 export function transcriptLines(
@@ -711,7 +715,8 @@ export function transcriptLines(
   let previousKind: TranscriptItem['kind'] | null = null;
   for (const item of items) {
     const isSubagent = 'isSubagent' in item && item.isSubagent;
-    const needsGap = item.kind === 'text' || item.kind === 'result' || previousKind === 'text';
+    const needsGap =
+      isMatching({ kind: P.union('text', 'result') }, item) || isMatching('text', previousKind);
     if (needsGap && (lines.at(-1)?.line.length ?? 0) > 0) lines.push(blank());
     const innerWidth = isSubagent ? width - 2 : width;
     const action: Action = { kind: 'toggle', key: item.key };

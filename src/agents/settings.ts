@@ -24,9 +24,7 @@ export function rejectUnsupported(
 }
 
 export function withoutEnv(names: readonly string[]): NodeJS.ProcessEnv {
-  const env = { ...process.env };
-  for (const name of names) delete env[name];
-  return env;
+  return Object.fromEntries(Object.entries(process.env).filter(([name]) => !names.includes(name)));
 }
 
 export function getUnattendedNote({ routine, runId, trigger }: RunContext): string {

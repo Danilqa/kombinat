@@ -1,9 +1,21 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+
+import { isMatching } from 'ts-pattern';
+import { z } from 'zod';
+
 import { config } from './config';
+import { getErrorMessage } from './shared/errors';
 
 type Log = (line: string) => void;
+
+const processErrorSchema = z.object({ stderr: z.string() });
+
+function getProcessOutput(error: unknown): string {
+  const parsed = processErrorSchema.safeParse(error);
+  return parsed.success && parsed.data.stderr ? parsed.data.stderr : getErrorMessage(error);
+}
 
 function getNewestMtime(root: string): number {
   if (!fs.existsSync(root)) return 0;
@@ -21,6 +33,7 @@ const uiSources = () => [
   path.join(config.repoRoot, 'ui', 'src'),
   path.join(config.repoRoot, 'ui', 'index.html'),
   path.join(config.repoRoot, 'ui', 'vite.config.ts'),
+  path.join(config.repoRoot, 'src', 'shared'),
 ];
 
 export function isUiStale(repoRoot = config.repoRoot): boolean {
@@ -54,7 +67,7 @@ function runPnpm(args: string[], log: Log): boolean {
     log(`pnpm ${args.join(' ')}: ${output.trim().split('\n').at(-1) ?? 'ok'}`);
     return true;
   } catch (err) {
-    const stderr = String((err as { stderr?: string }).stderr ?? (err as Error).message);
+    const stderr = getProcessOutput(err);
     log(`pnpm ${args.join(' ')} failed: ${stderr.trim().split('\n').slice(-5).join(' | ')}`);
     return false;
   }
@@ -81,7 +94,7 @@ function watchDebounced(
   let timer: NodeJS.Timeout | null = null;
   let lastFile = '';
   const watcher = fs.watch(target, { recursive: true }, (_event, file) => {
-    lastFile = String(file ?? '');
+    lastFile = file ?? '';
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => onChange(lastFile), delayMs);
   });
@@ -125,7 +138,7 @@ export function pullLatest(): PullResult {
     const summary = runGit(['log', '--oneline', `${before}..${after}`]);
     return { status: 'updated', detail: summary.split('\n').reverse().join(' | ') };
   } catch (err) {
-    const stderr = String((err as { stderr?: string }).stderr ?? (err as Error).message).trim();
+    const stderr = getProcessOutput(err).trim();
     return { status: 'failed', detail: stderr.split('\n').slice(-3).join(' | ') };
   }
 }
@@ -135,8 +148,9 @@ export function startAutoPull(log: Log): () => void {
   let lastMessage = '';
   const run = () => {
     const result = pullLatest();
-    const message =
-      result.status === 'up_to_date' ? '' : `git pull ${result.status}: ${result.detail}`;
+    const message = isMatching({ status: 'up_to_date' }, result)
+      ? ''
+      : `git pull ${result.status}: ${result.detail}`;
     if (message && message !== lastMessage) log(message);
     lastMessage = message;
   };

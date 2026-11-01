@@ -1,9 +1,22 @@
-import { config } from '../config';
-import type { DaemonStatus, RoutineDetail, RoutineSummary } from '../server';
-import type { RunRecord } from '../state';
-import type { Transcript } from '../transcript';
+import { z } from 'zod';
 
-export type { RoutineDetail, RoutineSummary } from '../server';
+import { config } from '../config';
+import {
+  daemonStatusSchema,
+  routineDetailSchema,
+  routineSummarySchema,
+  runRecordSchema,
+  startedRunSchema,
+  transcriptSchema,
+} from '../shared/contract';
+import type {
+  DaemonStatus,
+  RoutineDetail,
+  RoutineSummary,
+  RunRecord,
+  Transcript,
+} from '../shared/contract';
+import { readResponse } from '../shared/http';
 
 export interface Overview {
   status: DaemonStatus;
@@ -16,10 +29,6 @@ export interface RunWithTranscript {
   transcript: Transcript;
 }
 
-interface ErrorBody {
-  error?: string;
-}
-
 // Same API as the web dashboard, so "run now" starts in the launchd daemon (unlocked keychain), not over ssh.
 export interface DaemonClient {
   baseUrl: string;
@@ -30,7 +39,11 @@ export interface DaemonClient {
 }
 
 export function createDaemonClient(baseUrl = `http://127.0.0.1:${config.port}`): DaemonClient {
-  async function request<T>(pathname: string, init?: RequestInit): Promise<T> {
+  async function request<T>(
+    pathname: string,
+    schema: z.ZodType<T>,
+    init?: RequestInit,
+  ): Promise<T> {
     let response: Response;
     try {
       response = await fetch(`${baseUrl}${pathname}`, {
@@ -40,9 +53,7 @@ export function createDaemonClient(baseUrl = `http://127.0.0.1:${config.port}`):
     } catch {
       throw new Error(`daemon not reachable at ${baseUrl}`);
     }
-    const body = (await response.json().catch(() => null)) as (T & ErrorBody) | null;
-    if (!response.ok) throw new Error(body?.error ?? `${response.status} ${response.statusText}`);
-    return body as T;
+    return readResponse(response, schema);
   }
   const encode = encodeURIComponent;
 
@@ -50,23 +61,23 @@ export function createDaemonClient(baseUrl = `http://127.0.0.1:${config.port}`):
     baseUrl,
     async getOverview() {
       const [status, routines, runs] = await Promise.all([
-        request<DaemonStatus>('/api/status'),
-        request<RoutineSummary[]>('/api/routines'),
-        request<RunRecord[]>('/api/runs?limit=50'),
+        request('/api/status', daemonStatusSchema),
+        request('/api/routines', z.array(routineSummarySchema)),
+        request('/api/runs?limit=50', z.array(runRecordSchema)),
       ]);
       return { status, routines, runs };
     },
-    getRoutine: async name => request(`/api/routines/${encode(name)}`),
+    getRoutine: async name => request(`/api/routines/${encode(name)}`, routineDetailSchema),
     async getRun(routine, id) {
       const runPath = `/api/runs/${encode(routine)}/${encode(id)}`;
       const [run, transcript] = await Promise.all([
-        request<RunRecord>(runPath),
-        request<Transcript>(`${runPath}/transcript`),
+        request(runPath, runRecordSchema),
+        request(`${runPath}/transcript`, transcriptSchema),
       ]);
       return { run, transcript };
     },
     async startRun(name) {
-      await request(`/api/routines/${encode(name)}/run`, { method: 'POST' });
+      await request(`/api/routines/${encode(name)}/run`, startedRunSchema, { method: 'POST' });
     },
   };
 }

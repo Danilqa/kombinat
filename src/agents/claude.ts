@@ -1,8 +1,10 @@
 import { match } from 'ts-pattern';
+import { z } from 'zod';
 
 import { config } from '../config';
-import { isRecord, toPreview } from '../transcript';
-import type { ToolResult, TranscriptItem } from '../transcript';
+import { isRecord } from '../json';
+import type { ToolResult, TranscriptItem } from '../shared/contract';
+import { toPreview } from '../transcript';
 import { getUnattendedNote, pickOne, rejectUnsupported, withoutEnv } from './settings';
 import type { Agent, RunUpdate } from './types';
 
@@ -43,45 +45,52 @@ const PREVIEW_FIELDS: Record<string, string> = {
   ToolSearch: 'query',
 };
 
-interface ContentBlock {
-  type?: string;
-  text?: string;
-  id?: string;
-  name?: string;
-  input?: unknown;
-  tool_use_id?: string;
-  content?: unknown;
-  is_error?: boolean;
-}
+const contentBlockSchema = z.object({
+  type: z.string().optional(),
+  text: z.string().optional(),
+  id: z.string().optional(),
+  name: z.string().optional(),
+  input: z.unknown().optional(),
+  tool_use_id: z.string().optional(),
+  content: z.unknown().optional(),
+  is_error: z.boolean().optional(),
+});
+type ContentBlock = z.infer<typeof contentBlockSchema>;
 
-interface Message {
-  content?: unknown;
-}
+const textPartSchema = z.object({ type: z.literal('text'), text: z.string() });
 
-interface ClaudeEvent {
-  type?: string;
-  subtype?: string;
-  session_id?: string;
-  parent_tool_use_id?: string | null;
-  message?: Message;
-  model?: string;
-  cwd?: string;
-  tools?: unknown[];
-  permissionMode?: string;
-  result?: string;
-  is_error?: boolean;
-  total_cost_usd?: number;
-  num_turns?: number;
-  duration_ms?: number;
-}
+const claudeEventSchema = z.object({
+  type: z.string().optional(),
+  subtype: z.string().optional(),
+  session_id: z.string().optional(),
+  parent_tool_use_id: z.string().nullable().optional(),
+  message: z.object({ content: z.unknown().optional() }).optional(),
+  model: z.string().optional(),
+  cwd: z.string().optional(),
+  tools: z.array(z.unknown()).optional(),
+  permissionMode: z.string().optional(),
+  result: z.string().optional(),
+  is_error: z.boolean().optional(),
+  total_cost_usd: z.number().optional(),
+  num_turns: z.number().optional(),
+  duration_ms: z.number().optional(),
+});
+type ClaudeEvent = z.infer<typeof claudeEventSchema>;
 
 function toClaudeEvents(events: unknown[]): ClaudeEvent[] {
-  return events.flatMap(event => (isRecord(event) ? [event as ClaudeEvent] : []));
+  return events.flatMap(event => {
+    const parsed = claudeEventSchema.safeParse(event);
+    return parsed.success ? [parsed.data] : [];
+  });
 }
 
 function getContentBlocks(event: ClaudeEvent): ContentBlock[] {
   const content = event.message?.content;
-  return Array.isArray(content) ? content.filter(isRecord).map(block => block as ContentBlock) : [];
+  if (!Array.isArray(content)) return [];
+  return content.flatMap(block => {
+    const parsed = contentBlockSchema.safeParse(block);
+    return parsed.success ? [parsed.data] : [];
+  });
 }
 
 function getInputPreview(name: string, input: unknown): string {
@@ -94,11 +103,10 @@ function stringifyResultContent(content: unknown): string {
   if (typeof content === 'string') return content;
   if (!Array.isArray(content)) return JSON.stringify(content, null, 2);
   return content
-    .map(part =>
-      isRecord(part) && part['type'] === 'text' && typeof part['text'] === 'string'
-        ? part['text']
-        : JSON.stringify(part),
-    )
+    .map(part => {
+      const textPart = textPartSchema.safeParse(part);
+      return textPart.success ? textPart.data.text : JSON.stringify(part);
+    })
     .join('\n');
 }
 
@@ -240,8 +248,9 @@ export const claudeAgent: Agent = {
   },
 
   readEvent(event) {
-    if (!isRecord(event)) return {};
-    return match(event as ClaudeEvent)
+    const parsed = claudeEventSchema.safeParse(event);
+    if (!parsed.success) return {};
+    return match(parsed.data)
       .with({ type: 'system', subtype: 'init' }, (init): RunUpdate => {
         const update: RunUpdate = {};
         if (init.session_id !== undefined) update.sessionId = init.session_id;

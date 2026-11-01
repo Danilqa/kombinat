@@ -1,50 +1,18 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import type { AgentName } from './agents/types';
+
+import { isMatching } from 'ts-pattern';
+import type { z } from 'zod';
+
 import { config } from './config';
+import { parseJson } from './json';
+import { runRecordSchema, schedulerStateSchema } from './shared/contract';
+import type { RunRecord, SchedulerState } from './shared/contract';
 
-export type RunStatus = 'running' | 'succeeded' | 'failed' | 'timed_out' | 'aborted';
-export type RunTrigger = 'schedule' | 'manual' | 'catch_up';
-
-export interface RunRecord {
-  id: string;
-  routine: string;
-  agent: AgentName;
-  trigger: RunTrigger;
-  scheduledFor: string | null;
-  startedAt: string;
-  endedAt: string | null;
-  status: RunStatus;
-  pid: number | null;
-  exitCode: number | null;
-  sessionId: string | null;
-  resumeCommand: string | null;
-  model: string | null;
-  costUsd: number | null;
-  numTurns: number | null;
-  durationMs: number | null;
-  resultText: string | null;
-  error: string | null;
-  logFile: string;
-}
-
-export type SkipReason = 'already_running' | 'concurrency_limit' | 'disabled';
-
-export interface Skip {
-  at: string;
-  scheduledFor: string;
-  reason: SkipReason;
-}
-
-export interface RoutineSchedule {
-  lastScheduledFor: string | null;
-  skips: Skip[];
-}
-
-export interface SchedulerState {
-  startedAt: string;
-  lastTickAt: string;
-  routines: Record<string, RoutineSchedule>;
+function readJsonFile<T>(file: string, schema: z.ZodType<T>): T | null {
+  if (!fs.existsSync(file)) return null;
+  const parsed = schema.safeParse(parseJson(fs.readFileSync(file, 'utf8')));
+  return parsed.success ? parsed.data : null;
 }
 
 export function getRunsDir(routine: string): string {
@@ -64,9 +32,7 @@ export function writeRunRecord(record: RunRecord): void {
 }
 
 export function readRunRecord(routine: string, id: string): RunRecord | null {
-  const file = path.join(getRunsDir(routine), `${id}.json`);
-  if (!fs.existsSync(file)) return null;
-  return JSON.parse(fs.readFileSync(file, 'utf8')) as RunRecord;
+  return readJsonFile(path.join(getRunsDir(routine), `${id}.json`), runRecordSchema);
 }
 
 export function isProcessAlive(pid: number | null): boolean {
@@ -80,7 +46,7 @@ export function isProcessAlive(pid: number | null): boolean {
 }
 
 function reconcileRecord(record: RunRecord): RunRecord {
-  if (record.status !== 'running' || isProcessAlive(record.pid)) return record;
+  if (!isMatching({ status: 'running' }, record) || isProcessAlive(record.pid)) return record;
   const reconciled: RunRecord = {
     ...record,
     status: 'aborted',
@@ -96,8 +62,11 @@ export function listRuns(routine: string): RunRecord[] {
   if (!fs.existsSync(dir)) return [];
   return fs
     .readdirSync(dir)
-    .filter(f => f.endsWith('.json'))
-    .map(f => reconcileRecord(JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')) as RunRecord))
+    .filter(entry => entry.endsWith('.json'))
+    .flatMap(entry => {
+      const record = readJsonFile(path.join(dir, entry), runRecordSchema);
+      return record === null ? [] : [reconcileRecord(record)];
+    })
     .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
 }
 
@@ -111,14 +80,13 @@ export function listAllRuns(): RunRecord[] {
 }
 
 export function getRunningRuns(): RunRecord[] {
-  return listAllRuns().filter(r => r.status === 'running');
+  return listAllRuns().filter(isMatching({ status: 'running' }));
 }
 
 const schedulerFile = () => path.join(config.stateDir, 'scheduler.json');
 
 export function readSchedulerState(): SchedulerState | null {
-  if (!fs.existsSync(schedulerFile())) return null;
-  return JSON.parse(fs.readFileSync(schedulerFile(), 'utf8')) as SchedulerState;
+  return readJsonFile(schedulerFile(), schedulerStateSchema);
 }
 
 export function writeSchedulerState(state: SchedulerState): void {

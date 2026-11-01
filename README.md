@@ -48,7 +48,7 @@ pnpm cli readme            # refresh the routines table in this README
 pnpm cli run smoke-test    # run one routine now, in the foreground
 pnpm cli status            # launchd + scheduler state
 pnpm cli uninstall
-pnpm validate              # format check, typecheck and tests
+pnpm validate              # format check, lint, typecheck and tests
 ```
 
 The TypeScript runs through `tsx`, so plain `node src/cli.ts` does not work.
@@ -74,7 +74,14 @@ pnpm dev
 
 This stops the launchd daemon, runs the scheduler and API from your checkout without the auto-restart, and starts the Vite dev server on http://localhost:5173. Ctrl-C hands everything back to launchd. Add `--no-scheduler` if you only want the UI and no routines should fire from your half-edited tree.
 
-Dependencies are pinned to exact versions (`saveExact` in `pnpm-workspace.yaml`) and the TypeScript config is strict, including `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`. Branch on unions with `ts-pattern` instead of `switch`.
+### Code rules
+
+- Dependencies are pinned to exact versions (`saveExact` in `pnpm-workspace.yaml`).
+- TypeScript is strict, including `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`.
+- ESLint (`pnpm lint`) runs typescript-eslint's `strictTypeChecked` and bans `any`, every type assertion except `as const` (so no `as unknown as`), non-null assertions, `@ts-` comments, `switch`, `enum` and `===` on string-literal unions (use `ts-pattern`). Inline `eslint-disable` comments are ignored.
+- Data from outside the process (run records on disk, agent output, API responses) is parsed with the zod schemas in `src/shared/contract.ts`, which the daemon, the TUI and the web UI share (`@shared/*` in the UI).
+- File names are kebab-case, React components included.
+- `tsc` is TypeScript 7 (the `typescript7` package). typescript-eslint still needs the TypeScript 6 compiler API, so `typescript` is an alias of `@typescript/typescript6`.
 
 ## Writing a routine
 

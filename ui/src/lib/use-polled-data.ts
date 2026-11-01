@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { getErrorMessage } from '@shared/errors';
+
 const ACTIVE_INTERVAL_MS = 5000;
 const IDLE_INTERVAL_MS = 15000;
 
@@ -42,11 +44,11 @@ export function usePolledData<T>(
         if (isCancelled) return;
         setData(next);
         setError(null);
-        timer = setTimeout(runTick, getIsActiveRef.current(next) ? activeMs : idleMs);
+        timer = setTimeout(() => void runTick(), getIsActiveRef.current(next) ? activeMs : idleMs);
       } catch (err) {
         if (isCancelled) return;
-        setError((err as Error).message);
-        timer = setTimeout(runTick, idleMs);
+        setError(getErrorMessage(err));
+        timer = setTimeout(() => void runTick(), idleMs);
       }
     }
 

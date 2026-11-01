@@ -1,19 +1,13 @@
+import { isMatching } from 'ts-pattern';
+
 import { cronRunsBetween } from './cron';
 import type { Routine } from './routines';
-import type { RunRecord } from './state';
-
-export interface CalendarEntry {
-  id: string;
-  routine: string;
-  start: string;
-  end: string;
-  kind: 'run' | 'planned';
-  status: RunRecord['status'] | null;
-  runId: string | null;
-  trigger: RunRecord['trigger'] | null;
-  estimated: boolean;
-  overlaps: string[];
-}
+import type {
+  CalendarEntry,
+  PlannedCalendarEntry,
+  RunCalendarEntry,
+  RunRecord,
+} from './shared/contract';
 
 export interface PlannedLength {
   minutes: number;
@@ -35,7 +29,9 @@ function median(values: number[]): number | null {
 export function estimatePlannedMinutes(routine: Routine, runs: RunRecord[]): PlannedLength {
   const finished = runs
     .flatMap(run =>
-      run.routine === routine.name && run.endedAt !== null && run.status !== 'aborted'
+      run.routine === routine.name &&
+      run.endedAt !== null &&
+      !isMatching({ status: 'aborted' }, run)
         ? [(new Date(run.endedAt).getTime() - new Date(run.startedAt).getTime()) / 60_000]
         : [],
     )
@@ -49,7 +45,7 @@ export function estimatePlannedMinutes(routine: Routine, runs: RunRecord[]): Pla
   };
 }
 
-function toRunEntry(run: RunRecord, now: Date): CalendarEntry {
+function toRunEntry(run: RunRecord, now: Date): RunCalendarEntry {
   const start = new Date(run.startedAt);
   const rawEnd = run.endedAt ? new Date(run.endedAt) : now;
   const end = new Date(Math.max(rawEnd.getTime(), start.getTime() + MIN_BLOCK_MINUTES * 60_000));
@@ -91,7 +87,7 @@ export function buildCalendar(
     .filter(r => new Date(r.startedAt) < to && new Date(r.endedAt ?? now) > from)
     .map(r => toRunEntry(r, now));
   const plannedFrom = new Date(Math.max(from.getTime(), now.getTime()));
-  const plannedEntries = routines.flatMap((routine): CalendarEntry[] => {
+  const plannedEntries = routines.flatMap((routine): PlannedCalendarEntry[] => {
     if (!routine.enabled || routine.schedule === null || plannedFrom >= to) return [];
     const { minutes, estimated } = estimatePlannedMinutes(routine, runs);
     return cronRunsBetween(routine.schedule, plannedFrom, to).map(start => ({

@@ -1,4 +1,4 @@
-import { isOutputEvent } from '../transcript';
+import { outputEventSchema } from '../transcript';
 import { rejectUnsupported } from './settings';
 import type { Agent } from './types';
 
@@ -30,15 +30,19 @@ export const commandAgent: Agent = {
   },
 
   readEvent(event, record) {
-    if (!isOutputEvent(event)) return {};
-    const text = record.resultText === null ? event.text : `${record.resultText}\n${event.text}`;
-    return { resultText: text.slice(-MAX_RESULT_CHARS) };
+    const output = outputEventSchema.safeParse(event);
+    if (!output.success) return {};
+    const { text } = output.data;
+    const resultText = record.resultText === null ? text : `${record.resultText}\n${text}`;
+    return { resultText: resultText.slice(-MAX_RESULT_CHARS) };
   },
 
   buildTranscript(events) {
     const text = events
-      .filter(isOutputEvent)
-      .map(event => event.text)
+      .flatMap(event => {
+        const output = outputEventSchema.safeParse(event);
+        return output.success ? [output.data.text] : [];
+      })
       .join('\n');
     return text.trim() ? [{ kind: 'text', key: 'output', text, isSubagent: false }] : [];
   },

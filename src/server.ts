@@ -2,61 +2,26 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 
-import { match, P } from 'ts-pattern';
+import { isMatching, match, P } from 'ts-pattern';
 
 import { buildTranscript } from './agents';
-import type { AgentName } from './agents/types';
 import { buildCalendar } from './calendar';
 import { config } from './config';
 import { describeCron } from './cron';
+import { parseJson } from './json';
 import { loadRoutines } from './routines';
 import type { Routine } from './routines';
 import { startDetachedRun } from './run';
 import { getNextRun } from './scheduler';
+import type {
+  DaemonStatus,
+  RoutineDetail,
+  RoutineSummary,
+  RunRecord,
+  Skip,
+} from './shared/contract';
+import { getErrorMessage } from './shared/errors';
 import { listAllRuns, listRuns, readRunRecord, readSchedulerState } from './state';
-import type { RunRecord, Skip } from './state';
-import { parseJsonLine } from './transcript';
-
-export interface RoutineSummary {
-  name: string;
-  description: string;
-  schedule: string | null;
-  scheduleHuman: string;
-  nextRunAt: string | null;
-  enabled: boolean;
-  agent: AgentName;
-  model: string | null;
-  effort: string | null;
-  permissionMode: string | null;
-  command: string | null;
-  cwd: string;
-  timeoutMinutes: number;
-  maxBudgetUsd: number | null;
-  file: string;
-  running: boolean;
-  lastRun: RunRecord | null;
-  lastSkip: Skip | null;
-}
-
-export interface RoutineDetail extends RoutineSummary {
-  prompt: string;
-  runs: RunRecord[];
-  skips: Skip[];
-}
-
-export interface DaemonStatus {
-  pid: number;
-  startedAt: string;
-  lastTickAt: string | null;
-  routinesDir: string;
-  stateDir: string;
-  claudeBin: string;
-  codexBin: string;
-  maxConcurrentRuns: number;
-  running: number;
-  timezone: string;
-  now: string;
-}
 
 interface ApiResponse {
   status: number;
@@ -102,7 +67,7 @@ function toRoutineSummary(routine: Routine, runs: RunRecord[]): RoutineSummary {
     timeoutMinutes: routine.timeoutMinutes,
     maxBudgetUsd: routine.maxBudgetUsd,
     file: path.relative(config.repoRoot, routine.file),
-    running: runs.some(run => run.status === 'running'),
+    running: runs.some(isMatching({ status: 'running' })),
     lastRun: runs[0] ?? null,
     lastSkip: getSkips(routine.name).at(-1) ?? null,
   };
@@ -114,7 +79,7 @@ function readEvents(record: RunRecord): unknown[] {
     .readFileSync(record.logFile, 'utf8')
     .split('\n')
     .filter(Boolean)
-    .map(parseJsonLine)
+    .map(parseJson)
     .filter(event => event !== undefined);
 }
 
@@ -128,7 +93,7 @@ function getStatus(startedAt: Date): DaemonStatus {
     claudeBin: config.claudeBin,
     codexBin: config.codexBin,
     maxConcurrentRuns: config.maxConcurrentRuns,
-    running: listAllRuns().filter(run => run.status === 'running').length,
+    running: listAllRuns().filter(isMatching({ status: 'running' })).length,
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     now: new Date().toISOString(),
   };
@@ -160,7 +125,7 @@ function getRoutineDetail(routine: Routine): ApiResponse {
 }
 
 function startRun(routine: Routine): ApiResponse {
-  if (listRuns(routine.name).some(run => run.status === 'running')) {
+  if (listRuns(routine.name).some(isMatching({ status: 'running' }))) {
     return fail(409, `${routine.name} is already running`);
   }
   startDetachedRun(routine.name, { trigger: 'manual' });
@@ -234,10 +199,13 @@ export function startServer(log: (line: string) => void): http.Server {
       if (root === 'api') sendJson(res, routeApi([req.method ?? 'GET', segments], url, startedAt));
       else serveStatic(res, url);
     } catch (error) {
-      log(`request failed ${url.pathname}: ${(error as Error).message}`);
-      sendJson(res, fail(500, (error as Error).message));
+      const message = getErrorMessage(error);
+      log(`request failed ${url.pathname}: ${message}`);
+      sendJson(res, fail(500, message));
     }
   });
-  server.listen(config.port, '127.0.0.1', () => log(`ui at http://localhost:${config.port}`));
+  server.listen(config.port, '127.0.0.1', () => {
+    log(`ui at http://localhost:${config.port}`);
+  });
   return server;
 }

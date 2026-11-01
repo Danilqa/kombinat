@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router';
-import { match } from 'ts-pattern';
+import { isMatching, match } from 'ts-pattern';
 import { SectionTitle } from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -143,7 +143,7 @@ function formatHour(hour: number): string {
 }
 
 function getHasRunningEntry(entries: CalendarEntry[]): boolean {
-  return entries.some(entry => entry.status === 'running');
+  return entries.some(isMatching({ status: 'running' }));
 }
 
 function useNow(intervalMs: number): Date {

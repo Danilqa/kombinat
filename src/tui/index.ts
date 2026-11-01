@@ -37,7 +37,10 @@ export function runTui(): Promise<void> {
 
     const poll = async () => {
       await app.refresh();
-      pollTimer = setTimeout(poll, app.hasActiveRuns() ? POLL_ACTIVE_MS : POLL_IDLE_MS);
+      pollTimer = setTimeout(
+        () => void poll(),
+        app.hasActiveRuns() ? POLL_ACTIVE_MS : POLL_IDLE_MS,
+      );
     };
     const repaint = () => {
       draw();
@@ -45,7 +48,10 @@ export function runTui(): Promise<void> {
     };
 
     terminal.start(keys => {
-      if (app.handleKeys(keys, terminal.width, terminal.height) === 'quit') return quit();
+      if (app.handleKeys(keys, terminal.width, terminal.height) === 'quit') {
+        quit();
+        return;
+      }
       draw();
     }, draw);
     void poll();
