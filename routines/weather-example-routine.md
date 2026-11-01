@@ -1,5 +1,5 @@
 ---
-name: umbrella-check
+name: weather-example-routine
 description: Says if you need an umbrella today
 schedule: '0 8 * * 1-5'
 cwd: ~/

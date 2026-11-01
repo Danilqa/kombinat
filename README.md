@@ -24,7 +24,7 @@ Each row is a file in [`routines/`](routines/). `pnpm cli readme` updates this t
 <!-- routines:start -->
 | Routine | When | What it does |
 | - | - | - |
-| [umbrella-check](routines/umbrella-check.md) | Weekdays at 08:00 | Says if you need an umbrella today |
+| [weather-example-routine](routines/weather-example-routine.md) | Weekdays at 08:00 | Says if you need an umbrella today |
 <!-- routines:end -->
 <!-- prettier-ignore-end -->
 
@@ -61,11 +61,11 @@ pnpm cli uninstall      # stop and remove the daemon
 
 ## Writing a routine
 
-`routines/umbrella-check.md` runs every weekday at 8:00:
+`routines/weather-example-routine.md` runs every weekday at 8:00:
 
 ```markdown
 ---
-name: umbrella-check
+name: weather-example-routine
 description: Says if you need an umbrella today
 schedule: '0 8 * * 1-5'
 cwd: ~/
