@@ -1,13 +1,11 @@
 import type { ReactNode } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { Link } from 'react-router';
-import { BrandMark } from '@/components/brand-mark';
 import { cn } from '@/lib/utils';
 
 interface Crumb {
   label: string;
   to?: string;
-  isMono?: boolean;
 }
 
 interface CrumbLabelProps {
@@ -15,10 +13,7 @@ interface CrumbLabelProps {
 }
 
 function CrumbLabel({ crumb }: CrumbLabelProps) {
-  const className = cn(
-    'min-w-0 truncate text-body font-medium',
-    crumb.isMono && 'font-mono text-body-sm',
-  );
+  const className = 'min-w-0 truncate text-body font-medium';
   if (crumb.to) {
     return (
       <Link
@@ -43,18 +38,18 @@ interface BreadcrumbsProps {
 
 export function Breadcrumbs({ crumbs, aside }: BreadcrumbsProps) {
   return (
-    <div className="mb-8 flex min-h-8 flex-wrap items-center justify-between gap-x-6 gap-y-2">
-      <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2">
-        <Link to="/" className="flex shrink-0 items-center gap-2 text-title-md text-fg">
-          <BrandMark />
-          Kombinat
-        </Link>
-        {crumbs.map(crumb => (
-          <span key={crumb.label} className="flex min-w-0 items-center gap-2">
-            <ChevronRight aria-hidden="true" className="size-3.5 shrink-0 text-fg-faint" />
-            <CrumbLabel crumb={crumb} />
-          </span>
-        ))}
+    <div className="mb-6 flex min-h-8 flex-wrap items-center justify-between gap-x-6 gap-y-2">
+      <nav aria-label="Breadcrumb" className="min-w-0">
+        <ol className="flex min-w-0 items-center gap-2">
+          {crumbs.map((crumb, index) => (
+            <li key={crumb.label} className="flex min-w-0 items-center gap-2">
+              {index > 0 && (
+                <ChevronRight aria-hidden="true" className="size-3.5 shrink-0 text-fg-faint" />
+              )}
+              <CrumbLabel crumb={crumb} />
+            </li>
+          ))}
+        </ol>
       </nav>
       {aside && (
         <div className="ml-auto flex max-w-full min-w-0 items-center justify-end gap-3">
@@ -71,7 +66,23 @@ interface PageTitleProps {
 }
 
 export function PageTitle({ children, className }: PageTitleProps) {
-  return <h1 className={cn('min-w-0 truncate text-title-lg text-fg', className)}>{children}</h1>;
+  return (
+    <h1 className={cn('min-w-0 text-title-lg wrap-anywhere text-fg', className)}>{children}</h1>
+  );
+}
+
+interface PageHeaderProps {
+  title: string;
+  aside?: ReactNode;
+}
+
+export function PageHeader({ title, aside }: PageHeaderProps) {
+  return (
+    <div className="mb-6 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+      <PageTitle>{title}</PageTitle>
+      {aside}
+    </div>
+  );
 }
 
 interface SectionTitleProps {

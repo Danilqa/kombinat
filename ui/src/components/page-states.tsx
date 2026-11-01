@@ -1,5 +1,9 @@
 export function LoadingState() {
-  return <p className="py-10 text-center text-body text-fg-muted">Loading…</p>;
+  return (
+    <p role="status" className="py-10 text-center text-body text-fg-muted">
+      Loading…
+    </p>
+  );
 }
 
 interface ErrorStateProps {
@@ -8,7 +12,10 @@ interface ErrorStateProps {
 
 export function ErrorState({ message }: ErrorStateProps) {
   return (
-    <p className="rounded-lg bg-negative-soft px-4 py-3 text-body font-medium text-negative">
+    <p
+      role="alert"
+      className="rounded-lg bg-negative-soft px-4 py-3 text-body font-medium text-negative"
+    >
       {message}
     </p>
   );

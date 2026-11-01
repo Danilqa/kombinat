@@ -72,6 +72,7 @@ function TableHead({ className, ...props }: TableHeadProps) {
   return (
     <th
       data-slot="table-head"
+      scope="col"
       className={cn(
         'h-9 px-2 text-left align-middle text-body-sm font-normal whitespace-nowrap text-fg-muted first:pl-4 last:pr-4 [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]',
         className,

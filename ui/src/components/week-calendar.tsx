@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Ban, Check, ChevronLeft, ChevronRight, Clock, Loader, X } from 'lucide-react';
 import { Link } from 'react-router';
 import { isMatching, match } from 'ts-pattern';
-import { SectionTitle } from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -32,16 +31,32 @@ type BlockVariant = 'planned' | 'plannedDefault' | RunStatus;
 interface BlockStyle {
   className: string;
   label: string;
+  icon: BlockIcon | null;
 }
 
+interface BlockIcon {
+  component: typeof Check;
+  className: string;
+}
+
+// Opaque tints, so the current-time line passes behind a block instead of through its text.
 const blockSurfaceClassNames: Record<BlockVariant, string> = {
   planned: 'border border-line-strong bg-raised',
   plannedDefault: 'border border-dashed border-line-strong bg-raised',
-  succeeded: 'bg-positive-soft shadow-[inset_2px_0_0_var(--positive)]',
-  failed: 'bg-negative-soft shadow-[inset_2px_0_0_var(--negative)]',
-  timed_out: 'bg-negative-soft shadow-[inset_2px_0_0_var(--negative)]',
-  aborted: 'bg-neutral-soft shadow-[inset_2px_0_0_var(--fg-faint)]',
-  running: 'bg-warning-soft shadow-[inset_2px_0_0_var(--warning)]',
+  succeeded: 'bg-positive-tint shadow-[inset_2px_0_0_var(--positive)]',
+  failed: 'bg-negative-tint shadow-[inset_2px_0_0_var(--negative)]',
+  timed_out: 'bg-negative-tint shadow-[inset_2px_0_0_var(--negative)]',
+  aborted: 'bg-neutral-tint shadow-[inset_2px_0_0_var(--fg-faint)]',
+  running: 'bg-warning-tint shadow-[inset_2px_0_0_var(--warning)]',
+};
+
+// The icon repeats the outcome that the tint shows, so it does not depend on colour alone.
+const blockIcons: Record<RunStatus, BlockIcon> = {
+  succeeded: { component: Check, className: 'text-positive' },
+  failed: { component: X, className: 'text-negative' },
+  timed_out: { component: Clock, className: 'text-negative' },
+  aborted: { component: Ban, className: 'text-fg-muted' },
+  running: { component: Loader, className: 'text-warning' },
 };
 
 const outlinedBlockClassName = 'hover:border-fg-faint';
@@ -51,30 +66,37 @@ const blockStyles: Record<BlockVariant, BlockStyle> = {
   planned: {
     className: cn(blockSurfaceClassNames.planned, outlinedBlockClassName),
     label: 'planned',
+    icon: null,
   },
   plannedDefault: {
     className: cn(blockSurfaceClassNames.plannedDefault, outlinedBlockClassName),
     label: 'planned',
+    icon: null,
   },
   succeeded: {
     className: cn(blockSurfaceClassNames.succeeded, tintedBlockClassName),
     label: 'succeeded',
+    icon: blockIcons.succeeded,
   },
   failed: {
     className: cn(blockSurfaceClassNames.failed, tintedBlockClassName),
     label: 'failed',
+    icon: blockIcons.failed,
   },
   timed_out: {
     className: cn(blockSurfaceClassNames.timed_out, tintedBlockClassName),
     label: 'timed out',
+    icon: blockIcons.timed_out,
   },
   aborted: {
     className: cn(blockSurfaceClassNames.aborted, tintedBlockClassName),
     label: 'aborted',
+    icon: blockIcons.aborted,
   },
   running: {
     className: cn(blockSurfaceClassNames.running, tintedBlockClassName, 'animate-soft-pulse'),
     label: 'running',
+    icon: blockIcons.running,
   },
 };
 
@@ -88,6 +110,8 @@ const legendItems: LegendItem[] = [
   { label: 'Planned, default length', variant: 'plannedDefault' },
   { label: 'Succeeded', variant: 'succeeded' },
   { label: 'Failed', variant: 'failed' },
+  { label: 'Timed out', variant: 'timed_out' },
+  { label: 'Aborted', variant: 'aborted' },
   { label: 'Running', variant: 'running' },
 ];
 
@@ -133,7 +157,9 @@ function getOverlapLabel(entry: CalendarEntry, routinesById: Map<string, string>
 }
 
 function getEntryTitle(entry: CalendarEntry, overlapLabel: string | null): string {
-  const summary = `${entry.routine} · ${formatClock(new Date(entry.start))}–${formatClock(new Date(entry.end))} · ${getStateLabel(entry)}`;
+  const start = new Date(entry.start);
+  const day = `${formatWeekday(start)} ${formatDayMonth(start)}`;
+  const summary = `${entry.routine}, ${day}, ${formatClock(start)}–${formatClock(new Date(entry.end))}, ${getStateLabel(entry)}`;
   return [summary, overlapLabel].filter(Boolean).join('\n');
 }
 
@@ -192,12 +218,15 @@ function CalendarBlock({ positioned, overlapLabel }: CalendarBlockProps) {
   const { entry, top, height, left, width } = positioned;
   const style = blockStyles[getBlockVariant(entry)];
   const hasTimeLabel = height >= MIN_TIME_LABEL_HEIGHT;
+  const title = getEntryTitle(entry, overlapLabel);
+  const Icon = style.icon?.component;
   return (
     <Link
       to={getEntryHref(entry)}
-      title={getEntryTitle(entry, overlapLabel)}
+      title={title}
+      aria-label={title}
       className={cn(
-        'absolute z-10 flex flex-col overflow-hidden rounded-sm px-1.5 text-fg transition-[filter,border-color] hover:z-20',
+        'absolute z-10 flex flex-col overflow-hidden rounded-sm px-1.5 text-fg transition-[filter,border-color] hover:z-20 focus-visible:z-30',
         style.className,
       )}
       style={{
@@ -208,8 +237,20 @@ function CalendarBlock({ positioned, overlapLabel }: CalendarBlockProps) {
         paddingTop: hasTimeLabel ? 3 : 0,
       }}
     >
-      <span className={cn('truncate text-caption leading-3', overlapLabel && 'pr-2.5')}>
-        {entry.routine}
+      <span
+        className={cn(
+          'flex min-w-0 items-center gap-1 text-caption leading-3',
+          overlapLabel && 'pr-2.5',
+        )}
+      >
+        {Icon && (
+          <Icon
+            aria-hidden="true"
+            strokeWidth={3}
+            className={cn('size-2.5 shrink-0', style.icon?.className)}
+          />
+        )}
+        <span className="truncate">{entry.routine}</span>
       </span>
       {hasTimeLabel && (
         <span className="truncate text-caption leading-3 font-normal text-fg-secondary tabular-nums">
@@ -218,7 +259,7 @@ function CalendarBlock({ positioned, overlapLabel }: CalendarBlockProps) {
       )}
       {overlapLabel && (
         <span
-          title={overlapLabel}
+          aria-hidden="true"
           className="absolute top-[3px] right-[3px] size-1.5 rounded-full bg-surface shadow-[0_0_0_1.5px_var(--negative)]"
         />
       )}
@@ -314,12 +355,32 @@ function OverlapChip({ count }: OverlapChipProps) {
     .exhaustive();
 }
 
+interface LegendSwatchProps {
+  variant: BlockVariant;
+}
+
+function LegendSwatch({ variant }: LegendSwatchProps) {
+  const icon = blockStyles[variant].icon;
+  const Icon = icon?.component;
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        'flex h-3.5 w-5 items-center justify-center rounded-xs',
+        blockSurfaceClassNames[variant],
+      )}
+    >
+      {Icon && <Icon strokeWidth={3} className={cn('size-2.5', icon.className)} />}
+    </span>
+  );
+}
+
 function CalendarLegend() {
   return (
     <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-line px-4 py-3 text-body-sm text-fg-muted">
       {legendItems.map(item => (
         <span key={item.label} className="flex items-center gap-1.5">
-          <span className={cn('h-2.5 w-4 rounded-xs', blockSurfaceClassNames[item.variant])} />
+          <LegendSwatch variant={item.variant} />
           {item.label}
         </span>
       ))}
@@ -354,81 +415,88 @@ export function WeekCalendar() {
   const isCurrentWeek = getIsSameDay(weekStart, getWeekStart(now));
 
   return (
-    <section>
-      <SectionTitle>Calendar</SectionTitle>
-      <Card className="gap-0 py-0">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
-          <div className="flex min-w-0 items-baseline gap-3">
-            <span className="text-title-md text-fg tabular-nums">{formatWeekRange(weekStart)}</span>
-            {error && <span className="text-body-sm text-negative">{error}</span>}
-          </div>
-          <div className="flex items-center gap-3">
-            {data && <OverlapChip count={overlapCount} />}
-            <div className="flex items-center gap-1">
-              <Button
-                variant="tertiary"
-                size="icon-small"
-                aria-label="Previous week"
-                onClick={() => setWeekStart(addDays(weekStart, -7))}
-              >
-                <ChevronLeft />
-              </Button>
-              <Button
-                variant="tertiary"
-                size="small"
-                isActive={isCurrentWeek}
-                aria-pressed={isCurrentWeek}
-                onClick={() => setWeekStart(getWeekStart(new Date()))}
-              >
-                Today
-              </Button>
-              <Button
-                variant="tertiary"
-                size="icon-small"
-                aria-label="Next week"
-                onClick={() => setWeekStart(addDays(weekStart, 7))}
-              >
-                <ChevronRight />
-              </Button>
-            </div>
+    <Card className="gap-0 py-0">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
+        <div className="flex min-w-0 items-baseline gap-3">
+          <h2 aria-live="polite" className="text-title-md text-fg tabular-nums">
+            {formatWeekRange(weekStart)}
+          </h2>
+          {error && (
+            <span role="alert" className="text-body-sm text-negative">
+              {error}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          {data && <OverlapChip count={overlapCount} />}
+          <div className="flex items-center gap-1">
+            <Button
+              variant="tertiary"
+              size="icon-small"
+              aria-label="Previous week"
+              onClick={() => setWeekStart(addDays(weekStart, -7))}
+            >
+              <ChevronLeft />
+            </Button>
+            <Button
+              variant="tertiary"
+              size="small"
+              isActive={isCurrentWeek}
+              onClick={() => setWeekStart(getWeekStart(new Date()))}
+            >
+              Today
+            </Button>
+            <Button
+              variant="tertiary"
+              size="icon-small"
+              aria-label="Next week"
+              onClick={() => setWeekStart(addDays(weekStart, 7))}
+            >
+              <ChevronRight />
+            </Button>
           </div>
         </div>
-        <div className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] border-b border-line pr-2">
-          <div />
-          {days.map(day => (
-            <DayHeader key={day.toISOString()} day={day} isToday={getIsSameDay(day, now)} />
-          ))}
-        </div>
-        <div className="py-2 pr-2">
-          <div
-            className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] border-b border-line-faint"
-            style={{ height: DAY_HEIGHT }}
-          >
-            <div className="relative">
-              {HOURS.map(hour => (
-                <span
-                  key={hour}
-                  className="absolute right-2 -translate-y-1/2 text-caption font-normal text-fg-muted tabular-nums"
-                  style={{ top: hour * HOUR_HEIGHT }}
-                >
-                  {formatHour(hour)}
-                </span>
-              ))}
-            </div>
+      </div>
+      {/* Below ~720px the week scrolls sideways inside the card instead of squeezing the days. */}
+      <div className="overflow-x-auto">
+        <div className="min-w-[720px]">
+          <div className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] border-b border-line pr-2">
+            <div className="sticky left-0 z-40 bg-surface" />
             {days.map(day => (
-              <DayColumn
-                key={day.toISOString()}
-                day={day}
-                entries={entries}
-                now={now}
-                isToday={getIsSameDay(day, now)}
-                routinesById={routinesById}
-              />
+              <DayHeader key={day.toISOString()} day={day} isToday={getIsSameDay(day, now)} />
             ))}
           </div>
+          <div className="py-2 pr-2">
+            <div
+              className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] border-b border-line-faint"
+              style={{ height: DAY_HEIGHT }}
+            >
+              <div className="sticky left-0 z-40 bg-surface">
+                {HOURS.map(hour => (
+                  <span
+                    key={hour}
+                    className="absolute right-2 -translate-y-1/2 text-caption font-normal text-fg-muted tabular-nums"
+                    style={{ top: hour * HOUR_HEIGHT }}
+                  >
+                    {formatHour(hour)}
+                  </span>
+                ))}
+              </div>
+              {days.map(day => (
+                <DayColumn
+                  key={day.toISOString()}
+                  day={day}
+                  entries={entries}
+                  now={now}
+                  isToday={getIsSameDay(day, now)}
+                  routinesById={routinesById}
+                />
+              ))}
+            </div>
+          </div>
         </div>
-        <CalendarLegend />
-      </Card>
-    </section>
+      </div>
+      <CalendarLegend />
+    </Card>
   );
 }

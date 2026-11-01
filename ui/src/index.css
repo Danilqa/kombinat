@@ -3,6 +3,8 @@
 @plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
+/* Matches controls that can be used: neither disabled nor aria-disabled (which stays focusable). */
+@custom-variant interactive (&:not(:disabled):not([aria-disabled='true']));
 
 :root {
   color-scheme: dark;
@@ -21,7 +23,7 @@
   --fg: #ececee;
   --fg-prose: #cfcfd3;
   --fg-secondary: #a3a3a9;
-  --fg-muted: #808087;
+  --fg-muted: #8b8b92;
   --fg-faint: #47474d;
 
   --positive: #4cc38a;
@@ -34,10 +36,16 @@
   --info-soft: rgba(107, 156, 255, 0.14);
   --neutral-soft: rgba(255, 255, 255, 0.06);
 
+  /* The soft tints above, pre-blended over --surface so lines behind them do not show through. */
+  --positive-tint: color-mix(in srgb, var(--positive) 13%, var(--surface));
+  --negative-tint: color-mix(in srgb, var(--negative) 13%, var(--surface));
+  --warning-tint: color-mix(in srgb, var(--warning) 13%, var(--surface));
+  --neutral-tint: color-mix(in srgb, #fff 6%, var(--surface));
+
   --glow: rgba(240, 120, 70, 0.07);
 
   --popover-shadow-value: 0 12px 32px -8px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--line);
-  --focus-ring-value: 0 0 0 1px var(--page), 0 0 0 3px rgba(255, 255, 255, 0.3);
+  --focus-ring-value: 0 0 0 1px var(--page), 0 0 0 3px rgba(255, 255, 255, 0.5);
 
   --background: var(--page);
   --foreground: var(--fg);
@@ -91,6 +99,10 @@
   --color-info: var(--info);
   --color-info-soft: var(--info-soft);
   --color-neutral-soft: var(--neutral-soft);
+  --color-positive-tint: var(--positive-tint);
+  --color-negative-tint: var(--negative-tint);
+  --color-warning-tint: var(--warning-tint);
+  --color-neutral-tint: var(--neutral-tint);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -179,6 +191,34 @@
     background: rgba(107, 156, 255, 0.35);
     color: var(--fg);
   }
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  [role='tab']:not([aria-disabled='true']),
+  summary,
+  select,
+  label[for] {
+    cursor: pointer;
+  }
+  button:disabled,
+  [aria-disabled='true'] {
+    cursor: not-allowed;
+  }
+  @media (forced-colors: active) {
+    :focus-visible {
+      outline: 2px solid CanvasText;
+      outline-offset: 2px;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
 
 @layer components {
@@ -237,6 +277,23 @@
     line-height: 16px;
     font-weight: 500;
     color: var(--fg-muted);
+  }
+  .skip-link {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 100;
+    padding: 6px 12px;
+    border-radius: 9999px;
+    background-color: var(--fg);
+    color: var(--page);
+    font-size: 13px;
+    line-height: 20px;
+    font-weight: 500;
+    transform: translateY(-200%);
+  }
+  .skip-link:focus-visible {
+    transform: none;
   }
 }
 
