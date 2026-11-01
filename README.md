@@ -24,7 +24,7 @@ Each row is a file in [`routines/`](routines/). `pnpm cli readme` updates this t
 <!-- routines:start -->
 | Routine | When | What it does |
 | - | - | - |
-| [smoke-test](routines/smoke-test.md) | Manual | Say hi |
+| [weather-example-routine](routines/weather-example-routine.md) | Weekdays at 08:00 | Says if you need an umbrella today |
 <!-- routines:end -->
 <!-- prettier-ignore-end -->
 
