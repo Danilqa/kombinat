@@ -1,6 +1,20 @@
 # Kombinat
 
-Coding agent routines defined in this repo instead of a desktop UI. They run on your Mac under launchd with Claude Code, Codex or any other CLI agent, using your normal subscription login.
+Background AI agents that run routines defined in your repository, 24/7. They run on your machine under launchd with Claude Code, Codex or any other CLI agent, using your normal subscription login.
+
+Ready to use in your organisation or at home.
+
+1. **Version-controlled routines.** Merge a `.md` file and the change is picked up automatically.
+2. **Minimal and lightweight.** Run one command on a machine that is on 24/7.
+3. **Your own integrations.** Agents use your local environment as is, including skills, browser control and more.
+4. **Cheap.** Works with your existing Claude or Codex subscription.
+
+**Ideas to get you started:**
+
+1. **Post-release monitoring.** Checks Intercom, Sentry, Grafana and the logs for problems in code shipped over the last 3 days, raises an alert and opens PRs with fixes.
+2. **On-call engineer.** Investigates production incidents and opens PRs to fix them.
+3. **Flaky E2E test fixer.**
+4. **Dead code and feature flag clean-up.**
 
 ## Routines
 
