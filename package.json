@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Repo-defined routines for Claude Code, Codex or any other coding agent, run on a local machine under launchd",
+  "description": "Dead simple, lightweight engine for 24/7 background AI agents. Works with your Claude, Codex or any other subscription.",
   "scripts": {
     "cli": "tsx src/cli.ts",
     "serve": "tsx src/cli.ts serve",
