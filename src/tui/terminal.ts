@@ -1,8 +1,11 @@
 import { createKeyReader } from './keys';
 import { toAnsi, type Line } from './text';
+import { BASE } from './theme';
 
+// Erasing paints with the current background, so the page colour is set first.
+const PAGE = `\x1b[0;${BASE}m`;
 // Alternate screen, hidden cursor, no line wrap, bracketed paste.
-const ENTER = '\x1b[?1049h\x1b[?25l\x1b[?7l\x1b[?2004h\x1b[2J';
+const ENTER = `\x1b[?1049h\x1b[?25l\x1b[?7l\x1b[?2004h${PAGE}\x1b[2J`;
 const LEAVE = '\x1b[0m\x1b[?2004l\x1b[?7h\x1b[?25h\x1b[?1049l';
 // Synchronized output, so terminals that support it never show half a frame.
 const BEGIN_FRAME = '\x1b[?2026h';
@@ -34,18 +37,18 @@ export class Terminal {
     process.stdin.resume();
     process.stdout.on('resize', () => {
       this.previous = [];
-      process.stdout.write('\x1b[2J');
+      process.stdout.write(`${PAGE}\x1b[2J`);
       onResize();
     });
   }
 
   draw(frame: Line[]): void {
     if (!this.isActive) return;
-    const rows = frame.map(line => toAnsi(line));
+    const rows = frame.map(line => toAnsi(line, BASE));
     let output = '';
     rows.forEach((row, index) => {
       // Clearing the row first means a cell the width math got wrong cannot linger.
-      if (row !== this.previous[index]) output += `\x1b[${index + 1};1H\x1b[2K${row}`;
+      if (row !== this.previous[index]) output += `\x1b[${index + 1};1H${PAGE}\x1b[2K${row}`;
     });
     this.previous = rows;
     if (output) process.stdout.write(BEGIN_FRAME + output + END_FRAME);

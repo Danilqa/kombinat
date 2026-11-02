@@ -123,15 +123,20 @@ export function withStyle(line: Line, style: string): Line {
   return line.map(span => ({ ...span, style: span.style ? `${span.style};${style}` : style }));
 }
 
-// The cursor row: blue bar, and nothing dim on it so it stays readable.
-function selectRow(line: Line): Line {
+function onBackground(line: Line, background: string): Line {
   return line.map(span => ({
     ...span,
-    style: [
-      ...(span.style ?? '').split(';').filter(param => param && param !== S.dim),
-      S.selected,
-    ].join(';'),
+    style: span.style ? `${background};${span.style}` : background,
   }));
+}
+
+function titleSpans(title: string, isFocused: boolean, icon: Span | undefined): Line {
+  const [, key, name = title] = /^\[(\S+)\] (.*)$/.exec(title) ?? [];
+  return [
+    ...(icon ? [icon, text(' ')] : []),
+    ...(key ? [text(`${key}  `, S.grey)] : []),
+    text(name, isFocused ? S.boldMagenta : S.heading),
+  ];
 }
 
 interface BoxOptions {
@@ -142,8 +147,12 @@ interface BoxOptions {
   isFocused: boolean;
   footer?: string | undefined;
   highlightRow?: number | null;
+  icon?: Span;
+  tone?: 'panel' | 'popup';
 }
 
+// A filled card like the dashboard's: title row on top, an accent bar on the left while focused,
+// and a row and a column of page around a panel so neighbours stay apart.
 // Body lines get one cell of padding on each side, so they should be width - 4 wide.
 export function box({
   title,
@@ -153,31 +162,34 @@ export function box({
   isFocused,
   footer,
   highlightRow,
+  icon,
+  tone = 'panel',
 }: BoxOptions): Line[] {
-  const border = isFocused ? S.boldGreen : undefined;
-  const inner = width - 2;
-  const titleLine = fitLine(
-    [text(` ${title} `, isFocused ? S.boldGreen : S.bold)],
-    Math.min(inner - 1, textWidth(title) + 2),
-  );
-  const top: Line = [
-    text('╭─', border),
-    ...titleLine,
-    text(`${'─'.repeat(Math.max(0, inner - 1 - lineWidth(titleLine)))}╮`, border),
+  const isPopup = match(tone)
+    .with('popup', () => true)
+    .with('panel', () => false)
+    .exhaustive();
+  const fill = isPopup ? S.popup : S.surface;
+  const inner = width - 4;
+  const bar = isFocused ? text('▌', S.accent) : text(' ');
+  const footerLine: Line = footer ? [text(footer, isFocused ? S.cyan : S.grey)] : [];
+  const header: Line = [
+    ...fitLine(titleSpans(title, isFocused, icon), Math.max(0, inner - lineWidth(footerLine))),
+    ...footerLine,
   ];
-  const footerText = footer ? ` ${footer} ` : '';
-  const bottom: Line = [
-    text(`╰${'─'.repeat(Math.max(0, inner - textWidth(footerText) - 1))}`, border),
-    text(footerText, isFocused ? S.boldGreen : S.dim),
-    text('─╯', border),
+  const edge = text(' ');
+  const row = (content: Line, background = fill): Line => [
+    ...onBackground([bar], fill),
+    ...onBackground([text(' '), ...fitLine(content, inner), text(' ')], background),
+    ...(isPopup ? onBackground([edge], fill) : [edge]),
   ];
   const rows = Array.from({ length: Math.max(0, height - 2) }, (_, index) => {
-    let row = fitLine([text(' '), ...(body[index] ?? [])], inner);
-    // Like lazygit: a blue bar in the focused panel, just bold in the others.
-    if (index === highlightRow) row = isFocused ? selectRow(row) : withStyle(row, S.bold);
-    return [text('│', border), ...row, text('│', border)];
+    const content = body[index] ?? [];
+    if (index !== highlightRow) return row(content);
+    return row(content, `${fill};${isFocused ? S.selected : S.hover}`);
   });
-  return [top, ...rows, fitLine(bottom, width)];
+  const last = isPopup ? row([]) : [text(' '.repeat(width))];
+  return [row(header), ...rows, last];
 }
 
 export function overlayOnto(frame: Line[], popup: Line[], width: number): Line[] {
@@ -312,7 +324,7 @@ function detailRows(pairs: DetailPair[], width: number): Line[] {
 }
 
 function sectionTitle(title: string, aside?: string): Line {
-  return [text(title.toUpperCase(), S.boldBlue), ...(aside ? [text(`  ${aside}`, S.dim)] : [])];
+  return [text(title.toUpperCase(), S.heading), ...(aside ? [text(`  ${aside}`, S.grey)] : [])];
 }
 
 function timeValue(iso: string | null, now: number): Line {
@@ -328,10 +340,10 @@ interface Tab {
 function tabBar(tabs: Tab[], active: RoutineTab): Line {
   return [
     ...tabs.flatMap(tab => [
-      text(` ${tab.label} `, tab.id === active ? '1;30;42' : S.dim),
+      text(` ${tab.label} `, tab.id === active ? `${S.boldMagenta};${S.selected}` : S.dim),
       text(' '),
     ]),
-    text('  [ ] switch', S.dim),
+    text('  [ ] switch', S.grey),
   ];
 }
 
@@ -484,7 +496,7 @@ export function routinePage({
       ],
       tab,
     ),
-    [text('─'.repeat(width), S.dim)],
+    [text('─'.repeat(width), S.grey)],
   ]);
   if (!detail) {
     return {
@@ -573,7 +585,7 @@ function blockLines(
   style: string | undefined,
   width: number,
 ): Line[] {
-  const gutter = text('  │ ', S.dim);
+  const gutter = text('  │ ', S.grey);
   const body: Line[] = [];
   let isCut = false;
   for (const raw of source) {
@@ -722,7 +734,7 @@ export function transcriptLines(
     const action: Action = { kind: 'toggle', key: item.key };
     itemLines(item, expanded.has(item.key), innerWidth, isRunning).forEach((line, index) => {
       lines.push({
-        line: isSubagent ? [text('┊ ', S.dim), ...line] : line,
+        line: isSubagent ? [text('┊ ', S.grey), ...line] : line,
         itemKey: item.key,
         isItemStart: index === 0,
         ...(isExpandable(item) ? { action } : {}),
@@ -760,7 +772,15 @@ export function helpPopup(width: number, height: number): Line[] {
   // Drop the spacing and the footer when the terminal is too short for them.
   const body =
     keys.length + 5 <= height ? [[], ...keys, [], [text(' any key closes', S.dim)]] : keys;
-  return box({ title: 'Keys', width: popupWidth, height: body.length + 2, body, isFocused: true });
+  return box({
+    title: 'Keys',
+    width: popupWidth,
+    height: body.length + 2,
+    body,
+    isFocused: true,
+    footer: 'esc',
+    tone: 'popup',
+  });
 }
 
 export function confirmPopup(routine: string, width: number): Line[] {
@@ -783,13 +803,14 @@ export function confirmPopup(routine: string, width: number): Line[] {
     height: body.length + 2,
     body,
     isFocused: true,
+    tone: 'popup',
   });
 }
 
 export function hintsBar(hints: Array<[string, string]>, right: Line, width: number): Line {
   const left: Line = hints.flatMap(([key, label]) => [
     text(` ${key}`, S.boldCyan),
-    text(` ${label} `),
+    text(` ${label}  `, S.dim),
   ]);
   const rightWidth = Math.min(lineWidth(right), Math.floor(width / 2));
   return [...fitLine(left, width - rightWidth - 1), text(' '), ...fitLine(right, rightWidth)];

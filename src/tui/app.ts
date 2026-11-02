@@ -640,6 +640,7 @@ export class TuiApp {
     const left = [
       ...box({
         title: 'Kombinat',
+        icon: { text: '▟', style: S.accent },
         width: leftWidth,
         height: statusHeight,
         body: statusLines(this.overview, this.overviewError, this.loadedAt, now),
