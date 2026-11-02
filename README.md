@@ -21,7 +21,7 @@ Ready to use in your organisation or at home.
 
    It runs in this terminal. To keep it running in the background and after reboots, stop it and run `pnpm cli install` instead, see [Setup](#setup).
 
-3. Add your routines as `.md` files in [`routines/`](routines/), see [Writing a routine](#writing-a-routine). Changes are picked up on the next check, no restart needed. Agents run with your usual setup, so your global skills, MCP servers and `CLAUDE.md` are picked up. Commit your routines, for example to a fork: the daemon only pulls updates into a checkout with no local changes. The included `weather-example-routine` runs on weekdays at 08:00, delete it if you don't need it.
+3. Add your routines as `.md` files in [`routines/`](routines/), see [Writing a routine](#writing-a-routine). Changes are picked up on the next check, no restart needed. Agents run with your usual setup, so your global skills, MCP servers and `CLAUDE.md` are picked up.
 
 4. Monitor and debug runs in the dashboard at http://localhost:7433, or in the terminal with `pnpm cli tui`, which also works over ssh. See [Monitoring](#monitoring).
 
