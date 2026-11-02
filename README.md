@@ -27,7 +27,11 @@ The daemon serves a dashboard at http://localhost:7433.
 - **Runs.** The latest runs across all routines. A run page shows the result, every tool call in the transcript and, for Claude and Codex, the command to resume the session in your terminal.
 - **Daemon status.** The top bar shows whether the scheduler is ticking and how many routines are running.
 
-`pnpm cli tui` shows the same in the terminal, without the calendar. Press `?` for keys.
+### In the terminal
+
+<img src=".github/assets/tui.png" alt="Kombinat in the terminal: routines, recent runs and a routine's run history" width="100%" />
+
+`pnpm cli tui` shows the same in the terminal, without the calendar. It works over ssh. Press `?` for keys.
 
 ## Routines
 
