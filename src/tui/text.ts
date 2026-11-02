@@ -1,5 +1,7 @@
 import { stripVTControlCharacters } from 'node:util';
 
+import { bg, fg } from './theme';
+
 // `style` holds SGR parameters ("1;32" = bold green), `link` becomes an OSC 8 hyperlink.
 export interface Span {
   text: string;
@@ -8,26 +10,32 @@ export interface Span {
 }
 export type Line = Span[];
 
+// Named after what they used to be in 16 colours; the values come from the dashboard palette.
 export const S = {
   bold: '1',
-  dim: '2',
+  dim: fg('muted'),
   italic: '3',
   underline: '4',
   inverse: '7',
-  red: '31',
-  green: '32',
-  yellow: '33',
-  blue: '34',
-  magenta: '35',
-  cyan: '36',
-  grey: '90',
-  boldRed: '1;31',
-  boldGreen: '1;32',
-  boldYellow: '1;33',
-  boldBlue: '1;34',
-  boldMagenta: '1;35',
-  boldCyan: '1;36',
-  selected: '44',
+  red: fg('negative'),
+  green: fg('positive'),
+  yellow: fg('warning'),
+  blue: fg('info'),
+  magenta: fg('fg'),
+  cyan: fg('secondary'),
+  grey: fg('faint'),
+  accent: fg('accent'),
+  boldRed: `1;${fg('negative')}`,
+  boldGreen: `1;${fg('positive')}`,
+  boldYellow: `1;${fg('warning')}`,
+  boldBlue: `1;${fg('info')}`,
+  boldMagenta: `1;${fg('fg')}`,
+  boldCyan: `1;${fg('fg')}`,
+  heading: `1;${fg('secondary')}`,
+  selected: bg('overlay'),
+  hover: bg('raised'),
+  surface: bg('surface'),
+  popup: bg('overlay'),
 } as const;
 
 const ZERO_WIDTH: Array<[number, number]> = [

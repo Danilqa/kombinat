@@ -185,28 +185,28 @@ test('fills the terminal exactly, with the status, routines, runs and detail pan
   for (const line of frame) assert.equal(lineWidth(line), WIDTH);
   const text = frame.map(plain).join('\n');
   assert.match(text, /daemon pid 4242/);
-  assert.match(text, /\[1\] Routines/);
-  assert.match(text, /\[2\] Recent runs/);
+  assert.match(text, /1 {2}Routines/);
+  assert.match(text, /2 {2}Recent runs/);
   assert.match(text, /on-call-monitoring\s+in 10m/);
   assert.match(text, /Hourly at :10, 07:00-22:59/);
 });
 
 test('moving through the routines list changes the detail panel', async () => {
   const { screen, press } = await makeApp();
-  assert.match(screen(), /\[0\] on-call-monitoring/);
-  assert.match(await press('j'), /\[0\] smoke-test/);
-  assert.match(await press('k'), /\[0\] on-call-monitoring/);
+  assert.match(screen(), /0 {2}on-call-monitoring/);
+  assert.match(await press('j'), /0 {2}smoke-test/);
+  assert.match(await press('k'), /0 {2}on-call-monitoring/);
 });
 
 test("enter opens a run from the routine's runs tab and esc goes back", async () => {
   const { press } = await makeApp();
   await press('enter');
   const runScreen = await press('enter');
-  assert.match(runScreen, /\[0\] on-call-monitoring › 20261006T110000Z-abcd/);
+  assert.match(runScreen, /0 {2}on-call-monitoring › 20261006T110000Z-abcd/);
   assert.match(runScreen, /TRANSCRIPT\s+4 events/);
   assert.match(runScreen, /▸ Bash\s+gh pr list/);
   assert.match(runScreen, /claude --resume session-1/);
-  assert.match(await press('escape'), /\[0\] on-call-monitoring ─/);
+  assert.match(await press('escape'), /0 {2}on-call-monitoring {2}/);
 });
 
 test('the prompt tab renders the routine prompt as markdown', async () => {
@@ -256,9 +256,9 @@ test('every key in a chunk acts on the screen the previous key left', async () =
   await press('enter');
   assert.match(
     await pressChunk(['enter', 'enter']),
-    /\[0\] on-call-monitoring › 20261006T110000Z-abcd/,
+    /0 {2}on-call-monitoring › 20261006T110000Z-abcd/,
   );
-  assert.match(await press('escape'), /\[0\] on-call-monitoring ─/);
+  assert.match(await press('escape'), /0 {2}on-call-monitoring {2}/);
 });
 
 test('the cursor stays on the same run when a new run shows up above it', async () => {
@@ -269,7 +269,7 @@ test('the cursor stays on the same run when a new run shows up above it', async 
   overview.runs.unshift(makeRun('on-call-monitoring', '20261006T115000Z-newer'));
   await app.refresh();
   app.render(WIDTH, HEIGHT);
-  assert.match(await press('enter'), /\[0\] on-call-monitoring › 20261006T100000Z-older/);
+  assert.match(await press('enter'), /0 {2}on-call-monitoring › 20261006T100000Z-older/);
 });
 
 test('does not offer to start a routine that is already running', async () => {
