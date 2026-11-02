@@ -4,6 +4,29 @@ Background AI agents that run routines defined in your repository, 24/7. They ru
 
 Ready to use in your organisation or at home.
 
+**Quickstart:**
+
+1. Get the code. You need macOS, Node 24, pnpm and Claude Code or Codex, logged in. Kombinat looks for Claude Code at `~/.local/bin/claude`. If yours is elsewhere, set `CLAUDE_BIN`.
+
+   ```bash
+   git clone https://github.com/Danilqa/kombinat.git && cd kombinat
+   pnpm install
+   ```
+
+2. Start the scheduler. The first start also builds the dashboard.
+
+   ```bash
+   pnpm serve
+   ```
+
+   It runs in this terminal. To keep it running in the background and after reboots, stop it and run `pnpm cli install` instead, see [Setup](#setup).
+
+3. Add your routines as `.md` files in [`routines/`](routines/), see [Writing a routine](#writing-a-routine). Changes are picked up on the next check, no restart needed. Agents run with your usual setup, so your global skills, MCP servers and `CLAUDE.md` are picked up. Commit your routines, for example to a fork: the daemon only pulls updates into a checkout with no local changes. The included `weather-example-routine` runs on weekdays at 08:00, delete it if you don't need it.
+
+4. Monitor and debug runs in the dashboard at http://localhost:7433, or in the terminal with `pnpm cli tui`, which also works over ssh. See [Monitoring](#monitoring).
+
+**Why Kombinat:**
+
 1. **Version-controlled routines.** Merge a `.md` file and the change is picked up automatically.
 2. **Minimal and lightweight.** Run one command on a machine that is on 24/7.
 3. **Your own integrations.** Agents use your local environment as is, including skills, browser control and more.
@@ -16,7 +39,7 @@ Ready to use in your organisation or at home.
 3. **Flaky E2E test fixer.**
 4. **Dead code and feature flag clean-up.**
 
-## Dashboard
+## Monitoring
 
 <img src=".github/assets/dashboard.png" alt="Kombinat dashboard: routines list, week calendar and a run transcript" width="100%" />
 
