@@ -1,12 +1,3 @@
-<h1 align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset=".github/assets/logo-dark.svg" />
-    <img src=".github/assets/logo-light.svg" alt="" width="96" height="96" />
-  </picture>
-  <br />
-  Kombinat
-</h1>
-
 <img src=".github/assets/banner.png" alt="Kombinat: routines in your repo, run by AI agents 24/7" width="100%" />
 
 Background AI agents that run routines defined in your repository, 24/7. They run on your machine under launchd with Claude Code, Codex or any other CLI agent, using your normal subscription login.
@@ -24,6 +15,19 @@ Ready to use in your organisation or at home.
 2. **On-call engineer.** Investigates production incidents and opens PRs to fix them.
 3. **Flaky E2E test fixer.**
 4. **Dead code and feature flag clean-up.**
+
+## Dashboard
+
+<img src=".github/assets/dashboard.png" alt="Kombinat dashboard: routines list, week calendar and a run transcript" width="100%" />
+
+The daemon serves a dashboard at http://localhost:7433.
+
+- **Routines.** Every routine with its schedule in plain words, agent and model, next run and last result. Start any routine with Run now.
+- **Calendar.** A week of past runs coloured by status and the planned runs from each schedule, so you can spot gaps and routines that overlap.
+- **Runs.** The latest runs across all routines. A run page shows the result, every tool call in the transcript and, for Claude and Codex, the command to resume the session in your terminal.
+- **Daemon status.** The top bar shows whether the scheduler is ticking and how many routines are running.
+
+`pnpm cli tui` shows the same in the terminal, without the calendar. Press `?` for keys.
 
 ## Routines
 
@@ -116,12 +120,6 @@ A setting the agent does not support fails validation.
 - If the Mac was asleep, each routine runs once for its latest missed time, up to 7 days back.
 - A routine never runs twice at the same time. If it is still running at its next time, that run is skipped.
 - At most 3 routines run at once.
-
-## Dashboard
-
-The week calendar shows past runs coloured by status and planned runs from each routine's schedule. A run page shows the full transcript and, for Claude and Codex, the command to resume the session in your terminal.
-
-`pnpm cli tui` shows the same in the terminal, without the calendar. Press `?` for keys.
 
 ## Updating
 
