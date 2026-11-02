@@ -7,6 +7,8 @@
   Kombinat
 </h1>
 
+<img src=".github/assets/banner.png" alt="Kombinat: routines in your repo, run by AI agents 24/7" width="100%" />
+
 Background AI agents that run routines defined in your repository, 24/7. They run on your machine under launchd with Claude Code, Codex or any other CLI agent, using your normal subscription login.
 
 Ready to use in your organisation or at home.
