@@ -1,3 +1,9 @@
+packages:
+  - packages/*
+catalog:
+  ts-pattern: 5.9.2
+  tsx: 4.23.15
+  zod: 4.6.7
 allowBuilds:
   esbuild: false
 saveExact: true

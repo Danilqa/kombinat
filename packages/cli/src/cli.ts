@@ -17,7 +17,7 @@ import {
 } from './install';
 import { updateReadme } from './readme';
 import {
-  buildUiIfStale,
+  buildWebAppIfStale,
   installDepsIfStale,
   pullLatest,
   startAutoPull,
@@ -150,7 +150,7 @@ function serve(options: CliOptions): void {
     `kombinat serve pid ${process.pid}, routines ${config.routinesDir}, state ${config.stateDir}${managed}`,
   );
   installDepsIfStale(log);
-  buildUiIfStale(log);
+  buildWebAppIfStale(log);
   const stopScheduler = startScheduler(options);
   const server = startServer(log);
   const shutdown = (): void => {
@@ -179,7 +179,8 @@ function pull(): void {
 }
 
 function dev(options: CliOptions): void {
-  if (!config.fromSource)
+  const { workspaceRoot } = config;
+  if (workspaceRoot === null)
     throw new Error('dev only works in a checkout of the kombinat repository');
   ensureStateDirs();
   const hadLaunchd = isLaunchdLoaded();
@@ -196,7 +197,7 @@ function dev(options: CliOptions): void {
     scheduler: options.scheduler && !isOtherFolder,
   });
   const server = startServer(log);
-  const vite = spawn('pnpm', ['-s', 'ui:dev'], { cwd: config.packageRoot, stdio: 'inherit' });
+  const vite = spawn('pnpm', ['-s', 'ui:dev'], { cwd: workspaceRoot, stdio: 'inherit' });
   let closing = false;
   const handBack = (): void => {
     if (closing) return;

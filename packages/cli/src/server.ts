@@ -174,18 +174,18 @@ function sendJson(res: http.ServerResponse, { status, body }: ApiResponse): void
 }
 
 function serveStatic(res: http.ServerResponse, url: URL): void {
-  if (!fs.existsSync(config.uiDist)) {
+  if (!fs.existsSync(config.webAppDist)) {
     res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' });
     res.end('kombinat API is up. Build the UI with `pnpm ui:build` to get the dashboard here.\n');
     return;
   }
   const requested = path.normalize(decodeURIComponent(url.pathname));
-  const candidate = path.join(config.uiDist, requested);
+  const candidate = path.join(config.webAppDist, requested);
   const isFile =
-    candidate.startsWith(config.uiDist) &&
+    candidate.startsWith(config.webAppDist) &&
     fs.existsSync(candidate) &&
     fs.statSync(candidate).isFile();
-  const file = isFile ? candidate : path.join(config.uiDist, 'index.html');
+  const file = isFile ? candidate : path.join(config.webAppDist, 'index.html');
   res.writeHead(200, { 'content-type': MIME[path.extname(file)] ?? 'application/octet-stream' });
   fs.createReadStream(file).pipe(res);
 }

@@ -31,20 +31,19 @@ function getNewestMtime(root: string): number {
     );
 }
 
-const uiSources = () => [
-  path.join(config.packageRoot, 'ui', 'src'),
-  path.join(config.packageRoot, 'ui', 'index.html'),
-  path.join(config.packageRoot, 'ui', 'vite.config.ts'),
-  path.join(config.packageRoot, 'src', 'shared'),
+const webAppSources = (workspaceRoot: string) => [
+  path.join(workspaceRoot, 'ui', 'src'),
+  path.join(workspaceRoot, 'ui', 'index.html'),
+  path.join(workspaceRoot, 'ui', 'vite.config.ts'),
+  path.join(workspaceRoot, 'packages', 'cli', 'src', 'shared'),
 ];
 
-export function isUiStale(packageRoot = config.packageRoot): boolean {
-  const built = path.join(packageRoot, 'ui', 'dist', 'index.html');
+export function isWebAppStale(workspaceRoot = config.workspaceRoot): boolean {
+  if (workspaceRoot === null) return false;
+  const built = path.join(workspaceRoot, 'packages', 'cli', 'dist', 'web-app', 'index.html');
   if (!fs.existsSync(built)) return true;
   const builtAt = fs.statSync(built).mtimeMs;
-  return uiSources().some(
-    source => getNewestMtime(source.replace(config.packageRoot, packageRoot)) > builtAt,
-  );
+  return webAppSources(workspaceRoot).some(source => getNewestMtime(source) > builtAt);
 }
 
 interface PackageManager {
@@ -146,7 +145,8 @@ function runTool(command: string, args: string[], cwd: string, log: Log): boolea
   }
 }
 
-const buildUi = (log: Log): boolean => runTool('pnpm', ['-s', 'ui:build'], config.packageRoot, log);
+const buildWebApp = (workspaceRoot: string, log: Log): boolean =>
+  runTool('pnpm', ['-s', 'ui:build'], workspaceRoot, log);
 
 export function installDepsIfStale(log: Log): boolean {
   const dependencies = findDependencies();
@@ -161,10 +161,11 @@ export function installDepsIfStale(log: Log): boolean {
   return isInstalled;
 }
 
-export function buildUiIfStale(log: Log): boolean {
-  if (!config.fromSource || !isUiStale()) return false;
-  log('ui sources newer than ui/dist, building');
-  return buildUi(log);
+export function buildWebAppIfStale(log: Log): boolean {
+  const { workspaceRoot } = config;
+  if (workspaceRoot === null || !isWebAppStale(workspaceRoot)) return false;
+  log('ui sources newer than dist/web-app, building');
+  return buildWebApp(workspaceRoot, log);
 }
 
 function watchDebounced(
@@ -244,31 +245,35 @@ export function startAutoPull(log: Log): () => void {
 
 export function startReloadWatchers(log: Log, restart: (reason: string) => void): () => void {
   const dependencies = findDependencies();
-  const sourceWatchers = config.fromSource
-    ? [
-        watchDebounced(path.join(config.packageRoot, 'src'), 1500, file =>
-          restart(`src/${file} changed`),
-        ),
-        watchDebounced(path.join(config.packageRoot, 'ui', 'src'), 1500, file => {
-          log(`ui/src/${file} changed, rebuilding ui`);
-          buildUi(log);
-        }),
-      ]
-    : [];
+  // Pulled code can need dependencies that are not installed yet.
+  const installAndRestart = (reason: string): void => {
+    installDepsIfStale(log);
+    if (!fs.existsSync(config.cliBin)) {
+      log(`${config.cliBin} is missing after the install, keeping this version running`);
+      return;
+    }
+    restart(reason);
+  };
+  const { workspaceRoot } = config;
+  const sourceWatchers =
+    workspaceRoot === null
+      ? []
+      : [
+          watchDebounced(path.join(config.packageRoot, 'src'), 1500, file =>
+            installAndRestart(`src/${file} changed`),
+          ),
+          watchDebounced(path.join(workspaceRoot, 'ui', 'src'), 1500, file => {
+            log(`ui/src/${file} changed, rebuilding ui`);
+            buildWebApp(workspaceRoot, log);
+          }),
+        ];
   const lockfile =
     dependencies === null ? null : path.join(dependencies.root, dependencies.manager.lockfile);
   const watchers = [
     ...sourceWatchers,
     lockfile === null
       ? null
-      : watchDebounced(lockfile, 1500, () => {
-          installDepsIfStale(log);
-          if (!fs.existsSync(config.cliBin)) {
-            log(`${config.cliBin} is missing after the install, keeping this version running`);
-            return;
-          }
-          restart('dependencies changed');
-        }),
+      : watchDebounced(lockfile, 1500, () => installAndRestart('dependencies changed')),
   ];
   return () => watchers.forEach(w => w?.close());
 }

@@ -6,7 +6,7 @@ import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 
-const CLI = path.join(import.meta.dirname, '..', '..', 'bin', 'kombinat.js');
+const CLI = path.join(import.meta.dirname, '..', '..', 'packages', 'cli', 'bin', 'kombinat.js');
 
 export interface Daemon {
   root: string;

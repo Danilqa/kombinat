@@ -11,11 +11,11 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.join(uiRoot, 'src'),
-      '@shared': path.join(uiRoot, '..', 'src', 'shared'),
+      '@shared': path.join(uiRoot, '..', 'packages', 'cli', 'src', 'shared'),
     },
   },
   build: {
-    outDir: path.join(uiRoot, 'dist'),
+    outDir: path.join(uiRoot, '..', 'packages', 'cli', 'dist', 'web-app'),
     emptyOutDir: true,
     chunkSizeWarningLimit: 1000,
   },

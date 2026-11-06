@@ -29,19 +29,21 @@ const installedRoot =
     ? packageLink
     : null;
 const packageRoot = installedRoot ?? ownRoot;
+const fromSource = fs.existsSync(path.join(packageRoot, 'src', 'cli.ts'));
 
 const env = (name: string): string | undefined => process.env[name];
 
 export const config = {
   projectRoot,
   packageRoot,
+  workspaceRoot: fromSource ? path.resolve(fs.realpathSync(packageRoot), '..', '..') : null,
   cliBin: path.join(packageRoot, 'bin', 'kombinat.js'),
-  fromSource: fs.existsSync(path.join(packageRoot, 'src', 'cli.ts')),
+  fromSource,
   installedInProject: installedRoot !== null,
   projectHasCopy: packageLink !== null,
   routinesDir: env('KOMBINAT_ROUTINES_DIR') ?? path.join(projectRoot, 'routines'),
   stateDir: env('KOMBINAT_STATE_DIR') ?? path.join(os.homedir(), '.kombinat'),
-  uiDist: path.join(packageRoot, 'ui', 'dist'),
+  webAppDist: path.join(packageRoot, 'dist', 'web-app'),
   port: Number(env('KOMBINAT_PORT') ?? DEFAULT_PORT),
   claudeBin: env('CLAUDE_BIN') ?? path.join(os.homedir(), '.local', 'bin', 'claude'),
   codexBin: env('CODEX_BIN') ?? 'codex',

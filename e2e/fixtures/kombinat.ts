@@ -1,9 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import type { AgentName, RunRecord, SchedulerState, SkipReason } from '../../src/shared/contract';
-import { createRunId } from '../../src/state';
-import { makeRunRecord } from '../../src/testing';
+import type {
+  AgentName,
+  RunRecord,
+  SchedulerState,
+  SkipReason,
+} from '../../packages/cli/src/shared/contract';
+import { createRunId } from '../../packages/cli/src/state';
+import { makeRunRecord } from '../../packages/cli/src/testing';
 import { minutesAgo } from './time';
 
 export interface RoutineFile {
