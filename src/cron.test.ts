@@ -50,6 +50,9 @@ test('finds the next run after a given time', () => {
 test('describes common schedules', () => {
   assert.equal(describeCron('30 11 * * *'), 'Daily at 11:30');
   assert.equal(describeCron('10 7-22 * * *'), 'Hourly at :10, 07:00-22:59');
+  assert.equal(describeCron('0 0-4,23 * * *'), 'Hourly at :00, 23:00-04:59');
+  assert.equal(describeCron('0 9-12,14-17 * * *'), 'Hourly at :00, 09:00-12:59 and 14:00-17:59');
+  assert.equal(describeCron('15 6,9-11 * * *'), 'Hourly at :15, 06:15 and 09:00-11:59');
   assert.equal(describeCron('30 5 * * 2'), 'Weekly on Tuesday at 05:30');
   assert.equal(describeCron('0 9 * * 1-5'), 'Weekdays at 09:00');
   assert.equal(describeCron('0 23,2 * * *'), 'Daily at 02:00 and 23:00');

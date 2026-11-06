@@ -178,7 +178,7 @@ function RoutineView({ routine }: RoutineViewProps) {
           <TabsTrigger value="prompt">Prompt</TabsTrigger>
         </TabsList>
         <TabsContent value="runs" className="space-y-10">
-          <Card className="gap-0 py-0">
+          <Card className="gap-0 overflow-visible py-0">
             <RunsTable runs={routine.runs} hasRoutineColumn={false} />
           </Card>
           {routine.skips.length > 0 && (
@@ -186,7 +186,7 @@ function RoutineView({ routine }: RoutineViewProps) {
               <SectionTitle aside={<SectionAside>{routine.skips.length} skipped</SectionAside>}>
                 Skipped runs
               </SectionTitle>
-              <Card className="gap-0 py-0">
+              <Card className="gap-0 overflow-visible py-0">
                 <SkipsTable skips={routine.skips} />
               </Card>
             </section>

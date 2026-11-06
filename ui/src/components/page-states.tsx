@@ -14,7 +14,7 @@ export function ErrorState({ message }: ErrorStateProps) {
   return (
     <p
       role="alert"
-      className="rounded-lg bg-negative-soft px-4 py-3 text-body font-medium text-negative"
+      className="mb-4 rounded-lg bg-negative-soft px-4 py-3 text-body font-medium wrap-break-word text-negative"
     >
       {message}
     </p>
