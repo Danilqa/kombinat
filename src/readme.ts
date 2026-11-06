@@ -20,7 +20,7 @@ export function renderRoutinesTable(): string {
   return ['| Routine | When | What it does |', '| - | - | - |', ...rows].join('\n');
 }
 
-export function updateReadme(file = path.join(config.repoRoot, 'README.md')): boolean {
+export function updateReadme(file = path.join(config.projectRoot, 'README.md')): boolean {
   const source = fs.readFileSync(file, 'utf8');
   const start = source.indexOf(START);
   const end = source.indexOf(END);

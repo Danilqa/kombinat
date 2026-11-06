@@ -6,6 +6,7 @@ import { isMatching, match, P } from 'ts-pattern';
 import { config } from './config';
 import { describeCron } from './cron';
 import {
+  getDaemonFolder,
   getLaunchdStatus,
   install,
   isLaunchdLoaded,
@@ -29,7 +30,7 @@ import { ensureStateDirs, listRuns, readSchedulerState } from './state';
 import type { RunTrigger } from './shared/contract';
 import { runTui } from './tui';
 
-const USAGE = `kombinat
+const USAGE = `kombinat, run from the project folder that holds routines/
 
   tui                       keyboard dashboard in the terminal (works over ssh), talks to the
                             running daemon
@@ -38,8 +39,9 @@ const USAGE = `kombinat
   readme                    regenerate the routines table in README.md
   run <name>                run one routine now in the foreground (what the scheduler spawns)
   serve                     run scheduler + web UI (what launchd runs); pulls the main branch
-                            every 5 min, installs deps and builds the UI when stale, restarts
-                            itself when src/ changes
+                            every 5 min, installs deps and restarts when the lockfile changes;
+                            in a checkout of kombinat also builds the UI and restarts when src/
+                            changes
   pull                      git pull once, the way serve does it (ff-only, clean tree)
   dev                       take over from launchd: scheduler + API from this checkout with no
                             auto-restart, plus the Vite dev server; Ctrl-C hands back to launchd
@@ -143,15 +145,25 @@ function pull(): void {
 }
 
 function dev(options: CliOptions): void {
+  if (!config.fromSource)
+    throw new Error('dev only works in a checkout of the kombinat repository');
   ensureStateDirs();
   const hadLaunchd = isLaunchdLoaded();
   if (hadLaunchd) {
     stopLaunchd();
     log('stopped the launchd daemon, this process takes over until Ctrl-C');
   }
-  const stopScheduler = startScheduler(options);
+  // Ticks from here would move the daemon's last tick past the missed runs of its own routines,
+  // and it only catches up on runs after its last tick.
+  const daemonFolder = hadLaunchd ? getDaemonFolder() : null;
+  const isOtherFolder = daemonFolder !== null && daemonFolder !== config.projectRoot;
+  if (isOtherFolder) log(`the daemon runs ${daemonFolder}, so the scheduler stays off here`);
+  const stopScheduler = startScheduler({
+    ...options,
+    scheduler: options.scheduler && !isOtherFolder,
+  });
   const server = startServer(log);
-  const vite = spawn('pnpm', ['-s', 'ui:dev'], { cwd: config.repoRoot, stdio: 'inherit' });
+  const vite = spawn('pnpm', ['-s', 'ui:dev'], { cwd: config.packageRoot, stdio: 'inherit' });
   let closing = false;
   const handBack = (): void => {
     if (closing) return;

@@ -46,7 +46,7 @@ const KEBAB_CASE_FILES = {
 };
 
 export default defineConfig(
-  globalIgnores(['ui/dist/']),
+  globalIgnores(['ui/dist/', 'dist/']),
   {
     linterOptions: {
       noInlineConfig: true,
