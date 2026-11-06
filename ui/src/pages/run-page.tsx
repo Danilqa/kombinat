@@ -32,8 +32,9 @@ function getIsRunActive(data: RunWithTranscript): boolean {
 
 function formatOptionalTime(iso: string | null) {
   return iso ? (
-    <span className="tabular-nums">
-      {formatShort(iso)} <RelativeTime iso={iso} className="ml-1 text-fg-muted" />
+    <span className="flex flex-wrap gap-x-2 tabular-nums">
+      <span>{formatShort(iso)}</span>
+      <RelativeTime iso={iso} className="text-fg-muted" />
     </span>
   ) : (
     '-'

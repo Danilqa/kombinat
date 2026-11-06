@@ -42,10 +42,6 @@
   --warning-tint: color-mix(in srgb, var(--warning) 13%, var(--surface));
   --neutral-tint: color-mix(in srgb, #fff 6%, var(--surface));
 
-  --glow: rgba(240, 120, 70, 0.07);
-  --page-background:
-    radial-gradient(1200px 420px at 50% -160px, var(--glow), transparent 70%) no-repeat, var(--page);
-
   --font-size-title-lg: 22px;
   --line-height-title-lg: 28px;
   --font-size-title-md: 16px;
@@ -216,7 +212,7 @@
     font-size: var(--font-size-body);
     line-height: var(--line-height-body);
     color: var(--fg);
-    background: var(--page-background);
+    background-color: var(--page);
   }
   :focus-visible {
     outline: none;

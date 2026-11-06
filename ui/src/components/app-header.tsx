@@ -89,7 +89,7 @@ export function AppHeader() {
   useHeightProperty(headerRef, '--app-header-height');
   // On phones the brand and the status share the first row and the nav takes a row of its own.
   return (
-    <header ref={headerRef} className="sticky top-0 z-50 mb-6 [background:var(--page-background)]">
+    <header ref={headerRef} className="sticky top-0 z-50 mb-6 bg-page">
       <div className="mx-auto flex max-w-[1180px] flex-wrap items-center gap-x-2 gap-y-2 px-4 pt-4 pb-3 sm:gap-y-3 sm:px-6 sm:pt-6 sm:pb-4">
         <Link
           to="/"
