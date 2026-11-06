@@ -13,7 +13,7 @@ interface CrumbLabelProps {
 }
 
 function CrumbLabel({ crumb }: CrumbLabelProps) {
-  const className = 'min-w-0 truncate text-body font-medium';
+  const className = 'min-w-0 truncate text-nav font-medium';
   if (crumb.to) {
     return (
       <Link
