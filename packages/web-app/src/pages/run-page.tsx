@@ -1,20 +1,25 @@
 import { useParams } from 'react-router';
 import { isMatching } from 'ts-pattern';
-import { CodeBlock } from '@/components/code-block';
-import { DetailList, type DetailEntry } from '@/components/detail-list';
-import { Markdown } from '@/components/markdown';
-import { Breadcrumbs, PageTitle, SectionAside, SectionTitle } from '@/components/page-header';
-import { ErrorState, LoadingState } from '@/components/page-states';
-import { RelativeTime } from '@/components/relative-time';
-import { StatusBadge, getTriggerLabel } from '@/components/status-badge';
-import { Transcript } from '@/components/transcript';
-import { Card } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { getRun, getRunTranscript } from '@/lib/api';
-import type { RunRecord, Transcript as RunTranscript } from '@/lib/api';
-import { formatDuration, getRunDurationMs, formatShort } from '@/lib/format';
-import { useDocumentTitle } from '@/lib/use-document-title';
-import { usePolledData } from '@/lib/use-polled-data';
+import { CodeBlock } from '@web-app/components/code-block';
+import { DetailList, type DetailEntry } from '@web-app/components/detail-list';
+import { Markdown } from '@web-app/components/markdown';
+import {
+  Breadcrumbs,
+  PageTitle,
+  SectionAside,
+  SectionTitle,
+} from '@web-app/components/page-header';
+import { ErrorState, LoadingState } from '@web-app/components/page-states';
+import { RelativeTime } from '@web-app/components/relative-time';
+import { StatusBadge, getTriggerLabel } from '@web-app/components/status-badge';
+import { Transcript } from '@web-app/components/transcript';
+import { Card } from '@web-app/components/ui/card';
+import { Separator } from '@web-app/components/ui/separator';
+import { getRun, getRunTranscript } from '@web-app/lib/api';
+import type { RunRecord, Transcript as RunTranscript } from '@web-app/lib/api';
+import { formatDuration, getRunDurationMs, formatShort } from '@web-app/lib/format';
+import { useDocumentTitle } from '@web-app/lib/use-document-title';
+import { usePolledData } from '@web-app/lib/use-polled-data';
 
 interface RunWithTranscript {
   run: RunRecord;

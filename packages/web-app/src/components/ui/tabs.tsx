@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { cn } from '@/lib/utils';
+import { cn } from '@web-app/lib/utils';
 import { Tabs as TabsPrimitive } from 'radix-ui';
 
 interface TabsProps extends React.ComponentProps<typeof TabsPrimitive.Root> {}

@@ -1,14 +1,14 @@
 import { useEffect, useRef } from 'react';
 import { BrowserRouter, Link, Route, Routes, useLocation } from 'react-router';
-import { AppHeader } from '@/components/app-header';
-import { PageTitle } from '@/components/page-header';
-import { TooltipProvider } from '@/components/ui/tooltip';
-import { useDocumentTitle } from '@/lib/use-document-title';
-import { CalendarPage } from '@/pages/calendar-page';
-import { RoutinePage } from '@/pages/routine-page';
-import { RoutinesPage } from '@/pages/routines-page';
-import { RunPage } from '@/pages/run-page';
-import { RunsPage } from '@/pages/runs-page';
+import { AppHeader } from '@web-app/components/app-header';
+import { PageTitle } from '@web-app/components/page-header';
+import { TooltipProvider } from '@web-app/components/ui/tooltip';
+import { useDocumentTitle } from '@web-app/lib/use-document-title';
+import { CalendarPage } from '@web-app/pages/calendar-page';
+import { RoutinePage } from '@web-app/pages/routine-page';
+import { RoutinesPage } from '@web-app/pages/routines-page';
+import { RunPage } from '@web-app/pages/run-page';
+import { RunsPage } from '@web-app/pages/runs-page';
 
 const MAIN_ID = 'main';
 

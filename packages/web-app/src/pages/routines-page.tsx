@@ -1,11 +1,11 @@
 import { Link } from 'react-router';
-import { PageHeader, SectionAside } from '@/components/page-header';
-import { ErrorState, LoadingState } from '@/components/page-states';
-import { RelativeTime } from '@/components/relative-time';
-import { RunNowButton } from '@/components/run-now-button';
-import { StatusBadge, getSkipReasonLabel } from '@/components/status-badge';
-import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
+import { PageHeader, SectionAside } from '@web-app/components/page-header';
+import { ErrorState, LoadingState } from '@web-app/components/page-states';
+import { RelativeTime } from '@web-app/components/relative-time';
+import { RunNowButton } from '@web-app/components/run-now-button';
+import { StatusBadge, getSkipReasonLabel } from '@web-app/components/status-badge';
+import { Badge } from '@web-app/components/ui/badge';
+import { Card } from '@web-app/components/ui/card';
 import {
   Table,
   TableBody,
@@ -13,12 +13,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { getRoutines, type RoutineSummary } from '@/lib/api';
-import { useDocumentTitle } from '@/lib/use-document-title';
-import { usePolledData } from '@/lib/use-polled-data';
-import { useRowLink } from '@/lib/use-row-link';
-import { cn } from '@/lib/utils';
+} from '@web-app/components/ui/table';
+import { getRoutines, type RoutineSummary } from '@web-app/lib/api';
+import { useDocumentTitle } from '@web-app/lib/use-document-title';
+import { usePolledData } from '@web-app/lib/use-polled-data';
+import { useRowLink } from '@web-app/lib/use-row-link';
+import { cn } from '@web-app/lib/utils';
 
 function getHasRunningRoutine(routines: RoutineSummary[]): boolean {
   return routines.some(routine => routine.running);

@@ -1,4 +1,4 @@
-import type { RunRecord } from '@/lib/api';
+import type { RunRecord } from '@web-app/lib/api';
 
 const absoluteFormatter = new Intl.DateTimeFormat('en-GB', {
   weekday: 'short',

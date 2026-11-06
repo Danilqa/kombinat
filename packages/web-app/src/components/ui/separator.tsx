@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { cn } from '@/lib/utils';
+import { cn } from '@web-app/lib/utils';
 import { Separator as SeparatorPrimitive } from 'radix-ui';
 
 interface SeparatorProps extends React.ComponentProps<typeof SeparatorPrimitive.Root> {}

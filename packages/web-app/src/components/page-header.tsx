@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router';
-import { cn } from '@/lib/utils';
+import { cn } from '@web-app/lib/utils';
 
 interface Crumb {
   label: string;

@@ -1,9 +1,9 @@
 import { P, match } from 'ts-pattern';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { getStatus, type DaemonStatus as DaemonStatusData } from '@/lib/api';
-import { formatRelative } from '@/lib/format';
-import { usePolledData } from '@/lib/use-polled-data';
-import { cn } from '@/lib/utils';
+import { Popover, PopoverContent, PopoverTrigger } from '@web-app/components/ui/popover';
+import { getStatus, type DaemonStatus as DaemonStatusData } from '@web-app/lib/api';
+import { formatRelative } from '@web-app/lib/format';
+import { usePolledData } from '@web-app/lib/use-polled-data';
+import { cn } from '@web-app/lib/utils';
 
 const STALE_TICK_MS = 5 * 60_000;
 

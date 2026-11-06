@@ -1,15 +1,20 @@
 import { useParams } from 'react-router';
 import { match } from 'ts-pattern';
-import { DetailList, type DetailEntry } from '@/components/detail-list';
-import { Markdown } from '@/components/markdown';
-import { Breadcrumbs, PageTitle, SectionAside, SectionTitle } from '@/components/page-header';
-import { ErrorState, LoadingState } from '@/components/page-states';
-import { RelativeTime } from '@/components/relative-time';
-import { RunNowButton } from '@/components/run-now-button';
-import { RunsTable } from '@/components/runs-table';
-import { getSkipReasonLabel } from '@/components/status-badge';
-import { Badge, type BadgeVariant } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
+import { DetailList, type DetailEntry } from '@web-app/components/detail-list';
+import { Markdown } from '@web-app/components/markdown';
+import {
+  Breadcrumbs,
+  PageTitle,
+  SectionAside,
+  SectionTitle,
+} from '@web-app/components/page-header';
+import { ErrorState, LoadingState } from '@web-app/components/page-states';
+import { RelativeTime } from '@web-app/components/relative-time';
+import { RunNowButton } from '@web-app/components/run-now-button';
+import { RunsTable } from '@web-app/components/runs-table';
+import { getSkipReasonLabel } from '@web-app/components/status-badge';
+import { Badge, type BadgeVariant } from '@web-app/components/ui/badge';
+import { Card } from '@web-app/components/ui/card';
 import {
   Table,
   TableBody,
@@ -17,12 +22,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { getRoutine, type AgentName, type RoutineDetail, type Skip } from '@/lib/api';
-import { useDocumentTitle } from '@/lib/use-document-title';
-import { usePolledData } from '@/lib/use-polled-data';
-import { cn } from '@/lib/utils';
+} from '@web-app/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@web-app/components/ui/tabs';
+import { getRoutine, type AgentName, type RoutineDetail, type Skip } from '@web-app/lib/api';
+import { useDocumentTitle } from '@web-app/lib/use-document-title';
+import { usePolledData } from '@web-app/lib/use-polled-data';
+import { cn } from '@web-app/lib/utils';
 
 function getIsRoutineRunning(routine: RoutineDetail): boolean {
   return routine.running;

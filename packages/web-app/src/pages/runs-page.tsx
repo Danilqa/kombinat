@@ -1,11 +1,11 @@
 import { isMatching } from 'ts-pattern';
-import { PageHeader, SectionAside } from '@/components/page-header';
-import { ErrorState, LoadingState } from '@/components/page-states';
-import { RunsTable } from '@/components/runs-table';
-import { Card } from '@/components/ui/card';
-import { getRuns, type RunRecord } from '@/lib/api';
-import { useDocumentTitle } from '@/lib/use-document-title';
-import { usePolledData } from '@/lib/use-polled-data';
+import { PageHeader, SectionAside } from '@web-app/components/page-header';
+import { ErrorState, LoadingState } from '@web-app/components/page-states';
+import { RunsTable } from '@web-app/components/runs-table';
+import { Card } from '@web-app/components/ui/card';
+import { getRuns, type RunRecord } from '@web-app/lib/api';
+import { useDocumentTitle } from '@web-app/lib/use-document-title';
+import { usePolledData } from '@web-app/lib/use-polled-data';
 
 const RUNS_LIMIT = 50;
 

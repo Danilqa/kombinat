@@ -1,6 +1,6 @@
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { formatAbsolute, formatRelative } from '@/lib/format';
-import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@web-app/components/ui/tooltip';
+import { formatAbsolute, formatRelative } from '@web-app/lib/format';
+import { cn } from '@web-app/lib/utils';
 
 interface RelativeTimeProps {
   iso: string | null;

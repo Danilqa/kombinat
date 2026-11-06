@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils';
+import { cn } from '@web-app/lib/utils';
 
 interface BrandMarkProps {
   className?: string;

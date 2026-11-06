@@ -1,9 +1,9 @@
 import { match } from 'ts-pattern';
 
-import { Badge } from '@/components/ui/badge';
-import type { BadgeVariant } from '@/components/ui/badge';
-import type { RunStatus, RunTrigger, SkipReason } from '@/lib/api';
-import { cn } from '@/lib/utils';
+import { Badge } from '@web-app/components/ui/badge';
+import type { BadgeVariant } from '@web-app/components/ui/badge';
+import type { RunStatus, RunTrigger, SkipReason } from '@web-app/lib/api';
+import { cn } from '@web-app/lib/utils';
 
 interface StatusAppearance {
   label: string;

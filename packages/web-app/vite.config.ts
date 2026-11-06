@@ -10,7 +10,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      '@': path.join(webAppRoot, 'src'),
+      '@web-app': path.join(webAppRoot, 'src'),
       '@shared': path.join(webAppRoot, '..', 'cli', 'src', 'shared'),
     },
   },

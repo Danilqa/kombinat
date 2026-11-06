@@ -1,9 +1,9 @@
 import { CalendarDays, History, Workflow } from 'lucide-react';
 import { useLayoutEffect, useRef, type RefObject } from 'react';
 import { Link, useLocation } from 'react-router';
-import { BrandMark } from '@/components/brand-mark';
-import { DaemonStatus } from '@/components/daemon-status';
-import { cn } from '@/lib/utils';
+import { BrandMark } from '@web-app/components/brand-mark';
+import { DaemonStatus } from '@web-app/components/daemon-status';
+import { cn } from '@web-app/lib/utils';
 
 interface NavItem {
   label: string;

@@ -1,6 +1,6 @@
-import { PageHeader } from '@/components/page-header';
-import { WeekCalendar } from '@/components/week-calendar';
-import { useDocumentTitle } from '@/lib/use-document-title';
+import { PageHeader } from '@web-app/components/page-header';
+import { WeekCalendar } from '@web-app/components/week-calendar';
+import { useDocumentTitle } from '@web-app/lib/use-document-title';
 
 export function CalendarPage() {
   useDocumentTitle('Calendar');
