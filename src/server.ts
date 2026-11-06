@@ -190,14 +190,23 @@ function serveStatic(res: http.ServerResponse, url: URL): void {
   fs.createReadStream(file).pipe(res);
 }
 
+// There is no login, so a page from another site must not start runs through the browser it is open in.
+export function isCrossSite(headers: http.IncomingHttpHeaders): boolean {
+  const site = headers['sec-fetch-site'];
+  if (site !== undefined) return site !== 'same-origin' && site !== 'none';
+  return headers.origin !== undefined && URL.parse(headers.origin)?.host !== headers.host;
+}
+
 export function startServer(log: (line: string) => void): http.Server {
   const startedAt = new Date();
   const server = http.createServer((req, res) => {
     const url = new URL(req.url ?? '/', `http://localhost:${config.port}`);
     const [root, ...segments] = url.pathname.split('/').filter(Boolean);
     try {
-      if (root === 'api') sendJson(res, routeApi([req.method ?? 'GET', segments], url, startedAt));
-      else serveStatic(res, url);
+      if (root !== 'api') serveStatic(res, url);
+      else if (req.method !== 'GET' && isCrossSite(req.headers)) {
+        sendJson(res, fail(403, 'Requests from other sites cannot change anything'));
+      } else sendJson(res, routeApi([req.method ?? 'GET', segments], url, startedAt));
     } catch (error) {
       const message = getErrorMessage(error);
       log(`request failed ${url.pathname}: ${message}`);

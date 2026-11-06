@@ -31,7 +31,7 @@ Ready to use in your organisation or at home.
 
    It runs in this terminal. To keep it running in the background and after reboots, stop it and run `pnpm kombinat install` instead, see [Setup](#setup).
 
-4. Monitor and debug runs in the dashboard at http://localhost:7433, or in the terminal with `pnpm kombinat tui`, which also works over ssh. See [Monitoring](#monitoring).
+4. Monitor and debug runs in the dashboard at http://localhost:7433, or in the terminal with `pnpm kombinat tui`, which also works over ssh. See [Monitoring](#monitoring). To open them from another machine, see [Remote access](#remote-access).
 
 **Why Kombinat:**
 
@@ -63,6 +63,35 @@ The daemon serves a dashboard at http://localhost:7433.
 <img src=".github/assets/tui.png" alt="Kombinat in the terminal: routines, recent runs and a routine's run history" width="100%" />
 
 `pnpm kombinat tui` shows the same in the terminal, without the calendar. It works over ssh. Press `?` for keys.
+
+## Remote access
+
+The daemon has no login. It only listens on localhost, so other machines can't reach it, and it refuses to start routines for web pages from other sites. Other accounts on the same Mac can still reach it. To use it from another machine, for example from your laptop while it runs on a Mac mini in the office, go through SSH or Tailscale.
+
+### Over SSH
+
+Turn on Remote Login on the Mac that runs Kombinat, in System Settings → General → Sharing. Then, on your laptop:
+
+```bash
+npx @danilqa/kombinat connect admin@mac-mini         # dashboard in the browser
+npx @danilqa/kombinat connect admin@mac-mini --tui   # dashboard in the terminal
+```
+
+It opens an SSH tunnel to the daemon, then the dashboard. SSH asks for the password if you have no key set up. Ctrl-C disconnects. Instead of `admin@mac-mini`, use anything `ssh` accepts: a host from `~/.ssh/config`, an IP address or a Tailscale machine name. If the daemon there uses another `KOMBINAT_PORT`, add `--port`.
+
+You can also ssh in and run `pnpm kombinat tui` in the folder Kombinat runs in.
+
+### With Tailscale Serve
+
+To open the dashboard from any device in your tailnet, your phone included, run this on the Mac that runs Kombinat:
+
+```bash
+tailscale serve --bg 7433
+```
+
+The dashboard is then at `https://mac-mini.<your-tailnet>.ts.net`, and `npx @danilqa/kombinat tui --url https://mac-mini.<your-tailnet>.ts.net` shows it in the terminal. Serve needs HTTPS certificates in your tailnet, the command asks to turn them on. They put the machine name in public certificate logs. It stays on after a reboot, `tailscale serve --https=443 off` turns it off. If the Mac has no `tailscale` command, see [Using the Tailscale CLI](https://tailscale.com/kb/1080/cli).
+
+Everyone who can reach the Mac in your tailnet can then read transcripts and start routines. To limit that, allow only some people to reach port 443 of the Mac in your [Tailscale access rules](https://tailscale.com/kb/1018/acls).
 
 ## Routines
 
