@@ -59,7 +59,8 @@ function NavLinkItem({ item, pathname }: NavLinkItemProps) {
           : 'text-fg-muted hover:bg-hover hover:text-fg',
       )}
     >
-      <Icon aria-hidden="true" className="size-3.5 shrink-0" />
+      {/* Below 360px the three links only fit as words. */}
+      <Icon aria-hidden="true" className="size-3.5 shrink-0 max-[360px]:hidden" />
       {item.label}
     </Link>
   );

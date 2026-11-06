@@ -44,7 +44,7 @@ function useFocusMainOnNavigate() {
 function AppLayout() {
   useFocusMainOnNavigate();
   return (
-    <div className="mx-auto max-w-[1180px] px-6 pt-6 pb-20">
+    <div className="mx-auto max-w-[1180px] px-4 pt-6 pb-20 sm:px-6">
       <a href={`#${MAIN_ID}`} className="skip-link">
         Skip to content
       </a>

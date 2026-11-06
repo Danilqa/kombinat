@@ -54,7 +54,7 @@ Ready to use in your organisation or at home.
 The daemon serves a dashboard at http://localhost:7433.
 
 - **Routines.** Every routine with its schedule in plain words, agent and model, next run and last result. Start any routine with Run now.
-- **Calendar.** A week of past runs coloured by status and the planned runs from each schedule, so you can spot gaps and routines that overlap.
+- **Calendar.** A week of past runs coloured by status and the planned runs from each schedule, so you can spot gaps. To mark routines that overlap, turn on Highlight overlaps in its `…` menu. Phones show one day at a time.
 - **Runs.** The latest runs across all routines. A run page shows the result, every tool call in the transcript and, for Claude and Codex, the command to resume the session in your terminal.
 - **Daemon status.** The top bar shows whether the scheduler is ticking and how many routines are running.
 
