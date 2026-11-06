@@ -173,6 +173,8 @@ export async function runRoutine(routine: Routine, options: RunOptions): Promise
 
   const killTimer = killAfter(child, routine.timeoutMinutes);
 
+  // A command that ignores the prompt can exit before it is written. Its exit code decides the run.
+  child.stdin.on('error', () => undefined);
   child.stdin.end(invocation.input);
 
   const exitCode = await new Promise<number | null>(resolve => {

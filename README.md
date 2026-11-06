@@ -216,7 +216,10 @@ git clone https://github.com/Danilqa/kombinat.git && cd kombinat
 pnpm install
 pnpm dev        # run the daemon and the dashboard from this checkout
 pnpm validate   # format, lint, typecheck and tests
+pnpm test:e2e   # dashboard tests in Chromium
 ```
+
+`pnpm test:e2e` starts a daemon from this checkout with temporary routines and state, so the running daemon is not touched. Install the browser once with `pnpm exec playwright install chromium`.
 
 `pnpm dev` pauses the launchd daemon until you press Ctrl-C. Add `--no-scheduler` to stop routines from running while you work. If the daemon runs another folder, the scheduler stays off anyway, and its routines catch up when it is back.
 
