@@ -4,7 +4,6 @@ import { Link } from 'react-router';
 import { isMatching, match } from 'ts-pattern';
 import { Button } from '@/components/ui/button';
 import { ErrorState } from '@/components/page-states';
-import { Card } from '@/components/ui/card';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -503,88 +502,92 @@ export function WeekCalendar() {
   return (
     <>
       {error && <ErrorState message={error} />}
-      <Card className="gap-0 overflow-clip py-0 [--hour-height:48px] max-sm:[--hour-height:60px]">
-        <div className="sticky top-[var(--app-header-height,0px)] z-40 bg-surface">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
-            <h2 aria-live="polite" className="text-title-md text-fg tabular-nums">
-              {formatWeekRange(weekStart)}
-            </h2>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="tertiary"
-                size="icon-small"
-                aria-label="Previous week"
-                onClick={() => setWeekStart(addDays(weekStart, -7))}
-              >
-                <ChevronLeft />
-              </Button>
-              <Button
-                variant="tertiary"
-                size="small"
-                isActive={isCurrentWeek}
-                className="text-nav-sm"
-                onClick={showToday}
-              >
-                Today
-              </Button>
-              <Button
-                variant="tertiary"
-                size="icon-small"
-                aria-label="Next week"
-                onClick={() => setWeekStart(addDays(weekStart, 7))}
-              >
-                <ChevronRight />
-              </Button>
-              <CalendarOptions
-                isHighlightingOverlaps={isHighlightingOverlaps}
-                overlapCount={data ? overlapCount : null}
-                onHighlightOverlapsChange={setIsHighlightingOverlaps}
-              />
-            </div>
-          </div>
-          <div className="border-b border-line">
-            <div className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] pr-2 max-sm:hidden">
-              <div />
-              {days.map(day => (
-                <DayHeader key={day.toISOString()} day={day} isToday={getIsSameDay(day, now)} />
-              ))}
-            </div>
-            <DayPicker
-              days={days}
-              selectedIndex={selectedDayIndex}
-              now={now}
-              onSelect={setSelectedDayIndex}
-            />
-          </div>
-        </div>
-        <div className="py-2 pr-2">
-          <div className="grid h-[calc(var(--hour-height)*24)] grid-cols-[48px_minmax(0,1fr)] border-b border-line-faint sm:grid-cols-[56px_repeat(7,minmax(0,1fr))]">
-            <div className="relative">
-              {HOURS.map(hour => (
-                <span
-                  key={hour}
-                  className="absolute right-2 -translate-y-1/2 text-caption font-normal text-fg-muted tabular-nums"
-                  style={{ top: getLengthForMinutes(hour * 60) }}
+      <div className="text-fg [--hour-height:48px] max-sm:[--hour-height:60px]">
+        <div className="sticky top-[var(--app-header-height,0px)] z-40 bg-page">
+          <div className="rounded-t-xl border-x border-t border-line bg-surface">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
+              <h2 aria-live="polite" className="text-title-md text-fg tabular-nums">
+                {formatWeekRange(weekStart)}
+              </h2>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="tertiary"
+                  size="icon-small"
+                  aria-label="Previous week"
+                  onClick={() => setWeekStart(addDays(weekStart, -7))}
                 >
-                  {formatHour(hour)}
-                </span>
-              ))}
+                  <ChevronLeft />
+                </Button>
+                <Button
+                  variant="tertiary"
+                  size="small"
+                  isActive={isCurrentWeek}
+                  className="text-nav-sm"
+                  onClick={showToday}
+                >
+                  Today
+                </Button>
+                <Button
+                  variant="tertiary"
+                  size="icon-small"
+                  aria-label="Next week"
+                  onClick={() => setWeekStart(addDays(weekStart, 7))}
+                >
+                  <ChevronRight />
+                </Button>
+                <CalendarOptions
+                  isHighlightingOverlaps={isHighlightingOverlaps}
+                  overlapCount={data ? overlapCount : null}
+                  onHighlightOverlapsChange={setIsHighlightingOverlaps}
+                />
+              </div>
             </div>
-            {days.map((day, index) => (
-              <DayColumn
-                key={day.toISOString()}
-                day={day}
-                entries={entries}
+            <div className="border-b border-line">
+              <div className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] pr-2 max-sm:hidden">
+                <div />
+                {days.map(day => (
+                  <DayHeader key={day.toISOString()} day={day} isToday={getIsSameDay(day, now)} />
+                ))}
+              </div>
+              <DayPicker
+                days={days}
+                selectedIndex={selectedDayIndex}
                 now={now}
-                isToday={getIsSameDay(day, now)}
-                isSelected={index === selectedDayIndex}
-                routinesById={isHighlightingOverlaps ? routinesById : null}
+                onSelect={setSelectedDayIndex}
               />
-            ))}
+            </div>
           </div>
         </div>
-        <CalendarLegend isHighlightingOverlaps={isHighlightingOverlaps} />
-      </Card>
+        <div className="rounded-b-xl border-x border-b border-line bg-surface">
+          <div className="py-2 pr-2">
+            <div className="grid h-[calc(var(--hour-height)*24)] grid-cols-[48px_minmax(0,1fr)] border-b border-line-faint sm:grid-cols-[56px_repeat(7,minmax(0,1fr))]">
+              <div className="relative">
+                {HOURS.map(hour => (
+                  <span
+                    key={hour}
+                    className="absolute right-2 -translate-y-1/2 text-caption font-normal text-fg-muted tabular-nums"
+                    style={{ top: getLengthForMinutes(hour * 60) }}
+                  >
+                    {formatHour(hour)}
+                  </span>
+                ))}
+              </div>
+              {days.map((day, index) => (
+                <DayColumn
+                  key={day.toISOString()}
+                  day={day}
+                  entries={entries}
+                  now={now}
+                  isToday={getIsSameDay(day, now)}
+                  isSelected={index === selectedDayIndex}
+                  routinesById={isHighlightingOverlaps ? routinesById : null}
+                />
+              ))}
+            </div>
+          </div>
+          <CalendarLegend isHighlightingOverlaps={isHighlightingOverlaps} />
+        </div>
+      </div>
     </>
   );
 }
