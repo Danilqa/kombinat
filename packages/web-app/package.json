@@ -30,6 +30,7 @@
   "devDependencies": {
     "@tailwindcss/vite": "4.3.3",
     "@vitejs/plugin-react": "6.1.1",
+    "e2e": "workspace:*",
     "vite": "8.3.1"
   }
 }

@@ -6,9 +6,9 @@ import type {
   RunRecord,
   SchedulerState,
   SkipReason,
-} from '../../packages/cli/src/shared/contract';
-import { createRunId } from '../../packages/cli/src/state';
-import { makeRunRecord } from '../../packages/cli/src/testing';
+} from '../../../cli/src/shared/contract';
+import { createRunId } from '../../../cli/src/state';
+import { makeRunRecord } from '../../../cli/src/testing';
 import { minutesAgo } from './time';
 
 export interface RoutineFile {

@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { expect, test } from 'e2e/web-app';
 
 const DAY_MS = 86_400_000;
 

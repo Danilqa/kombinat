@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { expect, test } from 'e2e/web-app';
 
 test('warns when the scheduler stops ticking', async ({ page, kombinat }) => {
   kombinat.stallScheduler();

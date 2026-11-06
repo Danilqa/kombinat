@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { expect, test } from 'e2e/web-app';
 
 test("shows a run's result, transcript and how to resume it", async ({
   page,

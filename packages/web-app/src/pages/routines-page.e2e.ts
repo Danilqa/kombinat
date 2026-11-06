@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { expect, test } from 'e2e/web-app';
 
 // Idle pages poll every 15 seconds.
 const NEW_RUN_TIMEOUT_MS = 25_000;

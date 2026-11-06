@@ -46,7 +46,7 @@ const KEBAB_CASE_FILES = {
 };
 
 export default defineConfig(
-  globalIgnores(['**/dist/', 'playwright-report/', 'test-results/']),
+  globalIgnores(['**/dist/', '**/playwright-report/', '**/test-results/']),
   {
     linterOptions: {
       noInlineConfig: true,
@@ -134,7 +134,7 @@ export default defineConfig(
   },
   {
     // Playwright fixtures without dependencies take `{}`.
-    files: ['e2e/**/*.ts'],
+    files: ['packages/e2e/**/*.ts'],
     rules: { 'no-empty-pattern': ['error', { allowObjectPatternsAsParameters: true }] },
   },
 );

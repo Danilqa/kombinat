@@ -40,9 +40,6 @@ importers:
       '@eslint/js':
         specifier: 10.0.1
         version: 10.0.1(eslint@10.13.0(jiti@2.7.0))
-      '@playwright/test':
-        specifier: 1.65.0
-        version: 1.65.0
       '@types/node':
         specifier: 26.6.3
         version: 26.6.3
@@ -92,6 +89,12 @@ importers:
       tsx:
         specifier: 'catalog:'
         version: 4.23.15
+
+  packages/e2e:
+    devDependencies:
+      '@playwright/test':
+        specifier: 1.65.0
+        version: 1.65.0
 
   packages/web-app:
     dependencies:
@@ -150,6 +153,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: 6.1.1
         version: 6.1.1(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+      e2e:
+        specifier: workspace:*
+        version: link:../e2e
       vite:
         specifier: 8.3.1
         version: 8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)

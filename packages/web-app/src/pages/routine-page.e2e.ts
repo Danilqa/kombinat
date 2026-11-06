@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { expect, test } from 'e2e/web-app';
 
 test("shows a routine's settings, runs, skipped runs and prompt", async ({ page, kombinat }) => {
   kombinat.addRoutine({

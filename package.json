@@ -12,8 +12,8 @@
     "dev:local": "tsx --env-file=.env.local packages/cli/src/cli.ts dev",
     "tui:local": "tsx --env-file=.env.local packages/cli/src/cli.ts tui",
     "test": "pnpm -r test",
-    "test:e2e": "playwright test",
-    "typecheck": "tsc -p tsconfig.json && pnpm -r typecheck && tsc -p e2e/tsconfig.json",
+    "test:e2e": "pnpm --filter e2e run web-app",
+    "typecheck": "pnpm -r typecheck",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -27,7 +27,6 @@
   "devDependencies": {
     "@danilqa/eslint-plugin-ts-pattern": "0.0.4",
     "@eslint/js": "10.0.1",
-    "@playwright/test": "1.65.0",
     "@types/node": "26.6.3",
     "@types/react": "catalog:",
     "@types/react-dom": "19.3.0",

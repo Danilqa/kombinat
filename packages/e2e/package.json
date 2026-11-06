@@ -1,0 +1,17 @@
+{
+  "name": "e2e",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./web-app": "./web-app/index.ts"
+  },
+  "scripts": {
+    "web-app": "playwright test --config web-app/playwright.config.ts",
+    "web-app:ui": "pnpm run web-app --ui",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.0"
+  }
+}

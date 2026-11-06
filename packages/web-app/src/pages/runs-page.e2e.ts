@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { expect, test } from 'e2e/web-app';
 
 test('lists the latest runs of all routines and opens one', async ({ page, kombinat, time }) => {
   kombinat.addRoutine({ name: 'triage-sentry' });

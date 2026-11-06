@@ -1,11 +1,11 @@
 import { test as base } from '@playwright/test';
 
-import { claude } from './claude';
-import { startDaemon } from './daemon';
-import type { Daemon } from './daemon';
-import { createKombinat } from './kombinat';
-import type { Kombinat } from './kombinat';
-import { time } from './time';
+import { claude } from './fixtures/claude';
+import { startDaemon } from './fixtures/daemon';
+import type { Daemon } from './fixtures/daemon';
+import { createKombinat } from './fixtures/kombinat';
+import type { Kombinat } from './fixtures/kombinat';
+import { time } from './fixtures/time';
 
 interface TestFixtures {
   kombinat: Kombinat;
