@@ -190,7 +190,7 @@ function serveStatic(res: http.ServerResponse, url: URL): void {
   fs.createReadStream(file).pipe(res);
 }
 
-// There is no login, so a page from another site must not start runs through the browser it is open in.
+// There is no login, so pages from other sites must not start runs through the browser.
 export function isCrossSite(headers: http.IncomingHttpHeaders): boolean {
   const site = headers['sec-fetch-site'];
   if (site !== undefined) return site !== 'same-origin' && site !== 'none';

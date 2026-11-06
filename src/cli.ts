@@ -96,7 +96,6 @@ function parsePort(value: string): number {
   return port;
 }
 
-// The flags of one command, so that `serve --port 8000` fails instead of quietly using 7433.
 function checkFlag(isSet: boolean, flag: string, command: string | undefined, owner: string): void {
   if (isSet && command !== owner) throw new Error(`--${flag} only works with ${owner}`);
 }

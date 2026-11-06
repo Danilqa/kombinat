@@ -15,10 +15,8 @@ export interface ConnectOptions {
 }
 
 interface SshTunnel {
-  // Resolves with the ssh exit code.
   closed: Promise<number>;
   isOpen(): boolean;
-  // While quiet, only the last ssh message is kept, to explain a lost connection afterwards.
   setQuiet(quiet: boolean): void;
   getLastMessage(): string;
   close(): void;
@@ -31,12 +29,11 @@ export function buildSshArgs(destination: string, localPort: number, remotePort:
     '-N',
     '-o',
     'ExitOnForwardFailure=yes',
-    // A shared connection would hold the tunnel in another ssh process that outlives this one.
+    // A shared connection would keep the tunnel in another ssh process.
     '-o',
     'ControlMaster=no',
     '-o',
     'ControlPath=none',
-    // Ends ssh when the other machine stops answering, instead of keeping a dead tunnel open.
     '-o',
     'ServerAliveInterval=15',
     '-L',
@@ -73,7 +70,7 @@ function isListening(port: number): Promise<boolean> {
   });
 }
 
-// ssh asks for passwords and host keys on the terminal itself, not on stdin, so it can still prompt.
+// ssh prompts on the terminal, not on stdin.
 function openTunnel(destination: string, localPort: number, remotePort: number): SshTunnel {
   const ssh = spawn('ssh', buildSshArgs(destination, localPort, remotePort), {
     stdio: ['ignore', 'ignore', 'pipe'],
@@ -127,7 +124,7 @@ function openInBrowser(url: string): void {
     .unref();
 }
 
-// Disconnecting is Ctrl-C or quitting the TUI, so ssh ending on its own means the connection was lost.
+// Ctrl-C and quitting the TUI exit elsewhere, so ssh ending here means the connection was lost.
 async function reportLostConnection(tunnel: SshTunnel, destination: string): Promise<number> {
   const exitCode = await tunnel.closed;
   const message = tunnel.getLastMessage();
@@ -142,7 +139,7 @@ export async function connect({ destination, remotePort, tui }: ConnectOptions):
   const tunnel = openTunnel(destination, localPort, remotePort);
   if (!(await waitUntilListening(tunnel, localPort))) return tunnel.closed;
 
-  // A closed daemon port makes ssh print a line per request, the error below says it once.
+  // Mutes ssh's line per failed request, the error below shows the last one.
   tunnel.setQuiet(true);
   const failure = await createDaemonClient(url)
     .getOverview()
@@ -172,7 +169,7 @@ export async function connect({ destination, remotePort, tui }: ConnectOptions):
     return 0;
   }
 
-  // The exit handler of the tunnel closes ssh.
+  // The tunnel's exit handler closes ssh.
   for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP'] as const) {
     process.on(signal, () => process.exit(0));
   }
