@@ -30,59 +30,128 @@ function getNewestMtime(root: string): number {
 }
 
 const uiSources = () => [
-  path.join(config.repoRoot, 'ui', 'src'),
-  path.join(config.repoRoot, 'ui', 'index.html'),
-  path.join(config.repoRoot, 'ui', 'vite.config.ts'),
-  path.join(config.repoRoot, 'src', 'shared'),
+  path.join(config.packageRoot, 'ui', 'src'),
+  path.join(config.packageRoot, 'ui', 'index.html'),
+  path.join(config.packageRoot, 'ui', 'vite.config.ts'),
+  path.join(config.packageRoot, 'src', 'shared'),
 ];
 
-export function isUiStale(repoRoot = config.repoRoot): boolean {
-  const built = path.join(repoRoot, 'ui', 'dist', 'index.html');
+export function isUiStale(packageRoot = config.packageRoot): boolean {
+  const built = path.join(packageRoot, 'ui', 'dist', 'index.html');
   if (!fs.existsSync(built)) return true;
   const builtAt = fs.statSync(built).mtimeMs;
   return uiSources().some(
-    source => getNewestMtime(source.replace(config.repoRoot, repoRoot)) > builtAt,
+    source => getNewestMtime(source.replace(config.packageRoot, packageRoot)) > builtAt,
   );
 }
 
-export function areDepsStale(repoRoot = config.repoRoot): boolean {
-  const marker = path.join(repoRoot, 'node_modules', '.modules.yaml');
-  if (!fs.existsSync(marker)) return true;
-  const installedAt = fs.statSync(marker).mtimeMs;
-  return ['package.json', 'pnpm-lock.yaml'].some(
-    file =>
-      fs.existsSync(path.join(repoRoot, file)) &&
-      fs.statSync(path.join(repoRoot, file)).mtimeMs > installedAt,
+interface PackageManager {
+  command: string;
+  install: string[];
+  lockfile: string;
+  marker: string;
+}
+
+interface Dependencies {
+  manager: PackageManager;
+  root: string;
+}
+
+const PACKAGE_MANAGERS: PackageManager[] = [
+  {
+    command: 'pnpm',
+    install: ['-s', 'install', '--frozen-lockfile'],
+    lockfile: 'pnpm-lock.yaml',
+    marker: '.modules.yaml',
+  },
+  // Not npm ci: when it fails, node_modules is left empty, kombinat included.
+  {
+    command: 'npm',
+    install: ['install', '--no-audit', '--no-fund', '--loglevel=error'],
+    lockfile: 'package-lock.json',
+    marker: '.package-lock.json',
+  },
+];
+
+// pnpm does not touch its marker when there is nothing to install.
+const INSTALL_MARKER = '.kombinat-install';
+
+// Up to the git root, for workspaces with the lockfile at the top.
+function getLockfileDirs(projectRoot: string): string[] {
+  const dirs: string[] = [];
+  for (let dir = projectRoot; ; dir = path.dirname(dir)) {
+    dirs.push(dir);
+    if (fs.existsSync(path.join(dir, '.git'))) return dirs;
+    if (path.dirname(dir) === dir) return [projectRoot];
+  }
+}
+
+export function findDependencies(projectRoot = config.projectRoot): Dependencies | null {
+  for (const root of getLockfileDirs(projectRoot)) {
+    const manager = PACKAGE_MANAGERS.find(candidate =>
+      fs.existsSync(path.join(root, candidate.lockfile)),
+    );
+    if (manager !== undefined) return { manager, root };
+  }
+  return null;
+}
+
+function getMtime(file: string): number {
+  return fs.existsSync(file) ? fs.statSync(file).mtimeMs : 0;
+}
+
+function isStale({ manager, root }: Dependencies): boolean {
+  const installedAt = Math.max(
+    ...[manager.marker, INSTALL_MARKER].map(marker =>
+      getMtime(path.join(root, 'node_modules', marker)),
+    ),
+  );
+  return ['package.json', manager.lockfile].some(
+    file => getMtime(path.join(root, file)) > installedAt,
   );
 }
 
-function runPnpm(args: string[], log: Log): boolean {
+export function areDepsStale(projectRoot = config.projectRoot): boolean {
+  const dependencies = findDependencies(projectRoot);
+  return dependencies !== null && isStale(dependencies);
+}
+
+function runTool(command: string, args: string[], cwd: string, log: Log): boolean {
   try {
-    const output = execFileSync('pnpm', ['-s', ...args], {
-      cwd: config.repoRoot,
+    const output = execFileSync(command, args, {
+      cwd,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
       timeout: 5 * 60_000,
     });
-    log(`pnpm ${args.join(' ')}: ${output.trim().split('\n').at(-1) ?? 'ok'}`);
+    log(`${command} ${args.join(' ')}: ${output.trim().split('\n').at(-1) || 'ok'}`);
     return true;
   } catch (err) {
     const stderr = getProcessOutput(err);
-    log(`pnpm ${args.join(' ')} failed: ${stderr.trim().split('\n').slice(-5).join(' | ')}`);
+    log(`${command} ${args.join(' ')} failed: ${stderr.trim().split('\n').slice(-5).join(' | ')}`);
     return false;
   }
 }
 
+const buildUi = (log: Log): boolean => runTool('pnpm', ['-s', 'ui:build'], config.packageRoot, log);
+
 export function installDepsIfStale(log: Log): boolean {
-  if (!areDepsStale()) return false;
-  log('dependencies changed, running pnpm install');
-  return runPnpm(['install', '--frozen-lockfile'], log);
+  const dependencies = findDependencies();
+  if (dependencies === null || !isStale(dependencies)) return false;
+  const { manager, root } = dependencies;
+  log(`dependencies changed, running ${manager.command} ${manager.install.join(' ')}`);
+  const isInstalled = runTool(manager.command, manager.install, root, log);
+  const modules = path.join(root, 'node_modules');
+  if (isInstalled && fs.existsSync(modules)) {
+    fs.writeFileSync(path.join(modules, INSTALL_MARKER), '');
+  }
+  return isInstalled;
 }
 
 export function buildUiIfStale(log: Log): boolean {
-  if (!isUiStale()) return false;
+  if (!config.fromSource || !isUiStale()) return false;
   log('ui sources newer than ui/dist, building');
-  return runPnpm(['ui:build'], log);
+  return buildUi(log);
 }
 
 function watchDebounced(
@@ -107,7 +176,7 @@ function runGit(args: string[]): string {
     'git',
     ['-c', 'credential.helper=', '-c', 'credential.helper=!gh auth git-credential', ...args],
     {
-      cwd: config.repoRoot,
+      cwd: config.projectRoot,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
       timeout: 90_000,
@@ -125,7 +194,8 @@ export function pullLatest(): PullResult {
     const branch = runGit(['rev-parse', '--abbrev-ref', 'HEAD']);
     if (branch !== config.pullBranch)
       return { status: 'skipped', detail: `on branch ${branch}, not ${config.pullBranch}` };
-    const dirty = runGit(['status', '--porcelain']);
+    // git pull refuses to overwrite untracked files anyway.
+    const dirty = runGit(['status', '--porcelain', '--untracked-files=no']);
     if (dirty)
       return {
         status: 'skipped',
@@ -160,16 +230,32 @@ export function startAutoPull(log: Log): () => void {
 }
 
 export function startReloadWatchers(log: Log, restart: (reason: string) => void): () => void {
+  const dependencies = findDependencies();
+  const sourceWatchers = config.fromSource
+    ? [
+        watchDebounced(path.join(config.packageRoot, 'src'), 1500, file =>
+          restart(`src/${file} changed`),
+        ),
+        watchDebounced(path.join(config.packageRoot, 'ui', 'src'), 1500, file => {
+          log(`ui/src/${file} changed, rebuilding ui`);
+          buildUi(log);
+        }),
+      ]
+    : [];
+  const lockfile =
+    dependencies === null ? null : path.join(dependencies.root, dependencies.manager.lockfile);
   const watchers = [
-    watchDebounced(path.join(config.repoRoot, 'src'), 1500, file => restart(`src/${file} changed`)),
-    watchDebounced(path.join(config.repoRoot, 'ui', 'src'), 1500, file => {
-      log(`ui/src/${file} changed, rebuilding ui`);
-      runPnpm(['ui:build'], log);
-    }),
-    watchDebounced(path.join(config.repoRoot, 'pnpm-lock.yaml'), 1500, () => {
-      installDepsIfStale(log);
-      restart('dependencies changed');
-    }),
+    ...sourceWatchers,
+    lockfile === null
+      ? null
+      : watchDebounced(lockfile, 1500, () => {
+          installDepsIfStale(log);
+          if (!fs.existsSync(config.cliBin)) {
+            log(`${config.cliBin} is missing after the install, keeping this version running`);
+            return;
+          }
+          restart('dependencies changed');
+        }),
   ];
   return () => watchers.forEach(w => w?.close());
 }

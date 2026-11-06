@@ -66,7 +66,7 @@ function toRoutineSummary(routine: Routine, runs: RunRecord[]): RoutineSummary {
     cwd: routine.cwd,
     timeoutMinutes: routine.timeoutMinutes,
     maxBudgetUsd: routine.maxBudgetUsd,
-    file: path.relative(config.repoRoot, routine.file),
+    file: path.relative(config.projectRoot, routine.file),
     running: runs.some(isMatching({ status: 'running' })),
     lastRun: runs[0] ?? null,
     lastSkip: getSkips(routine.name).at(-1) ?? null,

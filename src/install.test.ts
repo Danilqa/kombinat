@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { buildDaemonPath } from './install';
+import { config } from './config';
+import { buildDaemonPath, renderPlist } from './install';
 
 test('daemon PATH drops plugin dirs and duplicates but keeps user entries', () => {
   const result = buildDaemonPath(
@@ -15,4 +16,13 @@ test('daemon PATH drops plugin dirs and duplicates but keeps user entries', () =
   );
   assert.equal(entries.includes('/opt/homebrew/bin'), true);
   assert.equal(entries[0]?.endsWith('/bin'), true);
+});
+
+test('plist starts the kombinat bin in the project folder', () => {
+  const plist = renderPlist();
+  assert.equal(plist.includes(`<string>${config.packageRoot}/bin/kombinat.js</string>`), true);
+  assert.equal(
+    plist.includes(`<key>WorkingDirectory</key>\n    <string>${config.projectRoot}</string>`),
+    true,
+  );
 });

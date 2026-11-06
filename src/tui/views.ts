@@ -216,7 +216,7 @@ export function statusLines(
         text(
           loadedAt
             ? `showing data from ${formatRelative(new Date(loadedAt).toISOString(), now)}`
-            : 'is it running? pnpm cli status',
+            : 'is it running? check with the status command',
           S.dim,
         ),
       ],

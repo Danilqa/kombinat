@@ -49,8 +49,8 @@ function runBeforeHook({ command, cwd, env, logFile }: BeforeHook): string | nul
     cwd,
     env: {
       ...env,
-      KOMBINAT_REPO: config.repoRoot,
-      PATH: `${path.join(config.repoRoot, 'scripts')}:${env['PATH'] ?? ''}`,
+      KOMBINAT_REPO: config.projectRoot,
+      PATH: `${path.join(config.projectRoot, 'scripts')}:${env['PATH'] ?? ''}`,
     },
     timeout: BEFORE_HOOK_TIMEOUT_MS,
     encoding: 'utf8',
@@ -207,7 +207,7 @@ export function startDetachedRun(routineName: string, options: RunOptions): void
   const args = getCliArgs('run', routineName, '--trigger', options.trigger);
   if (options.scheduledFor) args.push('--scheduled-for', options.scheduledFor);
   spawn(process.execPath, args, {
-    cwd: config.repoRoot,
+    cwd: config.projectRoot,
     env: process.env,
     detached: true,
     stdio: 'ignore',
