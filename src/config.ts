@@ -5,7 +5,6 @@ import path from 'node:path';
 export const PACKAGE_NAME = '@danilqa/kombinat';
 export const DEFAULT_PORT = 7433;
 
-// npm and pnpm run bins in the folder they are called from, which can be a subfolder of the project.
 export function findProjectRoot(from: string): string {
   for (let dir = from; ; dir = path.dirname(dir)) {
     if (fs.existsSync(path.join(dir, 'package.json'))) return dir;
@@ -13,7 +12,6 @@ export function findProjectRoot(from: string): string {
   }
 }
 
-// The copy node resolves for the project, the same way it resolves any other dependency.
 export function findPackageLink(from: string): string | null {
   for (let dir = from; ; dir = path.dirname(dir)) {
     const candidate = path.join(dir, 'node_modules', PACKAGE_NAME);
@@ -22,11 +20,10 @@ export function findPackageLink(from: string): string | null {
   }
 }
 
-// The folder kombinat runs in: it holds routines/, package.json and the git checkout to pull.
 const projectRoot = findProjectRoot(process.cwd());
 const ownRoot = path.resolve(import.meta.dirname, '..');
 const packageLink = findPackageLink(projectRoot);
-// pnpm keeps each version in its own folder, so use the node_modules link instead: it survives upgrades.
+// Unlike pnpm's versioned folder, the node_modules link survives upgrades.
 const installedRoot =
   packageLink !== null && fs.realpathSync(packageLink) === fs.realpathSync(ownRoot)
     ? packageLink
@@ -39,7 +36,6 @@ export const config = {
   projectRoot,
   packageRoot,
   cliBin: path.join(packageRoot, 'bin', 'kombinat.js'),
-  // A checkout of the kombinat repository: runs the TypeScript sources and builds the UI itself.
   fromSource: fs.existsSync(path.join(packageRoot, 'src', 'cli.ts')),
   installedInProject: installedRoot !== null,
   projectHasCopy: packageLink !== null,

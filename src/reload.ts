@@ -49,13 +49,11 @@ interface PackageManager {
   command: string;
   install: string[];
   lockfile: string;
-  // Written to node_modules by an install that changes it.
   marker: string;
 }
 
 interface Dependencies {
   manager: PackageManager;
-  // Holds the lockfile: the project itself, or the root of the workspace it is part of.
   root: string;
 }
 
@@ -66,7 +64,7 @@ const PACKAGE_MANAGERS: PackageManager[] = [
     lockfile: 'pnpm-lock.yaml',
     marker: '.modules.yaml',
   },
-  // Not npm ci: it empties node_modules first, and a failed install would leave no kombinat to start.
+  // Not npm ci: when it fails, node_modules is left empty, kombinat included.
   {
     command: 'npm',
     install: ['install', '--no-audit', '--no-fund', '--loglevel=error'],
@@ -75,10 +73,10 @@ const PACKAGE_MANAGERS: PackageManager[] = [
   },
 ];
 
-// pnpm leaves its marker alone when there is nothing to install, so kombinat keeps one of its own.
+// pnpm does not touch its marker when there is nothing to install.
 const INSTALL_MARKER = '.kombinat-install';
 
-// Up to the root of the git checkout, so a workspace member finds the lockfile of the workspace.
+// Up to the git root, for workspaces with the lockfile at the top.
 function getLockfileDirs(projectRoot: string): string[] {
   const dirs: string[] = [];
   for (let dir = projectRoot; ; dir = path.dirname(dir)) {
@@ -150,7 +148,6 @@ export function installDepsIfStale(log: Log): boolean {
   return isInstalled;
 }
 
-// The npm package ships a built UI, only a checkout of the repository builds it.
 export function buildUiIfStale(log: Log): boolean {
   if (!config.fromSource || !isUiStale()) return false;
   log('ui sources newer than ui/dist, building');
@@ -197,8 +194,7 @@ export function pullLatest(): PullResult {
     const branch = runGit(['rev-parse', '--abbrev-ref', 'HEAD']);
     if (branch !== config.pullBranch)
       return { status: 'skipped', detail: `on branch ${branch}, not ${config.pullBranch}` };
-    // Untracked files, like a node_modules/ missing from .gitignore, do not block a pull: git refuses to
-    // overwrite them anyway.
+    // git pull refuses to overwrite untracked files anyway.
     const dirty = runGit(['status', '--porcelain', '--untracked-files=no']);
     if (dirty)
       return {

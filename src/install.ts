@@ -159,7 +159,6 @@ export function install(): string {
   return plistPath();
 }
 
-// The folder the installed daemon runs in, from its plist.
 export function getDaemonFolder(): string | null {
   if (!fs.existsSync(plistPath())) return null;
   const found = /<key>WorkingDirectory<\/key>\s*<string>(?<folder>[^<]*)<\/string>/.exec(
