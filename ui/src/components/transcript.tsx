@@ -17,7 +17,7 @@ function HookRow({ item }: HookRowProps) {
     <div className="space-y-2 text-body-sm text-fg-muted">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <span className="text-body font-medium text-fg">Before hook</span>
-        <span className="font-mono">{item.command}</span>
+        <span className="min-w-0 font-mono wrap-anywhere">{item.command}</span>
         <span className={cn('font-mono tabular-nums', item.exitCode !== 0 && 'text-negative')}>
           exit {item.exitCode ?? '?'}
         </span>
@@ -39,8 +39,8 @@ function InitRow({ item }: InitRowProps) {
   return (
     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-body-sm text-fg-muted">
       <span className="text-body font-medium text-fg">Session started</span>
-      {item.model !== null && <span className="font-mono">{item.model}</span>}
-      {item.cwd !== null && <span className="font-mono">{item.cwd}</span>}
+      {item.model !== null && <span className="min-w-0 font-mono wrap-anywhere">{item.model}</span>}
+      {item.cwd !== null && <span className="min-w-0 font-mono wrap-anywhere">{item.cwd}</span>}
       {item.toolCount !== null && <span className="tabular-nums">{item.toolCount} tools</span>}
       {item.permissionMode !== null && (
         <span>
@@ -69,29 +69,25 @@ const ToolRow = memo(function ToolRow({ item, isPending }: ToolRowProps) {
   const panelId = useId();
   const hasError = item.result?.isError === true;
   return (
-    <div
-      className={cn(
-        'relative overflow-hidden rounded-lg border border-line bg-surface has-[:focus-visible]:border-fg-muted',
-        isOpen &&
-          'before:absolute before:inset-y-0 before:left-0 before:z-10 before:w-0.5 before:bg-fg-muted',
-      )}
-    >
+    <div>
       <button
         type="button"
         aria-expanded={isOpen}
         aria-controls={panelId}
         onClick={() => setIsOpen(open => !open)}
-        className="flex h-9 w-full items-center gap-2 px-3 text-left transition-colors hover:bg-hover focus-visible:bg-hover focus-visible:-outline-offset-2"
+        className="group flex min-h-7 w-full items-center gap-2 rounded-sm text-left font-mono text-body-sm text-fg-muted"
       >
         <ChevronRight
           aria-hidden="true"
           className={cn(
-            'size-3.5 shrink-0 text-fg-muted transition-transform',
-            isOpen && 'rotate-90 text-fg',
+            'size-3.5 shrink-0 text-fg-faint transition-transform group-hover:text-fg-muted',
+            isOpen && 'rotate-90 text-fg-muted',
           )}
         />
-        <span className="shrink-0 font-mono text-body-sm font-medium text-fg">{item.name}</span>
-        <span className="min-w-0 flex-1 truncate font-mono text-body-sm text-fg-muted">
+        <span className="shrink-0 font-medium text-fg-secondary transition-colors group-hover:text-fg">
+          {item.name}
+        </span>
+        <span className="min-w-0 flex-1 truncate transition-colors group-hover:text-fg-secondary">
           {item.preview}
         </span>
         {hasError && (
@@ -108,7 +104,7 @@ const ToolRow = memo(function ToolRow({ item, isPending }: ToolRowProps) {
         )}
       </button>
       {isOpen && (
-        <div id={panelId} className="space-y-3 border-t border-line-faint p-3">
+        <div id={panelId} className="mt-1 mb-3 ml-[7px] space-y-3 border-l border-line-strong pl-4">
           <div>
             <div className="eyebrow mb-1.5">Input</div>
             <CodeBlock label="Tool input" className="max-h-80">

@@ -1,6 +1,6 @@
-export const HOUR_HEIGHT = 26;
+export const HOUR_HEIGHT = 48;
 export const DAY_HEIGHT = HOUR_HEIGHT * 24;
-export const MIN_BLOCK_HEIGHT = 14;
+export const MIN_BLOCK_HEIGHT = 20;
 
 const HOUR_MS = 3_600_000;
 
@@ -34,9 +34,12 @@ export function getDayStart(date: Date): Date {
   return addDays(date, 0);
 }
 
+export function getWeekdayIndex(date: Date): number {
+  return (date.getDay() + 6) % 7;
+}
+
 export function getWeekStart(date: Date): Date {
-  const mondayOffset = (date.getDay() + 6) % 7;
-  return addDays(date, -mondayOffset);
+  return addDays(date, -getWeekdayIndex(date));
 }
 
 export function getIsSameDay(a: Date, b: Date): boolean {

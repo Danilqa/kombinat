@@ -7,6 +7,7 @@ import {
   MIN_BLOCK_HEIGHT,
   countOverlapPairs,
   getWeekStart,
+  getWeekdayIndex,
   layoutDay,
 } from './calendar-layout';
 import type { TimedEntry } from './calendar-layout';
@@ -132,6 +133,12 @@ test('counts each overlapping pair once', () => {
     makeEntry('d', at(12), at(13)),
   ];
   assert.equal(countOverlapPairs(entries), 2);
+});
+
+test('numbers weekdays from 0 on Monday to 6 on Sunday', () => {
+  assert.equal(getWeekdayIndex(new Date(2026, 8, 28, 9)), 0);
+  assert.equal(getWeekdayIndex(new Date(2026, 9, 2, 9)), 4);
+  assert.equal(getWeekdayIndex(new Date(2026, 9, 4, 23)), 6);
 });
 
 test('starts the week on Monday', () => {

@@ -44,6 +44,19 @@
 
   --glow: rgba(240, 120, 70, 0.07);
 
+  --font-size-title-lg: 22px;
+  --line-height-title-lg: 28px;
+  --font-size-title-md: 16px;
+  --line-height-title-md: 22px;
+  --font-size-title-sm: 14px;
+  --line-height-title-sm: 20px;
+  --font-size-body: 13px;
+  --line-height-body: 20px;
+  --font-size-body-sm: 12px;
+  --line-height-body-sm: 16px;
+  --font-size-caption: 11px;
+  --line-height-caption: 14px;
+
   --popover-shadow-value: 0 12px 32px -8px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--line);
   --focus-ring-value: 0 0 0 1px var(--page), 0 0 0 3px rgba(255, 255, 255, 0.5);
 
@@ -65,6 +78,23 @@
   --border: var(--line);
   --input: var(--line-strong);
   --ring: var(--fg-muted);
+}
+
+@media (width < 40rem) {
+  :root {
+    --font-size-title-lg: 24px;
+    --line-height-title-lg: 30px;
+    --font-size-title-md: 18px;
+    --line-height-title-md: 24px;
+    --font-size-title-sm: 16px;
+    --line-height-title-sm: 22px;
+    --font-size-body: 16px;
+    --line-height-body: 24px;
+    --font-size-body-sm: 14px;
+    --line-height-body-sm: 20px;
+    --font-size-caption: 12px;
+    --line-height-caption: 16px;
+  }
 }
 
 @theme inline {
@@ -129,25 +159,25 @@
   --font-sans: 'Geist', -apple-system, 'Helvetica Neue', Arial, sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
-  --text-title-lg: 22px;
-  --text-title-lg--line-height: 28px;
+  --text-title-lg: var(--font-size-title-lg);
+  --text-title-lg--line-height: var(--line-height-title-lg);
   --text-title-lg--font-weight: 600;
   --text-title-lg--letter-spacing: -0.015em;
-  --text-title-md: 16px;
-  --text-title-md--line-height: 22px;
+  --text-title-md: var(--font-size-title-md);
+  --text-title-md--line-height: var(--line-height-title-md);
   --text-title-md--font-weight: 600;
   --text-title-md--letter-spacing: -0.01em;
-  --text-title-sm: 14px;
-  --text-title-sm--line-height: 20px;
+  --text-title-sm: var(--font-size-title-sm);
+  --text-title-sm--line-height: var(--line-height-title-sm);
   --text-title-sm--font-weight: 600;
-  --text-body: 13px;
-  --text-body--line-height: 20px;
+  --text-body: var(--font-size-body);
+  --text-body--line-height: var(--line-height-body);
   --text-body--font-weight: 400;
-  --text-body-sm: 12px;
-  --text-body-sm--line-height: 16px;
+  --text-body-sm: var(--font-size-body-sm);
+  --text-body-sm--line-height: var(--line-height-body-sm);
   --text-body-sm--font-weight: 400;
-  --text-caption: 11px;
-  --text-caption--line-height: 14px;
+  --text-caption: var(--font-size-caption);
+  --text-caption--line-height: var(--line-height-caption);
   --text-caption--font-weight: 500;
 
   --animate-soft-pulse: soft-pulse 2s ease-in-out infinite;
@@ -176,8 +206,8 @@
   body {
     @apply font-sans antialiased;
     min-height: 100vh;
-    font-size: 13px;
-    line-height: 20px;
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-body);
     color: var(--fg);
     background:
       radial-gradient(1200px 420px at 50% -160px, var(--glow), transparent 70%) no-repeat,
@@ -232,19 +262,19 @@
     font-variant-numeric: tabular-nums;
   }
   .chip-medium {
-    height: 22px;
+    height: calc(var(--line-height-body-sm) + 6px);
     padding: 0 8px;
     border-radius: 6px;
-    font-size: 12px;
-    line-height: 16px;
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-body-sm);
     font-weight: 500;
   }
   .chip-small {
-    height: 20px;
+    height: calc(var(--line-height-caption) + 6px);
     padding: 0 6px;
     border-radius: 4px;
-    font-size: 11px;
-    line-height: 14px;
+    font-size: var(--font-size-caption);
+    line-height: var(--line-height-caption);
     font-weight: 500;
   }
   .chip-positive {
@@ -273,8 +303,8 @@
     color: var(--fg-muted);
   }
   .eyebrow {
-    font-size: 12px;
-    line-height: 16px;
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-body-sm);
     font-weight: 500;
     color: var(--fg-muted);
   }
@@ -287,8 +317,8 @@
     border-radius: 9999px;
     background-color: var(--fg);
     color: var(--page);
-    font-size: 13px;
-    line-height: 20px;
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-body);
     font-weight: 500;
     transform: translateY(-200%);
   }

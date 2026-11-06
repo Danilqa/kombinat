@@ -1,5 +1,5 @@
-import { memo, useMemo } from 'react';
-import ReactMarkdown, { type Options } from 'react-markdown';
+import { memo, useMemo, type ReactNode } from 'react';
+import ReactMarkdown, { type Components, type Options } from 'react-markdown';
 import remarkBreaks from 'remark-breaks';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
@@ -36,6 +36,20 @@ function remarkShiftHeadings({ minHeadingLevel }: ShiftHeadingsOptions) {
   };
 }
 
+interface MarkdownTableProps {
+  children?: ReactNode;
+}
+
+function MarkdownTable({ children }: MarkdownTableProps) {
+  return (
+    <div tabIndex={0} role="region" aria-label="Table" className="overflow-x-auto">
+      <table>{children}</table>
+    </div>
+  );
+}
+
+const components: Components = { table: MarkdownTable };
+
 interface MarkdownProps {
   source: string;
   minHeadingLevel: HeadingLevel;
@@ -54,7 +68,7 @@ export const Markdown = memo(function Markdown({
   return (
     <div
       className={cn(
-        'markdown prose prose-sm max-w-none text-body',
+        'markdown prose prose-sm max-w-none text-body wrap-break-word',
         'prose-headings:font-semibold prose-headings:text-fg prose-h2:text-title-md prose-h3:text-title-sm prose-h4:text-title-sm prose-h5:text-title-sm prose-h6:text-title-sm',
         'prose-p:my-2 prose-li:my-0.5',
         'prose-table:text-body-sm prose-th:font-medium prose-th:text-fg-muted prose-td:text-fg-prose',
@@ -64,7 +78,9 @@ export const Markdown = memo(function Markdown({
         className,
       )}
     >
-      <ReactMarkdown remarkPlugins={remarkPlugins}>{source}</ReactMarkdown>
+      <ReactMarkdown remarkPlugins={remarkPlugins} components={components}>
+        {source}
+      </ReactMarkdown>
     </div>
   );
 });
