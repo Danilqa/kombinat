@@ -77,10 +77,19 @@ test('a lockfile outside the git checkout of the project is ignored', () => {
   assert.equal(findDependencies(project), null);
 });
 
-test('deps are never stale without a pnpm or npm lockfile', () => {
+test('yarn projects are checked against the yarn install marker', () => {
   const root = makeRepo();
-  assert.equal(areDepsStale(root), false);
   touch(path.join(root, 'yarn.lock'), 1_000_000);
+  assert.equal(findDependencies(root)?.manager.command, 'yarn');
+  assert.equal(areDepsStale(root), true);
+  touch(path.join(root, 'node_modules', '.yarn-integrity'), 2_000_000);
+  assert.equal(areDepsStale(root), false);
+});
+
+test('deps are never stale without a lockfile', () => {
+  const root = makeRepo();
   assert.equal(findDependencies(root), null);
   assert.equal(areDepsStale(root), false);
+  touch(path.join(root, 'bun.lock'), 1_000_000);
+  assert.equal(findDependencies(root), null);
 });

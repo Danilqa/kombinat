@@ -126,7 +126,7 @@ This starts the daemon under launchd, in that folder. Open http://localhost:7433
 
 ## Commands
 
-Run them from the same folder. With npm, use `npx kombinat` instead of `pnpm kombinat`.
+Run them from the same folder. With npm, use `npx kombinat` instead of `pnpm kombinat`, with Yarn `yarn kombinat`.
 
 ```bash
 pnpm kombinat list           # routines, next run, last status
@@ -191,7 +191,7 @@ A setting the agent does not support fails validation.
 
 The daemon runs `git pull` in the folder every 5 minutes, so merged changes go live on their own. It only pulls when the checkout is on `main` with no local changes.
 
-To update Kombinat, bump `@danilqa/kombinat` in `package.json`, for example with a Renovate or Dependabot PR. When the lockfile changes, the daemon installs dependencies with pnpm or npm and restarts. Running routines are not interrupted.
+To update Kombinat, bump `@danilqa/kombinat` in `package.json`, for example with a Renovate or Dependabot PR. When the lockfile changes, the daemon installs dependencies with pnpm, npm or Yarn and restarts. Running routines are not interrupted.
 
 ## Configuration
 
