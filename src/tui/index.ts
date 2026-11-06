@@ -8,12 +8,12 @@ const POLL_IDLE_MS = 10_000;
 const FRAME_ACTIVE_MS = 150;
 const FRAME_IDLE_MS = 1000;
 
-export function runTui(): Promise<void> {
+export function runTui(baseUrl?: string, stopSignal?: AbortSignal): Promise<void> {
   if (!process.stdin.isTTY || !process.stdout.isTTY)
     throw new Error('tui needs an interactive terminal');
   const terminal = new Terminal();
   const draw = () => terminal.draw(app.render(terminal.width, terminal.height));
-  const app = new TuiApp({ client: createDaemonClient(), onChange: draw });
+  const app = new TuiApp({ client: createDaemonClient(baseUrl), onChange: draw });
   let pollTimer: NodeJS.Timeout | undefined;
   let frameTimer: NodeJS.Timeout | undefined;
 
@@ -34,6 +34,7 @@ export function runTui(): Promise<void> {
     process.on('unhandledRejection', crash);
     for (const signal of ['SIGTERM', 'SIGHUP', 'SIGINT', 'SIGQUIT'] as const)
       process.on(signal, quit);
+    stopSignal?.addEventListener('abort', quit);
 
     const poll = async () => {
       await app.refresh();

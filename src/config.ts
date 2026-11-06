@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 export const PACKAGE_NAME = '@danilqa/kombinat';
+export const DEFAULT_PORT = 7433;
 
 export function findProjectRoot(from: string): string {
   for (let dir = from; ; dir = path.dirname(dir)) {
@@ -41,7 +42,7 @@ export const config = {
   routinesDir: env('KOMBINAT_ROUTINES_DIR') ?? path.join(projectRoot, 'routines'),
   stateDir: env('KOMBINAT_STATE_DIR') ?? path.join(os.homedir(), '.kombinat'),
   uiDist: path.join(packageRoot, 'ui', 'dist'),
-  port: Number(env('KOMBINAT_PORT') ?? 7433),
+  port: Number(env('KOMBINAT_PORT') ?? DEFAULT_PORT),
   claudeBin: env('CLAUDE_BIN') ?? path.join(os.homedir(), '.local', 'bin', 'claude'),
   codexBin: env('CODEX_BIN') ?? 'codex',
   tickSeconds: Number(env('KOMBINAT_TICK_SECONDS') ?? 30),

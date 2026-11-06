@@ -3,7 +3,8 @@ import { parseArgs } from 'node:util';
 
 import { isMatching, match, P } from 'ts-pattern';
 
-import { config } from './config';
+import { config, DEFAULT_PORT } from './config';
+import { connect } from './connect';
 import { describeCron } from './cron';
 import {
   getDaemonFolder,
@@ -30,10 +31,13 @@ import { ensureStateDirs, listRuns, readSchedulerState } from './state';
 import type { RunTrigger } from './shared/contract';
 import { runTui } from './tui';
 
-const USAGE = `kombinat, run from the project folder that holds routines/
+const USAGE = `kombinat, run from the folder that holds routines/ (connect and tui --url work anywhere)
 
-  tui                       keyboard dashboard in the terminal (works over ssh), talks to the
-                            running daemon
+  tui [--url <url>]         keyboard dashboard in the terminal (works over ssh), talks to the
+                            running daemon, or to the one at --url
+  connect <destination>     dashboard of a daemon on another machine through an ssh tunnel, in the
+                            browser or with --tui in the terminal; --port is the daemon port
+                            there (default ${DEFAULT_PORT}), for example connect admin@mac-mini --tui
   list                      show routines from ./routines with next run and last status
   validate                  parse every routine file and report errors
   readme                    regenerate the routines table in README.md
@@ -55,6 +59,9 @@ interface CliOptions {
   scheduledFor: string | null;
   watch: boolean;
   scheduler: boolean;
+  url: string | null;
+  remotePort: number;
+  tui: boolean;
 }
 
 function log(line: string): void {
@@ -73,13 +80,40 @@ function parseTrigger(value: string): RunTrigger {
     });
 }
 
+function parseUrl(value: string): string {
+  const url = URL.parse(value);
+  if (url === null || !['http:', 'https:'].includes(url.protocol)) {
+    throw new Error('--url must be an http(s) URL, for example https://mac-mini.example.ts.net');
+  }
+  return value.replace(/\/+$/, '');
+}
+
+function parsePort(value: string): number {
+  const port = Number(value);
+  if (!Number.isInteger(port) || port < 1 || port > 65_535) {
+    throw new Error('--port must be a port number');
+  }
+  return port;
+}
+
+function checkFlag(isSet: boolean, flag: string, command: string | undefined, owner: string): void {
+  if (isSet && command !== owner) throw new Error(`--${flag} only works with ${owner}`);
+}
+
 function startScheduler(options: CliOptions): () => void {
   return options.scheduler ? startSchedulerLoop(log) : () => undefined;
 }
 
-async function showTui(): Promise<void> {
-  await runTui();
+async function showTui(options: CliOptions): Promise<void> {
+  await runTui(options.url ?? undefined);
   process.exit(0);
+}
+
+async function connectTo(destination: string | undefined, options: CliOptions): Promise<void> {
+  if (destination === undefined) {
+    throw new Error('connect needs an ssh destination, for example admin@mac-mini');
+  }
+  process.exit(await connect({ destination, remotePort: options.remotePort, tui: options.tui }));
 }
 
 function listRoutines(): void {
@@ -203,18 +237,28 @@ async function main(): Promise<void> {
       'scheduled-for': { type: 'string' },
       'no-watch': { type: 'boolean', default: false },
       'no-scheduler': { type: 'boolean', default: false },
+      url: { type: 'string' },
+      port: { type: 'string' },
+      tui: { type: 'boolean', default: false },
     },
   });
   const [command, name] = positionals;
+  checkFlag(values.url !== undefined, 'url', command, 'tui');
+  checkFlag(values.port !== undefined, 'port', command, 'connect');
+  checkFlag(values.tui, 'tui', command, 'connect');
   const options: CliOptions = {
     trigger: parseTrigger(values.trigger),
     scheduledFor: values['scheduled-for'] ?? null,
     watch: !values['no-watch'],
     scheduler: !values['no-scheduler'],
+    url: values.url === undefined ? null : parseUrl(values.url),
+    remotePort: parsePort(values.port ?? String(DEFAULT_PORT)),
+    tui: values.tui,
   };
 
   await match(command)
-    .with('tui', showTui)
+    .with('tui', () => showTui(options))
+    .with('connect', () => connectTo(name, options))
     .with('list', listRoutines)
     .with('validate', () => console.log(`${loadRoutines().length} routine(s) ok`))
     .with('readme', () =>
