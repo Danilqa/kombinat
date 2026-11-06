@@ -46,7 +46,7 @@ const KEBAB_CASE_FILES = {
 };
 
 export default defineConfig(
-  globalIgnores(['ui/dist/', 'dist/']),
+  globalIgnores(['ui/dist/', 'dist/', 'playwright-report/', 'test-results/']),
   {
     linterOptions: {
       noInlineConfig: true,
@@ -131,5 +131,10 @@ export default defineConfig(
     // Parses raw terminal input, which is made of escape sequences.
     files: ['src/tui/keys.ts'],
     rules: { 'no-control-regex': 'off' },
+  },
+  {
+    // Playwright fixtures that depend on no other fixture take an empty object pattern.
+    files: ['e2e/**/*.ts'],
+    rules: { 'no-empty-pattern': ['error', { allowObjectPatternsAsParameters: true }] },
   },
 );

@@ -3,3 +3,5 @@ ui/dist/
 .env.local
 .DS_Store
 dist/
+playwright-report/
+test-results/

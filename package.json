@@ -42,7 +42,8 @@
     "dev:local": "tsx --env-file=.env.local src/cli.ts dev",
     "tui:local": "tsx --env-file=.env.local src/cli.ts tui",
     "test": "tsx --test 'src/**/*.test.ts' 'ui/src/**/*.test.ts'",
-    "typecheck": "tsc -p tsconfig.json && tsc -p ui/tsconfig.json",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc -p tsconfig.json && tsc -p ui/tsconfig.json && tsc -p e2e/tsconfig.json",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -63,6 +64,7 @@
   "devDependencies": {
     "@danilqa/eslint-plugin-ts-pattern": "0.0.4",
     "@eslint/js": "10.0.1",
+    "@playwright/test": "1.65.0",
     "@tailwindcss/typography": "0.5.20",
     "@tailwindcss/vite": "4.3.3",
     "@types/node": "26.6.3",
