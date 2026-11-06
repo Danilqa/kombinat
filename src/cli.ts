@@ -153,8 +153,7 @@ function dev(options: CliOptions): void {
     stopLaunchd();
     log('stopped the launchd daemon, this process takes over until Ctrl-C');
   }
-  // Ticks from here would move the daemon's last tick past the missed runs of its own routines,
-  // and it only catches up on runs after its last tick.
+  // Ticking here would make the daemon skip the missed runs of its own routines.
   const daemonFolder = hadLaunchd ? getDaemonFolder() : null;
   const isOtherFolder = daemonFolder !== null && daemonFolder !== config.projectRoot;
   if (isOtherFolder) log(`the daemon runs ${daemonFolder}, so the scheduler stays off here`);

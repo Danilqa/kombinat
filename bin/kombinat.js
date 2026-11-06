@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// The npm package ships the bundled dist/cli.js. A checkout of the repository runs the sources with tsx.
+// A checkout runs the sources with tsx, the npm package ships dist/cli.js.
 import fs from 'node:fs';
 
 const source = new URL('../src/cli.ts', import.meta.url);
