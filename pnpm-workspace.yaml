@@ -1,6 +1,10 @@
 packages:
   - packages/*
 catalog:
+  '@types/react': 19.3.0
+  lucide-react: 1.49.0
+  react: 19.3.0
+  react-dom: 19.3.0
   ts-pattern: 5.9.2
   tsx: 4.23.15
   zod: 4.6.7

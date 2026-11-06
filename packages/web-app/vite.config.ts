@@ -3,19 +3,19 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
-const uiRoot = import.meta.dirname;
+const webAppRoot = import.meta.dirname;
 
 export default defineConfig({
-  root: uiRoot,
+  root: webAppRoot,
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      '@': path.join(uiRoot, 'src'),
-      '@shared': path.join(uiRoot, '..', 'packages', 'cli', 'src', 'shared'),
+      '@': path.join(webAppRoot, 'src'),
+      '@shared': path.join(webAppRoot, '..', 'cli', 'src', 'shared'),
     },
   },
   build: {
-    outDir: path.join(uiRoot, '..', 'packages', 'cli', 'dist', 'web-app'),
+    outDir: path.join(webAppRoot, '..', 'cli', 'dist', 'web-app'),
     emptyOutDir: true,
     chunkSizeWarningLimit: 1000,
   },

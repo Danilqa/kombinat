@@ -36,7 +36,7 @@
     "typecheck": "tsc -p tsconfig.json",
     "build": "pnpm run build:cli && pnpm run build:web-app",
     "build:cli": "esbuild src/cli.ts --bundle --platform=node --format=esm --target=node24 --packages=external --outfile=dist/cli.js",
-    "build:web-app": "pnpm -w run ui:build",
+    "build:web-app": "pnpm --filter web-app run build",
     "prepack": "pnpm run build && cp ../../README.md README.md"
   },
   "engines": {

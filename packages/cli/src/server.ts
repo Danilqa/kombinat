@@ -176,7 +176,7 @@ function sendJson(res: http.ServerResponse, { status, body }: ApiResponse): void
 function serveStatic(res: http.ServerResponse, url: URL): void {
   if (!fs.existsSync(config.webAppDist)) {
     res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' });
-    res.end('kombinat API is up. Build the UI with `pnpm ui:build` to get the dashboard here.\n');
+    res.end('kombinat API is up. Build the UI with `pnpm build` to get the dashboard here.\n');
     return;
   }
   const requested = path.normalize(decodeURIComponent(url.pathname));

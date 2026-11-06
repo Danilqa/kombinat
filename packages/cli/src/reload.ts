@@ -32,9 +32,9 @@ function getNewestMtime(root: string): number {
 }
 
 const webAppSources = (workspaceRoot: string) => [
-  path.join(workspaceRoot, 'ui', 'src'),
-  path.join(workspaceRoot, 'ui', 'index.html'),
-  path.join(workspaceRoot, 'ui', 'vite.config.ts'),
+  path.join(workspaceRoot, 'packages', 'web-app', 'src'),
+  path.join(workspaceRoot, 'packages', 'web-app', 'index.html'),
+  path.join(workspaceRoot, 'packages', 'web-app', 'vite.config.ts'),
   path.join(workspaceRoot, 'packages', 'cli', 'src', 'shared'),
 ];
 
@@ -146,7 +146,7 @@ function runTool(command: string, args: string[], cwd: string, log: Log): boolea
 }
 
 const buildWebApp = (workspaceRoot: string, log: Log): boolean =>
-  runTool('pnpm', ['-s', 'ui:build'], workspaceRoot, log);
+  runTool('pnpm', ['-s', '--filter', 'web-app', 'run', 'build'], workspaceRoot, log);
 
 export function installDepsIfStale(log: Log): boolean {
   const dependencies = findDependencies();
@@ -262,8 +262,8 @@ export function startReloadWatchers(log: Log, restart: (reason: string) => void)
           watchDebounced(path.join(config.packageRoot, 'src'), 1500, file =>
             installAndRestart(`src/${file} changed`),
           ),
-          watchDebounced(path.join(workspaceRoot, 'ui', 'src'), 1500, file => {
-            log(`ui/src/${file} changed, rebuilding ui`);
+          watchDebounced(path.join(workspaceRoot, 'packages', 'web-app', 'src'), 1500, file => {
+            log(`packages/web-app/src/${file} changed, rebuilding ui`);
             buildWebApp(workspaceRoot, log);
           }),
         ];

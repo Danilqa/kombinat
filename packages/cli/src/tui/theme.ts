@@ -1,4 +1,4 @@
-// The dashboard palette (ui/src/index.css), so the terminal and the browser look alike.
+// The dashboard palette (packages/web-app/src/index.css), so the terminal and the browser look alike.
 const PALETTE = {
   page: '#09090a',
   surface: '#111113',

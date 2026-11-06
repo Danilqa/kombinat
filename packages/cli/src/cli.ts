@@ -197,7 +197,10 @@ function dev(options: CliOptions): void {
     scheduler: options.scheduler && !isOtherFolder,
   });
   const server = startServer(log);
-  const vite = spawn('pnpm', ['-s', 'ui:dev'], { cwd: workspaceRoot, stdio: 'inherit' });
+  const vite = spawn('pnpm', ['-s', '--filter', 'web-app', 'run', 'dev'], {
+    cwd: workspaceRoot,
+    stdio: 'inherit',
+  });
   let closing = false;
   const handBack = (): void => {
     if (closing) return;

@@ -6,6 +6,18 @@ settings:
 
 catalogs:
   default:
+    '@types/react':
+      specifier: 19.3.0
+      version: 19.3.0
+    lucide-react:
+      specifier: 1.49.0
+      version: 1.49.0
+    react:
+      specifier: 19.3.0
+      version: 19.3.0
+    react-dom:
+      specifier: 19.3.0
+      version: 19.3.0
     ts-pattern:
       specifier: 5.9.2
       version: 5.9.2
@@ -31,30 +43,15 @@ importers:
       '@playwright/test':
         specifier: 1.65.0
         version: 1.65.0
-      '@tailwindcss/typography':
-        specifier: 0.5.20
-        version: 0.5.20(tailwindcss@4.3.3)
-      '@tailwindcss/vite':
-        specifier: 4.3.3
-        version: 4.3.3(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       '@types/node':
         specifier: 26.6.3
         version: 26.6.3
       '@types/react':
-        specifier: 19.3.0
+        specifier: 'catalog:'
         version: 19.3.0
       '@types/react-dom':
         specifier: 19.3.0
         version: 19.3.0(@types/react@19.3.0)
-      '@vitejs/plugin-react':
-        specifier: 6.1.1
-        version: 6.1.1(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
-      class-variance-authority:
-        specifier: 0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: 2.1.1
-        version: 2.1.1
       eslint:
         specifier: 10.13.0
         version: 10.13.0(jiti@2.7.0)
@@ -64,20 +61,60 @@ importers:
       globals:
         specifier: 17.13.0
         version: 17.13.0
-      lucide-react:
-        specifier: 1.49.0
-        version: 1.49.0(@types/react@19.3.0)(react@19.3.0)
       prettier:
         specifier: 3.9.10
         version: 3.9.10
+      tsx:
+        specifier: 'catalog:'
+        version: 4.23.15
+      typescript:
+        specifier: npm:@typescript/typescript6@6.0.2
+        version: '@typescript/typescript6@6.0.2'
+      typescript-eslint:
+        specifier: 8.71.2
+        version: 8.71.2(@typescript/typescript6@6.0.2)(eslint@10.13.0(jiti@2.7.0))
+      typescript7:
+        specifier: npm:typescript@7.0.2
+        version: typescript@7.0.2
+
+  packages/cli:
+    dependencies:
+      ts-pattern:
+        specifier: 'catalog:'
+        version: 5.9.2
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.7
+    devDependencies:
+      esbuild:
+        specifier: 0.28.2
+        version: 0.28.2
+      tsx:
+        specifier: 'catalog:'
+        version: 4.23.15
+
+  packages/web-app:
+    dependencies:
+      '@tailwindcss/typography':
+        specifier: 0.5.20
+        version: 0.5.20(tailwindcss@4.3.3)
+      class-variance-authority:
+        specifier: 0.7.1
+        version: 0.7.1
+      clsx:
+        specifier: 2.1.1
+        version: 2.1.1
+      lucide-react:
+        specifier: 'catalog:'
+        version: 1.49.0(@types/react@19.3.0)(react@19.3.0)
       radix-ui:
         specifier: 1.6.7
         version: 1.6.7(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       react:
-        specifier: 19.3.0
+        specifier: 'catalog:'
         version: 19.3.0
       react-dom:
-        specifier: 19.3.0
+        specifier: 'catalog:'
         version: 19.3.0(react@19.3.0)
       react-markdown:
         specifier: 10.1.0
@@ -100,43 +137,22 @@ importers:
       ts-pattern:
         specifier: 'catalog:'
         version: 5.9.2
-      tsx:
-        specifier: 'catalog:'
-        version: 4.23.15
       tw-animate-css:
         specifier: 1.4.0
         version: 1.4.0
-      typescript:
-        specifier: npm:@typescript/typescript6@6.0.2
-        version: '@typescript/typescript6@6.0.2'
-      typescript-eslint:
-        specifier: 8.71.2
-        version: 8.71.2(@typescript/typescript6@6.0.2)(eslint@10.13.0(jiti@2.7.0))
-      typescript7:
-        specifier: npm:typescript@7.0.2
-        version: typescript@7.0.2
-      vite:
-        specifier: 8.3.1
-        version: 8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
-      zod:
-        specifier: 'catalog:'
-        version: 4.6.7
-
-  packages/cli:
-    dependencies:
-      ts-pattern:
-        specifier: 'catalog:'
-        version: 5.9.2
       zod:
         specifier: 'catalog:'
         version: 4.6.7
     devDependencies:
-      esbuild:
-        specifier: 0.28.2
-        version: 0.28.2
-      tsx:
-        specifier: 'catalog:'
-        version: 4.23.15
+      '@tailwindcss/vite':
+        specifier: 4.3.3
+        version: 4.3.3(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+      '@vitejs/plugin-react':
+        specifier: 6.1.1
+        version: 6.1.1(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+      vite:
+        specifier: 8.3.1
+        version: 8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
 
 packages:
 
