@@ -10,11 +10,13 @@ import { getErrorMessage } from './shared/errors';
 
 type Log = (line: string) => void;
 
-const processErrorSchema = z.object({ stderr: z.string() });
+const processErrorSchema = z.object({ stderr: z.string(), stdout: z.string().optional() });
 
+// Yarn 2+ prints its errors to stdout.
 function getProcessOutput(error: unknown): string {
   const parsed = processErrorSchema.safeParse(error);
-  return parsed.success && parsed.data.stderr ? parsed.data.stderr : getErrorMessage(error);
+  const output = parsed.success ? parsed.data.stderr || parsed.data.stdout : undefined;
+  return output || getErrorMessage(error);
 }
 
 function getNewestMtime(root: string): number {
@@ -71,6 +73,13 @@ const PACKAGE_MANAGERS: PackageManager[] = [
     lockfile: 'package-lock.json',
     marker: '.package-lock.json',
   },
+  // Yarn 2+ reads --frozen-lockfile as --immutable.
+  {
+    command: 'yarn',
+    install: ['install', '--frozen-lockfile'],
+    lockfile: 'yarn.lock',
+    marker: '.yarn-integrity',
+  },
 ];
 
 // pnpm does not touch its marker when there is nothing to install.
@@ -120,6 +129,8 @@ function runTool(command: string, args: string[], cwd: string, log: Log): boolea
   try {
     const output = execFileSync(command, args, {
       cwd,
+      // Yarn 1 trips a Node deprecation warning on every run.
+      env: { ...process.env, NODE_NO_WARNINGS: '1' },
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
       timeout: 5 * 60_000,
@@ -127,8 +138,10 @@ function runTool(command: string, args: string[], cwd: string, log: Log): boolea
     log(`${command} ${args.join(' ')}: ${output.trim().split('\n').at(-1) || 'ok'}`);
     return true;
   } catch (err) {
-    const stderr = getProcessOutput(err);
-    log(`${command} ${args.join(' ')} failed: ${stderr.trim().split('\n').slice(-5).join(' | ')}`);
+    const lines = getProcessOutput(err)
+      .split('\n')
+      .filter(line => line.trim() && !/^\s+at /.test(line));
+    log(`${command} ${args.join(' ')} failed: ${lines.slice(-5).join(' | ')}`);
     return false;
   }
 }
