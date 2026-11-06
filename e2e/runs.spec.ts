@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures';
-import { minutesAgo } from './helpers/time';
+import { minutesAgo } from './fixtures/time';
 
 test('lists the latest runs of all routines and opens one', async ({ page, kombinat }) => {
   kombinat.addRoutine({ name: 'triage-sentry' });

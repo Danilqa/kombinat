@@ -1,9 +1,9 @@
 import { test as base } from '@playwright/test';
 
-import { startDaemon } from './helpers/daemon';
-import type { Daemon } from './helpers/daemon';
-import { createKombinat } from './helpers/kombinat';
-import type { Kombinat } from './helpers/kombinat';
+import { startDaemon } from './daemon';
+import type { Daemon } from './daemon';
+import { createKombinat } from './kombinat';
+import type { Kombinat } from './kombinat';
 
 interface TestFixtures {
   kombinat: Kombinat;

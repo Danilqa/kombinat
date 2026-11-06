@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures';
-import { claude } from './helpers/claude-stream';
+import { claude } from './fixtures/claude-stream';
 
 test("shows a run's result, transcript and how to resume it", async ({ page, kombinat }) => {
   kombinat.addRoutine({ name: 'fix-e2e-tests' });

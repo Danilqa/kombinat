@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures';
-import { minutesAgo } from './helpers/time';
+import { minutesAgo } from './fixtures/time';
 
 // Idle pages poll every 15 seconds.
 const NEW_RUN_TIMEOUT_MS = 25_000;

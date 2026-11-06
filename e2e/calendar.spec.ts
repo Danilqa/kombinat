@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures';
-import { formatDay, todayAt } from './helpers/time';
+import { formatDay, todayAt } from './fixtures/time';
 
 const DAY_MS = 86_400_000;
 
