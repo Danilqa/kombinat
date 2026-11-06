@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Play } from 'lucide-react';
+import { getErrorMessage } from 'utils/error';
 import { Button } from '@web-app/components/ui/button';
 import { startRoutineRun } from '@web-app/lib/api';
-import { getErrorMessage } from '@shared/errors';
 
 type RunNowVariant = 'primary' | 'secondary';
 

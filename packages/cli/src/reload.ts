@@ -5,8 +5,9 @@ import path from 'node:path';
 import { isMatching } from 'ts-pattern';
 import { z } from 'zod';
 
+import { getErrorMessage } from 'utils/error';
+
 import { config } from './config';
-import { getErrorMessage } from './shared/errors';
 
 type Log = (line: string) => void;
 
@@ -19,23 +20,33 @@ function getProcessOutput(error: unknown): string {
   return output || getErrorMessage(error);
 }
 
+const SKIPPED_FOLDERS = ['node_modules', 'dist'];
+
+function isSkipped(file: string): boolean {
+  return file.split(path.sep).some(segment => SKIPPED_FOLDERS.includes(segment));
+}
+
 function getNewestMtime(root: string): number {
   if (!fs.existsSync(root)) return 0;
   const stat = fs.statSync(root);
   if (stat.isFile()) return stat.mtimeMs;
   return fs
     .readdirSync(root)
+    .filter(entry => !isSkipped(entry))
     .reduce(
       (newest, entry) => Math.max(newest, getNewestMtime(path.join(root, entry))),
       stat.mtimeMs,
     );
 }
 
+const SHARED_PACKAGES = ['utils'];
+
 const webAppSources = (workspaceRoot: string) => [
   path.join(workspaceRoot, 'packages', 'web-app', 'src'),
   path.join(workspaceRoot, 'packages', 'web-app', 'index.html'),
   path.join(workspaceRoot, 'packages', 'web-app', 'vite.config.ts'),
   path.join(workspaceRoot, 'packages', 'cli', 'src', 'shared'),
+  ...SHARED_PACKAGES.map(name => path.join(workspaceRoot, 'packages', name)),
 ];
 
 export function isWebAppStale(workspaceRoot = config.workspaceRoot): boolean {
@@ -177,6 +188,7 @@ function watchDebounced(
   let timer: NodeJS.Timeout | null = null;
   let lastFile = '';
   const watcher = fs.watch(target, { recursive: true }, (_event, file) => {
+    if (file !== null && isSkipped(file)) return;
     lastFile = file ?? '';
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => onChange(lastFile), delayMs);
@@ -261,6 +273,11 @@ export function startReloadWatchers(log: Log, restart: (reason: string) => void)
       : [
           watchDebounced(path.join(config.packageRoot, 'src'), 1500, file =>
             installAndRestart(`src/${file} changed`),
+          ),
+          ...SHARED_PACKAGES.map(name =>
+            watchDebounced(path.join(workspaceRoot, 'packages', name), 1500, file =>
+              installAndRestart(`packages/${name}/${file} changed`),
+            ),
           ),
           watchDebounced(path.join(workspaceRoot, 'packages', 'web-app', 'src'), 1500, file => {
             log(`packages/web-app/src/${file} changed, rebuilding ui`);

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { readResponse } from 'utils/http';
 import {
   calendarEntrySchema,
   daemonStatusSchema,
@@ -17,7 +18,6 @@ import type {
   RunRecord,
   Transcript,
 } from '@shared/contract';
-import { readResponse } from '@shared/http';
 
 export type {
   AgentName,

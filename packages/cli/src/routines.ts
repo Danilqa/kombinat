@@ -2,11 +2,12 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import { getErrorMessage } from 'utils/error';
+
 import { getAgent, parseAgentName } from './agents';
 import type { AgentName, AgentSettings } from './agents/types';
 import { config } from './config';
 import { parseCron } from './cron';
-import { getErrorMessage } from './shared/errors';
 
 export interface Routine extends AgentSettings {
   name: string;

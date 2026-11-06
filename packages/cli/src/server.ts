@@ -4,6 +4,8 @@ import path from 'node:path';
 
 import { isMatching, match, P } from 'ts-pattern';
 
+import { getErrorMessage } from 'utils/error';
+
 import { buildTranscript } from './agents';
 import { buildCalendar } from './calendar';
 import { config } from './config';
@@ -20,7 +22,6 @@ import type {
   RunRecord,
   Skip,
 } from './shared/contract';
-import { getErrorMessage } from './shared/errors';
 import { listAllRuns, listRuns, readRunRecord, readSchedulerState } from './state';
 
 interface ApiResponse {

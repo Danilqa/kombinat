@@ -31,6 +31,23 @@ test('the web app is stale when dist/web-app is missing or older than a source f
   assert.equal(isWebAppStale(root), true);
 });
 
+test('shared packages are web app sources, their node_modules and dist are not', () => {
+  const root = makeRepo();
+  const utils = path.join(root, 'packages', 'utils');
+  for (const folder of ['node_modules', 'dist']) {
+    fs.mkdirSync(path.join(utils, folder), { recursive: true });
+    touch(path.join(utils, folder, 'index.js'), 3_000_000);
+  }
+  touch(path.join(utils, 'http.ts'), 1_000_000);
+  touch(path.join(root, 'packages', 'cli', 'dist', 'web-app', 'index.html'), 2_000_000);
+  for (const folder of [utils, path.join(root, 'packages', 'web-app', 'src')]) {
+    fs.utimesSync(folder, 1000, 1000);
+  }
+  assert.equal(isWebAppStale(root), false);
+  touch(path.join(utils, 'http.ts'), 3_000_000);
+  assert.equal(isWebAppStale(root), true);
+});
+
 test('deps are stale when the lockfile is newer than the install marker', () => {
   const root = makeRepo();
   touch(path.join(root, 'pnpm-lock.yaml'), 1_000_000);

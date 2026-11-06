@@ -1,6 +1,6 @@
-import type { z } from 'zod';
+import { z } from 'zod';
 
-import { errorBodySchema } from './contract';
+export const errorBodySchema = z.object({ error: z.string() });
 
 export async function readResponse<T>(response: Response, schema: z.ZodType<T>): Promise<T> {
   const body: unknown = await response.json().catch(() => null);

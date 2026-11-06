@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { readResponse } from 'utils/http';
+
 import { config } from '../config';
 import {
   daemonStatusSchema,
@@ -16,7 +18,6 @@ import type {
   RunRecord,
   Transcript,
 } from '../shared/contract';
-import { readResponse } from '../shared/http';
 
 export interface Overview {
   status: DaemonStatus;

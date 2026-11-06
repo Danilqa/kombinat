@@ -1,9 +1,10 @@
 import { isMatching, match, P } from 'ts-pattern';
 
+import { getErrorMessage } from 'utils/error';
+
 import type { RunRecord } from '../shared/contract';
 import type { TranscriptItem } from '../shared/contract';
 import type { RoutineDetail } from '../shared/contract';
-import { getErrorMessage } from '../shared/errors';
 import type { DaemonClient, Overview, RunWithTranscript } from './api';
 import { formatRelative } from './format';
 import { fitLine, S } from './text';

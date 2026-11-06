@@ -4,7 +4,8 @@ import { setTimeout as sleep } from 'node:timers/promises';
 
 import { match } from 'ts-pattern';
 
-import { getErrorMessage } from './shared/errors';
+import { getErrorMessage } from 'utils/error';
+
 import { runTui } from './tui';
 import { createDaemonClient } from './tui/api';
 

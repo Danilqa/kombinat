@@ -89,12 +89,21 @@ importers:
       tsx:
         specifier: 'catalog:'
         version: 4.23.15
+      utils:
+        specifier: workspace:*
+        version: link:../utils
 
   packages/e2e:
     devDependencies:
       '@playwright/test':
         specifier: 1.65.0
         version: 1.65.0
+
+  packages/utils:
+    dependencies:
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.7
 
   packages/web-app:
     dependencies:
@@ -143,6 +152,9 @@ importers:
       tw-animate-css:
         specifier: 1.4.0
         version: 1.4.0
+      utils:
+        specifier: workspace:*
+        version: link:../utils
       zod:
         specifier: 'catalog:'
         version: 4.6.7

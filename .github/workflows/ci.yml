@@ -35,6 +35,19 @@ jobs:
               throw new Error("workspace: or catalog: specifiers are packed");
             }
           '
+          tar -xzOf "$tarball" package/dist/cli.js | node -e '
+            const code = require("node:fs").readFileSync(0, "utf8");
+            const specifiers = [
+              ...code.matchAll(/^(?:import|export)\s[^"]*"([^"]+)";$/gm),
+              ...code.matchAll(/\b(?:import|require)\(\s*"([^"]+)"\s*\)/g),
+            ].map(([, specifier]) => specifier);
+            const unexpected = specifiers.filter(
+              specifier => !/^(node:|(zod|ts-pattern)(\/|$))/.test(specifier),
+            );
+            if (unexpected.length > 0) {
+              throw new Error(`dist/cli.js imports ${[...new Set(unexpected)].join(", ")}`);
+            }
+          '
           project="$RUNNER_TEMP/project"
           mkdir -p "$project/routines"
           cp routines/*.md "$project/routines/"
