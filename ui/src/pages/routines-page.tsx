@@ -17,6 +17,7 @@ import {
 import { getRoutines, type RoutineSummary } from '@/lib/api';
 import { useDocumentTitle } from '@/lib/use-document-title';
 import { usePolledData } from '@/lib/use-polled-data';
+import { useRowLink } from '@/lib/use-row-link';
 import { cn } from '@/lib/utils';
 
 function getHasRunningRoutine(routines: RoutineSummary[]): boolean {
@@ -59,9 +60,9 @@ interface RoutinesTableProps {
 }
 
 function RoutinesTable({ routines, onStarted }: RoutinesTableProps) {
+  const getRowClickHandler = useRowLink();
   if (routines.length === 0)
     return <p className="py-10 text-center text-body text-fg-muted">No routines yet.</p>;
-  // The routine link covers the whole row; the cells with their own controls sit above it.
   return (
     <Table>
       <TableHeader>
@@ -79,13 +80,17 @@ function RoutinesTable({ routines, onStarted }: RoutinesTableProps) {
       </TableHeader>
       <TableBody>
         {routines.map(routine => (
-          <TableRow key={routine.name} className="relative">
+          <TableRow
+            key={routine.name}
+            className="cursor-pointer"
+            onClick={getRowClickHandler(`/routines/${encodeURIComponent(routine.name)}`)}
+          >
             <TableCell>
               <div className="flex items-center gap-2">
                 <Link
                   to={`/routines/${encodeURIComponent(routine.name)}`}
                   className={cn(
-                    "text-body font-medium underline-offset-4 after:absolute after:inset-0 after:content-[''] hover:underline",
+                    'text-body font-medium underline-offset-4 hover:underline',
                     routine.enabled ? 'text-fg' : 'text-fg-secondary',
                   )}
                 >
@@ -110,7 +115,7 @@ function RoutinesTable({ routines, onStarted }: RoutinesTableProps) {
               )}
             </TableCell>
             <TableCell className="text-fg-secondary tabular-nums">
-              <RelativeTime iso={routine.nextRunAt} className="relative z-10" />
+              <RelativeTime iso={routine.nextRunAt} />
             </TableCell>
             <TableCell>
               <div
@@ -124,10 +129,10 @@ function RoutinesTable({ routines, onStarted }: RoutinesTableProps) {
                 {routine.effort !== null && ` · effort ${routine.effort}`}
               </div>
             </TableCell>
-            <TableCell className="relative z-10">
+            <TableCell>
               <LastRunCell routine={routine} />
             </TableCell>
-            <TableCell className="relative z-10">
+            <TableCell>
               <RunNowButton
                 routine={routine.name}
                 isRunning={routine.running}

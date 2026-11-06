@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/table';
 import type { RunRecord } from '@/lib/api';
 import { formatDuration, getRunDurationMs } from '@/lib/format';
+import { useRowLink } from '@/lib/use-row-link';
 import { cn } from '@/lib/utils';
 
 interface RunsTableProps {
@@ -19,9 +20,9 @@ interface RunsTableProps {
 }
 
 export function RunsTable({ runs, hasRoutineColumn }: RunsTableProps) {
+  const getRowClickHandler = useRowLink();
   if (runs.length === 0)
     return <p className="py-10 text-center text-body text-fg-muted">No runs yet.</p>;
-  // The run link covers the whole row; the routine link and the time sit above it.
   return (
     <Table>
       <TableHeader>
@@ -37,12 +38,18 @@ export function RunsTable({ runs, hasRoutineColumn }: RunsTableProps) {
       </TableHeader>
       <TableBody>
         {runs.map(run => (
-          <TableRow key={`${run.routine}/${run.id}`} className="relative">
+          <TableRow
+            key={`${run.routine}/${run.id}`}
+            className="cursor-pointer"
+            onClick={getRowClickHandler(
+              `/runs/${encodeURIComponent(run.routine)}/${encodeURIComponent(run.id)}`,
+            )}
+          >
             {hasRoutineColumn && (
               <TableCell>
                 <Link
                   to={`/routines/${encodeURIComponent(run.routine)}`}
-                  className="relative z-10 text-body font-medium text-fg underline-offset-4 hover:underline"
+                  className="text-body font-medium text-fg underline-offset-4 hover:underline"
                 >
                   {run.routine}
                 </Link>
@@ -55,7 +62,7 @@ export function RunsTable({ runs, hasRoutineColumn }: RunsTableProps) {
               <Link
                 to={`/runs/${encodeURIComponent(run.routine)}/${encodeURIComponent(run.id)}`}
                 className={cn(
-                  "font-mono text-body-sm underline-offset-4 transition-colors after:absolute after:inset-0 after:content-[''] hover:underline",
+                  'font-mono text-body-sm underline-offset-4 transition-colors hover:underline',
                   hasRoutineColumn ? 'text-fg-secondary hover:text-fg' : 'text-fg',
                 )}
               >
@@ -66,7 +73,7 @@ export function RunsTable({ runs, hasRoutineColumn }: RunsTableProps) {
               {getTriggerLabel(run.trigger)}
             </TableCell>
             <TableCell className="text-fg-secondary">
-              <RelativeTime iso={run.startedAt} className="relative z-10" />
+              <RelativeTime iso={run.startedAt} />
             </TableCell>
             <TableCell className="text-right text-fg tabular-nums">
               {formatDuration(getRunDurationMs(run))}
