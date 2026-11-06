@@ -124,6 +124,28 @@ export function cronRunsBetween(
   return runs;
 }
 
+interface HourRun {
+  from: number;
+  to: number;
+}
+
+// Hours 23 and 0-4 read as one run, 23:00-04:59.
+function getHourRuns(hours: Set<number>): HourRun[] {
+  const runs: HourRun[] = [];
+  for (const hour of [...hours].sort((a, b) => a - b)) {
+    const last = runs.at(-1);
+    if (last?.to === hour - 1) last.to = hour;
+    else runs.push({ from: hour, to: hour });
+  }
+  const first = runs[0];
+  const last = runs.at(-1);
+  if (runs.length > 1 && first?.from === 0 && last?.to === 23) {
+    runs.shift();
+    last.to = first.to;
+  }
+  return runs;
+}
+
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -154,8 +176,12 @@ export function describeCron(expression: string): string {
       return `Every ${hour.split('/')[1]} hours at :${pad(singleMinute)}, ${span}`;
     }
     if (singleMinute !== undefined && hour.includes('-') && dow === '*') {
-      const [from = 0, to = 23] = hour.split('-').map(Number);
-      return `Hourly at :${pad(singleMinute)}, ${pad(from)}:00-${pad(to)}:59`;
+      const spans = getHourRuns(c.hour).map(({ from, to }) =>
+        from === to ? `${pad(from)}:${pad(singleMinute)}` : `${pad(from)}:00-${pad(to)}:59`,
+      );
+      const last = spans.pop() ?? '';
+      const span = spans.length > 0 ? `${spans.join(', ')} and ${last}` : last;
+      return `Hourly at :${pad(singleMinute)}, ${span}`;
     }
     if (singleMinute !== undefined && dow === '*' && c.hour.size <= 4) {
       const times = [...c.hour].sort((a, b) => a - b).map(h => `${pad(h)}:${pad(singleMinute)}`);

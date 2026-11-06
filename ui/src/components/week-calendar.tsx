@@ -3,6 +3,7 @@ import { Ban, Check, ChevronLeft, ChevronRight, Clock, Ellipsis, Loader, X } fro
 import { Link } from 'react-router';
 import { isMatching, match } from 'ts-pattern';
 import { Button } from '@/components/ui/button';
+import { ErrorState } from '@/components/page-states';
 import { Card } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -237,6 +238,7 @@ function CalendarBlock({ positioned, overlapLabel }: CalendarBlockProps) {
       aria-label={title}
       className={cn(
         '@container absolute z-10 flex flex-col overflow-hidden rounded-sm px-1.5 py-0.5 text-fg transition-[filter,border-color] hover:z-20 focus-visible:z-30 max-sm:py-1',
+        !hasTimeLabel && 'justify-center',
         style.className,
       )}
       style={{
@@ -248,7 +250,7 @@ function CalendarBlock({ positioned, overlapLabel }: CalendarBlockProps) {
     >
       <span
         className={cn(
-          '@container flex min-w-0 items-center gap-1 text-body-sm leading-4 font-medium',
+          '@container relative flex min-w-0 items-center gap-1 text-body-sm leading-4 font-medium',
           overlapLabel && 'pr-2.5',
         )}
       >
@@ -262,17 +264,17 @@ function CalendarBlock({ positioned, overlapLabel }: CalendarBlockProps) {
         <span className={cn('truncate', Icon ? '@max-[32px]:hidden' : '@max-[18px]:hidden')}>
           {entry.routine}
         </span>
+        {overlapLabel && (
+          <span
+            aria-hidden="true"
+            className="absolute top-1/2 -right-[3px] size-1.5 -translate-y-1/2 rounded-full bg-surface shadow-[0_0_0_1.5px_var(--negative)]"
+          />
+        )}
       </span>
       {hasTimeLabel && (
         <span className="truncate text-caption leading-4 font-normal text-fg-secondary tabular-nums @max-[34px]:hidden">
           {formatClock(new Date(entry.start))}
         </span>
-      )}
-      {overlapLabel && (
-        <span
-          aria-hidden="true"
-          className="absolute top-[7px] right-[3px] size-1.5 rounded-full bg-surface shadow-[0_0_0_1.5px_var(--negative)]"
-        />
       )}
     </Link>
   );
@@ -499,94 +501,90 @@ export function WeekCalendar() {
   };
 
   return (
-    <Card className="gap-0 overflow-clip py-0 [--hour-height:48px] max-sm:[--hour-height:60px]">
-      <div className="sticky top-0 z-40 bg-surface">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
-          <div className="flex min-w-0 items-baseline gap-3">
+    <>
+      {error && <ErrorState message={error} />}
+      <Card className="gap-0 overflow-clip py-0 [--hour-height:48px] max-sm:[--hour-height:60px]">
+        <div className="sticky top-[var(--app-header-height,0px)] z-40 bg-surface">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
             <h2 aria-live="polite" className="text-title-md text-fg tabular-nums">
               {formatWeekRange(weekStart)}
             </h2>
-            {error && (
-              <span role="alert" className="text-body-sm text-negative">
-                {error}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="tertiary"
-              size="icon-small"
-              aria-label="Previous week"
-              onClick={() => setWeekStart(addDays(weekStart, -7))}
-            >
-              <ChevronLeft />
-            </Button>
-            <Button
-              variant="tertiary"
-              size="small"
-              isActive={isCurrentWeek}
-              className="text-nav-sm"
-              onClick={showToday}
-            >
-              Today
-            </Button>
-            <Button
-              variant="tertiary"
-              size="icon-small"
-              aria-label="Next week"
-              onClick={() => setWeekStart(addDays(weekStart, 7))}
-            >
-              <ChevronRight />
-            </Button>
-            <CalendarOptions
-              isHighlightingOverlaps={isHighlightingOverlaps}
-              overlapCount={data ? overlapCount : null}
-              onHighlightOverlapsChange={setIsHighlightingOverlaps}
-            />
-          </div>
-        </div>
-        <div className="border-b border-line">
-          <div className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] pr-2 max-sm:hidden">
-            <div />
-            {days.map(day => (
-              <DayHeader key={day.toISOString()} day={day} isToday={getIsSameDay(day, now)} />
-            ))}
-          </div>
-          <DayPicker
-            days={days}
-            selectedIndex={selectedDayIndex}
-            now={now}
-            onSelect={setSelectedDayIndex}
-          />
-        </div>
-      </div>
-      <div className="py-2 pr-2">
-        <div className="grid h-[calc(var(--hour-height)*24)] grid-cols-[48px_minmax(0,1fr)] border-b border-line-faint sm:grid-cols-[56px_repeat(7,minmax(0,1fr))]">
-          <div className="relative">
-            {HOURS.map(hour => (
-              <span
-                key={hour}
-                className="absolute right-2 -translate-y-1/2 text-caption font-normal text-fg-muted tabular-nums"
-                style={{ top: getLengthForMinutes(hour * 60) }}
+            <div className="flex items-center gap-1">
+              <Button
+                variant="tertiary"
+                size="icon-small"
+                aria-label="Previous week"
+                onClick={() => setWeekStart(addDays(weekStart, -7))}
               >
-                {formatHour(hour)}
-              </span>
+                <ChevronLeft />
+              </Button>
+              <Button
+                variant="tertiary"
+                size="small"
+                isActive={isCurrentWeek}
+                className="text-nav-sm"
+                onClick={showToday}
+              >
+                Today
+              </Button>
+              <Button
+                variant="tertiary"
+                size="icon-small"
+                aria-label="Next week"
+                onClick={() => setWeekStart(addDays(weekStart, 7))}
+              >
+                <ChevronRight />
+              </Button>
+              <CalendarOptions
+                isHighlightingOverlaps={isHighlightingOverlaps}
+                overlapCount={data ? overlapCount : null}
+                onHighlightOverlapsChange={setIsHighlightingOverlaps}
+              />
+            </div>
+          </div>
+          <div className="border-b border-line">
+            <div className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] pr-2 max-sm:hidden">
+              <div />
+              {days.map(day => (
+                <DayHeader key={day.toISOString()} day={day} isToday={getIsSameDay(day, now)} />
+              ))}
+            </div>
+            <DayPicker
+              days={days}
+              selectedIndex={selectedDayIndex}
+              now={now}
+              onSelect={setSelectedDayIndex}
+            />
+          </div>
+        </div>
+        <div className="py-2 pr-2">
+          <div className="grid h-[calc(var(--hour-height)*24)] grid-cols-[48px_minmax(0,1fr)] border-b border-line-faint sm:grid-cols-[56px_repeat(7,minmax(0,1fr))]">
+            <div className="relative">
+              {HOURS.map(hour => (
+                <span
+                  key={hour}
+                  className="absolute right-2 -translate-y-1/2 text-caption font-normal text-fg-muted tabular-nums"
+                  style={{ top: getLengthForMinutes(hour * 60) }}
+                >
+                  {formatHour(hour)}
+                </span>
+              ))}
+            </div>
+            {days.map((day, index) => (
+              <DayColumn
+                key={day.toISOString()}
+                day={day}
+                entries={entries}
+                now={now}
+                isToday={getIsSameDay(day, now)}
+                isSelected={index === selectedDayIndex}
+                routinesById={isHighlightingOverlaps ? routinesById : null}
+              />
             ))}
           </div>
-          {days.map((day, index) => (
-            <DayColumn
-              key={day.toISOString()}
-              day={day}
-              entries={entries}
-              now={now}
-              isToday={getIsSameDay(day, now)}
-              isSelected={index === selectedDayIndex}
-              routinesById={isHighlightingOverlaps ? routinesById : null}
-            />
-          ))}
         </div>
-      </div>
-      <CalendarLegend isHighlightingOverlaps={isHighlightingOverlaps} />
-    </Card>
+        <CalendarLegend isHighlightingOverlaps={isHighlightingOverlaps} />
+      </Card>
+    </>
   );
 }

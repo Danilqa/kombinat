@@ -85,7 +85,7 @@ function RoutinesTable({ routines, onStarted }: RoutinesTableProps) {
             className="cursor-pointer"
             onClick={getRowClickHandler(`/routines/${encodeURIComponent(routine.name)}`)}
           >
-            <TableCell>
+            <TableCell className="max-sm:whitespace-normal">
               <div className="flex items-center gap-2">
                 <Link
                   to={`/routines/${encodeURIComponent(routine.name)}`}
@@ -108,7 +108,7 @@ function RoutinesTable({ routines, onStarted }: RoutinesTableProps) {
                 {routine.description}
               </div>
             </TableCell>
-            <TableCell className="min-w-36 whitespace-normal">
+            <TableCell className="min-w-36 whitespace-normal max-sm:min-w-56">
               <div className="text-fg">{routine.scheduleHuman}</div>
               {routine.schedule && (
                 <div className="font-mono text-body-sm text-fg-muted">{routine.schedule}</div>

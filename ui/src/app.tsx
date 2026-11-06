@@ -44,12 +44,16 @@ function useFocusMainOnNavigate() {
 function AppLayout() {
   useFocusMainOnNavigate();
   return (
-    <div className="mx-auto max-w-[1180px] px-4 pt-6 pb-20 sm:px-6">
+    <div className="pb-20">
       <a href={`#${MAIN_ID}`} className="skip-link">
         Skip to content
       </a>
       <AppHeader />
-      <main id={MAIN_ID} tabIndex={-1} className="outline-none focus-visible:shadow-none">
+      <main
+        id={MAIN_ID}
+        tabIndex={-1}
+        className="mx-auto max-w-[1180px] px-4 outline-none focus-visible:shadow-none sm:px-6"
+      >
         <Routes>
           <Route path="/" element={<RoutinesPage />} />
           <Route path="/calendar" element={<CalendarPage />} />
