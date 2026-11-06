@@ -133,7 +133,7 @@ export default defineConfig(
     rules: { 'no-control-regex': 'off' },
   },
   {
-    // Playwright fixtures that depend on no other fixture take an empty object pattern.
+    // Playwright fixtures without dependencies take `{}`.
     files: ['e2e/**/*.ts'],
     rules: { 'no-empty-pattern': ['error', { allowObjectPatternsAsParameters: true }] },
   },

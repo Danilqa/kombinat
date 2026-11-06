@@ -26,7 +26,6 @@ export interface RunFile extends Partial<Omit<RunRecord, 'routine' | 'logFile'>>
   events?: unknown[];
 }
 
-// Writes what the daemon reads: routine files, run records with their logs and the scheduler state.
 export interface Kombinat {
   addRoutine: (routine: RoutineFile) => void;
   addRun: (run: RunFile) => RunRecord;

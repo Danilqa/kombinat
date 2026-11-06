@@ -1,5 +1,5 @@
 import { expect, test } from './fixtures';
-import { formatDay, todayAt } from './support/time';
+import { formatDay, todayAt } from './helpers/time';
 
 const DAY_MS = 86_400_000;
 
@@ -41,7 +41,6 @@ test.describe('on a phone', () => {
 
   test('shows one day at a time', async ({ page, kombinat }) => {
     const today = new Date(todayAt(6));
-    // Another day of this week: Tuesday when today is Monday, yesterday otherwise.
     const otherDay = new Date(today.getTime() + (today.getUTCDay() === 1 ? DAY_MS : -DAY_MS));
     kombinat.addRoutine({ name: 'morning-digest' });
     kombinat.addRoutine({ name: 'weekly-cleanup' });

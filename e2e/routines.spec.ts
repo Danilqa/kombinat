@@ -1,7 +1,7 @@
 import { expect, test } from './fixtures';
-import { minutesAgo } from './support/time';
+import { minutesAgo } from './helpers/time';
 
-// A run starts in a process of its own, and a page with nothing running polls every 15 seconds.
+// Idle pages poll every 15 seconds.
 const NEW_RUN_TIMEOUT_MS = 25_000;
 
 test('lists each routine with its schedule, agent and last run', async ({ page, kombinat }) => {

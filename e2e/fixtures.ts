@@ -1,9 +1,9 @@
 import { test as base } from '@playwright/test';
 
-import { startDaemon } from './support/daemon';
-import type { Daemon } from './support/daemon';
-import { createKombinat } from './support/kombinat';
-import type { Kombinat } from './support/kombinat';
+import { startDaemon } from './helpers/daemon';
+import type { Daemon } from './helpers/daemon';
+import { createKombinat } from './helpers/kombinat';
+import type { Kombinat } from './helpers/kombinat';
 
 interface TestFixtures {
   kombinat: Kombinat;
@@ -22,7 +22,6 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     },
     { scope: 'worker' },
   ],
-  // Auto, so every test starts with no routines and no runs, even if it seeds nothing.
   kombinat: [
     async ({ daemon }, use) => {
       await use(createKombinat(daemon.root));

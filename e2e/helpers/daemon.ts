@@ -38,7 +38,6 @@ function waitUntilListening(daemon: ChildProcess): Promise<void> {
   });
 }
 
-// Settings from the shell, like KOMBINAT_MAX_CONCURRENT, must not change what tests see.
 function getEnvWithoutKombinat(): NodeJS.ProcessEnv {
   return Object.fromEntries(
     Object.entries(process.env).filter(([name]) => !name.startsWith('KOMBINAT_')),
@@ -51,9 +50,6 @@ async function stopProcess(daemon: ChildProcess): Promise<void> {
   await once(daemon, 'exit');
 }
 
-// The real daemon of this checkout, on a free port, with its routines and state in a temporary
-// folder. No scheduler, so routines only run when a test starts them, and no watchers, so code
-// edits during a test run change nothing. UTC, like the browser in playwright.config.ts.
 export async function startDaemon(): Promise<Daemon> {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'kombinat-e2e-')));
   const port = await getFreePort();

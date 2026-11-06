@@ -1,4 +1,3 @@
-// Events in the stream-json format Claude Code prints, which the daemon keeps as the run log.
 export const claude = {
   init: () => ({
     type: 'system',
