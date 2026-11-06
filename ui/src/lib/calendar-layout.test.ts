@@ -2,9 +2,8 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
-  DAY_HEIGHT,
-  HOUR_HEIGHT,
-  MIN_BLOCK_HEIGHT,
+  MINUTES_PER_DAY,
+  MIN_BLOCK_MINUTES,
   countOverlapPairs,
   getWeekStart,
   getWeekdayIndex,
@@ -45,12 +44,7 @@ function getBoxes(entries: TimedEntry[]): (id: string) => Box {
 
 test('positions a single entry by time with full width', () => {
   const boxes = getBoxes([makeEntry('a', at(9), at(10, 30))]);
-  assert.deepEqual(boxes('a'), {
-    top: 9 * HOUR_HEIGHT,
-    height: 1.5 * HOUR_HEIGHT,
-    left: 0,
-    width: 1,
-  });
+  assert.deepEqual(boxes('a'), { top: 9 * 60, height: 90, left: 0, width: 1 });
 });
 
 test('puts two intersecting entries side by side', () => {
@@ -101,7 +95,7 @@ test('gives very short entries the minimum height and lays them out by that heig
     makeEntry('a', at(8, 10), at(8, 20)),
     makeEntry('b', at(8, 30), at(8, 50)),
   ]);
-  assert.equal(boxes('a').height, MIN_BLOCK_HEIGHT);
+  assert.equal(boxes('a').height, MIN_BLOCK_MINUTES);
   assert.equal(boxes('b').left, 0.5);
 });
 
@@ -115,14 +109,14 @@ test('clips entries to the day and drops entries outside it', () => {
     dayStart,
   );
   const boxes = new Map(layout.map(({ entry, top, height }) => [entry.id, { top, height }]));
-  assert.deepEqual(boxes.get('overnight'), { top: 0, height: HOUR_HEIGHT });
-  assert.deepEqual(boxes.get('late'), { top: 23 * HOUR_HEIGHT, height: HOUR_HEIGHT });
+  assert.deepEqual(boxes.get('overnight'), { top: 0, height: 60 });
+  assert.deepEqual(boxes.get('late'), { top: 23 * 60, height: 60 });
   assert.equal(boxes.get('tomorrow'), undefined);
 });
 
 test('keeps a minimum-height block at the end of the day inside the grid', () => {
   const boxes = getBoxes([makeEntry('a', at(23, 55), at(0, 0, 1))]);
-  assert.equal(boxes('a').top + boxes('a').height, DAY_HEIGHT);
+  assert.equal(boxes('a').top + boxes('a').height, MINUTES_PER_DAY);
 });
 
 test('counts each overlapping pair once', () => {

@@ -179,6 +179,10 @@
   --text-caption: var(--font-size-caption);
   --text-caption--line-height: var(--line-height-caption);
   --text-caption--font-weight: 500;
+  --text-nav: 13px;
+  --text-nav--line-height: 20px;
+  --text-nav-sm: 12px;
+  --text-nav-sm--line-height: 16px;
 
   --animate-soft-pulse: soft-pulse 2s ease-in-out infinite;
 

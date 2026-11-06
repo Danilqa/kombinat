@@ -53,13 +53,13 @@ function NavLinkItem({ item, pathname }: NavLinkItemProps) {
       to={item.to}
       aria-current={getNavCurrent(item, pathname)}
       className={cn(
-        'flex h-8 items-center gap-1.5 rounded-full px-3 text-body font-medium transition-colors forced-colors:underline-offset-4',
+        'flex h-8 items-center gap-1.5 rounded-full px-3 text-nav font-medium transition-colors forced-colors:underline-offset-4',
         isActive
           ? 'bg-overlay text-fg forced-colors:underline'
           : 'text-fg-muted hover:bg-hover hover:text-fg',
       )}
     >
-      <Icon aria-hidden="true" className="size-3.5 shrink-0 max-[360px]:hidden" />
+      <Icon aria-hidden="true" className="size-3.5 shrink-0" />
       {item.label}
     </Link>
   );

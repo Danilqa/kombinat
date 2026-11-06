@@ -1,8 +1,7 @@
-export const HOUR_HEIGHT = 48;
-export const DAY_HEIGHT = HOUR_HEIGHT * 24;
-export const MIN_BLOCK_HEIGHT = 20;
+export const MINUTES_PER_DAY = 24 * 60;
+export const MIN_BLOCK_MINUTES = 25;
 
-const HOUR_MS = 3_600_000;
+const MINUTE_MS = 60_000;
 
 export interface TimedEntry {
   id: string;
@@ -46,8 +45,8 @@ export function getIsSameDay(a: Date, b: Date): boolean {
   return getDayStart(a).getTime() === getDayStart(b).getTime();
 }
 
-export function getTopForTime(time: Date, dayStart: Date): number {
-  return ((time.getTime() - dayStart.getTime()) / HOUR_MS) * HOUR_HEIGHT;
+export function getMinutesIntoDay(time: Date, dayStart: Date): number {
+  return (time.getTime() - dayStart.getTime()) / MINUTE_MS;
 }
 
 function placeInDay<T extends TimedEntry>(
@@ -58,8 +57,8 @@ function placeInDay<T extends TimedEntry>(
   const start = Math.max(new Date(entry.start).getTime(), dayStart.getTime());
   const end = Math.min(new Date(entry.end).getTime(), dayEnd.getTime());
   if (end <= start) return null;
-  const height = Math.max(MIN_BLOCK_HEIGHT, ((end - start) / HOUR_MS) * HOUR_HEIGHT);
-  const top = Math.min(getTopForTime(new Date(start), dayStart), DAY_HEIGHT - height);
+  const height = Math.max(MIN_BLOCK_MINUTES, (end - start) / MINUTE_MS);
+  const top = Math.min(getMinutesIntoDay(new Date(start), dayStart), MINUTES_PER_DAY - height);
   return { entry, top, height };
 }
 
