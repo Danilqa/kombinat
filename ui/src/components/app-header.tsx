@@ -66,7 +66,6 @@ function NavLinkItem({ item, pathname }: NavLinkItemProps) {
   );
 }
 
-// Lets other sticky bars sit just below the header.
 function useHeightProperty(ref: RefObject<HTMLElement | null>, property: string) {
   useLayoutEffect(() => {
     const element = ref.current;

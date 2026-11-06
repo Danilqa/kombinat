@@ -1,6 +1,6 @@
 {
   "name": "@danilqa/kombinat",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "type": "module",
   "description": "Dead simple, lightweight engine for 24/7 background AI agents. Works with your Claude, Codex or any other subscription.",
   "keywords": [

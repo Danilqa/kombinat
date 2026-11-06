@@ -129,7 +129,6 @@ interface HourRun {
   to: number;
 }
 
-// Hours 23 and 0-4 read as one run, 23:00-04:59.
 function getHourRuns(hours: Set<number>): HourRun[] {
   const runs: HourRun[] = [];
   for (const hour of [...hours].sort((a, b) => a - b)) {
