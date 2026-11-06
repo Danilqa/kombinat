@@ -3,14 +3,79 @@ import { cn } from '@/lib/utils';
 
 interface TableProps extends React.ComponentProps<'table'> {}
 
-function Table({ className, ...props }: TableProps) {
+function useStickyHeaderCopy(
+  containerRef: React.RefObject<HTMLDivElement | null>,
+  copyScrollerRef: React.RefObject<HTMLDivElement | null>,
+  scrollerRef: React.RefObject<HTMLDivElement | null>,
+) {
+  React.useLayoutEffect(() => {
+    const container = containerRef.current;
+    const copyScroller = copyScrollerRef.current;
+    const scroller = scrollerRef.current;
+    const table = scroller?.querySelector('table');
+    const copy = copyScroller?.querySelector('table');
+    if (!container || !copyScroller || !scroller || !table || !copy) return;
+    const heads = [...table.querySelectorAll<HTMLTableCellElement>('thead th')];
+    const copyHeads = [...copy.querySelectorAll<HTMLTableCellElement>('thead th')];
+    const syncSize = () => {
+      container.style.setProperty('--table-header-height', `${table.tHead?.offsetHeight ?? 0}px`);
+      copy.style.width = `${table.offsetWidth}px`;
+      copyHeads.forEach((head, index) => {
+        head.style.width = `${heads[index]?.getBoundingClientRect().width ?? 0}px`;
+      });
+    };
+    const syncScroll = () => {
+      copyScroller.scrollLeft = scroller.scrollLeft;
+    };
+    syncSize();
+    syncScroll();
+    const observer = new ResizeObserver(syncSize);
+    for (const element of [table, ...heads]) observer.observe(element);
+    scroller.addEventListener('scroll', syncScroll, { passive: true });
+    return () => {
+      observer.disconnect();
+      scroller.removeEventListener('scroll', syncScroll);
+    };
+  });
+}
+
+// A header can't stick from inside a sideways-scrolling box, so a hidden copy sticks above it.
+function Table({ className, children, ...props }: TableProps) {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const copyScrollerRef = React.useRef<HTMLDivElement>(null);
+  const scrollerRef = React.useRef<HTMLDivElement>(null);
+  const header = React.Children.toArray(children).find(
+    child => React.isValidElement(child) && child.type === TableHeader,
+  );
+  useStickyHeaderCopy(containerRef, copyScrollerRef, scrollerRef);
+  const tableClassName = cn('w-full caption-bottom text-body tabular-nums', className);
   return (
-    <div data-slot="table-container" className="relative w-full overflow-x-auto">
-      <table
-        data-slot="table"
-        className={cn('w-full caption-bottom text-body tabular-nums', className)}
-        {...props}
-      />
+    <div ref={containerRef} data-slot="table-container" className="w-full">
+      {header && (
+        <div
+          aria-hidden="true"
+          inert
+          className="sticky top-[var(--app-header-height,0px)] z-10 -mx-px -mt-px h-[calc(var(--table-header-height,36px)+2px)] bg-page"
+        >
+          <div
+            ref={copyScrollerRef}
+            className="relative h-full overflow-hidden rounded-t-xl border border-line bg-surface"
+          >
+            <table className={cn(tableClassName, 'table-fixed')}>{header}</table>
+          </div>
+        </div>
+      )}
+      <div
+        ref={scrollerRef}
+        className={cn(
+          'relative overflow-x-auto rounded-[11px]',
+          header && '-mt-[calc(var(--table-header-height,36px)+1px)]',
+        )}
+      >
+        <table data-slot="table" className={tableClassName} {...props}>
+          {children}
+        </table>
+      </div>
     </div>
   );
 }

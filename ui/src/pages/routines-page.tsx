@@ -160,7 +160,7 @@ export function RoutinesPage() {
       {error && <ErrorState message={error} />}
       {!data && !error && <LoadingState />}
       {data && (
-        <Card className="gap-0 py-0">
+        <Card className="gap-0 overflow-visible py-0">
           <RoutinesTable routines={data} onStarted={reload} />
         </Card>
       )}

@@ -27,7 +27,7 @@ export function RunsPage() {
       {error && <ErrorState message={error} />}
       {!data && !error && <LoadingState />}
       {data && (
-        <Card className="gap-0 py-0">
+        <Card className="gap-0 overflow-visible py-0">
           <RunsTable runs={data} hasRoutineColumn />
         </Card>
       )}
