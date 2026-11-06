@@ -1,7 +1,10 @@
 import { expect, test } from './fixtures';
-import { claude } from './fixtures/claude-stream';
 
-test("shows a run's result, transcript and how to resume it", async ({ page, kombinat }) => {
+test("shows a run's result, transcript and how to resume it", async ({
+  page,
+  kombinat,
+  claude,
+}) => {
   kombinat.addRoutine({ name: 'fix-e2e-tests' });
   const run = kombinat.addRun({
     routine: 'fix-e2e-tests',
@@ -38,7 +41,7 @@ test("shows a run's result, transcript and how to resume it", async ({ page, kom
   await expect(page.getByText('Finished', { exact: true })).toBeVisible();
 });
 
-test('shows why a run failed', async ({ page, kombinat }) => {
+test('shows why a run failed', async ({ page, kombinat, claude }) => {
   kombinat.addRoutine({ name: 'fix-e2e-tests' });
   const run = kombinat.addRun({
     routine: 'fix-e2e-tests',

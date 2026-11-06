@@ -14,3 +14,5 @@ export function formatDay(date: Date): string {
   const weekday = date.toLocaleDateString('en-GB', { weekday: 'short', timeZone: 'UTC' });
   return `${weekday} ${date.getUTCDate()}`;
 }
+
+export const time = { minutesAgo, todayAt, formatDay };

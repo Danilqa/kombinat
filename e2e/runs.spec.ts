@@ -1,18 +1,17 @@
 import { expect, test } from './fixtures';
-import { minutesAgo } from './fixtures/time';
 
-test('lists the latest runs of all routines and opens one', async ({ page, kombinat }) => {
+test('lists the latest runs of all routines and opens one', async ({ page, kombinat, time }) => {
   kombinat.addRoutine({ name: 'triage-sentry' });
   kombinat.addRoutine({ name: 'fix-e2e-tests' });
   const older = kombinat.addRun({
     routine: 'triage-sentry',
     status: 'failed',
-    startedAt: minutesAgo(120),
+    startedAt: time.minutesAgo(120),
   });
   const newer = kombinat.addRun({
     routine: 'fix-e2e-tests',
     trigger: 'manual',
-    startedAt: minutesAgo(30),
+    startedAt: time.minutesAgo(30),
   });
   await page.goto('/');
 

@@ -1,17 +1,20 @@
 import { expect, test } from './fixtures';
-import { minutesAgo } from './fixtures/time';
 
 // Idle pages poll every 15 seconds.
 const NEW_RUN_TIMEOUT_MS = 25_000;
 
-test('lists each routine with its schedule, agent and last run', async ({ page, kombinat }) => {
+test('lists each routine with its schedule, agent and last run', async ({
+  page,
+  kombinat,
+  time,
+}) => {
   kombinat.addRoutine({
     name: 'triage-sentry',
     description: 'Triages new Sentry issues',
     schedule: '0 8 * * 1-5',
     model: 'claude-sonnet-5-5',
   });
-  kombinat.addRun({ routine: 'triage-sentry', status: 'failed', startedAt: minutesAgo(90) });
+  kombinat.addRun({ routine: 'triage-sentry', status: 'failed', startedAt: time.minutesAgo(90) });
   kombinat.addRoutine({
     name: 'say-hello',
     agent: 'command',

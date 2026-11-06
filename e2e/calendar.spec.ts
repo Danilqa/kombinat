@@ -1,14 +1,13 @@
 import { expect, test } from './fixtures';
-import { formatDay, todayAt } from './fixtures/time';
 
 const DAY_MS = 86_400_000;
 
-test("shows this week's runs and opens one", async ({ page, kombinat }) => {
+test("shows this week's runs and opens one", async ({ page, kombinat, time }) => {
   kombinat.addRoutine({ name: 'morning-digest' });
   const run = kombinat.addRun({
     routine: 'morning-digest',
-    startedAt: todayAt(6),
-    endedAt: todayAt(6, 20),
+    startedAt: time.todayAt(6),
+    endedAt: time.todayAt(6, 20),
   });
 
   await page.goto('/calendar');
@@ -39,8 +38,8 @@ test('plans the next runs and highlights overlaps', async ({ page, kombinat }) =
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 
-  test('shows one day at a time', async ({ page, kombinat }) => {
-    const today = new Date(todayAt(6));
+  test('shows one day at a time', async ({ page, kombinat, time }) => {
+    const today = new Date(time.todayAt(6));
     const otherDay = new Date(today.getTime() + (today.getUTCDay() === 1 ? DAY_MS : -DAY_MS));
     kombinat.addRoutine({ name: 'morning-digest' });
     kombinat.addRoutine({ name: 'weekly-cleanup' });
@@ -52,7 +51,7 @@ test.describe('on a phone', () => {
     const otherDayRun = page.getByRole('link', { name: /^weekly-cleanup/ });
     await expect(todayRun).toBeVisible();
     await expect(otherDayRun).toBeHidden();
-    await page.getByRole('button', { name: formatDay(otherDay), exact: true }).tap();
+    await page.getByRole('button', { name: time.formatDay(otherDay), exact: true }).tap();
     await expect(otherDayRun).toBeVisible();
     await expect(todayRun).toBeHidden();
   });
