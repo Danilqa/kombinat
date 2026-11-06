@@ -9,7 +9,6 @@ function readStoredBoolean(key: string, fallback: boolean): boolean {
   }
 }
 
-// A preference this browser remembers. Where storage is blocked it still works, until the next reload.
 export function useStoredBoolean(
   key: string,
   fallback: boolean,

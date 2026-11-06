@@ -68,7 +68,6 @@ const ToolRow = memo(function ToolRow({ item, isPending }: ToolRowProps) {
   const [isOpen, setIsOpen] = useState(false);
   const panelId = useId();
   const hasError = item.result?.isError === true;
-  // A quiet grey line rather than a card, so the agent's own words stand out between tool calls.
   return (
     <div>
       <button

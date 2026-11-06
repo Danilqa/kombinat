@@ -40,8 +40,6 @@ interface MarkdownTableProps {
   children?: ReactNode;
 }
 
-// A wide table scrolls in its own region instead of pushing the page sideways on a phone. The region
-// is focusable so keyboard users can scroll it too.
 function MarkdownTable({ children }: MarkdownTableProps) {
   return (
     <div tabIndex={0} role="region" aria-label="Table" className="overflow-x-auto">

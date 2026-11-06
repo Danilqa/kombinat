@@ -34,7 +34,6 @@ export function getDayStart(date: Date): Date {
   return addDays(date, 0);
 }
 
-// 0 for Monday to 6 for Sunday.
 export function getWeekdayIndex(date: Date): number {
   return (date.getDay() + 6) % 7;
 }

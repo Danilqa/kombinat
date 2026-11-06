@@ -47,7 +47,6 @@ interface DropdownMenuCheckboxItemProps extends React.ComponentProps<
   typeof DropdownMenuPrimitive.CheckboxItem
 > {}
 
-// Phones get a taller row, so the item is easy to hit with a thumb.
 function DropdownMenuCheckboxItem({
   className,
   children,

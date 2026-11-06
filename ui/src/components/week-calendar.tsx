@@ -248,8 +248,6 @@ function CalendarBlock({ positioned, overlapLabel }: CalendarBlockProps) {
         paddingBlock: BLOCK_PADDING_Y,
       }}
     >
-      {/* A block too narrow for a letter and an ellipsis shows its icon alone, not a sliver of text.
-          The label row is a container of its own, so its width leaves out the room for the overlap dot. */}
       <span
         className={cn(
           '@container flex min-w-0 items-center gap-1 text-body-sm leading-4 font-medium',
@@ -330,7 +328,6 @@ interface DayPickerProps {
   onSelect: (index: number) => void;
 }
 
-// Phones show one day at a time, so there the day headers are buttons that pick it.
 function DayPicker({ days, selectedIndex, now, onSelect }: DayPickerProps) {
   return (
     <div className="grid grid-cols-7 gap-1 px-2 py-1 sm:hidden">
@@ -513,7 +510,6 @@ export function WeekCalendar() {
     setSelectedDayIndex(getWeekdayIndex(today));
   };
 
-  // Clips instead of hiding overflow, so the day headers can stick to the top of the page.
   return (
     <Card className="gap-0 overflow-clip py-0">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">

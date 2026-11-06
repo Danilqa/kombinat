@@ -80,8 +80,6 @@
   --ring: var(--fg-muted);
 }
 
-/* Phones (Tailwind's max-sm) read at arm's length: body text at 16px, the usual floor for reading on
-   a phone, and nothing under 12px. */
 @media (width < 40rem) {
   :root {
     --font-size-title-lg: 24px;
