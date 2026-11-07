@@ -6,14 +6,10 @@ import type { RoutineDetail } from 'domains/routine/types';
 import type { Skip } from 'domains/scheduler/types';
 import { getSkipReasonLabel } from 'domains/scheduler/utils';
 import { sameOriginApi } from 'utils/http';
+import { Breadcrumbs } from '@web-app/components/breadcrumbs';
 import { DetailList, type DetailEntry } from '@web-app/components/detail-list';
 import { Markdown } from '@web-app/components/markdown';
-import {
-  Breadcrumbs,
-  PageTitle,
-  SectionAside,
-  SectionTitle,
-} from '@web-app/components/page-header';
+import { PageTitle, SectionAside, SectionTitle } from '@web-app/components/page-header';
 import { ErrorState, LoadingState } from '@web-app/components/page-states';
 import { RelativeTime } from '@web-app/components/relative-time';
 import { RunNowButton } from '@web-app/components/run-now-button';

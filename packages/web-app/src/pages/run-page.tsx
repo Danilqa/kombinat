@@ -5,15 +5,11 @@ import type { RunRecord, RunWithTranscript } from 'domains/run/types';
 import { getRunDurationMs, getTriggerLabel } from 'domains/run/utils';
 import { formatDuration, formatShort } from 'utils/date-time';
 import { sameOriginApi } from 'utils/http';
+import { Breadcrumbs } from '@web-app/components/breadcrumbs';
 import { CodeBlock } from '@web-app/components/code-block';
 import { DetailList, type DetailEntry } from '@web-app/components/detail-list';
 import { Markdown } from '@web-app/components/markdown';
-import {
-  Breadcrumbs,
-  PageTitle,
-  SectionAside,
-  SectionTitle,
-} from '@web-app/components/page-header';
+import { PageTitle, SectionAside, SectionTitle } from '@web-app/components/page-header';
 import { ErrorState, LoadingState } from '@web-app/components/page-states';
 import { RelativeTime } from '@web-app/components/relative-time';
 import { StatusBadge } from '@web-app/components/status-badge';
