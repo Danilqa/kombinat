@@ -1,5 +1,7 @@
 @import 'design-system/styles.css';
 @source '../../domains';
+/* Words in the docs, such as "fixed", would otherwise become classes. */
+@source not '../../domains/**/*.md';
 
 @layer components {
   .skip-link {

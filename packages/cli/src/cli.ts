@@ -48,8 +48,8 @@ const USAGE = `kombinat, run from the folder that holds routines/ (connect and t
   run <name>                run one routine now in the foreground (what the scheduler spawns)
   serve                     run scheduler + web UI (what launchd runs); pulls the main branch
                             every 5 min, installs deps and restarts when the lockfile changes;
-                            in a checkout of kombinat also builds the UI and restarts when src/
-                            changes
+                            in a checkout of kombinat also builds the UI and restarts when
+                            packages/ change
   pull                      git pull once, the way serve does it (ff-only, clean tree)
   dev                       take over from launchd: scheduler + API from this checkout with no
                             auto-restart, plus the Vite dev server; Ctrl-C hands back to launchd
