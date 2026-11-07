@@ -92,6 +92,9 @@ importers:
       tsx:
         specifier: 'catalog:'
         version: 4.23.15
+      tui:
+        specifier: workspace:*
+        version: link:../tui
       utils:
         specifier: workspace:*
         version: link:../utils
@@ -116,6 +119,18 @@ importers:
       domains:
         specifier: workspace:*
         version: link:../domains
+
+  packages/tui:
+    dependencies:
+      domains:
+        specifier: workspace:*
+        version: link:../domains
+      ts-pattern:
+        specifier: 'catalog:'
+        version: 5.9.2
+      utils:
+        specifier: workspace:*
+        version: link:../utils
 
   packages/utils:
     dependencies:

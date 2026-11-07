@@ -13,10 +13,10 @@ import {
   formatTimestamp,
 } from 'utils/date-time';
 
-import type { Overview } from './api';
-import { renderMarkdown } from './markdown';
-import { fitLine, lineWidth, S, sanitize, sliceLine, textWidth, wrapLine } from './text';
-import type { Line, Span } from './text';
+import type { Overview } from './daemon-client';
+import { renderMarkdown } from './terminal/markdown';
+import { fitLine, lineWidth, S, sanitize, sliceLine, textWidth, wrapLine } from './terminal/text';
+import type { Line, Span } from './terminal/text';
 
 export interface OpenRunAction {
   kind: 'open-run';

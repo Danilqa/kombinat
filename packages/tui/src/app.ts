@@ -6,9 +6,9 @@ import type { TranscriptItem } from 'domains/transcript/types';
 import { formatRelativeCompact } from 'utils/date-time';
 import { getErrorMessage } from 'utils/error';
 
-import type { DaemonClient, Overview } from './api';
-import { fitLine, S } from './text';
-import type { Line } from './text';
+import type { DaemonClient, Overview } from './daemon-client';
+import { fitLine, S } from './terminal/text';
+import type { Line } from './terminal/text';
 import {
   box,
   confirmPopup,

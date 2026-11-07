@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { lineWidth, plain, S } from './text';
+import { lineWidth, plain, S } from './terminal/text';
 import { box, overlayOnto } from './views';
 
 test('box draws a filled panel with the title and footer on top and a gap below', () => {

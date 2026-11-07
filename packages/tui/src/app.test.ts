@@ -3,11 +3,11 @@ import { test } from 'node:test';
 
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import type { RunRecord } from 'domains/run/types';
+import type { Transcript } from 'domains/transcript/types';
 
-import { buildRunTranscript } from '../domains/run/event-log';
-import type { DaemonClient, Overview } from './api';
 import { TuiApp } from './app';
-import { lineWidth, plain } from './text';
+import type { DaemonClient, Overview } from './daemon-client';
+import { lineWidth, plain } from './terminal/text';
 
 const NOW = Date.parse('2026-10-06T12:00:00Z');
 const WIDTH = 140;
@@ -96,30 +96,39 @@ function makeOverview(): Overview {
   };
 }
 
-const events = [
-  {
-    type: 'system',
-    subtype: 'init',
-    model: 'claude-opus-5-5',
-    cwd: '/repo',
-    tools: [],
-    permissionMode: 'auto',
-  },
-  {
-    type: 'assistant',
-    message: {
-      content: [
-        { type: 'text', text: 'Checking the queue' },
-        { type: 'tool_use', id: 't1', name: 'Bash', input: { command: 'gh pr list' } },
-      ],
+const transcript: Transcript = {
+  eventCount: 4,
+  items: [
+    {
+      kind: 'init',
+      key: 'init-0',
+      model: 'claude-opus-5-5',
+      cwd: '/repo',
+      toolCount: 0,
+      permissionMode: 'auto',
     },
-  },
-  {
-    type: 'user',
-    message: { content: [{ type: 'tool_result', tool_use_id: 't1', content: 'no open PRs' }] },
-  },
-  { type: 'result', result: 'All quiet', num_turns: 7, duration_ms: 83_000 },
-];
+    { kind: 'text', key: '1-0', text: 'Checking the queue', isSubagent: false },
+    {
+      kind: 'tool',
+      key: '1-1',
+      id: 't1',
+      name: 'Bash',
+      input: { command: 'gh pr list' },
+      preview: 'gh pr list',
+      result: { content: 'no open PRs', isError: false },
+      isSubagent: false,
+    },
+    {
+      kind: 'result',
+      key: 'result-3',
+      text: 'All quiet',
+      isError: false,
+      costUsd: null,
+      numTurns: 7,
+      durationMs: 83_000,
+    },
+  ],
+};
 
 interface FakeOptions {
   isDown?: boolean;
@@ -129,7 +138,6 @@ interface FakeOptions {
 function makeClient(overview: Overview, options: FakeOptions) {
   const started: string[] = [];
   const client: DaemonClient = {
-    baseUrl: 'http://127.0.0.1:7433',
     getOverview() {
       return options.isDown
         ? Promise.reject(new Error('daemon not reachable at http://127.0.0.1:7433'))
@@ -149,7 +157,7 @@ function makeClient(overview: Overview, options: FakeOptions) {
     getRun(routine, id) {
       const run = overview.runs.find(r => r.routine === routine && r.id === id);
       if (!run) return Promise.reject(new Error('Run not found'));
-      return Promise.resolve({ run, transcript: buildRunTranscript('claude', events) });
+      return Promise.resolve({ run, transcript });
     },
     startRun(name) {
       started.push(name);

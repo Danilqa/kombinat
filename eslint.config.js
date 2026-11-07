@@ -129,7 +129,7 @@ export default defineConfig(
   },
   {
     // Parses raw terminal input, which is made of escape sequences.
-    files: ['packages/cli/src/tui/keys.ts'],
+    files: ['packages/tui/src/terminal/keys.ts'],
     rules: { 'no-control-regex': 'off' },
   },
   {

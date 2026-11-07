@@ -1,6 +1,6 @@
-import { createDaemonClient } from './api';
 import { TuiApp } from './app';
-import { Terminal } from './terminal';
+import { createDaemonClient } from './daemon-client';
+import { Terminal } from './terminal/terminal';
 
 const POLL_ACTIVE_MS = 3000;
 const POLL_IDLE_MS = 10_000;
@@ -8,7 +8,7 @@ const POLL_IDLE_MS = 10_000;
 const FRAME_ACTIVE_MS = 150;
 const FRAME_IDLE_MS = 1000;
 
-export function runTui(baseUrl?: string, stopSignal?: AbortSignal): Promise<void> {
+export function runTui(baseUrl: string, stopSignal?: AbortSignal): Promise<void> {
   if (!process.stdin.isTTY || !process.stdout.isTTY)
     throw new Error('tui needs an interactive terminal');
   const terminal = new Terminal();
@@ -59,3 +59,5 @@ export function runTui(baseUrl?: string, stopSignal?: AbortSignal): Promise<void
     repaint();
   });
 }
+
+export { createDaemonClient } from './daemon-client';

@@ -7,8 +7,6 @@ import { getRuns, getRunWithTranscript } from 'domains/run/requests';
 import type { RunRecord, RunWithTranscript } from 'domains/run/types';
 import { createHttpClient } from 'utils/http';
 
-import { config } from '../config';
-
 export interface Overview {
   status: DaemonStatus;
   routines: RoutineSummary[];
@@ -17,14 +15,13 @@ export interface Overview {
 
 // Same API as the web dashboard, so "run now" starts in the launchd daemon (unlocked keychain), not over ssh.
 export interface DaemonClient {
-  baseUrl: string;
   getOverview(): Promise<Overview>;
   getRoutine(name: string): Promise<RoutineDetail>;
   getRun(routine: string, id: string): Promise<RunWithTranscript>;
   startRun(name: string): Promise<void>;
 }
 
-export function createDaemonClient(baseUrl = `http://127.0.0.1:${config.port}`): DaemonClient {
+export function createDaemonClient(baseUrl: string): DaemonClient {
   const http = createHttpClient({
     baseUrl,
     timeoutMs: 30_000,
@@ -32,7 +29,6 @@ export function createDaemonClient(baseUrl = `http://127.0.0.1:${config.port}`):
   });
 
   return {
-    baseUrl,
     async getOverview() {
       const [status, routines, runs] = await Promise.all([
         getDaemonStatus(http),

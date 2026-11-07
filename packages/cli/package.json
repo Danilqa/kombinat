@@ -50,6 +50,7 @@
     "domains": "workspace:*",
     "esbuild": "0.28.2",
     "tsx": "catalog:",
+    "tui": "workspace:*",
     "utils": "workspace:*"
   }
 }

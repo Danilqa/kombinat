@@ -41,6 +41,8 @@ function getNewestMtime(root: string): number {
 
 const SHARED_PACKAGES = ['domains', 'utils'];
 
+const RESTART_SOURCES = ['tui/src', ...SHARED_PACKAGES];
+
 const webAppSources = (workspaceRoot: string) => [
   path.join(workspaceRoot, 'packages', 'web-app', 'src'),
   path.join(workspaceRoot, 'packages', 'web-app', 'index.html'),
@@ -273,9 +275,9 @@ export function startReloadWatchers(log: Log, restart: (reason: string) => void)
           watchDebounced(path.join(config.packageRoot, 'src'), 1500, file =>
             installAndRestart(`src/${file} changed`),
           ),
-          ...SHARED_PACKAGES.map(name =>
-            watchDebounced(path.join(workspaceRoot, 'packages', name), 1500, file =>
-              installAndRestart(`packages/${name}/${file} changed`),
+          ...RESTART_SOURCES.map(source =>
+            watchDebounced(path.join(workspaceRoot, 'packages', source), 1500, file =>
+              installAndRestart(`packages/${source}/${file} changed`),
             ),
           ),
           watchDebounced(path.join(workspaceRoot, 'packages', 'web-app', 'src'), 1500, file => {
