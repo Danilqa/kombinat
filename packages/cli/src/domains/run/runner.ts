@@ -12,9 +12,10 @@ import { createRunId } from 'domains/run/utils';
 import { config, getCliArgs } from '../../config';
 import { parseJson } from '../../utils/json';
 import { getAgent } from '../agent/registry';
+import type { OutputEvent } from '../agent/schemas';
 import type { Agent } from '../agent/types';
-import type { Routine } from '../routine/utils';
-import type { BeforeHookEvent, OutputEvent } from './event-log';
+import type { Routine } from '../routine/types';
+import type { BeforeHookEvent } from './event-log';
 import { getRunsDir, writeRunRecord } from './storage';
 
 export interface RunOptions {

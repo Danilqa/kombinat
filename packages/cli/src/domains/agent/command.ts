@@ -1,4 +1,4 @@
-import { outputEventSchema } from '../run/event-log';
+import { outputEventSchema } from './schemas';
 import { rejectUnsupported } from './settings';
 import type { Agent } from './types';
 

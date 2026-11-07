@@ -12,7 +12,8 @@ process.env['KOMBINAT_STATE_DIR'] = stateDir;
 fs.mkdirSync(routinesDir);
 
 const { tick } = await import('./tick');
-const { readSchedulerState, writeSchedulerState, writeRunRecord } = await import('../run/storage');
+const { readSchedulerState, writeSchedulerState } = await import('./storage');
+const { writeRunRecord } = await import('../run/storage');
 
 function writeRoutine(name: string, frontmatter: string): void {
   fs.writeFileSync(

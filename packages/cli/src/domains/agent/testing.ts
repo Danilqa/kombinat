@@ -10,6 +10,21 @@ import type {
   TranscriptItem,
 } from 'domains/transcript/types';
 
+import type { AgentTask } from './types';
+
+export function makeAgentTask(overrides: Partial<AgentTask> = {}): AgentTask {
+  return {
+    name: 'demo',
+    prompt: 'Hello',
+    model: null,
+    effort: null,
+    permissionMode: null,
+    command: null,
+    maxBudgetUsd: null,
+    ...overrides,
+  };
+}
+
 const fail = (expected: string, item: TranscriptItem | undefined): never =>
   assert.fail(`expected a ${expected} item, got ${JSON.stringify(item)}`);
 

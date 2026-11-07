@@ -2,21 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { isMatching } from 'ts-pattern';
-import type { z } from 'zod';
 
 import { runRecordSchema } from 'domains/run/schemas';
 import type { RunRecord } from 'domains/run/types';
-import { schedulerStateSchema } from 'domains/scheduler/schemas';
-import type { SchedulerState } from 'domains/scheduler/types';
 
 import { config } from '../../config';
-import { parseJson } from '../../utils/json';
-
-function readJsonFile<T>(file: string, schema: z.ZodType<T>): T | null {
-  if (!fs.existsSync(file)) return null;
-  const parsed = schema.safeParse(parseJson(fs.readFileSync(file, 'utf8')));
-  return parsed.success ? parsed.data : null;
-}
+import { readJsonFile, writeJsonFile } from '../../utils/json';
 
 export function getRunsDir(routine: string): string {
   return path.join(config.stateDir, 'runs', routine);
@@ -29,9 +20,7 @@ export function ensureStateDirs(): void {
 export function writeRunRecord(record: RunRecord): void {
   const dir = getRunsDir(record.routine);
   fs.mkdirSync(dir, { recursive: true });
-  const file = path.join(dir, `${record.id}.json`);
-  fs.writeFileSync(`${file}.tmp`, JSON.stringify(record, null, 2));
-  fs.renameSync(`${file}.tmp`, file);
+  writeJsonFile(path.join(dir, `${record.id}.json`), record);
 }
 
 export function readRunRecord(routine: string, id: string): RunRecord | null {
@@ -84,16 +73,4 @@ export function listAllRuns(): RunRecord[] {
 
 export function getRunningRuns(): RunRecord[] {
   return listAllRuns().filter(isMatching({ status: 'running' }));
-}
-
-const schedulerFile = () => path.join(config.stateDir, 'scheduler.json');
-
-export function readSchedulerState(): SchedulerState | null {
-  return readJsonFile(schedulerFile(), schedulerStateSchema);
-}
-
-export function writeSchedulerState(state: SchedulerState): void {
-  ensureStateDirs();
-  fs.writeFileSync(`${schedulerFile()}.tmp`, JSON.stringify(state, null, 2));
-  fs.renameSync(`${schedulerFile()}.tmp`, schedulerFile());
 }

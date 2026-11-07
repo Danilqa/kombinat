@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import type { RunRecord } from 'domains/run/types';
 
-import { buildTranscript } from '../domains/agent/registry';
+import { buildRunTranscript } from '../domains/run/event-log';
 import type { DaemonClient, Overview } from './api';
 import { TuiApp } from './app';
 import { lineWidth, plain } from './text';
@@ -149,7 +149,7 @@ function makeClient(overview: Overview, options: FakeOptions) {
     getRun(routine, id) {
       const run = overview.runs.find(r => r.routine === routine && r.id === id);
       if (!run) return Promise.reject(new Error('Run not found'));
-      return Promise.resolve({ run, transcript: buildTranscript('claude', events) });
+      return Promise.resolve({ run, transcript: buildRunTranscript('claude', events) });
     },
     startRun(name) {
       started.push(name);

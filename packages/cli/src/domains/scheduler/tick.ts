@@ -2,11 +2,12 @@ import type { SchedulerState, SkipReason } from 'domains/scheduler/types';
 import { getErrorMessage } from 'utils/error';
 
 import { config } from '../../config';
-import { cronRunsBetween, nextCronRun } from '../../utils/cron';
-import { loadRoutines } from '../routine/utils';
-import type { Routine } from '../routine/utils';
+import { cronRunsBetween } from '../../utils/cron';
+import { loadRoutines } from '../routine/storage';
+import type { Routine } from '../routine/types';
 import { startDetachedRun } from '../run/runner';
-import { getRunningRuns, readSchedulerState, writeSchedulerState } from '../run/storage';
+import { getRunningRuns } from '../run/storage';
+import { readSchedulerState, writeSchedulerState } from './storage';
 
 function loadState(now: Date): SchedulerState {
   return (
@@ -94,11 +95,6 @@ export function tick(now = new Date()): TickResult {
   state.lastTickAt = now.toISOString();
   writeSchedulerState(state);
   return { started, skipped };
-}
-
-export function getNextRun(routine: Routine, now = new Date()): string | null {
-  if (!routine.schedule || !routine.enabled) return null;
-  return nextCronRun(routine.schedule, now)?.toISOString() ?? null;
 }
 
 export function startSchedulerLoop(log: (line: string) => void): () => void {

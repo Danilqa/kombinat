@@ -4,7 +4,12 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 
-import { findPackageLink, findProjectRoot, PACKAGE_NAME } from './config';
+import { z } from 'zod';
+
+import { config, findPackageLink, findProjectRoot, PACKAGE_NAME } from './config';
+import { parseJson } from './utils/json';
+
+const manifestSchema = z.object({ name: z.string() });
 
 function makeProject(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kombinat-config-'));
@@ -34,4 +39,12 @@ test('finds the closest node_modules copy of the package, also in a parent folde
   const own = path.join(project, 'node_modules', PACKAGE_NAME);
   fs.mkdirSync(own, { recursive: true });
   assert.equal(findPackageLink(project), own);
+});
+
+test('config sits one folder below the root of the kombinat package, which holds the bin', () => {
+  const manifest = manifestSchema.parse(
+    parseJson(fs.readFileSync(path.join(config.packageRoot, 'package.json'), 'utf8')),
+  );
+  assert.equal(manifest.name, PACKAGE_NAME);
+  assert.equal(fs.existsSync(config.cliBin), true);
 });

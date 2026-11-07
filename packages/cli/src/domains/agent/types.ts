@@ -2,10 +2,6 @@ import type { AgentName } from 'domains/agent/types';
 import type { RunRecord, RunTrigger } from 'domains/run/types';
 import type { TranscriptItem } from 'domains/transcript/types';
 
-import type { Routine } from '../routine/utils';
-
-export type { AgentName } from 'domains/agent/types';
-
 export interface AgentSettings {
   model: string | null;
   effort: string | null;
@@ -14,8 +10,13 @@ export interface AgentSettings {
   maxBudgetUsd: number | null;
 }
 
+export interface AgentTask extends AgentSettings {
+  name: string;
+  prompt: string;
+}
+
 export interface RunContext {
-  routine: Routine;
+  routine: AgentTask;
   runId: string;
   trigger: RunTrigger;
 }

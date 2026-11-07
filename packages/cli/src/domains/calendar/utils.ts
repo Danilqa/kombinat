@@ -4,7 +4,7 @@ import type { CalendarEntry, PlannedCalendarEntry, RunCalendarEntry } from 'doma
 import type { RunRecord } from 'domains/run/types';
 
 import { cronRunsBetween } from '../../utils/cron';
-import type { Routine } from '../routine/utils';
+import type { Routine } from '../routine/types';
 
 export interface PlannedLength {
   minutes: number;

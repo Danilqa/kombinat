@@ -3,13 +3,10 @@ import { test } from 'node:test';
 
 import { makeRunRecord } from 'domains/run/mocks';
 
-import { buildRoutine } from '../routine/utils';
 import { claudeAgent } from './claude';
-import { buildTranscript } from './registry';
-import { expectInit, expectResult, expectText, expectTool } from './testing';
+import { expectInit, expectResult, expectText, expectTool, makeAgentTask } from './testing';
 
 const events = [
-  { type: 'before_hook', command: 'ensure-docker.sh', exitCode: 0, output: '' },
   {
     type: 'system',
     subtype: 'init',
@@ -53,20 +50,12 @@ const events = [
 ];
 
 test('builds transcript items from the stream-json events', () => {
-  const { eventCount, items } = buildTranscript('claude', events);
-  assert.equal(eventCount, events.length);
+  const items = claudeAgent.buildTranscript(events);
   assert.deepEqual(
     items.map(item => item.kind),
-    ['hook', 'init', 'text', 'tool', 'tool', 'result'],
+    ['init', 'text', 'tool', 'tool', 'result'],
   );
-  const [hook, init, text, bash, read, result] = items;
-  assert.deepEqual(hook, {
-    kind: 'hook',
-    key: 'hook-0',
-    command: 'ensure-docker.sh',
-    exitCode: 0,
-    output: '',
-  });
+  const [init, text, bash, read, result] = items;
   assert.equal(expectInit(init).toolCount, 3);
   assert.equal(expectText(text).text, 'Looking at the logs');
   assert.equal(expectTool(bash).preview, 'git status');
@@ -77,13 +66,13 @@ test('builds transcript items from the stream-json events', () => {
 });
 
 test('tool calls without a result yet have a null result', () => {
-  const bash = buildTranscript('claude', events.slice(0, 4)).items[3];
+  const bash = claudeAgent.buildTranscript(events.slice(0, 3))[2];
   assert.equal(expectTool(bash).result, null);
 });
 
 test('reads the session and the result into the run record', () => {
   const record = makeRunRecord();
-  assert.deepEqual(claudeAgent.readEvent(events[1], record), { model: 'claude-opus-5-5' });
+  assert.deepEqual(claudeAgent.readEvent(events[0], record), { model: 'claude-opus-5-5' });
   assert.deepEqual(
     claudeAgent.readEvent({ type: 'system', subtype: 'init', session_id: 's1' }, record),
     { sessionId: 's1' },
@@ -99,12 +88,13 @@ test('reads the session and the result into the run record', () => {
 });
 
 test('passes the routine settings to claude -p', () => {
-  const routine = buildRoutine(
-    '/tmp/demo.md',
-    '---\nname: demo\ncwd: /tmp\nmodel: claude-sonnet-5-5\neffort: low\nmaxBudgetUsd: 2\n---\nHello',
-  );
   const { args, input, env } = claudeAgent.buildInvocation({
-    routine,
+    routine: makeAgentTask({
+      model: 'claude-sonnet-5-5',
+      effort: 'low',
+      permissionMode: 'auto',
+      maxBudgetUsd: 2,
+    }),
     runId: 'r1',
     trigger: 'manual',
   });

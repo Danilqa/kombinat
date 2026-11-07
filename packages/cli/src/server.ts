@@ -8,19 +8,17 @@ import type { DaemonStatus } from 'domains/daemon/types';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import { RECENT_RUNS_LIMIT } from 'domains/run/constants';
 import type { RunRecord } from 'domains/run/types';
-import type { Skip } from 'domains/scheduler/types';
 import { getErrorMessage } from 'utils/error';
 
 import { config } from './config';
-import { buildTranscript } from './domains/agent/registry';
 import { buildCalendar } from './domains/calendar/utils';
-import { loadRoutines } from './domains/routine/utils';
-import type { Routine } from './domains/routine/utils';
+import { loadRoutines } from './domains/routine/storage';
+import type { Routine } from './domains/routine/types';
+import { describeSchedule, getNextRun } from './domains/routine/utils';
+import { buildRunTranscript, readRunEvents } from './domains/run/event-log';
 import { startDetachedRun } from './domains/run/runner';
-import { listAllRuns, listRuns, readRunRecord, readSchedulerState } from './domains/run/storage';
-import { getNextRun } from './domains/scheduler/tick';
-import { describeCron } from './utils/cron';
-import { parseJson } from './utils/json';
+import { listAllRuns, listRuns, readRunRecord } from './domains/run/storage';
+import { getSkips, readSchedulerState } from './domains/scheduler/storage';
 
 interface ApiResponse {
   status: number;
@@ -45,16 +43,12 @@ const MAX_CALENDAR_DAYS = 32;
 const ok = (body: unknown): ApiResponse => ({ status: 200, body });
 const fail = (status: number, error: string): ApiResponse => ({ status, body: { error } });
 
-function getSkips(routine: string): Skip[] {
-  return readSchedulerState()?.routines[routine]?.skips ?? [];
-}
-
 function toRoutineSummary(routine: Routine, runs: RunRecord[]): RoutineSummary {
   return {
     name: routine.name,
     description: routine.description,
     schedule: routine.schedule,
-    scheduleHuman: routine.schedule === null ? 'Manual' : describeCron(routine.schedule),
+    scheduleHuman: describeSchedule(routine),
     nextRunAt: getNextRun(routine),
     enabled: routine.enabled,
     agent: routine.agent,
@@ -70,16 +64,6 @@ function toRoutineSummary(routine: Routine, runs: RunRecord[]): RoutineSummary {
     lastRun: runs[0] ?? null,
     lastSkip: getSkips(routine.name).at(-1) ?? null,
   };
-}
-
-function readEvents(record: RunRecord): unknown[] {
-  if (!fs.existsSync(record.logFile)) return [];
-  return fs
-    .readFileSync(record.logFile, 'utf8')
-    .split('\n')
-    .filter(Boolean)
-    .map(parseJson)
-    .filter(event => event !== undefined);
 }
 
 function getStatus(startedAt: Date): DaemonStatus {
@@ -159,7 +143,7 @@ function routeApi(request: ApiRequest, url: URL, startedAt: Date): ApiResponse {
     )
     .with(['GET', ['runs', P.string, P.string]], ([, [, routine, id]]) => withRun(routine, id, ok))
     .with(['GET', ['runs', P.string, P.string, 'transcript']], ([, [, routine, id]]) =>
-      withRun(routine, id, record => ok(buildTranscript(record.agent, readEvents(record)))),
+      withRun(routine, id, record => ok(buildRunTranscript(record.agent, readRunEvents(record)))),
     )
     .otherwise(() => fail(404, 'Not found'));
 }

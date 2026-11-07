@@ -1,4 +1,6 @@
-import type { AgentName, AgentSettings, RunContext } from './types';
+import type { AgentName } from 'domains/agent/types';
+
+import type { AgentSettings, RunContext } from './types';
 
 export function pickOne<T extends string>(
   value: string | null,

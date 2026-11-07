@@ -3,10 +3,8 @@ import { test } from 'node:test';
 
 import { makeRunRecord } from 'domains/run/mocks';
 
-import { buildRoutine } from '../routine/utils';
 import { codexAgent } from './codex';
-import { buildTranscript } from './registry';
-import { expectResult, expectText, expectTool } from './testing';
+import { expectResult, expectText, expectTool, makeAgentTask } from './testing';
 
 const events = [
   { type: 'thread.started', thread_id: 'thread-1' },
@@ -57,7 +55,7 @@ const events = [
 ];
 
 test('builds transcript items from codex exec --json events', () => {
-  const { items } = buildTranscript('codex', events);
+  const items = codexAgent.buildTranscript(events);
   assert.deepEqual(
     items.map(item => item.kind),
     ['init', 'tool', 'tool', 'tool', 'text', 'text', 'result'],
@@ -74,12 +72,12 @@ test('builds transcript items from codex exec --json events', () => {
 });
 
 test('a running command has no result yet', () => {
-  const shell = buildTranscript('codex', events.slice(0, 4)).items[1];
+  const shell = codexAgent.buildTranscript(events.slice(0, 4))[1];
   assert.equal(expectTool(shell).result, null);
 });
 
 test('a failed turn ends the transcript with an error result', () => {
-  const { items } = buildTranscript('codex', [
+  const items = codexAgent.buildTranscript([
     { type: 'turn.failed', error: { message: 'usage limit reached' } },
   ]);
   assert.deepEqual(items.at(-1), {
@@ -105,12 +103,8 @@ test('reads the thread, the last message, turns and failures into the run record
 });
 
 test('passes the routine settings to codex exec', () => {
-  const routine = buildRoutine(
-    '/tmp/demo.md',
-    '---\nname: demo\nagent: codex\ncwd: /tmp\nmodel: gpt-5.5\neffort: high\n---\nHello',
-  );
   const { args, input, env } = codexAgent.buildInvocation({
-    routine,
+    routine: makeAgentTask({ model: 'gpt-5.5', effort: 'high', permissionMode: 'workspace-write' }),
     runId: 'r1',
     trigger: 'schedule',
   });

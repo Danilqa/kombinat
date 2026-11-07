@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import os from 'node:os';
 import { test } from 'node:test';
 
-import { buildRoutine, parseFrontmatter } from './utils';
+import { buildRoutine, describeSchedule, getNextRun, parseFrontmatter } from './utils';
 
 const routineFile = (frontmatter: string): string =>
   `---\nname: demo\ncwd: /tmp\n${frontmatter}\n---\nHello`;
@@ -50,6 +50,21 @@ test('manual routines have no schedule', () => {
     '---\nname: demo\nschedule: manual\ncwd: /tmp\n---\nHello',
   );
   assert.equal(r.schedule, null);
+});
+
+test('the schedule gives the routine its label and its next run', () => {
+  const now = new Date('2026-09-30T10:00:00');
+  const weekdays = buildRoutine('/tmp/demo.md', routineFile('schedule: 0 8 * * 1-5'));
+  assert.equal(describeSchedule(weekdays), 'Weekdays at 08:00');
+  assert.equal(getNextRun(weekdays, now), new Date('2026-10-01T08:00:00').toISOString());
+  const manual = buildRoutine('/tmp/demo.md', routineFile('schedule: manual'));
+  assert.equal(describeSchedule(manual), 'Manual');
+  assert.equal(getNextRun(manual, now), null);
+  const disabled = buildRoutine(
+    '/tmp/demo.md',
+    routineFile('schedule: 0 8 * * 1-5\nenabled: false'),
+  );
+  assert.equal(getNextRun(disabled, now), null);
 });
 
 test('rejects mismatching names and bad cron', () => {

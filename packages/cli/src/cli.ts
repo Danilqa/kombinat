@@ -1,15 +1,18 @@
 import { spawn } from 'node:child_process';
 import { parseArgs } from 'node:util';
 
-import { isMatching, match, P } from 'ts-pattern';
+import { isMatching, match } from 'ts-pattern';
 
+import { runTriggerSchema } from 'domains/run/schemas';
 import type { RunTrigger } from 'domains/run/types';
 
 import { config, DEFAULT_PORT } from './config';
-import { getRoutine, loadRoutines } from './domains/routine/utils';
+import { getRoutine, loadRoutines } from './domains/routine/storage';
+import { getNextRun } from './domains/routine/utils';
 import { runRoutine } from './domains/run/runner';
-import { ensureStateDirs, listRuns, readSchedulerState } from './domains/run/storage';
-import { getNextRun, startSchedulerLoop } from './domains/scheduler/tick';
+import { ensureStateDirs, listRuns } from './domains/run/storage';
+import { readSchedulerState } from './domains/scheduler/storage';
+import { startSchedulerLoop } from './domains/scheduler/tick';
 import { connect } from './features/connect/connect';
 import {
   getDaemonFolder,
@@ -74,11 +77,11 @@ function formatTime(iso: string | null | undefined): string {
 }
 
 function parseTrigger(value: string): RunTrigger {
-  return match(value)
-    .with(P.union('schedule', 'manual', 'catch_up'), trigger => trigger)
-    .otherwise(() => {
-      throw new Error('--trigger must be one of schedule, manual, catch_up');
-    });
+  const parsed = runTriggerSchema.safeParse(value);
+  if (!parsed.success) {
+    throw new Error(`--trigger must be one of ${runTriggerSchema.options.join(', ')}`);
+  }
+  return parsed.data;
 }
 
 function parseUrl(value: string): string {

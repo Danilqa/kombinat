@@ -1,8 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
+
 import { config } from '../../config';
-import { loadRoutines } from '../../domains/routine/utils';
-import { describeCron } from '../../utils/cron';
+import { loadRoutines } from '../../domains/routine/storage';
+import { describeSchedule } from '../../domains/routine/utils';
 
 const START = '<!-- routines:start -->';
 const END = '<!-- routines:end -->';
@@ -13,10 +14,7 @@ export function renderRoutinesTable(): string {
       (a, b) =>
         Number(Boolean(b.schedule)) - Number(Boolean(a.schedule)) || a.name.localeCompare(b.name),
     )
-    .map(
-      r =>
-        `| [${r.name}](routines/${r.name}.md) | ${r.schedule ? describeCron(r.schedule) : 'Manual'} | ${r.description} |`,
-    );
+    .map(r => `| [${r.name}](routines/${r.name}.md) | ${describeSchedule(r)} | ${r.description} |`);
   return ['| Routine | When | What it does |', '| - | - | - |', ...rows].join('\n');
 }
 

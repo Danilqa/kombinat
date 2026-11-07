@@ -3,17 +3,12 @@ import { test } from 'node:test';
 
 import { makeRunRecord } from 'domains/run/mocks';
 
-import { buildRoutine } from '../routine/utils';
 import { commandAgent } from './command';
-import { buildTranscript } from './registry';
+import { makeAgentTask } from './testing';
 
 test('pipes the prompt into a shell command', () => {
-  const routine = buildRoutine(
-    '/tmp/demo.md',
-    '---\nname: demo\nagent: command\ncommand: gemini --yolo\ncwd: /tmp\n---\nHello',
-  );
   const { command, args, input, env } = commandAgent.buildInvocation({
-    routine,
+    routine: makeAgentTask({ command: 'gemini --yolo' }),
     runId: 'r1',
     trigger: 'manual',
   });
@@ -31,7 +26,7 @@ test('collects the output lines as the result and the transcript', () => {
   assert.deepEqual(commandAgent.readEvent(second, makeRunRecord({ resultText: '# Report' })), {
     resultText: '# Report\nAll good',
   });
-  assert.deepEqual(buildTranscript('command', [first, second]).items, [
+  assert.deepEqual(commandAgent.buildTranscript([first, second]), [
     { kind: 'text', key: 'output', text: '# Report\nAll good', isSubagent: false },
   ]);
   assert.equal(commandAgent.getResumeCommand('x'), null);

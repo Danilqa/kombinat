@@ -1,26 +1,13 @@
-import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import type { AgentName } from 'domains/agent/types';
 import { getErrorMessage } from 'utils/error';
 
-import { config } from '../../config';
-import { parseCron } from '../../utils/cron';
+import { describeCron, nextCronRun, parseCron } from '../../utils/cron';
 import { getAgent, parseAgentName } from '../agent/registry';
-import type { AgentName, AgentSettings } from '../agent/types';
-
-export interface Routine extends AgentSettings {
-  name: string;
-  description: string;
-  schedule: string | null;
-  cwd: string;
-  agent: AgentName;
-  enabled: boolean;
-  timeoutMinutes: number;
-  before: string | null;
-  prompt: string;
-  file: string;
-}
+import type { AgentSettings } from '../agent/types';
+import type { Routine } from './types';
 
 type FrontmatterValue = string | number | boolean;
 type Frontmatter = Record<string, FrontmatterValue>;
@@ -123,20 +110,11 @@ export function buildRoutine(file: string, source: string): Routine {
   };
 }
 
-export function loadRoutines(dir = config.routinesDir): Routine[] {
-  if (!fs.existsSync(dir)) return [];
-  return fs
-    .readdirSync(dir)
-    .filter(entry => entry.endsWith('.md'))
-    .sort()
-    .map(entry => {
-      const file = path.join(dir, entry);
-      return buildRoutine(file, fs.readFileSync(file, 'utf8'));
-    });
+export function describeSchedule(routine: Routine): string {
+  return routine.schedule === null ? 'Manual' : describeCron(routine.schedule);
 }
 
-export function getRoutine(name: string, dir = config.routinesDir): Routine {
-  const routine = loadRoutines(dir).find(candidate => candidate.name === name);
-  if (!routine) throw new Error(`Unknown routine "${name}" (looked in ${dir})`);
-  return routine;
+export function getNextRun(routine: Routine, now = new Date()): string | null {
+  if (!routine.schedule || !routine.enabled) return null;
+  return nextCronRun(routine.schedule, now)?.toISOString() ?? null;
 }
