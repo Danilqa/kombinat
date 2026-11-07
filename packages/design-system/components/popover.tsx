@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { cn } from '@web-app/lib/utils';
+import { cn } from '../utils';
 import { Popover as PopoverPrimitive } from 'radix-ui';
 
 interface PopoverProps extends React.ComponentProps<typeof PopoverPrimitive.Root> {}

@@ -1,4 +1,4 @@
-import { PageHeader } from '@web-app/components/page-header';
+import { PageHeader } from 'design-system/layouts/page-header';
 import { WeekCalendar } from '@web-app/components/week-calendar';
 import { useDocumentTitle } from '@web-app/lib/use-document-title';
 

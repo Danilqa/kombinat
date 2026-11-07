@@ -2,7 +2,7 @@ import { memo, useMemo, type ReactNode } from 'react';
 import ReactMarkdown, { type Components, type Options } from 'react-markdown';
 import remarkBreaks from 'remark-breaks';
 import remarkGfm from 'remark-gfm';
-import { cn } from '@web-app/lib/utils';
+import { cn } from '../utils';
 
 const MAX_HEADING_LEVEL = 6;
 

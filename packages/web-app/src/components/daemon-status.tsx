@@ -1,12 +1,12 @@
 import { P, match } from 'ts-pattern';
+import { Popover, PopoverContent, PopoverTrigger } from 'design-system/components/popover';
+import { cn } from 'design-system/utils';
 import { getDaemonStatus } from 'domains/daemon/requests';
 import type { DaemonHealth, DaemonStatus as DaemonStatusData } from 'domains/daemon/types';
 import { getDaemonHealth } from 'domains/daemon/utils';
 import { formatRelative } from 'utils/date-time';
 import { sameOriginApi } from 'utils/http';
-import { Popover, PopoverContent, PopoverTrigger } from '@web-app/components/ui/popover';
 import { usePolledData } from '@web-app/lib/use-polled-data';
-import { cn } from '@web-app/lib/utils';
 
 interface DaemonHealthAppearance {
   label: string;

@@ -1,15 +1,8 @@
 import { Link } from 'react-router';
-import { getRoutines } from 'domains/routine/requests';
-import type { RoutineSummary } from 'domains/routine/types';
-import { getSkipReasonLabel } from 'domains/scheduler/utils';
-import { sameOriginApi } from 'utils/http';
-import { PageHeader, SectionAside } from '@web-app/components/page-header';
-import { ErrorState, LoadingState } from '@web-app/components/page-states';
-import { RelativeTime } from '@web-app/components/relative-time';
-import { RunNowButton } from '@web-app/components/run-now-button';
-import { StatusBadge } from '@web-app/components/status-badge';
-import { Badge } from '@web-app/components/ui/badge';
-import { Card } from '@web-app/components/ui/card';
+import { Badge } from 'design-system/components/badge';
+import { Card } from 'design-system/components/card';
+import { ErrorState, LoadingState } from 'design-system/components/page-states';
+import { RelativeTime } from 'design-system/components/relative-time';
 import {
   Table,
   TableBody,
@@ -17,11 +10,18 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@web-app/components/ui/table';
+} from 'design-system/components/table';
+import { PageHeader, SectionAside } from 'design-system/layouts/page-header';
+import { cn } from 'design-system/utils';
+import { getRoutines } from 'domains/routine/requests';
+import type { RoutineSummary } from 'domains/routine/types';
+import { getSkipReasonLabel } from 'domains/scheduler/utils';
+import { sameOriginApi } from 'utils/http';
+import { RunNowButton } from '@web-app/components/run-now-button';
+import { StatusBadge } from '@web-app/components/status-badge';
 import { useDocumentTitle } from '@web-app/lib/use-document-title';
 import { usePolledData } from '@web-app/lib/use-polled-data';
 import { useRowLink } from '@web-app/lib/use-row-link';
-import { cn } from '@web-app/lib/utils';
 
 function getHasRunningRoutine(routines: RoutineSummary[]): boolean {
   return routines.some(routine => routine.running);

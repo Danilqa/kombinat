@@ -2,6 +2,9 @@ import { Check, ChevronRight, CircleAlert, Loader, X } from 'lucide-react';
 import { memo, useId, useState } from 'react';
 import { match } from 'ts-pattern';
 
+import { CodeBlock } from 'design-system/components/code-block';
+import { Markdown } from 'design-system/components/markdown';
+import { cn } from 'design-system/utils';
 import type {
   HookItem,
   InitItem,
@@ -11,10 +14,6 @@ import type {
   TranscriptItem,
 } from 'domains/transcript/types';
 import { formatDuration } from 'utils/date-time';
-
-import { CodeBlock } from '@web-app/components/code-block';
-import { Markdown } from '@web-app/components/markdown';
-import { cn } from '@web-app/lib/utils';
 
 interface HookRowProps {
   item: HookItem;

@@ -1,12 +1,12 @@
 import { isMatching } from 'ts-pattern';
+import { Card } from 'design-system/components/card';
+import { ErrorState, LoadingState } from 'design-system/components/page-states';
+import { PageHeader, SectionAside } from 'design-system/layouts/page-header';
 import { RECENT_RUNS_LIMIT } from 'domains/run/constants';
 import { getRuns } from 'domains/run/requests';
 import type { RunRecord } from 'domains/run/types';
 import { sameOriginApi } from 'utils/http';
-import { PageHeader, SectionAside } from '@web-app/components/page-header';
-import { ErrorState, LoadingState } from '@web-app/components/page-states';
 import { RunsTable } from '@web-app/components/runs-table';
-import { Card } from '@web-app/components/ui/card';
 import { useDocumentTitle } from '@web-app/lib/use-document-title';
 import { usePolledData } from '@web-app/lib/use-polled-data';
 

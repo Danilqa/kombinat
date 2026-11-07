@@ -43,12 +43,12 @@ const SHARED_PACKAGES = ['domains', 'utils'];
 
 const RESTART_SOURCES = ['tui/src', ...SHARED_PACKAGES];
 
-const webAppSources = (workspaceRoot: string) => [
-  path.join(workspaceRoot, 'packages', 'web-app', 'src'),
-  path.join(workspaceRoot, 'packages', 'web-app', 'index.html'),
-  path.join(workspaceRoot, 'packages', 'web-app', 'vite.config.ts'),
-  ...SHARED_PACKAGES.map(name => path.join(workspaceRoot, 'packages', name)),
-];
+const REBUILD_SOURCES = ['web-app/src', 'design-system'];
+
+const webAppSources = (workspaceRoot: string) =>
+  [...REBUILD_SOURCES, 'web-app/index.html', 'web-app/vite.config.ts', ...SHARED_PACKAGES].map(
+    source => path.join(workspaceRoot, 'packages', source),
+  );
 
 export function isWebAppStale(workspaceRoot = config.workspaceRoot): boolean {
   if (workspaceRoot === null) return false;
@@ -280,10 +280,12 @@ export function startReloadWatchers(log: Log, restart: (reason: string) => void)
               installAndRestart(`packages/${source}/${file} changed`),
             ),
           ),
-          watchDebounced(path.join(workspaceRoot, 'packages', 'web-app', 'src'), 1500, file => {
-            log(`packages/web-app/src/${file} changed, rebuilding ui`);
-            buildWebApp(workspaceRoot, log);
-          }),
+          ...REBUILD_SOURCES.map(source =>
+            watchDebounced(path.join(workspaceRoot, 'packages', source), 1500, file => {
+              log(`packages/${source}/${file} changed, rebuilding ui`);
+              buildWebApp(workspaceRoot, log);
+            }),
+          ),
         ];
   const lockfile =
     dependencies === null ? null : path.join(dependencies.root, dependencies.manager.lockfile);

@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Check } from 'lucide-react';
-import { cn } from '@web-app/lib/utils';
+import { cn } from '../utils';
 import { DropdownMenu as DropdownMenuPrimitive } from 'radix-ui';
 
 interface DropdownMenuProps extends React.ComponentProps<typeof DropdownMenuPrimitive.Root> {}

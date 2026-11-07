@@ -1,21 +1,11 @@
 import { useParams } from 'react-router';
 import { match } from 'ts-pattern';
-import { getAgentLabel } from 'domains/agent/utils';
-import { getRoutine } from 'domains/routine/requests';
-import type { RoutineDetail } from 'domains/routine/types';
-import type { Skip } from 'domains/scheduler/types';
-import { getSkipReasonLabel } from 'domains/scheduler/utils';
-import { sameOriginApi } from 'utils/http';
-import { Breadcrumbs } from '@web-app/components/breadcrumbs';
-import { DetailList, type DetailEntry } from '@web-app/components/detail-list';
-import { Markdown } from '@web-app/components/markdown';
-import { PageTitle, SectionAside, SectionTitle } from '@web-app/components/page-header';
-import { ErrorState, LoadingState } from '@web-app/components/page-states';
-import { RelativeTime } from '@web-app/components/relative-time';
-import { RunNowButton } from '@web-app/components/run-now-button';
-import { RunsTable } from '@web-app/components/runs-table';
-import { Badge, type BadgeVariant } from '@web-app/components/ui/badge';
-import { Card } from '@web-app/components/ui/card';
+import { Badge, type BadgeVariant } from 'design-system/components/badge';
+import { Card } from 'design-system/components/card';
+import { DetailList, type DetailEntry } from 'design-system/components/detail-list';
+import { Markdown } from 'design-system/components/markdown';
+import { ErrorState, LoadingState } from 'design-system/components/page-states';
+import { RelativeTime } from 'design-system/components/relative-time';
 import {
   Table,
   TableBody,
@@ -23,11 +13,21 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@web-app/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@web-app/components/ui/tabs';
+} from 'design-system/components/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from 'design-system/components/tabs';
+import { PageTitle, SectionAside, SectionTitle } from 'design-system/layouts/page-header';
+import { cn } from 'design-system/utils';
+import { getAgentLabel } from 'domains/agent/utils';
+import { getRoutine } from 'domains/routine/requests';
+import type { RoutineDetail } from 'domains/routine/types';
+import type { Skip } from 'domains/scheduler/types';
+import { getSkipReasonLabel } from 'domains/scheduler/utils';
+import { sameOriginApi } from 'utils/http';
+import { Breadcrumbs } from '@web-app/components/breadcrumbs';
+import { RunNowButton } from '@web-app/components/run-now-button';
+import { RunsTable } from '@web-app/components/runs-table';
 import { useDocumentTitle } from '@web-app/lib/use-document-title';
 import { usePolledData } from '@web-app/lib/use-polled-data';
-import { cn } from '@web-app/lib/utils';
 
 function getIsRoutineRunning(routine: RoutineDetail): boolean {
   return routine.running;

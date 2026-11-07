@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { cn } from '@web-app/lib/utils';
+import { cn } from '../utils';
 
 interface CodeBlockProps {
   label: string;

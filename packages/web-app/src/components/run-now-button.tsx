@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Play } from 'lucide-react';
+import { Button } from 'design-system/components/button';
 import { startRoutineRun } from 'domains/routine/requests';
 import { getErrorMessage } from 'utils/error';
 import { sameOriginApi } from 'utils/http';
-import { Button } from '@web-app/components/ui/button';
 
 type RunNowVariant = 'primary' | 'secondary';
 

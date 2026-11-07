@@ -1,9 +1,5 @@
 import { Link } from 'react-router';
-import type { RunRecord } from 'domains/run/types';
-import { getRunDurationMs, getTriggerLabel } from 'domains/run/utils';
-import { formatDuration } from 'utils/date-time';
-import { RelativeTime } from '@web-app/components/relative-time';
-import { StatusBadge } from '@web-app/components/status-badge';
+import { RelativeTime } from 'design-system/components/relative-time';
 import {
   Table,
   TableBody,
@@ -11,9 +7,13 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@web-app/components/ui/table';
+} from 'design-system/components/table';
+import { cn } from 'design-system/utils';
+import type { RunRecord } from 'domains/run/types';
+import { getRunDurationMs, getTriggerLabel } from 'domains/run/utils';
+import { formatDuration } from 'utils/date-time';
+import { StatusBadge } from '@web-app/components/status-badge';
 import { useRowLink } from '@web-app/lib/use-row-link';
-import { cn } from '@web-app/lib/utils';
 
 interface RunsTableProps {
   runs: RunRecord[];

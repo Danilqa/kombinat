@@ -2,20 +2,21 @@ import { useEffect, useMemo, useState } from 'react';
 import { Ban, Check, ChevronLeft, ChevronRight, Clock, Ellipsis, Loader, X } from 'lucide-react';
 import { Link } from 'react-router';
 import { isMatching, match } from 'ts-pattern';
+import { Button } from 'design-system/components/button';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from 'design-system/components/dropdown-menu';
+import { ErrorState } from 'design-system/components/page-states';
+import { cn } from 'design-system/utils';
 import { getCalendar } from 'domains/calendar/requests';
 import type { CalendarEntry } from 'domains/calendar/types';
 import type { RunStatus } from 'domains/run/types';
 import { getRunStatusLabel } from 'domains/run/utils';
 import { formatClock, formatDayMonth, formatWeekday } from 'utils/date-time';
 import { sameOriginApi } from 'utils/http';
-import { Button } from '@web-app/components/ui/button';
-import { ErrorState } from '@web-app/components/page-states';
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from '@web-app/components/ui/dropdown-menu';
 import {
   addDays,
   countOverlapPairs,
@@ -28,7 +29,6 @@ import {
 } from '@web-app/lib/calendar-layout';
 import { usePolledData } from '@web-app/lib/use-polled-data';
 import { useStoredBoolean } from '@web-app/lib/use-stored-boolean';
-import { cn } from '@web-app/lib/utils';
 
 const POLL_INTERVALS = { activeMs: 60_000, idleMs: 60_000 };
 const NOW_TICK_MS = 60_000;

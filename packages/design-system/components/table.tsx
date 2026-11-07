@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { cn } from '@web-app/lib/utils';
+import { cn } from '../utils';
 
 interface TableProps extends React.ComponentProps<'table'> {}
 

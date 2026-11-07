@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { cn } from '@web-app/lib/utils';
+import { cn } from '../utils';
 import { Slot } from 'radix-ui';
 
 // aria-disabled buttons keep focus, so they dim their colours instead of the whole element: element

@@ -1,11 +1,10 @@
 import { match } from 'ts-pattern';
 
+import { Badge } from 'design-system/components/badge';
+import type { BadgeVariant } from 'design-system/components/badge';
+import { cn } from 'design-system/utils';
 import type { RunStatus } from 'domains/run/types';
 import { getRunStatusLabel } from 'domains/run/utils';
-
-import { Badge } from '@web-app/components/ui/badge';
-import type { BadgeVariant } from '@web-app/components/ui/badge';
-import { cn } from '@web-app/lib/utils';
 
 interface StatusAppearance {
   variant: BadgeVariant;

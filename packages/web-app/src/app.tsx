@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { BrowserRouter, Link, Route, Routes, useLocation } from 'react-router';
+import { TooltipProvider } from 'design-system/components/tooltip';
+import { PageTitle } from 'design-system/layouts/page-header';
 import { AppHeader } from '@web-app/components/app-header';
-import { PageTitle } from '@web-app/components/page-header';
-import { TooltipProvider } from '@web-app/components/ui/tooltip';
 import { useDocumentTitle } from '@web-app/lib/use-document-title';
 import { CalendarPage } from '@web-app/pages/calendar-page';
 import { RoutinePage } from '@web-app/pages/routine-page';
