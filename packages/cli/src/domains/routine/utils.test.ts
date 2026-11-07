@@ -90,6 +90,22 @@ test('each agent gets its own defaults', () => {
   assert.equal(command.model, null);
 });
 
+test('keeps the agent settings that the frontmatter sets', () => {
+  const claude = buildRoutine(
+    '/tmp/demo.md',
+    routineFile('model: claude-sonnet-5-5\neffort: low\nmaxBudgetUsd: 2'),
+  );
+  assert.equal(claude.model, 'claude-sonnet-5-5');
+  assert.equal(claude.effort, 'low');
+  assert.equal(claude.maxBudgetUsd, 2);
+  const codex = buildRoutine(
+    '/tmp/demo.md',
+    routineFile('agent: codex\nmodel: gpt-5.5\neffort: high'),
+  );
+  assert.equal(codex.model, 'gpt-5.5');
+  assert.equal(codex.effort, 'high');
+});
+
 test('rejects settings the agent does not support', () => {
   assert.throws(() => buildRoutine('/tmp/demo.md', routineFile('agent: gemini')), /agent must be/);
   assert.throws(
