@@ -7,6 +7,11 @@ import type { Skip } from 'domains/scheduler/types';
 import { getSkipReasonLabel } from 'domains/scheduler/utils';
 import type { ToolItem, TranscriptItem } from 'domains/transcript/types';
 import {
+  getIsSubagent,
+  getTranscriptEmptyLabel,
+  getTranscriptResultLabel,
+} from 'domains/transcript/utils';
+import {
   formatDuration,
   formatRelativeCompact,
   formatSpan,
@@ -676,11 +681,11 @@ function itemLines(
     .with({ kind: 'tool' }, tool => toolLines(tool, toggle, isExpanded, width, isRunning))
     .with({ kind: 'result' }, result => {
       const look = result.isError
-        ? { icon: '✗', label: 'Finished with error', style: S.boldRed }
-        : { icon: '✓', label: 'Finished', style: S.boldGreen };
+        ? { icon: '✗', style: S.boldRed }
+        : { icon: '✓', style: S.boldGreen };
       return [
         [
-          text(`${look.icon} ${look.label}`, look.style),
+          text(`${look.icon} ${getTranscriptResultLabel(result.isError)}`, look.style),
           text(`  ${result.numTurns ?? '-'} turns`),
           text(`  ${formatDuration(result.durationMs)}`, S.magenta),
         ],
@@ -711,12 +716,12 @@ export function transcriptLines(
     return [
       ...lines,
       {
-        line: [text(isRunning ? 'Waiting for the first events…' : 'No transcript events.', S.dim)],
+        line: [text(getTranscriptEmptyLabel(isRunning), S.dim)],
       },
     ];
   let previousKind: TranscriptItem['kind'] | null = null;
   for (const item of items) {
-    const isSubagent = 'isSubagent' in item && item.isSubagent;
+    const isSubagent = getIsSubagent(item);
     const needsGap =
       isMatching({ kind: P.union('text', 'result') }, item) || isMatching('text', previousKind);
     if (needsGap && (lines.at(-1)?.line.length ?? 0) > 0) lines.push(blank());
