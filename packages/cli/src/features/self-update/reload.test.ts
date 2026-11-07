@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { areDepsStale, findDependencies, isWebAppStale } from './reload';
+import { areDepsStale, findDependencies, installDepsBeforeRestart, isWebAppStale } from './reload';
 
 function makeRepo(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ba-reload-'));
@@ -81,6 +81,22 @@ test('deps are stale when the lockfile is newer than the install marker', () => 
   touch(path.join(root, 'node_modules', '.modules.yaml'), 2_000_000);
   assert.equal(areDepsStale(root), false);
   touch(path.join(root, 'pnpm-lock.yaml'), 3_000_000);
+  assert.equal(areDepsStale(root), true);
+});
+
+test('a restart waits for the dependencies the new code needs', () => {
+  const root = makeRepo();
+  const lines: string[] = [];
+  const log = (line: string): void => {
+    lines.push(line);
+  };
+  touch(path.join(root, 'pnpm-lock.yaml'), 1_000_000);
+  touch(path.join(root, 'node_modules', '.modules.yaml'), 2_000_000);
+  assert.equal(installDepsBeforeRestart(log, root), true);
+  assert.equal(lines.length, 0);
+  touch(path.join(root, 'pnpm-lock.yaml'), 3_000_000);
+  assert.equal(installDepsBeforeRestart(log, root), false);
+  assert.match(lines.join('\n'), /pnpm -s install --frozen-lockfile failed/);
   assert.equal(areDepsStale(root), true);
 });
 

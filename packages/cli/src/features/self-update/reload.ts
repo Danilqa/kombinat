@@ -163,8 +163,8 @@ function runTool(command: string, args: string[], cwd: string, log: Log): boolea
 const buildWebApp = (workspaceRoot: string, log: Log): boolean =>
   runTool('pnpm', ['-s', '--filter', 'web-app', 'run', 'build'], workspaceRoot, log);
 
-export function installDepsIfStale(log: Log): boolean {
-  const dependencies = findDependencies();
+export function installDepsIfStale(log: Log, projectRoot = config.projectRoot): boolean {
+  const dependencies = findDependencies(projectRoot);
   if (dependencies === null || !isStale(dependencies)) return false;
   const { manager, root } = dependencies;
   log(`dependencies changed, running ${manager.command} ${manager.install.join(' ')}`);
@@ -174,6 +174,11 @@ export function installDepsIfStale(log: Log): boolean {
     fs.writeFileSync(path.join(modules, INSTALL_MARKER), '');
   }
   return isInstalled;
+}
+
+// Pulled code can need dependencies that are not installed yet.
+export function installDepsBeforeRestart(log: Log, projectRoot = config.projectRoot): boolean {
+  return !areDepsStale(projectRoot) || installDepsIfStale(log, projectRoot);
 }
 
 export function buildWebAppIfStale(log: Log): boolean {
@@ -261,9 +266,11 @@ export function startAutoPull(log: Log): () => void {
 
 export function startReloadWatchers(log: Log, restart: (reason: string) => void): () => void {
   const dependencies = findDependencies();
-  // Pulled code can need dependencies that are not installed yet.
   const installAndRestart = (reason: string): void => {
-    installDepsIfStale(log);
+    if (!installDepsBeforeRestart(log)) {
+      log(`${reason}, but the dependency install failed, keeping this version running`);
+      return;
+    }
     if (!fs.existsSync(config.cliBin)) {
       log(`${config.cliBin} is missing after the install, keeping this version running`);
       return;
