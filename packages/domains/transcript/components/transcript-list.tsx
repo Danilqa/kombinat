@@ -5,15 +5,9 @@ import { match } from 'ts-pattern';
 import { CodeBlock } from 'design-system/components/code-block';
 import { Markdown } from 'design-system/components/markdown';
 import { cn } from 'design-system/utils';
-import type {
-  HookItem,
-  InitItem,
-  ResultItem,
-  TextItem,
-  ToolItem,
-  TranscriptItem,
-} from 'domains/transcript/types';
 import { formatDuration } from 'utils/date-time';
+
+import type { HookItem, InitItem, ResultItem, TextItem, ToolItem, TranscriptItem } from '../types';
 
 interface HookRowProps {
   item: HookItem;
@@ -210,12 +204,12 @@ function getIsSubagent(item: TranscriptItem): boolean {
   return 'isSubagent' in item && item.isSubagent;
 }
 
-interface TranscriptProps {
+interface TranscriptListProps {
   items: TranscriptItem[];
   isRunning: boolean;
 }
 
-export function Transcript({ items, isRunning }: TranscriptProps) {
+export function TranscriptList({ items, isRunning }: TranscriptListProps) {
   if (items.length === 0)
     return (
       <p className="py-10 text-center text-body text-fg-muted">

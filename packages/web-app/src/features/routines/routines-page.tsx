@@ -13,15 +13,15 @@ import {
 } from 'design-system/components/table';
 import { PageHeader, SectionAside } from 'design-system/layouts/page-header';
 import { cn } from 'design-system/utils';
+import { RunNowButton } from 'domains/routine/components';
 import { getRoutines } from 'domains/routine/requests';
 import type { RoutineSummary } from 'domains/routine/types';
+import { RunStatusBadge } from 'domains/run/components';
 import { getSkipReasonLabel } from 'domains/scheduler/utils';
+import { usePolledData } from 'utils/hooks/use-polled-data';
 import { sameOriginApi } from 'utils/http';
-import { RunNowButton } from '@web-app/components/run-now-button';
-import { StatusBadge } from '@web-app/components/status-badge';
-import { useDocumentTitle } from '@web-app/lib/use-document-title';
-import { usePolledData } from '@web-app/lib/use-polled-data';
-import { useRowLink } from '@web-app/lib/use-row-link';
+import { useDocumentTitle } from '@web-app/hooks/use-document-title';
+import { useRowLink } from '@web-app/hooks/use-row-link';
 
 function getHasRunningRoutine(routines: RoutineSummary[]): boolean {
   return routines.some(routine => routine.running);
@@ -40,7 +40,7 @@ function LastRunCell({ routine }: LastRunCellProps) {
           to={`/runs/${encodeURIComponent(lastRun.routine)}/${encodeURIComponent(lastRun.id)}`}
           className="flex flex-col items-start gap-1"
         >
-          <StatusBadge status={lastRun.status} />
+          <RunStatusBadge status={lastRun.status} />
           <span className="text-body-sm text-fg-muted tabular-nums">
             <RelativeTime iso={lastRun.startedAt} />
           </span>

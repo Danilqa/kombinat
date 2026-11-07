@@ -5,12 +5,19 @@
   "sideEffects": false,
   "type": "module",
   "exports": {
-    "./*": "./*.ts"
+    "./*": "./*.ts",
+    "./daemon/components": "./daemon/components/index.ts",
+    "./routine/components": "./routine/components/index.ts",
+    "./run/components": "./run/components/index.ts",
+    "./transcript/components": "./transcript/components/index.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "design-system": "workspace:*",
+    "lucide-react": "catalog:",
+    "react": "catalog:",
     "ts-pattern": "catalog:",
     "utils": "workspace:*",
     "zod": "catalog:"

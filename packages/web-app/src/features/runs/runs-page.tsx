@@ -5,10 +5,10 @@ import { PageHeader, SectionAside } from 'design-system/layouts/page-header';
 import { RECENT_RUNS_LIMIT } from 'domains/run/constants';
 import { getRuns } from 'domains/run/requests';
 import type { RunRecord } from 'domains/run/types';
+import { usePolledData } from 'utils/hooks/use-polled-data';
 import { sameOriginApi } from 'utils/http';
 import { RunsTable } from '@web-app/components/runs-table';
-import { useDocumentTitle } from '@web-app/lib/use-document-title';
-import { usePolledData } from '@web-app/lib/use-polled-data';
+import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 
 function loadRuns(): Promise<RunRecord[]> {
   return getRuns(sameOriginApi, RECENT_RUNS_LIMIT);

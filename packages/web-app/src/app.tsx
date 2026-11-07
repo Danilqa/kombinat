@@ -3,12 +3,12 @@ import { BrowserRouter, Link, Route, Routes, useLocation } from 'react-router';
 import { TooltipProvider } from 'design-system/components/tooltip';
 import { PageTitle } from 'design-system/layouts/page-header';
 import { AppHeader } from '@web-app/components/app-header';
-import { useDocumentTitle } from '@web-app/lib/use-document-title';
-import { CalendarPage } from '@web-app/pages/calendar-page';
-import { RoutinePage } from '@web-app/pages/routine-page';
-import { RoutinesPage } from '@web-app/pages/routines-page';
-import { RunPage } from '@web-app/pages/run-page';
-import { RunsPage } from '@web-app/pages/runs-page';
+import { CalendarPage } from '@web-app/features/calendar/calendar-page';
+import { RoutinePage } from '@web-app/features/routines/routine-page';
+import { RoutinesPage } from '@web-app/features/routines/routines-page';
+import { RunPage } from '@web-app/features/runs/run-page';
+import { RunsPage } from '@web-app/features/runs/runs-page';
+import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 
 const MAIN_ID = 'main';
 

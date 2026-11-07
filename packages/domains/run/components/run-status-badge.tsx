@@ -3,8 +3,9 @@ import { match } from 'ts-pattern';
 import { Badge } from 'design-system/components/badge';
 import type { BadgeVariant } from 'design-system/components/badge';
 import { cn } from 'design-system/utils';
-import type { RunStatus } from 'domains/run/types';
-import { getRunStatusLabel } from 'domains/run/utils';
+
+import type { RunStatus } from '../types';
+import { getRunStatusLabel } from '../utils';
 
 interface StatusAppearance {
   variant: BadgeVariant;
@@ -42,11 +43,11 @@ function getStatusAppearance(status: RunStatus): StatusAppearance {
     .exhaustive();
 }
 
-interface StatusBadgeProps {
+interface RunStatusBadgeProps {
   status: RunStatus;
 }
 
-export function StatusBadge({ status }: StatusBadgeProps) {
+export function RunStatusBadge({ status }: RunStatusBadgeProps) {
   const appearance = getStatusAppearance(status);
   return (
     <Badge variant={appearance.variant} size="medium">

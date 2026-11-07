@@ -18,16 +18,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from 'design-system/componen
 import { PageTitle, SectionAside, SectionTitle } from 'design-system/layouts/page-header';
 import { cn } from 'design-system/utils';
 import { getAgentLabel } from 'domains/agent/utils';
+import { RunNowButton } from 'domains/routine/components';
 import { getRoutine } from 'domains/routine/requests';
 import type { RoutineDetail } from 'domains/routine/types';
 import type { Skip } from 'domains/scheduler/types';
 import { getSkipReasonLabel } from 'domains/scheduler/utils';
+import { usePolledData } from 'utils/hooks/use-polled-data';
 import { sameOriginApi } from 'utils/http';
 import { Breadcrumbs } from '@web-app/components/breadcrumbs';
-import { RunNowButton } from '@web-app/components/run-now-button';
 import { RunsTable } from '@web-app/components/runs-table';
-import { useDocumentTitle } from '@web-app/lib/use-document-title';
-import { usePolledData } from '@web-app/lib/use-polled-data';
+import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 
 function getIsRoutineRunning(routine: RoutineDetail): boolean {
   return routine.running;

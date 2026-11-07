@@ -8,16 +8,16 @@ import { ErrorState, LoadingState } from 'design-system/components/page-states';
 import { RelativeTime } from 'design-system/components/relative-time';
 import { Separator } from 'design-system/components/separator';
 import { PageTitle, SectionAside, SectionTitle } from 'design-system/layouts/page-header';
+import { RunStatusBadge } from 'domains/run/components';
 import { getRunWithTranscript } from 'domains/run/requests';
 import type { RunRecord, RunWithTranscript } from 'domains/run/types';
 import { getRunDurationMs, getTriggerLabel } from 'domains/run/utils';
+import { TranscriptList } from 'domains/transcript/components';
 import { formatDuration, formatShort } from 'utils/date-time';
+import { usePolledData } from 'utils/hooks/use-polled-data';
 import { sameOriginApi } from 'utils/http';
 import { Breadcrumbs } from '@web-app/components/breadcrumbs';
-import { StatusBadge } from '@web-app/components/status-badge';
-import { Transcript } from '@web-app/components/transcript';
-import { useDocumentTitle } from '@web-app/lib/use-document-title';
-import { usePolledData } from '@web-app/lib/use-polled-data';
+import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 
 function getIsRunActive(data: RunWithTranscript): boolean {
   return isMatching({ status: 'running' }, data.run);
@@ -95,7 +95,7 @@ function RunView({ run, transcript }: RunViewProps) {
         <SectionTitle aside={<SectionAside>{transcript.eventCount} events</SectionAside>}>
           Transcript
         </SectionTitle>
-        <Transcript items={transcript.items} isRunning={isRunning} />
+        <TranscriptList items={transcript.items} isRunning={isRunning} />
       </section>
     </div>
   );
@@ -121,7 +121,7 @@ export function RunPage() {
       {/* The title comes from the route, so the page has its heading while loading and on errors too. */}
       <header className="mb-6 flex max-w-full flex-wrap items-center gap-3">
         <PageTitle className="max-w-full font-mono">{id}</PageTitle>
-        {data && <StatusBadge status={data.run.status} />}
+        {data && <RunStatusBadge status={data.run.status} />}
       </header>
       {error && <ErrorState message={error} />}
       {!data && !error && <LoadingState />}

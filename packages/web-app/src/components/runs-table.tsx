@@ -9,11 +9,11 @@ import {
   TableRow,
 } from 'design-system/components/table';
 import { cn } from 'design-system/utils';
+import { RunStatusBadge } from 'domains/run/components';
 import type { RunRecord } from 'domains/run/types';
 import { getRunDurationMs, getTriggerLabel } from 'domains/run/utils';
 import { formatDuration } from 'utils/date-time';
-import { StatusBadge } from '@web-app/components/status-badge';
-import { useRowLink } from '@web-app/lib/use-row-link';
+import { useRowLink } from '@web-app/hooks/use-row-link';
 
 interface RunsTableProps {
   runs: RunRecord[];
@@ -57,7 +57,7 @@ export function RunsTable({ runs, hasRoutineColumn }: RunsTableProps) {
               </TableCell>
             )}
             <TableCell>
-              <StatusBadge status={run.status} />
+              <RunStatusBadge status={run.status} />
             </TableCell>
             <TableCell>
               <Link

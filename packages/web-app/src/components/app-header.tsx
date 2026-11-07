@@ -3,7 +3,7 @@ import { useLayoutEffect, useRef, type RefObject } from 'react';
 import { Link, useLocation } from 'react-router';
 import { BrandMark } from 'design-system/icons/brand-mark';
 import { cn } from 'design-system/utils';
-import { DaemonStatus } from '@web-app/components/daemon-status';
+import { DaemonStatusIndicator } from 'domains/daemon/components';
 
 interface NavItem {
   label: string;
@@ -107,7 +107,7 @@ export function AppHeader() {
           </ul>
         </nav>
         <span aria-hidden="true" className="mx-1 h-4 w-px bg-line-strong max-sm:hidden" />
-        <DaemonStatus />
+        <DaemonStatusIndicator />
       </div>
     </header>
   );

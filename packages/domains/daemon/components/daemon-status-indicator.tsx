@@ -1,12 +1,14 @@
 import { P, match } from 'ts-pattern';
+
 import { Popover, PopoverContent, PopoverTrigger } from 'design-system/components/popover';
 import { cn } from 'design-system/utils';
-import { getDaemonStatus } from 'domains/daemon/requests';
-import type { DaemonHealth, DaemonStatus as DaemonStatusData } from 'domains/daemon/types';
-import { getDaemonHealth } from 'domains/daemon/utils';
 import { formatRelative } from 'utils/date-time';
+import { usePolledData } from 'utils/hooks/use-polled-data';
 import { sameOriginApi } from 'utils/http';
-import { usePolledData } from '@web-app/lib/use-polled-data';
+
+import { getDaemonStatus } from '../requests';
+import type { DaemonHealth, DaemonStatus } from '../types';
+import { getDaemonHealth } from '../utils';
 
 interface DaemonHealthAppearance {
   label: string;
@@ -22,13 +24,13 @@ const daemonHealthAppearances: Record<DaemonHealth, DaemonHealthAppearance> = {
 const triggerClassName =
   'flex h-8 items-center gap-2 rounded-full px-2.5 text-body-sm text-fg-muted tabular-nums';
 
-function getHasRunning(status: DaemonStatusData): boolean {
+function getHasRunning(status: DaemonStatus): boolean {
   return status.running > 0;
 }
 
 interface DaemonStatusSummaryProps {
   health: DaemonHealth;
-  status: DaemonStatusData | null;
+  status: DaemonStatus | null;
 }
 
 // Every unhealthy state gets its own visible text, so the dot colour is not the only cue.
@@ -45,7 +47,7 @@ function DaemonStatusSummary({ health, status }: DaemonStatusSummaryProps) {
 }
 
 interface DaemonStatusDetailsProps {
-  status: DaemonStatusData;
+  status: DaemonStatus;
 }
 
 function DaemonStatusDetails({ status }: DaemonStatusDetailsProps) {
@@ -71,7 +73,7 @@ function DaemonStatusDetails({ status }: DaemonStatusDetailsProps) {
   );
 }
 
-export function DaemonStatus() {
+export function DaemonStatusIndicator() {
   const { data, error, isLoading } = usePolledData(
     'status',
     () => getDaemonStatus(sameOriginApi),

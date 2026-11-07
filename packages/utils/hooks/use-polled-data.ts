@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { getErrorMessage } from 'utils/error';
+import { getErrorMessage } from '../error';
 
 const ACTIVE_INTERVAL_MS = 5000;
 const IDLE_INTERVAL_MS = 15000;

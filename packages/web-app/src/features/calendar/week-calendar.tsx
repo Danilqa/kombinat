@@ -16,7 +16,9 @@ import type { CalendarEntry } from 'domains/calendar/types';
 import type { RunStatus } from 'domains/run/types';
 import { getRunStatusLabel } from 'domains/run/utils';
 import { formatClock, formatDayMonth, formatWeekday } from 'utils/date-time';
+import { usePolledData } from 'utils/hooks/use-polled-data';
 import { sameOriginApi } from 'utils/http';
+import { useStoredBoolean } from '@web-app/hooks/use-stored-boolean';
 import {
   addDays,
   countOverlapPairs,
@@ -26,9 +28,7 @@ import {
   getWeekdayIndex,
   layoutDay,
   type PositionedEntry,
-} from '@web-app/lib/calendar-layout';
-import { usePolledData } from '@web-app/lib/use-polled-data';
-import { useStoredBoolean } from '@web-app/lib/use-stored-boolean';
+} from './calendar-layout';
 
 const POLL_INTERVALS = { activeMs: 60_000, idleMs: 60_000 };
 const NOW_TICK_MS = 60_000;
