@@ -107,7 +107,7 @@ const WIDE: Array<[number, number]> = [
   [0x20000, 0x3fffd],
 ];
 
-function inRanges(code: number, ranges: Array<[number, number]>): boolean {
+function checkIsInRanges(code: number, ranges: Array<[number, number]>): boolean {
   for (const [from, to] of ranges) {
     if (code < from) return false;
     if (code <= to) return true;
@@ -117,8 +117,8 @@ function inRanges(code: number, ranges: Array<[number, number]>): boolean {
 
 export function charWidth(char: string): number {
   const code = char.codePointAt(0) ?? 0;
-  if (code === 0x200d || inRanges(code, ZERO_WIDTH)) return 0;
-  return inRanges(code, WIDE) ? 2 : 1;
+  if (code === 0x200d || checkIsInRanges(code, ZERO_WIDTH)) return 0;
+  return checkIsInRanges(code, WIDE) ? 2 : 1;
 }
 
 export function textWidth(text: string): number {

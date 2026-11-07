@@ -19,7 +19,7 @@ import { getRoutinePath, getRunPath } from '@web-app/constants/path';
 import { useStoredBoolean } from '@web-app/hooks/use-stored-boolean';
 import {
   addDays,
-  getIsSameDay,
+  checkIsSameDay,
   getMinutesIntoDay,
   getWeekStart,
   getWeekdayIndex,
@@ -141,11 +141,11 @@ function formatHour(hour: number): string {
   return `${String(hour).padStart(2, '0')}:00`;
 }
 
-function getIsWeekend(day: Date): boolean {
+function checkIsWeekend(day: Date): boolean {
   return day.getDay() === 0 || day.getDay() === 6;
 }
 
-function getHasRunningEntry(entries: CalendarEntry[]): boolean {
+function checkHasRunningEntry(entries: CalendarEntry[]): boolean {
   return entries.some(isMatching({ status: 'running' }));
 }
 
@@ -173,7 +173,7 @@ const dayNumberClassNames: Record<DayTone, string> = {
 };
 
 function getDayTone(day: Date, isToday: boolean): DayTone {
-  return match({ isToday, isWeekend: getIsWeekend(day) })
+  return match({ isToday, isWeekend: checkIsWeekend(day) })
     .with({ isToday: true }, () => 'today' as const)
     .with({ isWeekend: true }, () => 'weekend' as const)
     .otherwise(() => 'weekday' as const);
@@ -291,7 +291,7 @@ function DayPicker({ days, selectedIndex, now, onSelect }: DayPickerProps) {
   return (
     <div className="grid grid-cols-7 gap-1 px-2 py-1 sm:hidden">
       {days.map((day, index) => {
-        const isToday = getIsSameDay(day, now);
+        const isToday = checkIsSameDay(day, now);
         const isSelected = index === selectedIndex;
         return (
           <button
@@ -328,7 +328,7 @@ function DayColumn({ day, entries, now, isToday, isSelected, routinesById }: Day
     <div
       className={cn(
         'relative border-l border-line-faint',
-        getIsWeekend(day) && 'bg-hover',
+        checkIsWeekend(day) && 'bg-hover',
         !isSelected && 'max-sm:hidden',
       )}
       style={{
@@ -438,7 +438,7 @@ export function WeekCalendar() {
   const { data, error } = usePolledData(
     `calendar:${weekStart.toISOString()}`,
     () => getCalendar(sameOriginApi, weekStart, weekEnd),
-    getHasRunningEntry,
+    checkHasRunningEntry,
     POLL_INTERVALS,
   );
   const entries = data ?? [];
@@ -451,7 +451,7 @@ export function WeekCalendar() {
     [entries],
   );
   const overlapCount = useMemo(() => countOverlapPairs(entries), [entries]);
-  const isCurrentWeek = getIsSameDay(weekStart, getWeekStart(now));
+  const isCurrentWeek = checkIsSameDay(weekStart, getWeekStart(now));
 
   const showToday = () => {
     const today = new Date();
@@ -506,7 +506,7 @@ export function WeekCalendar() {
               <div className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] pr-2 max-sm:hidden">
                 <div />
                 {days.map(day => (
-                  <DayHeader key={day.toISOString()} day={day} isToday={getIsSameDay(day, now)} />
+                  <DayHeader key={day.toISOString()} day={day} isToday={checkIsSameDay(day, now)} />
                 ))}
               </div>
               <DayPicker
@@ -538,7 +538,7 @@ export function WeekCalendar() {
                   day={day}
                   entries={entries}
                   now={now}
-                  isToday={getIsSameDay(day, now)}
+                  isToday={checkIsSameDay(day, now)}
                   isSelected={index === selectedDayIndex}
                   routinesById={isHighlightingOverlaps ? routinesById : null}
                 />

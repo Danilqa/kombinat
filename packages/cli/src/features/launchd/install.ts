@@ -104,7 +104,7 @@ function sleep(ms: number): void {
 
 function waitUntilUnloaded(timeoutMs = 10_000): void {
   const deadline = Date.now() + timeoutMs;
-  while (isLaunchdLoaded() && Date.now() < deadline) sleep(250);
+  while (checkIsLaunchdLoaded() && Date.now() < deadline) sleep(250);
 }
 
 function bootstrapWithRetry(attempts = 5): void {
@@ -119,7 +119,7 @@ function bootstrapWithRetry(attempts = 5): void {
   }
 }
 
-export function isLaunchdLoaded(): boolean {
+export function checkIsLaunchdLoaded(): boolean {
   try {
     execFileSync('launchctl', ['print', `${domain()}/${config.launchdLabel}`], { stdio: 'pipe' });
     return true;

@@ -1,8 +1,8 @@
 import { execFileSync } from 'node:child_process';
 
-import { isWebAppStale } from '../../cli/src/features/self-update/reload';
+import { checkIsWebAppStale } from '../../cli/src/features/self-update/reload';
 
 export default function globalSetup(): void {
-  if (isWebAppStale())
+  if (checkIsWebAppStale())
     execFileSync('pnpm', ['-s', '--filter', 'web-app', 'run', 'build'], { stdio: 'inherit' });
 }

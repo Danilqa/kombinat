@@ -5,7 +5,7 @@ import type { ToolResult, TranscriptItem } from 'domains/transcript/types';
 import { toPreview } from 'domains/transcript/utils';
 
 import { config } from '../../config';
-import { isRecord } from '../../utils/json';
+import { checkIsRecord } from '../../utils/json';
 import { getUnattendedNote, pickOne, rejectUnsupported, withoutEnv } from './settings';
 import type { Agent, RunUpdate } from './types';
 
@@ -96,7 +96,7 @@ function getContentBlocks(event: ClaudeEvent): ContentBlock[] {
 
 function getInputPreview(name: string, input: unknown): string {
   const field = PREVIEW_FIELDS[name];
-  const value = field !== undefined && isRecord(input) ? input[field] : undefined;
+  const value = field !== undefined && checkIsRecord(input) ? input[field] : undefined;
   return toPreview(typeof value === 'string' ? value : JSON.stringify(input ?? {}));
 }
 

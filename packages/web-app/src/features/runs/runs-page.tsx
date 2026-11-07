@@ -13,13 +13,13 @@ function loadRuns(): Promise<RunRecord[]> {
   return getRuns(sameOriginApi, RECENT_RUNS_LIMIT);
 }
 
-function getHasRunningRun(runs: RunRecord[]): boolean {
+function checkHasRunningRun(runs: RunRecord[]): boolean {
   return runs.some(isMatching({ status: 'running' }));
 }
 
 export function RunsPage() {
   useDocumentTitle('Runs');
-  const { data, error } = usePolledData('runs', loadRuns, getHasRunningRun);
+  const { data, error } = usePolledData('runs', loadRuns, checkHasRunningRun);
 
   return (
     <div>

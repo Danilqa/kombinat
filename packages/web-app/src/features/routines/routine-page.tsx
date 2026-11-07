@@ -12,7 +12,7 @@ import { RunsTable } from '@web-app/components/runs-table';
 import { ROUTINES_PATH } from '@web-app/constants/path';
 import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 
-function getIsRoutineRunning(routine: RoutineDetail): boolean {
+function checkIsRoutineRunning(routine: RoutineDetail): boolean {
   return routine.running;
 }
 
@@ -87,7 +87,7 @@ export function RoutinePage() {
   const { data, error, reload } = usePolledData(
     `routine/${name}`,
     () => getRoutine(sameOriginApi, name),
-    getIsRoutineRunning,
+    checkIsRoutineRunning,
   );
 
   return (

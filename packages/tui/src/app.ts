@@ -14,7 +14,7 @@ import {
   confirmPopup,
   helpPopup,
   hintsBar,
-  isExpandable,
+  checkIsExpandable,
   overlayOnto,
   routinePage,
   routineRow,
@@ -229,7 +229,7 @@ export class TuiApp {
     return this.stack[this.stack.length - 1];
   }
 
-  hasActiveRuns(): boolean {
+  checkHasActiveRuns(): boolean {
     return (
       (this.overview?.status.running ?? 0) > 0 || this.routines.some(routine => routine.running)
     );
@@ -565,7 +565,7 @@ export class TuiApp {
   private toggleAll(page: RunPage): void {
     const data = this.runData.get(runKey(page.routine, page.id));
     if (!data) return;
-    const keys = data.items.filter(isExpandable).map(item => item.key);
+    const keys = data.items.filter(checkIsExpandable).map(item => item.key);
     const shouldExpand = keys.some(key => !data.expanded.has(key));
     data.expanded = new Set(shouldExpand ? keys : []);
     data.expandedVersion++;

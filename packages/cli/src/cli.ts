@@ -19,7 +19,7 @@ import {
   getDaemonFolder,
   getLaunchdStatus,
   install,
-  isLaunchdLoaded,
+  checkIsLaunchdLoaded,
   startLaunchd,
   stopLaunchd,
   uninstall,
@@ -187,7 +187,7 @@ function dev(options: CliOptions): void {
   if (workspaceRoot === null)
     throw new Error('dev only works in a checkout of the kombinat repository');
   ensureStateDirs();
-  const hadLaunchd = isLaunchdLoaded();
+  const hadLaunchd = checkIsLaunchdLoaded();
   if (hadLaunchd) {
     stopLaunchd();
     log('stopped the launchd daemon, this process takes over until Ctrl-C');

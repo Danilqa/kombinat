@@ -12,7 +12,7 @@ import { Breadcrumbs } from '@web-app/components/breadcrumbs';
 import { RUNS_PATH, getRoutinePath } from '@web-app/constants/path';
 import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 
-function getIsRunActive(data: RunWithTranscript): boolean {
+function checkIsRunActive(data: RunWithTranscript): boolean {
   return isMatching({ status: 'running' }, data.run);
 }
 
@@ -50,7 +50,7 @@ export function RunPage() {
   const { data, error } = usePolledData(
     `run/${routine}/${id}`,
     () => getRunWithTranscript(sameOriginApi, routine, id),
-    getIsRunActive,
+    checkIsRunActive,
   );
 
   return (

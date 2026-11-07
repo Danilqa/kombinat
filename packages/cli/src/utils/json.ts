@@ -11,7 +11,7 @@ export function parseJson(text: string): unknown {
   }
 }
 
-export function isRecord(value: unknown): value is Record<string, unknown> {
+export function checkIsRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 

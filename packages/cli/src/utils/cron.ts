@@ -75,7 +75,7 @@ export function parseCron(expression: string): CronFields {
   };
 }
 
-function matchesFields(c: CronFields, date: Date): boolean {
+function checkMatchesFields(c: CronFields, date: Date): boolean {
   if (
     !c.minute.has(date.getMinutes()) ||
     !c.hour.has(date.getHours()) ||
@@ -90,8 +90,8 @@ function matchesFields(c: CronFields, date: Date): boolean {
   return true;
 }
 
-export function matchesCron(expression: string, date: Date): boolean {
-  return matchesFields(parseCron(expression), date);
+export function checkMatchesCron(expression: string, date: Date): boolean {
+  return checkMatchesFields(parseCron(expression), date);
 }
 
 export function nextCronRun(expression: string, after: Date): Date | undefined {
@@ -101,7 +101,7 @@ export function nextCronRun(expression: string, after: Date): Date | undefined {
   cursor.setMinutes(cursor.getMinutes() + 1);
   const limit = 366 * 24 * 60;
   for (let i = 0; i < limit; i++) {
-    if (matchesFields(fields, cursor)) return cursor;
+    if (checkMatchesFields(fields, cursor)) return cursor;
     cursor.setMinutes(cursor.getMinutes() + 1);
   }
   return undefined;
@@ -118,7 +118,7 @@ export function cronRunsBetween(
   cursor.setSeconds(0, 0);
   cursor.setMinutes(cursor.getMinutes() + 1);
   while (cursor <= untilInclusive) {
-    if (matchesFields(fields, cursor)) runs.push(new Date(cursor));
+    if (checkMatchesFields(fields, cursor)) runs.push(new Date(cursor));
     cursor.setMinutes(cursor.getMinutes() + 1);
   }
   return runs;

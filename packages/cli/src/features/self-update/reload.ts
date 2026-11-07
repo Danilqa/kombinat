@@ -23,7 +23,7 @@ function getProcessOutput(error: unknown): string {
 const SKIPPED_FOLDERS = ['node_modules', 'dist'];
 
 // Docs such as packages/domains/README.md change no code.
-function isSkipped(file: string): boolean {
+function checkIsSkipped(file: string): boolean {
   return (
     file.endsWith('.md') || file.split(path.sep).some(segment => SKIPPED_FOLDERS.includes(segment))
   );
@@ -35,7 +35,7 @@ function getNewestMtime(root: string): number {
   if (stat.isFile()) return stat.mtimeMs;
   return fs
     .readdirSync(root)
-    .filter(entry => !isSkipped(entry))
+    .filter(entry => !checkIsSkipped(entry))
     .reduce(
       (newest, entry) => Math.max(newest, getNewestMtime(path.join(root, entry))),
       stat.mtimeMs,
@@ -53,7 +53,7 @@ const webAppSources = (workspaceRoot: string) =>
     path.join(workspaceRoot, 'packages', source),
   );
 
-export function isWebAppStale(workspaceRoot = config.workspaceRoot): boolean {
+export function checkIsWebAppStale(workspaceRoot = config.workspaceRoot): boolean {
   if (workspaceRoot === null) return false;
   const built = path.join(workspaceRoot, 'packages', 'cli', 'dist', 'web-app', 'index.html');
   if (!fs.existsSync(built)) return true;
@@ -123,7 +123,7 @@ function getMtime(file: string): number {
   return fs.existsSync(file) ? fs.statSync(file).mtimeMs : 0;
 }
 
-function isStale({ manager, root }: Dependencies): boolean {
+function checkIsStale({ manager, root }: Dependencies): boolean {
   const installedAt = Math.max(
     ...[manager.marker, INSTALL_MARKER].map(marker =>
       getMtime(path.join(root, 'node_modules', marker)),
@@ -134,9 +134,9 @@ function isStale({ manager, root }: Dependencies): boolean {
   );
 }
 
-export function areDepsStale(projectRoot = config.projectRoot): boolean {
+export function checkAreDepsStale(projectRoot = config.projectRoot): boolean {
   const dependencies = findDependencies(projectRoot);
-  return dependencies !== null && isStale(dependencies);
+  return dependencies !== null && checkIsStale(dependencies);
 }
 
 function runTool(command: string, args: string[], cwd: string, log: Log): boolean {
@@ -165,7 +165,7 @@ const buildWebApp = (workspaceRoot: string, log: Log): boolean =>
 
 export function installDepsIfStale(log: Log, projectRoot = config.projectRoot): boolean {
   const dependencies = findDependencies(projectRoot);
-  if (dependencies === null || !isStale(dependencies)) return false;
+  if (dependencies === null || !checkIsStale(dependencies)) return false;
   const { manager, root } = dependencies;
   log(`dependencies changed, running ${manager.command} ${manager.install.join(' ')}`);
   const isInstalled = runTool(manager.command, manager.install, root, log);
@@ -177,12 +177,12 @@ export function installDepsIfStale(log: Log, projectRoot = config.projectRoot): 
 }
 
 export function installDepsBeforeRestart(log: Log, projectRoot = config.projectRoot): boolean {
-  return !areDepsStale(projectRoot) || installDepsIfStale(log, projectRoot);
+  return !checkAreDepsStale(projectRoot) || installDepsIfStale(log, projectRoot);
 }
 
 export function buildWebAppIfStale(log: Log): boolean {
   const { workspaceRoot } = config;
-  if (workspaceRoot === null || !isWebAppStale(workspaceRoot)) return false;
+  if (workspaceRoot === null || !checkIsWebAppStale(workspaceRoot)) return false;
   log('ui sources newer than dist/web-app, building');
   return buildWebApp(workspaceRoot, log);
 }
@@ -196,7 +196,7 @@ function watchDebounced(
   let timer: NodeJS.Timeout | null = null;
   let lastFile = '';
   const watcher = fs.watch(target, { recursive: true }, (_event, file) => {
-    if (file !== null && isSkipped(file)) return;
+    if (file !== null && checkIsSkipped(file)) return;
     lastFile = file ?? '';
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => onChange(lastFile), delayMs);

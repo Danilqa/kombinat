@@ -24,7 +24,7 @@ const daemonHealthAppearances: Record<DaemonHealth, DaemonHealthAppearance> = {
 const triggerClassName =
   'flex h-8 items-center gap-2 rounded-full px-2.5 text-body-sm text-fg-muted tabular-nums';
 
-function getHasRunning(status: DaemonStatus): boolean {
+function checkHasRunning(status: DaemonStatus): boolean {
   return status.running > 0;
 }
 
@@ -77,7 +77,7 @@ export function DaemonStatusIndicator() {
   const { data, error, isLoading } = usePolledData(
     'status',
     () => getDaemonStatus(sameOriginApi),
-    getHasRunning,
+    checkHasRunning,
   );
   if (isLoading) {
     // Holds the width of the loaded summary so the navigation next to it does not jump.

@@ -7,7 +7,7 @@ import { cn } from 'design-system/utils';
 import { formatDuration } from 'utils/date-time';
 
 import type { HookItem, InitItem, ResultItem, TextItem, ToolItem, TranscriptItem } from '../types';
-import { getIsSubagent, getTranscriptEmptyLabel, getTranscriptResultLabel } from '../utils';
+import { checkIsSubagent, getTranscriptEmptyLabel, getTranscriptResultLabel } from '../utils';
 
 interface HookRowProps {
   item: HookItem;
@@ -209,7 +209,7 @@ export function TranscriptList({ items, isRunning }: TranscriptListProps) {
       {items.map(item => (
         <div
           key={item.key}
-          className={cn(getIsSubagent(item) && 'ml-5 border-l border-line-strong pl-3')}
+          className={cn(checkIsSubagent(item) && 'ml-5 border-l border-line-strong pl-3')}
         >
           {renderItem(item, isRunning)}
         </div>

@@ -40,12 +40,12 @@ export function runTui(baseUrl: string, stopSignal?: AbortSignal): Promise<void>
       await app.refresh();
       pollTimer = setTimeout(
         () => void poll(),
-        app.hasActiveRuns() ? POLL_ACTIVE_MS : POLL_IDLE_MS,
+        app.checkHasActiveRuns() ? POLL_ACTIVE_MS : POLL_IDLE_MS,
       );
     };
     const repaint = () => {
       draw();
-      frameTimer = setTimeout(repaint, app.hasActiveRuns() ? FRAME_ACTIVE_MS : FRAME_IDLE_MS);
+      frameTimer = setTimeout(repaint, app.checkHasActiveRuns() ? FRAME_ACTIVE_MS : FRAME_IDLE_MS);
     };
 
     terminal.start(keys => {
