@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { HookItem } from './shared/contract';
+import type { HookItem } from 'domains/transcript/types';
 
 export const beforeHookEventSchema = z.object({
   type: z.literal('before_hook'),

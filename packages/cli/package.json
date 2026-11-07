@@ -47,6 +47,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "domains": "workspace:*",
     "esbuild": "0.28.2",
     "tsx": "catalog:",
     "utils": "workspace:*"

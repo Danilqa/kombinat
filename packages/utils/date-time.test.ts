@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { formatDuration, formatRelative, formatSpan } from './format';
+import { formatDuration, formatRelativeCompact, formatSpan } from './date-time';
 
 const now = Date.parse('2026-10-06T12:00:00Z');
 const offset = (ms: number) => new Date(now + ms).toISOString();
@@ -14,11 +14,11 @@ test('formatSpan is compact and drops minutes for long spans', () => {
   assert.equal(formatSpan(50 * 3_600_000), '2d');
 });
 
-test('formatRelative says now, in or ago', () => {
-  assert.equal(formatRelative(offset(4_000), now), 'now');
-  assert.equal(formatRelative(offset(9 * 60_000), now), 'in 9m');
-  assert.equal(formatRelative(offset(-50 * 60_000), now), '50m ago');
-  assert.equal(formatRelative(null, now), '-');
+test('formatRelativeCompact says now, in or ago', () => {
+  assert.equal(formatRelativeCompact(offset(4_000), now), 'now');
+  assert.equal(formatRelativeCompact(offset(9 * 60_000), now), 'in 9m');
+  assert.equal(formatRelativeCompact(offset(-50 * 60_000), now), '50m ago');
+  assert.equal(formatRelativeCompact(null, now), '-');
 });
 
 test('formatDuration matches the dashboard', () => {

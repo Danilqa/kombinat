@@ -1,9 +1,10 @@
 import { match } from 'ts-pattern';
 import { z } from 'zod';
 
+import type { ToolResult, TranscriptItem } from 'domains/transcript/types';
+
 import { config } from '../config';
 import { isRecord } from '../json';
-import type { ToolResult, TranscriptItem } from '../shared/contract';
 import { toPreview } from '../transcript';
 import { getUnattendedNote, pickOne, rejectUnsupported, withoutEnv } from './settings';
 import type { Agent, RunUpdate } from './types';

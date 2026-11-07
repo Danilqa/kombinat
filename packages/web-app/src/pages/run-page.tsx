@@ -1,5 +1,10 @@
 import { useParams } from 'react-router';
 import { isMatching } from 'ts-pattern';
+import { getRunWithTranscript } from 'domains/run/requests';
+import type { RunRecord, RunWithTranscript } from 'domains/run/types';
+import { getRunDurationMs, getTriggerLabel } from 'domains/run/utils';
+import { formatDuration, formatShort } from 'utils/date-time';
+import { sameOriginApi } from 'utils/http';
 import { CodeBlock } from '@web-app/components/code-block';
 import { DetailList, type DetailEntry } from '@web-app/components/detail-list';
 import { Markdown } from '@web-app/components/markdown';
@@ -11,25 +16,12 @@ import {
 } from '@web-app/components/page-header';
 import { ErrorState, LoadingState } from '@web-app/components/page-states';
 import { RelativeTime } from '@web-app/components/relative-time';
-import { StatusBadge, getTriggerLabel } from '@web-app/components/status-badge';
+import { StatusBadge } from '@web-app/components/status-badge';
 import { Transcript } from '@web-app/components/transcript';
 import { Card } from '@web-app/components/ui/card';
 import { Separator } from '@web-app/components/ui/separator';
-import { getRun, getRunTranscript } from '@web-app/lib/api';
-import type { RunRecord, Transcript as RunTranscript } from '@web-app/lib/api';
-import { formatDuration, getRunDurationMs, formatShort } from '@web-app/lib/format';
 import { useDocumentTitle } from '@web-app/lib/use-document-title';
 import { usePolledData } from '@web-app/lib/use-polled-data';
-
-interface RunWithTranscript {
-  run: RunRecord;
-  transcript: RunTranscript;
-}
-
-async function loadRun(routine: string, id: string): Promise<RunWithTranscript> {
-  const [run, transcript] = await Promise.all([getRun(routine, id), getRunTranscript(routine, id)]);
-  return { run, transcript };
-}
 
 function getIsRunActive(data: RunWithTranscript): boolean {
   return isMatching({ status: 'running' }, data.run);
@@ -118,7 +110,7 @@ export function RunPage() {
   useDocumentTitle(`${routine} run ${id}`);
   const { data, error } = usePolledData(
     `run/${routine}/${id}`,
-    () => loadRun(routine, id),
+    () => getRunWithTranscript(sameOriginApi, routine, id),
     getIsRunActive,
   );
 

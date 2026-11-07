@@ -1,33 +1,18 @@
-import { z } from 'zod';
-
-import { readResponse } from 'utils/http';
+import { getDaemonStatus } from 'domains/daemon/requests';
+import type { DaemonStatus } from 'domains/daemon/types';
+import { getRoutine, getRoutines, startRoutineRun } from 'domains/routine/requests';
+import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
+import { RECENT_RUNS_LIMIT } from 'domains/run/constants';
+import { getRuns, getRunWithTranscript } from 'domains/run/requests';
+import type { RunRecord, RunWithTranscript } from 'domains/run/types';
+import { createHttpClient } from 'utils/http';
 
 import { config } from '../config';
-import {
-  daemonStatusSchema,
-  routineDetailSchema,
-  routineSummarySchema,
-  runRecordSchema,
-  startedRunSchema,
-  transcriptSchema,
-} from '../shared/contract';
-import type {
-  DaemonStatus,
-  RoutineDetail,
-  RoutineSummary,
-  RunRecord,
-  Transcript,
-} from '../shared/contract';
 
 export interface Overview {
   status: DaemonStatus;
   routines: RoutineSummary[];
   runs: RunRecord[];
-}
-
-export interface RunWithTranscript {
-  run: RunRecord;
-  transcript: Transcript;
 }
 
 // Same API as the web dashboard, so "run now" starts in the launchd daemon (unlocked keychain), not over ssh.
@@ -40,45 +25,26 @@ export interface DaemonClient {
 }
 
 export function createDaemonClient(baseUrl = `http://127.0.0.1:${config.port}`): DaemonClient {
-  async function request<T>(
-    pathname: string,
-    schema: z.ZodType<T>,
-    init?: RequestInit,
-  ): Promise<T> {
-    let response: Response;
-    try {
-      response = await fetch(`${baseUrl}${pathname}`, {
-        ...init,
-        signal: AbortSignal.timeout(30_000),
-      });
-    } catch {
-      throw new Error(`daemon not reachable at ${baseUrl}`);
-    }
-    return readResponse(response, schema);
-  }
-  const encode = encodeURIComponent;
+  const http = createHttpClient({
+    baseUrl,
+    timeoutMs: 30_000,
+    networkErrorMessage: `daemon not reachable at ${baseUrl}`,
+  });
 
   return {
     baseUrl,
     async getOverview() {
       const [status, routines, runs] = await Promise.all([
-        request('/api/status', daemonStatusSchema),
-        request('/api/routines', z.array(routineSummarySchema)),
-        request('/api/runs?limit=50', z.array(runRecordSchema)),
+        getDaemonStatus(http),
+        getRoutines(http),
+        getRuns(http, RECENT_RUNS_LIMIT),
       ]);
       return { status, routines, runs };
     },
-    getRoutine: async name => request(`/api/routines/${encode(name)}`, routineDetailSchema),
-    async getRun(routine, id) {
-      const runPath = `/api/runs/${encode(routine)}/${encode(id)}`;
-      const [run, transcript] = await Promise.all([
-        request(runPath, runRecordSchema),
-        request(`${runPath}/transcript`, transcriptSchema),
-      ]);
-      return { run, transcript };
-    },
+    getRoutine: async name => getRoutine(http, name),
+    getRun: async (routine, id) => getRunWithTranscript(http, routine, id),
     async startRun(name) {
-      await request(`/api/routines/${encode(name)}/run`, startedRunSchema, { method: 'POST' });
+      await startRoutineRun(http, name);
     },
   };
 }

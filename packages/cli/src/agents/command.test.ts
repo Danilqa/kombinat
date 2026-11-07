@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
+import { makeRunRecord } from 'domains/run/mocks';
+
 import { buildRoutine } from '../routines';
-import { makeRunRecord } from '../testing';
 import { commandAgent } from './command';
 import { buildTranscript } from './index';
 

@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
+import { makeRunRecord } from 'domains/run/mocks';
+
 import { buildRoutine } from '../routines';
-import { expectInit, expectResult, expectText, expectTool, makeRunRecord } from '../testing';
+import { expectInit, expectResult, expectText, expectTool } from '../testing';
 import { buildTranscript } from './index';
 import { claudeAgent } from './claude';
 

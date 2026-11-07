@@ -1,5 +1,3 @@
-import type { RunRecord } from '@web-app/lib/api';
-
 const absoluteFormatter = new Intl.DateTimeFormat('en-GB', {
   weekday: 'short',
   day: 'numeric',
@@ -11,6 +9,15 @@ const absoluteFormatter = new Intl.DateTimeFormat('en-GB', {
 });
 
 const shortFormatter = new Intl.DateTimeFormat('en-GB', {
+  day: 'numeric',
+  month: 'short',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+});
+
+const timestampFormatter = new Intl.DateTimeFormat('en-GB', {
+  weekday: 'short',
   day: 'numeric',
   month: 'short',
   hour: '2-digit',
@@ -66,6 +73,10 @@ export function formatShort(iso: string): string {
   return shortFormatter.format(new Date(iso));
 }
 
+export function formatTimestamp(iso: string): string {
+  return timestampFormatter.format(new Date(iso));
+}
+
 export function formatRelative(iso: string, now: number = Date.now()): string {
   const diffSeconds = (new Date(iso).getTime() - now) / 1000;
   const absSeconds = Math.abs(diffSeconds);
@@ -73,6 +84,25 @@ export function formatRelative(iso: string, now: number = Date.now()): string {
   const { unit, seconds } =
     relativeUnits.find(candidate => absSeconds >= candidate.seconds) ?? SECOND;
   return relativeFormatter.format(Math.round(diffSeconds / seconds), unit);
+}
+
+// "45s", "5m", "3h 5m", "13h", "2d": short enough for a list column.
+export function formatSpan(ms: number): string {
+  const seconds = Math.floor(Math.abs(ms) / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 10) return minutes % 60 ? `${hours}h ${minutes % 60}m` : `${hours}h`;
+  if (hours < 48) return `${hours}h`;
+  return `${Math.floor(hours / 24)}d`;
+}
+
+export function formatRelativeCompact(iso: string | null, now: number = Date.now()): string {
+  if (!iso) return '-';
+  const diff = new Date(iso).getTime() - now;
+  if (Math.abs(diff) < 10_000) return 'now';
+  return diff > 0 ? `in ${formatSpan(diff)}` : `${formatSpan(diff)} ago`;
 }
 
 export function formatDuration(ms: number | null): string {
@@ -83,16 +113,4 @@ export function formatDuration(ms: number | null): string {
   const seconds = totalSeconds % 60;
   if (minutes < 60) return `${minutes}m ${seconds}s`;
   return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
-}
-
-export function getRunDurationMs(
-  run: Pick<RunRecord, 'startedAt' | 'endedAt'>,
-  now: number = Date.now(),
-): number {
-  const end = run.endedAt ? new Date(run.endedAt).getTime() : now;
-  return end - new Date(run.startedAt).getTime();
-}
-
-export function truncate(text: string, max: number): string {
-  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }

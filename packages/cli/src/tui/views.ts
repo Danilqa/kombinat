@@ -1,16 +1,19 @@
 import { isMatching, match, P } from 'ts-pattern';
 
-import type { RunRecord, RunStatus, RunTrigger, Skip, SkipReason } from '../shared/contract';
-import type { ToolItem, TranscriptItem } from '../shared/contract';
-import type { RoutineDetail, RoutineSummary } from '../shared/contract';
-import type { Overview } from './api';
+import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
+import type { RunRecord, RunStatus } from 'domains/run/types';
+import { getRunDurationMs, getRunStatusLabel, getTriggerLabel } from 'domains/run/utils';
+import type { Skip } from 'domains/scheduler/types';
+import { getSkipReasonLabel } from 'domains/scheduler/utils';
+import type { ToolItem, TranscriptItem } from 'domains/transcript/types';
 import {
   formatDuration,
-  formatRelative,
+  formatRelativeCompact,
   formatSpan,
   formatTimestamp,
-  getRunDurationMs,
-} from './format';
+} from 'utils/date-time';
+
+import type { Overview } from './api';
 import { renderMarkdown } from './markdown';
 import { fitLine, lineWidth, S, sanitize, sliceLine, textWidth, wrapLine } from './text';
 import type { Line, Span } from './text';
@@ -52,33 +55,16 @@ const MAX_LINE_CHARS = 2000;
 
 interface StatusLook {
   icon: string;
-  label: string;
   style: string;
 }
 
 function getStatusLook(status: RunStatus): StatusLook {
   return match(status)
-    .with('running', () => ({ icon: '●', label: 'Running', style: S.yellow }))
-    .with('succeeded', () => ({ icon: '✓', label: 'Succeeded', style: S.green }))
-    .with('failed', () => ({ icon: '✗', label: 'Failed', style: S.red }))
-    .with('timed_out', () => ({ icon: '✗', label: 'Timed out', style: S.red }))
-    .with('aborted', () => ({ icon: '⊘', label: 'Aborted', style: S.dim }))
-    .exhaustive();
-}
-
-function getTriggerLabel(trigger: RunTrigger): string {
-  return match(trigger)
-    .with('schedule', () => 'Scheduled')
-    .with('manual', () => 'Manual')
-    .with('catch_up', () => 'Catch-up')
-    .exhaustive();
-}
-
-function getSkipReasonLabel(reason: SkipReason): string {
-  return match(reason)
-    .with('already_running', () => 'already running')
-    .with('concurrency_limit', () => 'concurrency limit')
-    .with('disabled', () => 'disabled')
+    .with('running', () => ({ icon: '●', style: S.yellow }))
+    .with('succeeded', () => ({ icon: '✓', style: S.green }))
+    .with('failed', () => ({ icon: '✗', style: S.red }))
+    .with('timed_out', () => ({ icon: '✗', style: S.red }))
+    .with('aborted', () => ({ icon: '⊘', style: S.dim }))
     .exhaustive();
 }
 
@@ -98,7 +84,7 @@ export function statusIcon(status: RunStatus, now: number): Span {
 
 export function statusBadge(status: RunStatus, now: number): Line {
   const look = getStatusLook(status);
-  return [statusIcon(status, now), text(` ${look.label}`, look.style)];
+  return [statusIcon(status, now), text(` ${getRunStatusLabel(status)}`, look.style)];
 }
 
 interface Column {
@@ -215,7 +201,7 @@ export function statusLines(
       [
         text(
           loadedAt
-            ? `showing data from ${formatRelative(new Date(loadedAt).toISOString(), now)}`
+            ? `showing data from ${formatRelativeCompact(new Date(loadedAt).toISOString(), now)}`
             : 'is it running? check with the status command',
           S.dim,
         ),
@@ -234,7 +220,7 @@ export function statusLines(
     ],
     [
       text('tick '),
-      text(formatRelative(status.lastTickAt, now), S.cyan),
+      text(formatRelativeCompact(status.lastTickAt, now), S.cyan),
       text(' · ', S.dim),
       text(
         `${status.running}/${status.maxConcurrentRuns} running`,
@@ -255,7 +241,7 @@ export function routineRow(routine: RoutineSummary, width: number, now: number):
   const next = !routine.enabled
     ? 'off'
     : routine.nextRunAt
-      ? formatRelative(routine.nextRunAt, now)
+      ? formatRelativeCompact(routine.nextRunAt, now)
       : 'manual';
   return [
     icon,
@@ -279,7 +265,11 @@ export function runRow(run: RunRecord, width: number, now: number): Line {
     ...columns(
       [
         { line: [text(run.routine)], width: Math.max(4, width - 21) },
-        { line: [text(formatRelative(run.startedAt, now), S.cyan)], width: 10, align: 'right' },
+        {
+          line: [text(formatRelativeCompact(run.startedAt, now), S.cyan)],
+          width: 10,
+          align: 'right',
+        },
         {
           line: [text(formatDuration(getRunDurationMs(run, now)), S.magenta)],
           width: 7,
@@ -329,7 +319,7 @@ function sectionTitle(title: string, aside?: string): Line {
 
 function timeValue(iso: string | null, now: number): Line {
   if (!iso) return [text('-', S.dim)];
-  return [text(formatTimestamp(iso)), text(` · ${formatRelative(iso, now)}`, S.cyan)];
+  return [text(formatTimestamp(iso)), text(` · ${formatRelativeCompact(iso, now)}`, S.cyan)];
 }
 
 interface Tab {
@@ -367,7 +357,7 @@ function runsTable(routine: string, runs: RunRecord[], width: number, now: numbe
       ];
   const headerLine = withStyle(columns(header), S.dim);
   const rows = runs.map((run): ContentLine => {
-    const started: Line = [text(formatRelative(run.startedAt, now), S.cyan)];
+    const started: Line = [text(formatRelativeCompact(run.startedAt, now), S.cyan)];
     const duration: Line = [text(formatDuration(getRunDurationMs(run, now)), S.magenta)];
     const cells: Column[] = isWide
       ? [
@@ -401,7 +391,7 @@ function skipsTable(skips: Skip[], now: number): ContentLine[] {
   );
   const rows = [...skips].reverse().map(skip =>
     columns([
-      { line: [text(formatRelative(skip.at, now), S.cyan)], width: 10 },
+      { line: [text(formatRelativeCompact(skip.at, now), S.cyan)], width: 10 },
       { line: [text(formatTimestamp(skip.scheduledFor))], width: 22 },
       { line: [text(getSkipReasonLabel(skip.reason), S.yellow)], width: 20 },
     ]),
@@ -454,7 +444,7 @@ export function routinePage({
       value: lastRun
         ? [
             ...statusBadge(lastRun.status, now),
-            text(` · ${formatRelative(lastRun.startedAt, now)}`, S.cyan),
+            text(` · ${formatRelativeCompact(lastRun.startedAt, now)}`, S.cyan),
           ]
         : [text('never', S.dim)],
       isWide: true,
@@ -464,7 +454,7 @@ export function routinePage({
           {
             label: 'last skip',
             value: [
-              text(formatRelative(routine.lastSkip.at, now), S.cyan),
+              text(formatRelativeCompact(routine.lastSkip.at, now), S.cyan),
               text(` · ${getSkipReasonLabel(routine.lastSkip.reason)}`, S.yellow),
             ],
             isWide: true,

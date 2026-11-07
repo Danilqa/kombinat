@@ -2,6 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { Ban, Check, ChevronLeft, ChevronRight, Clock, Ellipsis, Loader, X } from 'lucide-react';
 import { Link } from 'react-router';
 import { isMatching, match } from 'ts-pattern';
+import { getCalendar } from 'domains/calendar/requests';
+import type { CalendarEntry } from 'domains/calendar/types';
+import type { RunStatus } from 'domains/run/types';
+import { getRunStatusLabel } from 'domains/run/utils';
+import { formatClock, formatDayMonth, formatWeekday } from 'utils/date-time';
+import { sameOriginApi } from 'utils/http';
 import { Button } from '@web-app/components/ui/button';
 import { ErrorState } from '@web-app/components/page-states';
 import {
@@ -10,7 +16,6 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@web-app/components/ui/dropdown-menu';
-import { fetchCalendar, type CalendarEntry, type RunStatus } from '@web-app/lib/api';
 import {
   addDays,
   countOverlapPairs,
@@ -21,7 +26,6 @@ import {
   layoutDay,
   type PositionedEntry,
 } from '@web-app/lib/calendar-layout';
-import { formatClock, formatDayMonth, formatWeekday } from '@web-app/lib/format';
 import { usePolledData } from '@web-app/lib/use-polled-data';
 import { useStoredBoolean } from '@web-app/lib/use-stored-boolean';
 import { cn } from '@web-app/lib/utils';
@@ -36,7 +40,6 @@ type BlockVariant = 'planned' | 'plannedDefault' | RunStatus;
 
 interface BlockStyle {
   className: string;
-  label: string;
   icon: BlockIcon | null;
 }
 
@@ -71,37 +74,30 @@ const tintedBlockClassName = 'pl-[7px] hover:brightness-125 focus-visible:shadow
 const blockStyles: Record<BlockVariant, BlockStyle> = {
   planned: {
     className: cn(blockSurfaceClassNames.planned, outlinedBlockClassName),
-    label: 'planned',
     icon: null,
   },
   plannedDefault: {
     className: cn(blockSurfaceClassNames.plannedDefault, outlinedBlockClassName),
-    label: 'planned',
     icon: null,
   },
   succeeded: {
     className: cn(blockSurfaceClassNames.succeeded, tintedBlockClassName),
-    label: 'succeeded',
     icon: blockIcons.succeeded,
   },
   failed: {
     className: cn(blockSurfaceClassNames.failed, tintedBlockClassName),
-    label: 'failed',
     icon: blockIcons.failed,
   },
   timed_out: {
     className: cn(blockSurfaceClassNames.timed_out, tintedBlockClassName),
-    label: 'timed out',
     icon: blockIcons.timed_out,
   },
   aborted: {
     className: cn(blockSurfaceClassNames.aborted, tintedBlockClassName),
-    label: 'aborted',
     icon: blockIcons.aborted,
   },
   running: {
     className: cn(blockSurfaceClassNames.running, tintedBlockClassName, 'animate-soft-pulse'),
-    label: 'running',
     icon: blockIcons.running,
   },
 };
@@ -153,7 +149,7 @@ function getStateLabel(entry: CalendarEntry): string {
       { kind: 'planned', estimated: false },
       planned => `planned (default ${getDurationMinutes(planned)} min, no past runs)`,
     )
-    .with({ kind: 'run' }, run => blockStyles[run.status].label)
+    .with({ kind: 'run' }, run => getRunStatusLabel(run.status).toLowerCase())
     .exhaustive();
 }
 
@@ -477,7 +473,7 @@ export function WeekCalendar() {
   const weekEnd = addDays(weekStart, 7);
   const { data, error } = usePolledData(
     `calendar:${weekStart.toISOString()}`,
-    () => fetchCalendar(weekStart, weekEnd),
+    () => getCalendar(sameOriginApi, weekStart, weekEnd),
     getHasRunningEntry,
     POLL_INTERVALS,
   );

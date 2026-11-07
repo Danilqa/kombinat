@@ -11,7 +11,6 @@ export default defineConfig({
   resolve: {
     alias: {
       '@web-app': path.join(webAppRoot, 'src'),
-      '@shared': path.join(webAppRoot, '..', 'cli', 'src', 'shared'),
     },
   },
   build: {

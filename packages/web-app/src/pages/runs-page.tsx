@@ -1,16 +1,17 @@
 import { isMatching } from 'ts-pattern';
+import { RECENT_RUNS_LIMIT } from 'domains/run/constants';
+import { getRuns } from 'domains/run/requests';
+import type { RunRecord } from 'domains/run/types';
+import { sameOriginApi } from 'utils/http';
 import { PageHeader, SectionAside } from '@web-app/components/page-header';
 import { ErrorState, LoadingState } from '@web-app/components/page-states';
 import { RunsTable } from '@web-app/components/runs-table';
 import { Card } from '@web-app/components/ui/card';
-import { getRuns, type RunRecord } from '@web-app/lib/api';
 import { useDocumentTitle } from '@web-app/lib/use-document-title';
 import { usePolledData } from '@web-app/lib/use-polled-data';
 
-const RUNS_LIMIT = 50;
-
 function loadRuns(): Promise<RunRecord[]> {
-  return getRuns(RUNS_LIMIT);
+  return getRuns(sameOriginApi, RECENT_RUNS_LIMIT);
 }
 
 function getHasRunningRun(runs: RunRecord[]): boolean {

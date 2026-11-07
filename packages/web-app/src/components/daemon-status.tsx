@@ -1,13 +1,12 @@
 import { P, match } from 'ts-pattern';
+import { getDaemonStatus } from 'domains/daemon/requests';
+import type { DaemonHealth, DaemonStatus as DaemonStatusData } from 'domains/daemon/types';
+import { getDaemonHealth } from 'domains/daemon/utils';
+import { formatRelative } from 'utils/date-time';
+import { sameOriginApi } from 'utils/http';
 import { Popover, PopoverContent, PopoverTrigger } from '@web-app/components/ui/popover';
-import { getStatus, type DaemonStatus as DaemonStatusData } from '@web-app/lib/api';
-import { formatRelative } from '@web-app/lib/format';
 import { usePolledData } from '@web-app/lib/use-polled-data';
 import { cn } from '@web-app/lib/utils';
-
-const STALE_TICK_MS = 5 * 60_000;
-
-type DaemonHealth = 'healthy' | 'stale' | 'unreachable';
 
 interface DaemonHealthAppearance {
   label: string;
@@ -22,16 +21,6 @@ const daemonHealthAppearances: Record<DaemonHealth, DaemonHealthAppearance> = {
 
 const triggerClassName =
   'flex h-8 items-center gap-2 rounded-full px-2.5 text-body-sm text-fg-muted tabular-nums';
-
-function getIsTickStale(status: DaemonStatusData): boolean {
-  if (status.lastTickAt === null) return true;
-  return new Date(status.now).getTime() - new Date(status.lastTickAt).getTime() > STALE_TICK_MS;
-}
-
-function getDaemonHealth(status: DaemonStatusData | null, hasError: boolean): DaemonHealth {
-  if (hasError || status === null) return 'unreachable';
-  return getIsTickStale(status) ? 'stale' : 'healthy';
-}
 
 function getHasRunning(status: DaemonStatusData): boolean {
   return status.running > 0;
@@ -83,7 +72,11 @@ function DaemonStatusDetails({ status }: DaemonStatusDetailsProps) {
 }
 
 export function DaemonStatus() {
-  const { data, error, isLoading } = usePolledData('status', getStatus, getHasRunning);
+  const { data, error, isLoading } = usePolledData(
+    'status',
+    () => getDaemonStatus(sameOriginApi),
+    getHasRunning,
+  );
   if (isLoading) {
     // Holds the width of the loaded summary so the navigation next to it does not jump.
     return (

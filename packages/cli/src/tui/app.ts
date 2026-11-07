@@ -1,12 +1,12 @@
 import { isMatching, match, P } from 'ts-pattern';
 
+import type { RoutineDetail } from 'domains/routine/types';
+import type { RunRecord, RunWithTranscript } from 'domains/run/types';
+import type { TranscriptItem } from 'domains/transcript/types';
+import { formatRelativeCompact } from 'utils/date-time';
 import { getErrorMessage } from 'utils/error';
 
-import type { RunRecord } from '../shared/contract';
-import type { TranscriptItem } from '../shared/contract';
-import type { RoutineDetail } from '../shared/contract';
-import type { DaemonClient, Overview, RunWithTranscript } from './api';
-import { formatRelative } from './format';
+import type { DaemonClient, Overview } from './api';
 import { fitLine, S } from './text';
 import type { Line } from './text';
 import {
@@ -901,7 +901,7 @@ export class TuiApp {
     if (this.loadedAt === null) return [];
     return [
       {
-        text: `updated ${formatRelative(new Date(this.loadedAt).toISOString(), now)}`,
+        text: `updated ${formatRelativeCompact(new Date(this.loadedAt).toISOString(), now)}`,
         style: S.dim,
       },
     ];

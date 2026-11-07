@@ -1,7 +1,8 @@
 import { match } from 'ts-pattern';
 
-import { agentNameSchema } from '../shared/contract';
-import type { HookItem, Transcript } from '../shared/contract';
+import { agentNameSchema } from 'domains/agent/schemas';
+import type { HookItem, Transcript } from 'domains/transcript/types';
+
 import { beforeHookEventSchema, toHookItem } from '../transcript';
 import { claudeAgent } from './claude';
 import { codexAgent } from './codex';

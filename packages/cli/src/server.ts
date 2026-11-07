@@ -4,6 +4,11 @@ import path from 'node:path';
 
 import { isMatching, match, P } from 'ts-pattern';
 
+import type { DaemonStatus } from 'domains/daemon/types';
+import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
+import { RECENT_RUNS_LIMIT } from 'domains/run/constants';
+import type { RunRecord } from 'domains/run/types';
+import type { Skip } from 'domains/scheduler/types';
 import { getErrorMessage } from 'utils/error';
 
 import { buildTranscript } from './agents';
@@ -15,13 +20,6 @@ import { loadRoutines } from './routines';
 import type { Routine } from './routines';
 import { startDetachedRun } from './run';
 import { getNextRun } from './scheduler';
-import type {
-  DaemonStatus,
-  RoutineDetail,
-  RoutineSummary,
-  RunRecord,
-  Skip,
-} from './shared/contract';
 import { listAllRuns, listRuns, readRunRecord, readSchedulerState } from './state';
 
 interface ApiResponse {
@@ -157,7 +155,7 @@ function routeApi(request: ApiRequest, url: URL, startedAt: Date): ApiResponse {
     .with(['POST', ['routines', P.string, 'run']], ([, [, name]]) => withRoutine(name, startRun))
     .with(['GET', ['calendar']], () => getCalendar(url))
     .with(['GET', ['runs']], () =>
-      ok(listAllRuns().slice(0, Number(url.searchParams.get('limit') ?? 50))),
+      ok(listAllRuns().slice(0, Number(url.searchParams.get('limit') ?? RECENT_RUNS_LIMIT))),
     )
     .with(['GET', ['runs', P.string, P.string]], ([, [, routine, id]]) => withRun(routine, id, ok))
     .with(['GET', ['runs', P.string, P.string, 'transcript']], ([, [, routine, id]]) =>

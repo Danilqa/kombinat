@@ -1,5 +1,11 @@
 import { useParams } from 'react-router';
 import { match } from 'ts-pattern';
+import { getAgentLabel } from 'domains/agent/utils';
+import { getRoutine } from 'domains/routine/requests';
+import type { RoutineDetail } from 'domains/routine/types';
+import type { Skip } from 'domains/scheduler/types';
+import { getSkipReasonLabel } from 'domains/scheduler/utils';
+import { sameOriginApi } from 'utils/http';
 import { DetailList, type DetailEntry } from '@web-app/components/detail-list';
 import { Markdown } from '@web-app/components/markdown';
 import {
@@ -12,7 +18,6 @@ import { ErrorState, LoadingState } from '@web-app/components/page-states';
 import { RelativeTime } from '@web-app/components/relative-time';
 import { RunNowButton } from '@web-app/components/run-now-button';
 import { RunsTable } from '@web-app/components/runs-table';
-import { getSkipReasonLabel } from '@web-app/components/status-badge';
 import { Badge, type BadgeVariant } from '@web-app/components/ui/badge';
 import { Card } from '@web-app/components/ui/card';
 import {
@@ -24,7 +29,6 @@ import {
   TableRow,
 } from '@web-app/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@web-app/components/ui/tabs';
-import { getRoutine, type AgentName, type RoutineDetail, type Skip } from '@web-app/lib/api';
 import { useDocumentTitle } from '@web-app/lib/use-document-title';
 import { usePolledData } from '@web-app/lib/use-polled-data';
 import { cn } from '@web-app/lib/utils';
@@ -45,14 +49,6 @@ const enabledBadges: Record<EnabledState, EnabledBadge> = {
   enabled: { label: 'Enabled', variant: 'positive', dotClassName: 'bg-positive' },
   disabled: { label: 'Disabled', variant: 'ghost', dotClassName: 'bg-fg-faint' },
 };
-
-function getAgentLabel(agent: AgentName): string {
-  return match(agent)
-    .with('claude', () => 'Claude')
-    .with('codex', () => 'Codex')
-    .with('command', () => 'Command')
-    .exhaustive();
-}
 
 function getEnabledState(routine: RoutineDetail): EnabledState {
   return match(routine.enabled)
@@ -212,7 +208,7 @@ export function RoutinePage() {
   useDocumentTitle(name);
   const { data, error, reload } = usePolledData(
     `routine/${name}`,
-    () => getRoutine(name),
+    () => getRoutine(sameOriginApi, name),
     getIsRoutineRunning,
   );
 

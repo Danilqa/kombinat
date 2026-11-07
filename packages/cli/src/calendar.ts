@@ -1,13 +1,10 @@
 import { isMatching } from 'ts-pattern';
 
+import type { CalendarEntry, PlannedCalendarEntry, RunCalendarEntry } from 'domains/calendar/types';
+import type { RunRecord } from 'domains/run/types';
+
 import { cronRunsBetween } from './cron';
 import type { Routine } from './routines';
-import type {
-  CalendarEntry,
-  PlannedCalendarEntry,
-  RunCalendarEntry,
-  RunRecord,
-} from './shared/contract';
 
 export interface PlannedLength {
   minutes: number;

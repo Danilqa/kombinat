@@ -4,10 +4,13 @@ import path from 'node:path';
 import { isMatching } from 'ts-pattern';
 import type { z } from 'zod';
 
+import { runRecordSchema } from 'domains/run/schemas';
+import type { RunRecord } from 'domains/run/types';
+import { schedulerStateSchema } from 'domains/scheduler/schemas';
+import type { SchedulerState } from 'domains/scheduler/types';
+
 import { config } from './config';
 import { parseJson } from './json';
-import { runRecordSchema, schedulerStateSchema } from './shared/contract';
-import type { RunRecord, SchedulerState } from './shared/contract';
 
 function readJsonFile<T>(file: string, schema: z.ZodType<T>): T | null {
   if (!fs.existsSync(file)) return null;
@@ -93,13 +96,4 @@ export function writeSchedulerState(state: SchedulerState): void {
   ensureStateDirs();
   fs.writeFileSync(`${schedulerFile()}.tmp`, JSON.stringify(state, null, 2));
   fs.renameSync(`${schedulerFile()}.tmp`, schedulerFile());
-}
-
-export function createRunId(now = new Date()): string {
-  const stamp = now
-    .toISOString()
-    .replace(/[-:]/g, '')
-    .replace(/\.\d+Z$/, 'Z');
-  const suffix = Math.random().toString(36).slice(2, 6);
-  return `${stamp}-${suffix}`;
 }

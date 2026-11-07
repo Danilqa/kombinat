@@ -1,3 +1,4 @@
+import type { SchedulerState, SkipReason } from 'domains/scheduler/types';
 import { getErrorMessage } from 'utils/error';
 
 import { config } from './config';
@@ -5,7 +6,6 @@ import { cronRunsBetween, nextCronRun } from './cron';
 import { loadRoutines } from './routines';
 import type { Routine } from './routines';
 import { startDetachedRun } from './run';
-import type { SchedulerState, SkipReason } from './shared/contract';
 import { getRunningRuns, readSchedulerState, writeSchedulerState } from './state';
 
 function loadState(now: Date): SchedulerState {

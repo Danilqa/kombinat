@@ -6,13 +6,15 @@ import readline from 'node:readline';
 
 import { match } from 'ts-pattern';
 
+import type { RunRecord, RunTrigger } from 'domains/run/types';
+import { createRunId } from 'domains/run/utils';
+
 import { getAgent } from './agents';
 import type { Agent } from './agents/types';
 import { config, getCliArgs } from './config';
 import type { Routine } from './routines';
 import { parseJson } from './json';
-import type { RunRecord, RunTrigger } from './shared/contract';
-import { createRunId, getRunsDir, writeRunRecord } from './state';
+import { getRunsDir, writeRunRecord } from './state';
 import type { BeforeHookEvent, OutputEvent } from './transcript';
 
 export interface RunOptions {

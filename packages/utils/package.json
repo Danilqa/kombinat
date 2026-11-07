@@ -8,6 +8,7 @@
     "./*": "./*.ts"
   },
   "scripts": {
+    "test": "tsx --test '**/*.test.ts'",
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {

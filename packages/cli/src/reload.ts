@@ -39,13 +39,12 @@ function getNewestMtime(root: string): number {
     );
 }
 
-const SHARED_PACKAGES = ['utils'];
+const SHARED_PACKAGES = ['domains', 'utils'];
 
 const webAppSources = (workspaceRoot: string) => [
   path.join(workspaceRoot, 'packages', 'web-app', 'src'),
   path.join(workspaceRoot, 'packages', 'web-app', 'index.html'),
   path.join(workspaceRoot, 'packages', 'web-app', 'vite.config.ts'),
-  path.join(workspaceRoot, 'packages', 'cli', 'src', 'shared'),
   ...SHARED_PACKAGES.map(name => path.join(workspaceRoot, 'packages', name)),
 ];
 

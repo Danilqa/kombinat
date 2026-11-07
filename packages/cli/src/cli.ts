@@ -3,6 +3,8 @@ import { parseArgs } from 'node:util';
 
 import { isMatching, match, P } from 'ts-pattern';
 
+import type { RunTrigger } from 'domains/run/types';
+
 import { config, DEFAULT_PORT } from './config';
 import { connect } from './connect';
 import { describeCron } from './cron';
@@ -28,7 +30,6 @@ import { runRoutine } from './run';
 import { getNextRun, startSchedulerLoop } from './scheduler';
 import { startServer } from './server';
 import { ensureStateDirs, listRuns, readSchedulerState } from './state';
-import type { RunTrigger } from './shared/contract';
 import { runTui } from './tui';
 
 const USAGE = `kombinat, run from the folder that holds routines/ (connect and tui --url work anywhere)

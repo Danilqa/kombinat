@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Play } from 'lucide-react';
+import { startRoutineRun } from 'domains/routine/requests';
 import { getErrorMessage } from 'utils/error';
+import { sameOriginApi } from 'utils/http';
 import { Button } from '@web-app/components/ui/button';
-import { startRoutineRun } from '@web-app/lib/api';
 
 type RunNowVariant = 'primary' | 'secondary';
 
@@ -31,7 +32,7 @@ export function RunNowButton({
     setError(null);
     setAnnouncement('');
     try {
-      await startRoutineRun(routine);
+      await startRoutineRun(sameOriginApi, routine);
       setAnnouncement(`Started a run of ${routine}`);
       onStarted();
     } catch (err) {
