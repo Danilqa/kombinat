@@ -4,6 +4,7 @@ import { match } from 'ts-pattern';
 
 import { CodeBlock } from 'design-system/components/code-block';
 import { Markdown } from 'design-system/components/markdown';
+import { EmptyState } from 'design-system/components/page-states';
 import { cn } from 'design-system/utils';
 import { formatDuration } from 'utils/date-time';
 
@@ -212,9 +213,9 @@ interface TranscriptListProps {
 export function TranscriptList({ items, isRunning }: TranscriptListProps) {
   if (items.length === 0)
     return (
-      <p className="py-10 text-center text-body text-fg-muted">
+      <EmptyState>
         {isRunning ? 'Waiting for the first events…' : 'No transcript events.'}
-      </p>
+      </EmptyState>
     );
   return (
     <div className="space-y-2">

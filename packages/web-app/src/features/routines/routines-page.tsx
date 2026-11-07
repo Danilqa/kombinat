@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 import { Badge } from 'design-system/components/badge';
 import { Card } from 'design-system/components/card';
-import { ErrorState, LoadingState } from 'design-system/components/page-states';
+import { EmptyState, ErrorState, LoadingState } from 'design-system/components/page-states';
 import { RelativeTime } from 'design-system/components/relative-time';
 import {
   Table,
@@ -65,8 +65,7 @@ interface RoutinesTableProps {
 
 function RoutinesTable({ routines, onStarted }: RoutinesTableProps) {
   const getRowClickHandler = useRowLink();
-  if (routines.length === 0)
-    return <p className="py-10 text-center text-body text-fg-muted">No routines yet.</p>;
+  if (routines.length === 0) return <EmptyState>No routines yet.</EmptyState>;
   return (
     <Table>
       <TableHeader>

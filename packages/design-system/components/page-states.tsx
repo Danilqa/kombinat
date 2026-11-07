@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 export function LoadingState() {
   return (
     <p role="status" className="py-10 text-center text-body text-fg-muted">
@@ -19,4 +21,12 @@ export function ErrorState({ message }: ErrorStateProps) {
       {message}
     </p>
   );
+}
+
+interface EmptyStateProps {
+  children: ReactNode;
+}
+
+export function EmptyState({ children }: EmptyStateProps) {
+  return <p className="py-10 text-center text-body text-fg-muted">{children}</p>;
 }

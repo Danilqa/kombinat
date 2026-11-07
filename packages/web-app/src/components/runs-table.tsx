@@ -1,4 +1,5 @@
 import { Link } from 'react-router';
+import { EmptyState } from 'design-system/components/page-states';
 import { RelativeTime } from 'design-system/components/relative-time';
 import {
   Table,
@@ -23,8 +24,7 @@ interface RunsTableProps {
 
 export function RunsTable({ runs, hasRoutineColumn }: RunsTableProps) {
   const getRowClickHandler = useRowLink();
-  if (runs.length === 0)
-    return <p className="py-10 text-center text-body text-fg-muted">No runs yet.</p>;
+  if (runs.length === 0) return <EmptyState>No runs yet.</EmptyState>;
   return (
     <Table>
       <TableHeader>
