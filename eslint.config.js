@@ -120,6 +120,16 @@ const NO_REACT_IN_UNIVERSAL_UTILS = [
   { regex: '(^|/)hooks(/|$)', message: UNIVERSAL_UTILS_MESSAGE },
 ];
 
+const NO_BARREL_INSIDE_DESIGN_SYSTEM = {
+  regex: String.raw`^\.{1,2}(/(components|layouts|icons))?(/index)?/?$`,
+  message: 'Inside design-system, import the file you need by relative path, never a barrel.',
+};
+
+const NO_SELF_IMPORT_INSIDE_DESIGN_SYSTEM = {
+  regex: '^design-system(/|$)',
+  message: 'Inside design-system, import the file you need by relative path, not by package name.',
+};
+
 const ONLY_SPECS_IMPORT_E2E = {
   regex: '^e2e(/|$)',
   message: 'Only *.e2e.ts specs import e2e/*.',
@@ -299,6 +309,8 @@ export default defineConfig(
     packagesAbove('domains', 'web-app', 'tui', 'cli'),
     NO_ROUTER,
     packagesByPath('utils', 'e2e'),
+    NO_BARREL_INSIDE_DESIGN_SYSTEM,
+    NO_SELF_IMPORT_INSIDE_DESIGN_SYSTEM,
   ),
   restrictImports(
     ['packages/utils/**'],

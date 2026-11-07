@@ -4,7 +4,6 @@ import { test } from 'node:test';
 import {
   MINUTES_PER_DAY,
   MIN_BLOCK_MINUTES,
-  countOverlapPairs,
   getWeekStart,
   getWeekdayIndex,
   layoutDay,
@@ -17,8 +16,8 @@ function at(hours: number, minutes = 0, dayOffset = 0): string {
   return new Date(2026, 8, 30 + dayOffset, hours, minutes).toISOString();
 }
 
-function makeEntry(id: string, start: string, end: string, overlaps: string[] = []): TimedEntry {
-  return { id, start, end, overlaps };
+function makeEntry(id: string, start: string, end: string): TimedEntry {
+  return { id, start, end };
 }
 
 interface Box {
@@ -117,16 +116,6 @@ test('clips entries to the day and drops entries outside it', () => {
 test('keeps a minimum-height block at the end of the day inside the grid', () => {
   const boxes = getBoxes([makeEntry('a', at(23, 55), at(0, 0, 1))]);
   assert.equal(boxes('a').top + boxes('a').height, MINUTES_PER_DAY);
-});
-
-test('counts each overlapping pair once', () => {
-  const entries = [
-    makeEntry('a', at(9), at(10), ['b', 'c']),
-    makeEntry('b', at(9), at(10), ['a']),
-    makeEntry('c', at(9), at(10), ['a']),
-    makeEntry('d', at(12), at(13)),
-  ];
-  assert.equal(countOverlapPairs(entries), 2);
 });
 
 test('numbers weekdays from 0 on Monday to 6 on Sunday', () => {

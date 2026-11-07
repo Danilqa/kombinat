@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { BrowserRouter } from 'react-router';
-import { TooltipProvider } from 'design-system/components/tooltip';
+import { Tooltip } from 'design-system/components';
 
 interface AppProvidersProps {
   children: ReactNode;
@@ -9,7 +9,7 @@ interface AppProvidersProps {
 export function AppProviders({ children }: AppProvidersProps) {
   return (
     <BrowserRouter>
-      <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
+      <Tooltip.Provider delayDuration={300}>{children}</Tooltip.Provider>
     </BrowserRouter>
   );
 }

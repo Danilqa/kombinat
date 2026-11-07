@@ -1,17 +1,14 @@
 import { Link } from 'react-router';
-import { Badge } from 'design-system/components/badge';
-import { Card } from 'design-system/components/card';
-import { ErrorState, LoadingState } from 'design-system/components/page-states';
-import { RelativeTime } from 'design-system/components/relative-time';
 import {
+  Badge,
+  Card,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+  RelativeTime,
   Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from 'design-system/components/table';
-import { PageHeader, SectionAside } from 'design-system/layouts/page-header';
+} from 'design-system/components';
+import { PageHeader } from 'design-system/layouts';
 import { cn } from 'design-system/utils';
 import { RunNowButton } from 'domains/routine/components';
 import { getRoutines } from 'domains/routine/requests';
@@ -65,31 +62,30 @@ interface RoutinesTableProps {
 
 function RoutinesTable({ routines, onStarted }: RoutinesTableProps) {
   const getRowClickHandler = useRowLink();
-  if (routines.length === 0)
-    return <p className="py-10 text-center text-body text-fg-muted">No routines yet.</p>;
+  if (routines.length === 0) return <EmptyState>No routines yet.</EmptyState>;
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Routine</TableHead>
-          <TableHead className="max-md:hidden">Description</TableHead>
-          <TableHead>Schedule</TableHead>
-          <TableHead>Next run</TableHead>
-          <TableHead>Agent</TableHead>
-          <TableHead>Last run</TableHead>
-          <TableHead className="w-0">
+    <Table.Root>
+      <Table.Header>
+        <Table.Row>
+          <Table.Head>Routine</Table.Head>
+          <Table.Head className="max-md:hidden">Description</Table.Head>
+          <Table.Head>Schedule</Table.Head>
+          <Table.Head>Next run</Table.Head>
+          <Table.Head>Agent</Table.Head>
+          <Table.Head>Last run</Table.Head>
+          <Table.Head className="w-0">
             <span className="sr-only">Actions</span>
-          </TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
+          </Table.Head>
+        </Table.Row>
+      </Table.Header>
+      <Table.Body>
         {routines.map(routine => (
-          <TableRow
+          <Table.Row
             key={routine.name}
             className="cursor-pointer"
             onClick={getRowClickHandler(getRoutinePath(routine.name))}
           >
-            <TableCell className="max-sm:whitespace-normal">
+            <Table.Cell className="max-sm:whitespace-normal">
               <div className="flex items-center gap-2">
                 <Link
                   to={getRoutinePath(routine.name)}
@@ -106,22 +102,22 @@ function RoutinesTable({ routines, onStarted }: RoutinesTableProps) {
                   </Badge>
                 )}
               </div>
-            </TableCell>
-            <TableCell className="max-w-56 min-w-36 whitespace-normal text-fg-secondary max-md:hidden">
+            </Table.Cell>
+            <Table.Cell className="max-w-56 min-w-36 whitespace-normal text-fg-secondary max-md:hidden">
               <div className="line-clamp-2" title={routine.description}>
                 {routine.description}
               </div>
-            </TableCell>
-            <TableCell className="min-w-36 whitespace-normal max-sm:min-w-56">
+            </Table.Cell>
+            <Table.Cell className="min-w-36 whitespace-normal max-sm:min-w-56">
               <div className="text-fg">{routine.scheduleHuman}</div>
               {routine.schedule && (
                 <div className="font-mono text-body-sm text-fg-muted">{routine.schedule}</div>
               )}
-            </TableCell>
-            <TableCell className="text-fg-secondary tabular-nums">
+            </Table.Cell>
+            <Table.Cell className="text-fg-secondary tabular-nums">
               <RelativeTime iso={routine.nextRunAt} />
-            </TableCell>
-            <TableCell>
+            </Table.Cell>
+            <Table.Cell>
               <div
                 className="max-w-56 truncate font-mono text-body-sm text-fg"
                 title={routine.model ?? routine.command ?? routine.agent}
@@ -132,22 +128,22 @@ function RoutinesTable({ routines, onStarted }: RoutinesTableProps) {
                 {routine.agent}
                 {routine.effort !== null && ` · effort ${routine.effort}`}
               </div>
-            </TableCell>
-            <TableCell>
+            </Table.Cell>
+            <Table.Cell>
               <LastRunCell routine={routine} />
-            </TableCell>
-            <TableCell>
+            </Table.Cell>
+            <Table.Cell>
               <RunNowButton
                 routine={routine.name}
                 isRunning={routine.running}
                 onStarted={onStarted}
                 variant="secondary"
               />
-            </TableCell>
-          </TableRow>
+            </Table.Cell>
+          </Table.Row>
         ))}
-      </TableBody>
-    </Table>
+      </Table.Body>
+    </Table.Root>
   );
 }
 
@@ -161,16 +157,16 @@ export function RoutinesPage() {
 
   return (
     <div>
-      <PageHeader
+      <PageHeader.Root
         title="Routines"
-        aside={data && <SectionAside>{data.length} routines</SectionAside>}
+        aside={data && <PageHeader.Aside>{data.length} routines</PageHeader.Aside>}
       />
       {error && <ErrorState message={error} />}
       {!data && !error && <LoadingState />}
       {data && (
-        <Card className="gap-0 overflow-visible py-0">
+        <Card.Root className="gap-0 overflow-visible py-0">
           <RoutinesTable routines={data} onStarted={reload} />
-        </Card>
+        </Card.Root>
       )}
     </div>
   );

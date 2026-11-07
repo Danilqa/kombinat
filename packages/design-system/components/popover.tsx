@@ -38,4 +38,4 @@ function PopoverContent({
   );
 }
 
-export { Popover, PopoverTrigger, PopoverContent };
+export { Popover as Root, PopoverTrigger as Trigger, PopoverContent as Content };

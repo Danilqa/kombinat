@@ -1,6 +1,6 @@
 import { formatAbsolute, formatRelative } from 'utils/date-time';
 import { cn } from '../utils';
-import { Tooltip, TooltipContent, TooltipTrigger } from './tooltip';
+import * as Tooltip from './tooltip';
 
 interface RelativeTimeProps {
   iso: string | null;
@@ -13,8 +13,8 @@ export function RelativeTime({ iso, isFocusable = false, className }: RelativeTi
   if (!iso) return <span className={cn('text-fg-muted', className)}>-</span>;
   const absolute = formatAbsolute(iso);
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
+    <Tooltip.Root>
+      <Tooltip.Trigger asChild>
         <time
           dateTime={iso}
           tabIndex={isFocusable ? 0 : undefined}
@@ -23,8 +23,8 @@ export function RelativeTime({ iso, isFocusable = false, className }: RelativeTi
           {formatRelative(iso)}
           <span className="sr-only"> ({absolute})</span>
         </time>
-      </TooltipTrigger>
-      <TooltipContent>{absolute}</TooltipContent>
-    </Tooltip>
+      </Tooltip.Trigger>
+      <Tooltip.Content>{absolute}</Tooltip.Content>
+    </Tooltip.Root>
   );
 }

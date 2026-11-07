@@ -12,15 +12,15 @@ Each domain has up to two halves with the same name:
 
 ## Map
 
-| Domain         | Shared half                                                                                                             | Daemon half                                                                     |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| **agent**      | `AgentName`, agent label                                                                                                | claude, codex and command adapters, registry, settings validation, `AgentTask`  |
-| **transcript** | item schemas and types, preview rule, `TranscriptList`                                                                  | none                                                                            |
-| **run**        | `RunRecord`, status and trigger, requests, labels, id, duration, `RECENT_RUNS_LIMIT`, `makeRunRecord`, `RunStatusBadge` | runner, record storage with orphan reconciliation, event log and transcript     |
-| **scheduler**  | `Skip`, `SkipReason`, `SchedulerState`, skip label                                                                      | tick loop, `scheduler.json` storage                                             |
-| **routine**    | `RoutineSummary`, `RoutineDetail`, requests, `RunNowButton`                                                             | frontmatter parsing, validation and defaults, loading, next run, schedule label |
-| **calendar**   | entry schemas and types, `getCalendar`                                                                                  | `buildCalendar`, planned lengths                                                |
-| **daemon**     | status schema, `getDaemonStatus`, health rules, `DaemonStatusIndicator`                                                 | none, `cli/src/server.ts` builds the status                                     |
+| Domain         | Shared half                                                                                                                                           | Daemon half                                                                     |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| **agent**      | `AgentName`, agent label                                                                                                                              | claude, codex and command adapters, registry, settings validation, `AgentTask`  |
+| **transcript** | item schemas and types, preview rule, subagent check, empty and result labels, `TranscriptList`                                                       | none                                                                            |
+| **run**        | `RunRecord`, status and trigger, requests, labels, id, duration, `RECENT_RUNS_LIMIT`, `makeRunRecord`, `RunStatusBadge`, `RunDetailList`, `RunOutput` | runner, record storage with orphan reconciliation, event log and transcript     |
+| **scheduler**  | `Skip`, `SkipReason`, `SchedulerState`, skip label, `SkipsTable`                                                                                      | tick loop, `scheduler.json` storage                                             |
+| **routine**    | `RoutineSummary`, `RoutineDetail`, requests, `RunNowButton`, `RoutineBadges`, `RoutineDetailList`                                                     | frontmatter parsing, validation and defaults, loading, next run, schedule label |
+| **calendar**   | entry schemas and types, `getCalendar`, entry title and overlap labels, overlap count                                                                 | `buildCalendar`, planned lengths                                                |
+| **daemon**     | status schema, `getDaemonStatus`, health rules, `DaemonStatusIndicator`                                                                               | none, `cli/src/server.ts` builds the status                                     |
 
 Not domains:
 
@@ -127,14 +127,15 @@ A domain folder in this package can have:
 - `constants.ts`: fixed values, such as `RECENT_RUNS_LIMIT` and `STALE_TICK_MS`;
 - `utils.ts`: pure rules and labels;
 - `mocks.ts`: test data, imported only from `*.test.ts`, `*.e2e.ts` and `packages/e2e`;
-- `components/`: router-free React components, exported through `components/index.ts` as `domains/<domain>/components`.
+- `*.test.ts`: unit tests next to the rules they cover, run by `pnpm test`;
+- `components/`: router-free React components, exported through `components/index.ts` as `domains/<domain>/components`. A component made of parts is exported as a namespace, as in design-system.
 
-Components per domain: run `RunStatusBadge`, transcript `TranscriptList`, daemon `DaemonStatusIndicator`, routine `RunNowButton`.
+Components per domain: run `RunStatusBadge`, `RunDetailList` and `RunOutput`; transcript `TranscriptList`; daemon `DaemonStatusIndicator`; routine `RunNowButton`, `RoutineBadges` and `RoutineDetailList`; scheduler `SkipsTable`.
 
 Other packages import everything else per file, such as `domains/run/schemas`. Inside this package, files import each other by relative path.
 
 ## Rules
 
-- No routing, no `node:*`, no env and no cli config: the daemon, the TUI and the web app all run this code.
+- No routing, no `node:*` outside `*.test.ts`, no env and no cli config: the daemon, the TUI and the web app all run this code.
 - Only `components/` imports React, lucide-react, `design-system` and `utils/hooks`, because cli and tui import the rest.
 - Labels that the web app and the TUI share live in `utils.ts`. Each renderer keeps its own icons and colours.

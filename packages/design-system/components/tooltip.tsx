@@ -47,4 +47,9 @@ function TooltipContent({ className, sideOffset = 0, children, ...props }: Toolt
   );
 }
 
-export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider };
+export {
+  Tooltip as Root,
+  TooltipTrigger as Trigger,
+  TooltipContent as Content,
+  TooltipProvider as Provider,
+};

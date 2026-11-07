@@ -1,7 +1,7 @@
 import { CalendarDays, History, Workflow } from 'lucide-react';
 import { useLayoutEffect, useRef, type RefObject } from 'react';
 import { Link, useLocation } from 'react-router';
-import { BrandMark } from 'design-system/icons/brand-mark';
+import { BrandMark } from 'design-system/icons';
 import { cn } from 'design-system/utils';
 import { DaemonStatusIndicator } from 'domains/daemon/components';
 import { CALENDAR_PATH, ROUTINES_PATH, RUNS_PATH } from '@web-app/constants/path';

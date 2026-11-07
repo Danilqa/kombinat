@@ -9,9 +9,11 @@
     "./daemon/components": "./daemon/components/index.ts",
     "./routine/components": "./routine/components/index.ts",
     "./run/components": "./run/components/index.ts",
+    "./scheduler/components": "./scheduler/components/index.ts",
     "./transcript/components": "./transcript/components/index.ts"
   },
   "scripts": {
+    "test": "tsx --test '*/*.test.ts'",
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {

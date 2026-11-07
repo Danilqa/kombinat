@@ -2,12 +2,12 @@ import { Check, ChevronRight, CircleAlert, Loader, X } from 'lucide-react';
 import { memo, useId, useState } from 'react';
 import { match } from 'ts-pattern';
 
-import { CodeBlock } from 'design-system/components/code-block';
-import { Markdown } from 'design-system/components/markdown';
+import { CodeBlock, EmptyState, Markdown } from 'design-system/components';
 import { cn } from 'design-system/utils';
 import { formatDuration } from 'utils/date-time';
 
 import type { HookItem, InitItem, ResultItem, TextItem, ToolItem, TranscriptItem } from '../types';
+import { getIsSubagent, getTranscriptEmptyLabel, getTranscriptResultLabel } from '../utils';
 
 interface HookRowProps {
   item: HookItem;
@@ -131,7 +131,6 @@ const ToolRow = memo(function ToolRow({ item, isPending }: ToolRowProps) {
 });
 
 interface ResultAppearance {
-  label: string;
   className: string;
   labelClassName: string;
   iconClassName: string;
@@ -141,14 +140,12 @@ interface ResultAppearance {
 function getResultAppearance(isError: boolean): ResultAppearance {
   return match(isError)
     .with(true, () => ({
-      label: 'Finished with error',
       className: 'bg-negative-soft',
       labelClassName: 'text-negative',
       iconClassName: 'bg-negative',
       icon: X,
     }))
     .with(false, () => ({
-      label: 'Finished',
       className: 'bg-positive-soft',
       labelClassName: 'text-positive',
       iconClassName: 'bg-positive',
@@ -180,7 +177,7 @@ function ResultRow({ item }: ResultRowProps) {
         >
           <Icon className="size-2.5" strokeWidth={3.5} />
         </span>
-        {appearance.label}
+        {getTranscriptResultLabel(item.isError)}
       </span>
       <span className="tabular-nums">
         <span className="font-medium text-fg">{item.numTurns ?? '-'}</span> turns
@@ -200,22 +197,13 @@ function renderItem(item: TranscriptItem, isRunning: boolean) {
     .exhaustive();
 }
 
-function getIsSubagent(item: TranscriptItem): boolean {
-  return 'isSubagent' in item && item.isSubagent;
-}
-
 interface TranscriptListProps {
   items: TranscriptItem[];
   isRunning: boolean;
 }
 
 export function TranscriptList({ items, isRunning }: TranscriptListProps) {
-  if (items.length === 0)
-    return (
-      <p className="py-10 text-center text-body text-fg-muted">
-        {isRunning ? 'Waiting for the first events…' : 'No transcript events.'}
-      </p>
-    );
+  if (items.length === 0) return <EmptyState>{getTranscriptEmptyLabel(isRunning)}</EmptyState>;
   return (
     <div className="space-y-2">
       {items.map(item => (
