@@ -9,7 +9,7 @@ export function toPreview(value: string): string {
     : firstLine;
 }
 
-export function getIsSubagent(item: TranscriptItem): boolean {
+export function checkIsSubagent(item: TranscriptItem): boolean {
   return 'isSubagent' in item && item.isSubagent;
 }
 

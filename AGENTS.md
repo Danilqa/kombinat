@@ -87,6 +87,7 @@ The domain map, definitions and invariants are in [packages/domains/README.md](p
 ## Code style
 
 - File names are kebab-case. Object types are interfaces. No enums, no switch (use ts-pattern `match`) and no inline type literals. A component's props interface is `<Component>Props`. ESLint enforces these.
+- A function or method that returns a boolean is named `check<…>`, not `get<…>` or `is<…>`: `checkIsTickStale`, `checkHasRunningRun`, `tunnel.checkIsOpen()`, type guards too. Its result goes into an `is…` or `has…` variable. A function that does work and returns whether it succeeded keeps its verb, such as `buildWebApp`.
 - A component made of parts is a namespace, as in Radix. Its file keeps full names, `TableRow` with `TableRowProps`, and ends with `export { Table as Root, TableRow as Row }`. The folder's `index.ts` re-exports it with `export * as Table from './table'`, and callers write `<Table.Root>` and `<Table.Row>`. A component of one part keeps its name: `export * from './badge'`. Domain components follow the same rule.
 - Unit tests sit next to their code as `*.test.ts` and run on node:test through tsx. `pnpm test` runs the tests of every package.
 - Do not write comments by default. Write one short line only for a "why" the code cannot say.

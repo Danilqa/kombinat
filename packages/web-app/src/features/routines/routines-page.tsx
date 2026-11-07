@@ -21,7 +21,7 @@ import { getRoutinePath, getRunPath } from '@web-app/constants/path';
 import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 import { useRowLink } from '@web-app/hooks/use-row-link';
 
-function getHasRunningRoutine(routines: RoutineSummary[]): boolean {
+function checkHasRunningRoutine(routines: RoutineSummary[]): boolean {
   return routines.some(routine => routine.running);
 }
 
@@ -152,7 +152,7 @@ export function RoutinesPage() {
   const { data, error, reload } = usePolledData(
     'routines',
     () => getRoutines(sameOriginApi),
-    getHasRunningRoutine,
+    checkHasRunningRoutine,
   );
 
   return (

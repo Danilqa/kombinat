@@ -22,16 +22,16 @@ interface PolledData<T> {
 export function usePolledData<T>(
   key: string,
   load: () => Promise<T>,
-  getIsActive: (data: T) => boolean,
+  checkIsActive: (data: T) => boolean,
   intervals: PollIntervals = defaultIntervals,
 ): PolledData<T> {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
   const loadRef = useRef(load);
-  const getIsActiveRef = useRef(getIsActive);
+  const checkIsActiveRef = useRef(checkIsActive);
   loadRef.current = load;
-  getIsActiveRef.current = getIsActive;
+  checkIsActiveRef.current = checkIsActive;
   const { activeMs, idleMs } = intervals;
 
   useEffect(() => {
@@ -44,7 +44,10 @@ export function usePolledData<T>(
         if (isCancelled) return;
         setData(next);
         setError(null);
-        timer = setTimeout(() => void runTick(), getIsActiveRef.current(next) ? activeMs : idleMs);
+        timer = setTimeout(
+          () => void runTick(),
+          checkIsActiveRef.current(next) ? activeMs : idleMs,
+        );
       } catch (err) {
         if (isCancelled) return;
         setError(getErrorMessage(err));

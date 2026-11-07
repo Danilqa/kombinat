@@ -40,7 +40,7 @@ export function getWeekStart(date: Date): Date {
   return addDays(date, -getWeekdayIndex(date));
 }
 
-export function getIsSameDay(a: Date, b: Date): boolean {
+export function checkIsSameDay(a: Date, b: Date): boolean {
   return getDayStart(a).getTime() === getDayStart(b).getTime();
 }
 

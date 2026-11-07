@@ -15,7 +15,7 @@ export interface ConnectOptions {
 
 interface SshTunnel {
   closed: Promise<number>;
-  isOpen(): boolean;
+  checkIsOpen(): boolean;
   setQuiet(quiet: boolean): void;
   getLastMessage(): string;
   close(): void;
@@ -95,7 +95,7 @@ function openTunnel(destination: string, localPort: number, remotePort: number):
   process.on('exit', () => ssh.kill());
   return {
     closed,
-    isOpen: () => isOpen,
+    checkIsOpen: () => isOpen,
     setQuiet: quiet => {
       isQuiet = quiet;
       lastMessage = '';
@@ -106,7 +106,7 @@ function openTunnel(destination: string, localPort: number, remotePort: number):
 }
 
 async function waitUntilListening(tunnel: SshTunnel, port: number): Promise<boolean> {
-  while (tunnel.isOpen()) {
+  while (tunnel.checkIsOpen()) {
     if (await isListening(port)) return true;
     await sleep(PROBE_INTERVAL_MS);
   }
@@ -163,7 +163,7 @@ export async function connect({ destination, remotePort, tui }: ConnectOptions):
       lost.abort();
     });
     await runTui(url, lost.signal);
-    if (!tunnel.isOpen()) return reportLostConnection(tunnel, destination);
+    if (!tunnel.checkIsOpen()) return reportLostConnection(tunnel, destination);
     tunnel.close();
     return 0;
   }

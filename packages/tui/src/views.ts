@@ -7,7 +7,7 @@ import type { Skip } from 'domains/scheduler/types';
 import { getSkipReasonLabel } from 'domains/scheduler/utils';
 import type { ToolItem, TranscriptItem } from 'domains/transcript/types';
 import {
-  getIsSubagent,
+  checkIsSubagent,
   getTranscriptEmptyLabel,
   getTranscriptResultLabel,
 } from 'domains/transcript/utils';
@@ -694,7 +694,7 @@ function itemLines(
     .exhaustive();
 }
 
-export function isExpandable(item: TranscriptItem): boolean {
+export function checkIsExpandable(item: TranscriptItem): boolean {
   return match(item)
     .with({ kind: 'tool' }, () => true)
     .with({ kind: 'hook' }, hook => hook.output !== '')
@@ -721,7 +721,7 @@ export function transcriptLines(
     ];
   let previousKind: TranscriptItem['kind'] | null = null;
   for (const item of items) {
-    const isSubagent = getIsSubagent(item);
+    const isSubagent = checkIsSubagent(item);
     const needsGap =
       isMatching({ kind: P.union('text', 'result') }, item) || isMatching('text', previousKind);
     if (needsGap && (lines.at(-1)?.line.length ?? 0) > 0) lines.push(blank());
@@ -732,7 +732,7 @@ export function transcriptLines(
         line: isSubagent ? [text('┊ ', S.grey), ...line] : line,
         itemKey: item.key,
         isItemStart: index === 0,
-        ...(isExpandable(item) ? { action } : {}),
+        ...(checkIsExpandable(item) ? { action } : {}),
       });
     });
     previousKind = item.kind;

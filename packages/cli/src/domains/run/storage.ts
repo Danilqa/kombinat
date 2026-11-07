@@ -27,7 +27,7 @@ export function readRunRecord(routine: string, id: string): RunRecord | null {
   return readJsonFile(path.join(getRunsDir(routine), `${id}.json`), runRecordSchema);
 }
 
-export function isProcessAlive(pid: number | null): boolean {
+export function checkIsProcessAlive(pid: number | null): boolean {
   if (!pid) return false;
   try {
     process.kill(pid, 0);
@@ -38,7 +38,7 @@ export function isProcessAlive(pid: number | null): boolean {
 }
 
 function reconcileRecord(record: RunRecord): RunRecord {
-  if (!isMatching({ status: 'running' }, record) || isProcessAlive(record.pid)) return record;
+  if (!isMatching({ status: 'running' }, record) || checkIsProcessAlive(record.pid)) return record;
   const reconciled: RunRecord = {
     ...record,
     status: 'aborted',

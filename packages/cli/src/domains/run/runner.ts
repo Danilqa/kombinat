@@ -26,7 +26,7 @@ const BEFORE_HOOK_TIMEOUT_MS = 3 * 60_000;
 const KILL_GRACE_MS = 60_000;
 const STDERR_CHUNKS = 200;
 
-function findBinary(command: string): boolean {
+function checkIsBinaryFound(command: string): boolean {
   if (command.includes('/')) return fs.existsSync(command);
   return (process.env['PATH'] ?? '')
     .split(':')
@@ -69,7 +69,7 @@ function runBeforeHook({ command, cwd, env, logFile }: BeforeHook): string | nul
 
 interface KillTimer {
   clear: () => void;
-  hasFired: () => boolean;
+  checkHasFired: () => boolean;
 }
 
 // Ctrl-C first so the agent can wrap up, SIGTERM if it is still around a minute later.
@@ -80,7 +80,7 @@ function killAfter(child: ChildProcess, minutes: number): KillTimer {
     child.kill('SIGINT');
     setTimeout(() => child.kill('SIGTERM'), KILL_GRACE_MS).unref();
   }, minutes * 60_000);
-  return { clear: () => clearTimeout(timer), hasFired: () => fired };
+  return { clear: () => clearTimeout(timer), checkHasFired: () => fired };
 }
 
 function toEvent(agent: Agent, line: string): unknown {
@@ -129,7 +129,7 @@ export async function runRoutine(routine: Routine, options: RunOptions): Promise
   if (!fs.existsSync(routine.cwd)) {
     return finishRecord(record, { status: 'failed', error: `cwd does not exist: ${routine.cwd}` });
   }
-  if (!findBinary(invocation.command)) {
+  if (!checkIsBinaryFound(invocation.command)) {
     const hint = agent.binaryEnv === null ? '' : ` (set ${agent.binaryEnv})`;
     return finishRecord(record, {
       status: 'failed',
@@ -189,7 +189,7 @@ export async function runRoutine(routine: Routine, options: RunOptions): Promise
   killTimer.clear();
   log.end();
 
-  if (killTimer.hasFired()) {
+  if (killTimer.checkHasFired()) {
     return finishRecord(record, {
       status: 'timed_out',
       exitCode,

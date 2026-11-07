@@ -10,7 +10,7 @@ interface NavItem {
   label: string;
   to: string;
   icon: typeof Workflow;
-  getIsActive: (pathname: string) => boolean;
+  checkIsActive: (pathname: string) => boolean;
 }
 
 const navItems: NavItem[] = [
@@ -18,19 +18,19 @@ const navItems: NavItem[] = [
     label: 'Routines',
     to: ROUTINES_PATH,
     icon: Workflow,
-    getIsActive: pathname => pathname === ROUTINES_PATH || pathname.startsWith('/routines/'),
+    checkIsActive: pathname => pathname === ROUTINES_PATH || pathname.startsWith('/routines/'),
   },
   {
     label: 'Calendar',
     to: CALENDAR_PATH,
     icon: CalendarDays,
-    getIsActive: pathname => pathname.startsWith(CALENDAR_PATH),
+    checkIsActive: pathname => pathname.startsWith(CALENDAR_PATH),
   },
   {
     label: 'Runs',
     to: RUNS_PATH,
     icon: History,
-    getIsActive: pathname => pathname.startsWith(RUNS_PATH),
+    checkIsActive: pathname => pathname.startsWith(RUNS_PATH),
   },
 ];
 
@@ -39,7 +39,7 @@ type NavCurrent = 'page' | 'true';
 // On a detail page the section link is "current" but not the current page: the breadcrumb is.
 function getNavCurrent(item: NavItem, pathname: string): NavCurrent | undefined {
   if (pathname === item.to) return 'page';
-  return item.getIsActive(pathname) ? 'true' : undefined;
+  return item.checkIsActive(pathname) ? 'true' : undefined;
 }
 
 interface NavLinkItemProps {
@@ -49,7 +49,7 @@ interface NavLinkItemProps {
 
 function NavLinkItem({ item, pathname }: NavLinkItemProps) {
   const Icon = item.icon;
-  const isActive = item.getIsActive(pathname);
+  const isActive = item.checkIsActive(pathname);
   return (
     <Link
       to={item.to}

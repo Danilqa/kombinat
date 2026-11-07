@@ -13,7 +13,7 @@ const lock = path.join(modules, '.kombinat-install.lock');
 
 const getMtime = file => fs.statSync(file, { throwIfNoEntry: false })?.mtimeMs ?? 0;
 
-function isStale() {
+function checkIsStale() {
   if (!fs.existsSync(path.join(root, 'packages', 'cli', 'node_modules'))) return true;
   const installedAt = Math.max(getMtime(path.join(modules, '.modules.yaml')), getMtime(marker));
   return ['pnpm-lock.yaml', 'package.json'].some(
@@ -43,11 +43,11 @@ function lockInstall() {
   }
 }
 
-if (isStale()) {
+if (checkIsStale()) {
   fs.mkdirSync(modules, { recursive: true });
   lockInstall();
   try {
-    if (isStale()) {
+    if (checkIsStale()) {
       execFileSync('pnpm', ['install', '--frozen-lockfile'], {
         cwd: root,
         stdio: 'inherit',
