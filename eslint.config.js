@@ -125,6 +125,11 @@ const NO_BARREL_INSIDE_DESIGN_SYSTEM = {
   message: 'Inside design-system, import the file you need by relative path, never a barrel.',
 };
 
+const NO_SELF_IMPORT_INSIDE_DESIGN_SYSTEM = {
+  regex: '^design-system(/|$)',
+  message: 'Inside design-system, import the file you need by relative path, not by package name.',
+};
+
 const ONLY_SPECS_IMPORT_E2E = {
   regex: '^e2e(/|$)',
   message: 'Only *.e2e.ts specs import e2e/*.',
@@ -305,6 +310,7 @@ export default defineConfig(
     NO_ROUTER,
     packagesByPath('utils', 'e2e'),
     NO_BARREL_INSIDE_DESIGN_SYSTEM,
+    NO_SELF_IMPORT_INSIDE_DESIGN_SYSTEM,
   ),
   restrictImports(
     ['packages/utils/**'],
