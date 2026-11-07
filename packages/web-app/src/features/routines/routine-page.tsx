@@ -1,8 +1,5 @@
 import { useParams } from 'react-router';
-import { match } from 'ts-pattern';
-import { Badge, type BadgeVariant } from 'design-system/components/badge';
 import { Card } from 'design-system/components/card';
-import { DetailList, type DetailEntry } from 'design-system/components/detail-list';
 import { Markdown } from 'design-system/components/markdown';
 import { ErrorState, LoadingState } from 'design-system/components/page-states';
 import { RelativeTime } from 'design-system/components/relative-time';
@@ -16,9 +13,7 @@ import {
 } from 'design-system/components/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from 'design-system/components/tabs';
 import { PageTitle, SectionAside, SectionTitle } from 'design-system/layouts/page-header';
-import { cn } from 'design-system/utils';
-import { getAgentLabel } from 'domains/agent/utils';
-import { RunNowButton } from 'domains/routine/components';
+import { RoutineBadges, RoutineDetailList, RunNowButton } from 'domains/routine/components';
 import { getRoutine } from 'domains/routine/requests';
 import type { RoutineDetail } from 'domains/routine/types';
 import type { Skip } from 'domains/scheduler/types';
@@ -32,78 +27,6 @@ import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 
 function getIsRoutineRunning(routine: RoutineDetail): boolean {
   return routine.running;
-}
-
-type EnabledState = 'enabled' | 'disabled';
-
-interface EnabledBadge {
-  label: string;
-  variant: BadgeVariant;
-  dotClassName: string;
-}
-
-const enabledBadges: Record<EnabledState, EnabledBadge> = {
-  enabled: { label: 'Enabled', variant: 'positive', dotClassName: 'bg-positive' },
-  disabled: { label: 'Disabled', variant: 'ghost', dotClassName: 'bg-fg-faint' },
-};
-
-function getEnabledState(routine: RoutineDetail): EnabledState {
-  return match(routine.enabled)
-    .with(true, () => 'enabled' as const)
-    .with(false, () => 'disabled' as const)
-    .exhaustive();
-}
-
-interface RoutineBadgesProps {
-  routine: RoutineDetail;
-}
-
-function RoutineBadges({ routine }: RoutineBadgesProps) {
-  const enabledBadge = enabledBadges[getEnabledState(routine)];
-  return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <Badge size="small" variant={enabledBadge.variant}>
-        <span className={cn('size-1.5 rounded-full', enabledBadge.dotClassName)} />
-        {enabledBadge.label}
-      </Badge>
-      <Badge size="small">{routine.scheduleHuman}</Badge>
-      {routine.schedule && (
-        <Badge size="small" className="font-mono">
-          {routine.schedule}
-        </Badge>
-      )}
-      <Badge size="small">{getAgentLabel(routine.agent)}</Badge>
-      {routine.model !== null && (
-        <Badge size="small" className="font-mono">
-          {routine.model}
-        </Badge>
-      )}
-      {routine.effort !== null && <Badge size="small">Effort {routine.effort}</Badge>}
-      {routine.permissionMode !== null && (
-        <Badge size="small">Permission {routine.permissionMode}</Badge>
-      )}
-    </div>
-  );
-}
-
-function getStatEntries(routine: RoutineDetail): DetailEntry[] {
-  return [
-    { label: 'Next run', value: <RelativeTime iso={routine.nextRunAt} isFocusable /> },
-    {
-      label: 'Last run',
-      value: <RelativeTime iso={routine.lastRun?.startedAt ?? null} isFocusable />,
-    },
-    { label: 'Timeout', value: `${routine.timeoutMinutes} min` },
-    {
-      label: 'Budget',
-      value: routine.maxBudgetUsd === null ? 'None' : `$${routine.maxBudgetUsd.toFixed(2)}`,
-    },
-    { label: 'Working directory', value: routine.cwd, isMono: true, span: 'wide' },
-    { label: 'File', value: routine.file, isMono: true, span: 'wide' },
-    ...(routine.command === null
-      ? []
-      : [{ label: 'Command', value: routine.command, isMono: true, span: 'full' as const }]),
-  ];
 }
 
 interface SkipsTableProps {
@@ -165,7 +88,7 @@ function RoutineView({ routine }: RoutineViewProps) {
   return (
     <div className="space-y-10">
       <Card className="gap-0 py-0">
-        <DetailList entries={getStatEntries(routine)} />
+        <RoutineDetailList routine={routine} />
       </Card>
       <Tabs defaultValue="runs" className="gap-4">
         <TabsList>
