@@ -7,7 +7,7 @@ import type { Transcript } from '../transcript/types';
 import { runRecordSchema } from './schemas';
 import type { RunRecord, RunWithTranscript } from './types';
 
-function getRunPath(routine: string, id: string): string {
+function getRunApiPath(routine: string, id: string): string {
   return `/api/runs/${encodeURIComponent(routine)}/${encodeURIComponent(id)}`;
 }
 
@@ -16,7 +16,7 @@ export async function getRuns(http: HttpClient, limit: number): Promise<RunRecor
 }
 
 export async function getRun(http: HttpClient, routine: string, id: string): Promise<RunRecord> {
-  return http.request(getRunPath(routine, id), runRecordSchema);
+  return http.request(getRunApiPath(routine, id), runRecordSchema);
 }
 
 export async function getRunTranscript(
@@ -24,7 +24,7 @@ export async function getRunTranscript(
   routine: string,
   id: string,
 ): Promise<Transcript> {
-  return http.request(`${getRunPath(routine, id)}/transcript`, transcriptSchema);
+  return http.request(`${getRunApiPath(routine, id)}/transcript`, transcriptSchema);
 }
 
 export async function getRunWithTranscript(

@@ -1,6 +1,12 @@
+import type { z } from 'zod';
+
 import type { AgentName } from 'domains/agent/types';
 import type { RunRecord, RunTrigger } from 'domains/run/types';
 import type { TranscriptItem } from 'domains/transcript/types';
+
+import type { outputEventSchema } from './schemas';
+
+export type OutputEvent = z.infer<typeof outputEventSchema>;
 
 export interface AgentSettings {
   model: string | null;
