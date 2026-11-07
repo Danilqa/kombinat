@@ -17,7 +17,7 @@ Each domain has up to two halves with the same name:
 | **agent**      | `AgentName`, agent label                                                                                                | claude, codex and command adapters, registry, settings validation, `AgentTask`  |
 | **transcript** | item schemas and types, preview rule, subagent check, empty and result labels, `TranscriptList`                         | none                                                                            |
 | **run**        | `RunRecord`, status and trigger, requests, labels, id, duration, `RECENT_RUNS_LIMIT`, `makeRunRecord`, `RunStatusBadge` | runner, record storage with orphan reconciliation, event log and transcript     |
-| **scheduler**  | `Skip`, `SkipReason`, `SchedulerState`, skip label                                                                      | tick loop, `scheduler.json` storage                                             |
+| **scheduler**  | `Skip`, `SkipReason`, `SchedulerState`, skip label, `SkipsTable`                                                        | tick loop, `scheduler.json` storage                                             |
 | **routine**    | `RoutineSummary`, `RoutineDetail`, requests, `RunNowButton`, `RoutineBadges`, `RoutineDetailList`                       | frontmatter parsing, validation and defaults, loading, next run, schedule label |
 | **calendar**   | entry schemas and types, `getCalendar`, entry title and overlap labels, overlap count                                   | `buildCalendar`, planned lengths                                                |
 | **daemon**     | status schema, `getDaemonStatus`, health rules, `DaemonStatusIndicator`                                                 | none, `cli/src/server.ts` builds the status                                     |
@@ -130,7 +130,7 @@ A domain folder in this package can have:
 - `*.test.ts`: unit tests next to the rules they cover, run by `pnpm test`;
 - `components/`: router-free React components, exported through `components/index.ts` as `domains/<domain>/components`.
 
-Components per domain: run `RunStatusBadge`; transcript `TranscriptList`; daemon `DaemonStatusIndicator`; routine `RunNowButton`, `RoutineBadges` and `RoutineDetailList`.
+Components per domain: run `RunStatusBadge`; transcript `TranscriptList`; daemon `DaemonStatusIndicator`; routine `RunNowButton`, `RoutineBadges` and `RoutineDetailList`; scheduler `SkipsTable`.
 
 Other packages import everything else per file, such as `domains/run/schemas`. Inside this package, files import each other by relative path.
 

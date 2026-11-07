@@ -2,22 +2,12 @@ import { useParams } from 'react-router';
 import { Card } from 'design-system/components/card';
 import { Markdown } from 'design-system/components/markdown';
 import { ErrorState, LoadingState } from 'design-system/components/page-states';
-import { RelativeTime } from 'design-system/components/relative-time';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from 'design-system/components/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from 'design-system/components/tabs';
 import { PageTitle, SectionAside, SectionTitle } from 'design-system/layouts/page-header';
 import { RoutineBadges, RoutineDetailList, RunNowButton } from 'domains/routine/components';
 import { getRoutine } from 'domains/routine/requests';
 import type { RoutineDetail } from 'domains/routine/types';
-import type { Skip } from 'domains/scheduler/types';
-import { getSkipReasonLabel } from 'domains/scheduler/utils';
+import { SkipsTable } from 'domains/scheduler/components';
 import { usePolledData } from 'utils/hooks/use-polled-data';
 import { sameOriginApi } from 'utils/http';
 import { Breadcrumbs } from '@web-app/components/breadcrumbs';
@@ -27,37 +17,6 @@ import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 
 function getIsRoutineRunning(routine: RoutineDetail): boolean {
   return routine.running;
-}
-
-interface SkipsTableProps {
-  skips: Skip[];
-}
-
-function SkipsTable({ skips }: SkipsTableProps) {
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Skipped at</TableHead>
-          <TableHead>Scheduled for</TableHead>
-          <TableHead>Reason</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {[...skips].reverse().map(skip => (
-          <TableRow key={`${skip.at}-${skip.scheduledFor}`}>
-            <TableCell>
-              <RelativeTime iso={skip.at} isFocusable />
-            </TableCell>
-            <TableCell className="text-fg-secondary">
-              <RelativeTime iso={skip.scheduledFor} isFocusable />
-            </TableCell>
-            <TableCell className="text-fg-secondary">{getSkipReasonLabel(skip.reason)}</TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  );
 }
 
 interface RoutineHeaderProps {
