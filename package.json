@@ -28,7 +28,7 @@
     "@danilqa/eslint-plugin-ts-pattern": "0.0.4",
     "@eslint/js": "10.0.1",
     "@types/node": "26.6.3",
-    "@types/react": "catalog:",
+    "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "eslint": "10.13.0",
     "eslint-plugin-unicorn": "78.0.0",
