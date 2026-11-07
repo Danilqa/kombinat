@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Temporary, for LaunchAgents written before the move to packages/cli. Remove it one release later.
+// Temporary, for LaunchAgents written before the move to packages/cli. Remove it and its README note one release later.
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -32,7 +32,9 @@ function lockInstall() {
       return;
     } catch (error) {
       if (error.code !== 'EEXIST') throw error;
-      if (Date.now() - getMtime(lock) > ABANDONED_LOCK_MS) {
+      const lockedAt = getMtime(lock);
+      if (lockedAt === 0) continue;
+      if (Date.now() - lockedAt > ABANDONED_LOCK_MS) {
         fs.rmSync(lock, { recursive: true, force: true });
       } else {
         sleep(1000);
