@@ -176,7 +176,6 @@ export function installDepsIfStale(log: Log, projectRoot = config.projectRoot): 
   return isInstalled;
 }
 
-// Pulled code can need dependencies that are not installed yet.
 export function installDepsBeforeRestart(log: Log, projectRoot = config.projectRoot): boolean {
   return !areDepsStale(projectRoot) || installDepsIfStale(log, projectRoot);
 }

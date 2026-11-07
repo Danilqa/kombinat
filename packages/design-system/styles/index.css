@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @plugin "@tailwindcss/typography";
-/* The app that imports this file scans only its own folder for class names. */
+/* Apps scan only their own folder for class names. */
 @source '..';
 
 @custom-variant dark (&:is(.dark *));

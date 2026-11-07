@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Temporary, for LaunchAgents written before the move to packages/cli. Remove it and its README note one release later.
+// Temporary, for LaunchAgents from before packages/cli. Remove it with its README note one release later.
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';

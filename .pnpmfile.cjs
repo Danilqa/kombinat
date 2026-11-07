@@ -1,4 +1,4 @@
-// Users never install devDependencies, so the published manifest leaves them out.
+// The devDependencies name private workspace packages that are not on npm.
 module.exports = {
   hooks: {
     beforePacking(pkg) {

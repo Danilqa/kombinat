@@ -54,14 +54,13 @@ const PACKAGE_NAMES = {
   cli: '@danilqa/kombinat',
 };
 
-// By name or by a relative path into the package folder, e.g. 'tui' or '../../tui/src/app'.
+// Matches 'tui' and '../../tui/src/app' alike.
 const packagesAbove = (...folders) => ({
   regex: String.raw`^((\.\./)+(${folders.join('|')})/|(${folders.map(folder => PACKAGE_NAMES[folder]).join('|')})(/|$))`,
   message:
     'Packages import only the packages below them: utils, design-system, domains, then web-app and tui, then cli.',
 });
 
-// '../../domains/run/utils' would skip the manifest and the exports of domains.
 const packagesByPath = (...folders) => ({
   regex: String.raw`^(\.\./)+(${folders.join('|')})/`,
   message: 'Import other workspace packages by name, not by a relative path.',
@@ -143,7 +142,7 @@ const TEST_ONLY_IMPORTS = [
   ONLY_TESTS_IMPORT_MOCKS,
 ];
 
-// cli has domains/ and utils/ folders of its own, so packagesByPath leaves those names out.
+// cli has its own domains/ and utils/ folders.
 const CLI_IMPORTS = [
   {
     ...packagesAbove('web-app'),
@@ -164,7 +163,6 @@ const restrictImports = (files, ...patterns) => ({
   rules: { 'no-restricted-imports': ['error', { patterns }] },
 });
 
-// A domain imports only the levels before its own, so never a domain on its own level.
 const restrictDomainOrder = (folder, levels, domainsPattern, imports) =>
   levels.flatMap((level, index) => {
     const notBelow = levels.slice(index).flat();
@@ -275,7 +273,7 @@ export default defineConfig(
     files: ['packages/e2e/**/*.ts'],
     rules: { 'no-empty-pattern': ['error', { allowObjectPatternsAsParameters: true }] },
   },
-  // Where a file lives. A later block replaces the options of an earlier one, so each lists them all.
+  // A later block replaces the options of an earlier one, so each lists them all.
   restrictImports(['packages/cli/**'], ...CLI_IMPORTS),
   ...restrictDomainOrder(
     'packages/cli/src/domains',
@@ -308,7 +306,7 @@ export default defineConfig(
     NO_ROUTER,
     packagesByPath('e2e'),
   ),
-  // What a file is. The typescript-eslint copy of the rule keeps these apart from the blocks above.
+  // The typescript-eslint copy of the rule, so these do not replace the blocks above.
   restrictImportsOfKind(['packages/**/*.{ts,tsx}'], ['packages/e2e/**'], ...TEST_ONLY_IMPORTS),
   restrictImportsOfKind(
     ['packages/{web-app,domains,design-system,utils}/**/*.{ts,tsx}'],
