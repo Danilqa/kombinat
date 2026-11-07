@@ -1,6 +1,6 @@
 import { match } from 'ts-pattern';
 
-import { Badge, type BadgeVariant } from 'design-system/components/badge';
+import { Badge, type BadgeVariant } from 'design-system/components';
 import { cn } from 'design-system/utils';
 
 import { getAgentLabel } from '../../agent/utils';

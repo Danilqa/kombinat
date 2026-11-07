@@ -1,9 +1,7 @@
 import { useParams } from 'react-router';
 import { isMatching } from 'ts-pattern';
-import { Card } from 'design-system/components/card';
-import { ErrorState, LoadingState } from 'design-system/components/page-states';
-import { Separator } from 'design-system/components/separator';
-import { PageTitle, SectionAside, SectionTitle } from 'design-system/layouts/page-header';
+import { Card, ErrorState, LoadingState, Separator } from 'design-system/components';
+import { PageHeader, SectionHeader } from 'design-system/layouts';
 import { RunDetailList, RunOutput, RunStatusBadge } from 'domains/run/components';
 import { getRunWithTranscript } from 'domains/run/requests';
 import type { RunWithTranscript } from 'domains/run/types';
@@ -25,7 +23,7 @@ function RunView({ run, transcript }: RunViewProps) {
   const hasOutput = Boolean(run.error) || Boolean(run.resultText);
   return (
     <div className="space-y-10">
-      <Card className="gap-0 py-0">
+      <Card.Root className="gap-0 py-0">
         <RunDetailList run={run} />
         {hasOutput && (
           <>
@@ -33,11 +31,13 @@ function RunView({ run, transcript }: RunViewProps) {
             <RunOutput run={run} />
           </>
         )}
-      </Card>
+      </Card.Root>
       <section>
-        <SectionTitle aside={<SectionAside>{transcript.eventCount} events</SectionAside>}>
+        <SectionHeader.Root
+          aside={<SectionHeader.Aside>{transcript.eventCount} events</SectionHeader.Aside>}
+        >
           Transcript
-        </SectionTitle>
+        </SectionHeader.Root>
         <TranscriptList items={transcript.items} isRunning={isRunning} />
       </section>
     </div>
@@ -63,7 +63,7 @@ export function RunPage() {
       />
       {/* The title comes from the route, so the page has its heading while loading and on errors too. */}
       <header className="mb-6 flex max-w-full flex-wrap items-center gap-3">
-        <PageTitle className="max-w-full font-mono">{id}</PageTitle>
+        <PageHeader.Title className="max-w-full font-mono">{id}</PageHeader.Title>
         {data && <RunStatusBadge status={data.run.status} />}
       </header>
       {error && <ErrorState message={error} />}

@@ -1,7 +1,6 @@
 import { isMatching } from 'ts-pattern';
-import { Card } from 'design-system/components/card';
-import { ErrorState, LoadingState } from 'design-system/components/page-states';
-import { PageHeader, SectionAside } from 'design-system/layouts/page-header';
+import { Card, ErrorState, LoadingState } from 'design-system/components';
+import { PageHeader } from 'design-system/layouts';
 import { RECENT_RUNS_LIMIT } from 'domains/run/constants';
 import { getRuns } from 'domains/run/requests';
 import type { RunRecord } from 'domains/run/types';
@@ -24,13 +23,16 @@ export function RunsPage() {
 
   return (
     <div>
-      <PageHeader title="Runs" aside={data && <SectionAside>{data.length} runs</SectionAside>} />
+      <PageHeader.Root
+        title="Runs"
+        aside={data && <PageHeader.Aside>{data.length} runs</PageHeader.Aside>}
+      />
       {error && <ErrorState message={error} />}
       {!data && !error && <LoadingState />}
       {data && (
-        <Card className="gap-0 overflow-visible py-0">
+        <Card.Root className="gap-0 overflow-visible py-0">
           <RunsTable runs={data} hasRoutineColumn />
-        </Card>
+        </Card.Root>
       )}
     </div>
   );

@@ -1,5 +1,4 @@
-import { DetailList, type DetailEntry } from 'design-system/components/detail-list';
-import { RelativeTime } from 'design-system/components/relative-time';
+import { DetailList, RelativeTime, type DetailEntry } from 'design-system/components';
 
 import type { RoutineSummary } from '../types';
 

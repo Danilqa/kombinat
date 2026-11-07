@@ -174,4 +174,13 @@ function TableCaption({ className, ...props }: TableCaptionProps) {
   );
 }
 
-export { Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell, TableCaption };
+export {
+  Table as Root,
+  TableHeader as Header,
+  TableBody as Body,
+  TableFooter as Footer,
+  TableHead as Head,
+  TableRow as Row,
+  TableCell as Cell,
+  TableCaption as Caption,
+};

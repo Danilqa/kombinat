@@ -1,9 +1,6 @@
 import { useParams } from 'react-router';
-import { Card } from 'design-system/components/card';
-import { Markdown } from 'design-system/components/markdown';
-import { ErrorState, LoadingState } from 'design-system/components/page-states';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from 'design-system/components/tabs';
-import { PageTitle, SectionAside, SectionTitle } from 'design-system/layouts/page-header';
+import { Card, ErrorState, LoadingState, Markdown, Tabs } from 'design-system/components';
+import { PageHeader, SectionHeader } from 'design-system/layouts';
 import { RoutineBadges, RoutineDetailList, RunNowButton } from 'domains/routine/components';
 import { getRoutine } from 'domains/routine/requests';
 import type { RoutineDetail } from 'domains/routine/types';
@@ -29,7 +26,7 @@ function RoutineHeader({ name, routine }: RoutineHeaderProps) {
   return (
     <header className="mb-6 min-w-0 space-y-3">
       <div className="space-y-1">
-        <PageTitle>{name}</PageTitle>
+        <PageHeader.Title>{name}</PageHeader.Title>
         {routine?.description && (
           <p className="max-w-3xl text-body text-fg-secondary">{routine.description}</p>
         )}
@@ -46,38 +43,40 @@ interface RoutineViewProps {
 function RoutineView({ routine }: RoutineViewProps) {
   return (
     <div className="space-y-10">
-      <Card className="gap-0 py-0">
+      <Card.Root className="gap-0 py-0">
         <RoutineDetailList routine={routine} />
-      </Card>
-      <Tabs defaultValue="runs" className="gap-4">
-        <TabsList>
-          <TabsTrigger value="runs">
+      </Card.Root>
+      <Tabs.Root defaultValue="runs" className="gap-4">
+        <Tabs.List>
+          <Tabs.Trigger value="runs">
             Runs
             <span className="text-fg-secondary tabular-nums">{routine.runs.length}</span>
-          </TabsTrigger>
-          <TabsTrigger value="prompt">Prompt</TabsTrigger>
-        </TabsList>
-        <TabsContent value="runs" className="space-y-10">
-          <Card className="gap-0 overflow-visible py-0">
+          </Tabs.Trigger>
+          <Tabs.Trigger value="prompt">Prompt</Tabs.Trigger>
+        </Tabs.List>
+        <Tabs.Content value="runs" className="space-y-10">
+          <Card.Root className="gap-0 overflow-visible py-0">
             <RunsTable runs={routine.runs} hasRoutineColumn={false} />
-          </Card>
+          </Card.Root>
           {routine.skips.length > 0 && (
             <section>
-              <SectionTitle aside={<SectionAside>{routine.skips.length} skipped</SectionAside>}>
+              <SectionHeader.Root
+                aside={<SectionHeader.Aside>{routine.skips.length} skipped</SectionHeader.Aside>}
+              >
                 Skipped runs
-              </SectionTitle>
-              <Card className="gap-0 overflow-visible py-0">
+              </SectionHeader.Root>
+              <Card.Root className="gap-0 overflow-visible py-0">
                 <SkipsTable skips={routine.skips} />
-              </Card>
+              </Card.Root>
             </section>
           )}
-        </TabsContent>
-        <TabsContent value="prompt">
-          <Card className="gap-0 p-6">
+        </Tabs.Content>
+        <Tabs.Content value="prompt">
+          <Card.Root className="gap-0 p-6">
             <Markdown source={routine.prompt} minHeadingLevel={2} />
-          </Card>
-        </TabsContent>
-      </Tabs>
+          </Card.Root>
+        </Tabs.Content>
+      </Tabs.Root>
     </div>
   );
 }

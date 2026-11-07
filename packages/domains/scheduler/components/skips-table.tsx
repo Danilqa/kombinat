@@ -1,12 +1,4 @@
-import { RelativeTime } from 'design-system/components/relative-time';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from 'design-system/components/table';
+import { RelativeTime, Table } from 'design-system/components';
 
 import type { Skip } from '../types';
 import { getSkipReasonLabel } from '../utils';
@@ -17,27 +9,27 @@ interface SkipsTableProps {
 
 export function SkipsTable({ skips }: SkipsTableProps) {
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Skipped at</TableHead>
-          <TableHead>Scheduled for</TableHead>
-          <TableHead>Reason</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
+    <Table.Root>
+      <Table.Header>
+        <Table.Row>
+          <Table.Head>Skipped at</Table.Head>
+          <Table.Head>Scheduled for</Table.Head>
+          <Table.Head>Reason</Table.Head>
+        </Table.Row>
+      </Table.Header>
+      <Table.Body>
         {[...skips].reverse().map(skip => (
-          <TableRow key={`${skip.at}-${skip.scheduledFor}`}>
-            <TableCell>
+          <Table.Row key={`${skip.at}-${skip.scheduledFor}`}>
+            <Table.Cell>
               <RelativeTime iso={skip.at} isFocusable />
-            </TableCell>
-            <TableCell className="text-fg-secondary">
+            </Table.Cell>
+            <Table.Cell className="text-fg-secondary">
               <RelativeTime iso={skip.scheduledFor} isFocusable />
-            </TableCell>
-            <TableCell className="text-fg-secondary">{getSkipReasonLabel(skip.reason)}</TableCell>
-          </TableRow>
+            </Table.Cell>
+            <Table.Cell className="text-fg-secondary">{getSkipReasonLabel(skip.reason)}</Table.Cell>
+          </Table.Row>
         ))}
-      </TableBody>
-    </Table>
+      </Table.Body>
+    </Table.Root>
   );
 }

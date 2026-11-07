@@ -128,7 +128,7 @@ A domain folder in this package can have:
 - `utils.ts`: pure rules and labels;
 - `mocks.ts`: test data, imported only from `*.test.ts`, `*.e2e.ts` and `packages/e2e`;
 - `*.test.ts`: unit tests next to the rules they cover, run by `pnpm test`;
-- `components/`: router-free React components, exported through `components/index.ts` as `domains/<domain>/components`.
+- `components/`: router-free React components, exported through `components/index.ts` as `domains/<domain>/components`. A component made of parts is exported as a namespace, as in design-system.
 
 Components per domain: run `RunStatusBadge`, `RunDetailList` and `RunOutput`; transcript `TranscriptList`; daemon `DaemonStatusIndicator`; routine `RunNowButton`, `RoutineBadges` and `RoutineDetailList`; scheduler `SkipsTable`.
 

@@ -7,9 +7,9 @@
   ],
   "type": "module",
   "exports": {
-    "./components/*": "./components/*.tsx",
-    "./icons/*": "./icons/*.tsx",
-    "./layouts/*": "./layouts/*.tsx",
+    "./components": "./components/index.ts",
+    "./icons": "./icons/index.ts",
+    "./layouts": "./layouts/index.ts",
     "./styles.css": "./styles/index.css",
     "./utils": "./utils.ts"
   },

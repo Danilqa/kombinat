@@ -1,6 +1,6 @@
 import { P, match } from 'ts-pattern';
 
-import { Popover, PopoverContent, PopoverTrigger } from 'design-system/components/popover';
+import { Popover } from 'design-system/components';
 import { cn } from 'design-system/utils';
 import { formatRelative } from 'utils/date-time';
 import { usePolledData } from 'utils/hooks/use-polled-data';
@@ -94,8 +94,8 @@ export function DaemonStatusIndicator() {
       <span role="status" className="sr-only">
         {appearance.label}
       </span>
-      <Popover>
-        <PopoverTrigger
+      <Popover.Root>
+        <Popover.Trigger
           className={cn(
             triggerClassName,
             'transition-colors hover:bg-hover hover:text-fg data-[state=open]:bg-overlay',
@@ -110,12 +110,12 @@ export function DaemonStatusIndicator() {
           />
           <DaemonStatusSummary health={health} status={data} />
           <span className="sr-only">, daemon status</span>
-        </PopoverTrigger>
-        <PopoverContent side="bottom" align="end">
+        </Popover.Trigger>
+        <Popover.Content side="bottom" align="end">
           <p className="mb-1.5 font-medium">{appearance.label}</p>
           {data && <DaemonStatusDetails status={data} />}
-        </PopoverContent>
-      </Popover>
+        </Popover.Content>
+      </Popover.Root>
     </>
   );
 }

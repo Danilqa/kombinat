@@ -2,14 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Ban, Check, ChevronLeft, ChevronRight, Clock, Ellipsis, Loader, X } from 'lucide-react';
 import { Link } from 'react-router';
 import { isMatching, match } from 'ts-pattern';
-import { Button } from 'design-system/components/button';
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from 'design-system/components/dropdown-menu';
-import { ErrorState } from 'design-system/components/page-states';
+import { Button, DropdownMenu, ErrorState } from 'design-system/components';
 import { cn } from 'design-system/utils';
 import { getCalendar } from 'domains/calendar/requests';
 import type { CalendarEntry } from 'domains/calendar/types';
@@ -387,14 +380,14 @@ function CalendarOptions({
   onHighlightOverlapsChange,
 }: CalendarOptionsProps) {
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger asChild>
         <Button variant="tertiary" size="icon-small" aria-label="Calendar options">
           <Ellipsis />
         </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent>
-        <DropdownMenuCheckboxItem
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Content>
+        <DropdownMenu.CheckboxItem
           checked={isHighlightingOverlaps}
           onCheckedChange={onHighlightOverlapsChange}
         >
@@ -404,9 +397,9 @@ function CalendarOptions({
               {overlapCount} this week
             </span>
           )}
-        </DropdownMenuCheckboxItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        </DropdownMenu.CheckboxItem>
+      </DropdownMenu.Content>
+    </DropdownMenu.Root>
   );
 }
 

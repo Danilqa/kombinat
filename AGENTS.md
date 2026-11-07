@@ -81,11 +81,12 @@ The domain map, definitions and invariants are in [packages/domains/README.md](p
 
 ### design-system
 
-- Other packages import it per file: `design-system/components/button`, `design-system/layouts/page-header`, `design-system/utils`.
-- To add a shadcn component, run the shadcn CLI in `packages/design-system`, where `components.json` is; its aliases resolve through the tsconfig paths there. Then rewrite the generated `design-system/...` imports to relative paths, as in the other files.
+- Other packages import it through three barrels, `design-system/components`, `design-system/layouts` and `design-system/icons`, plus `design-system/utils` and `design-system/styles.css`. Inside the package, a file imports the file it needs by relative path, such as `import * as Tooltip from './tooltip'`, never a barrel.
+- To add a shadcn component, run the shadcn CLI in `packages/design-system`, where `components.json` is; its aliases resolve through the tsconfig paths there. Then rewrite the generated `design-system/...` imports to relative paths, as in the other files, then name the props interfaces `<Function>Props`, end the file with an export block as described in Code style and add it to `components/index.ts`.
 
 ## Code style
 
 - File names are kebab-case. Object types are interfaces. No enums, no switch (use ts-pattern `match`) and no inline type literals. A component's props interface is `<Component>Props`. ESLint enforces these.
+- A component made of parts is a namespace, as in Radix. Its file keeps full names, `TableRow` with `TableRowProps`, and ends with `export { Table as Root, TableRow as Row }`. The folder's `index.ts` re-exports it with `export * as Table from './table'`, and callers write `<Table.Root>` and `<Table.Row>`. A component of one part keeps its name: `export * from './badge'`. Domain components follow the same rule.
 - Unit tests sit next to their code as `*.test.ts` and run on node:test through tsx. `pnpm test` runs the tests of every package.
 - Do not write comments by default. Write one short line only for a "why" the code cannot say.

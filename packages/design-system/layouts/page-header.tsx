@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
 import { cn } from '../utils';
 
-interface PageTitleProps {
+interface PageHeaderTitleProps {
   children: ReactNode;
   className?: string;
 }
 
-export function PageTitle({ children, className }: PageTitleProps) {
+function PageHeaderTitle({ children, className }: PageHeaderTitleProps) {
   return (
     <h1 className={cn('min-w-0 text-title-lg wrap-anywhere text-fg', className)}>{children}</h1>
   );
@@ -17,33 +17,21 @@ interface PageHeaderProps {
   aside?: ReactNode;
 }
 
-export function PageHeader({ title, aside }: PageHeaderProps) {
+function PageHeader({ title, aside }: PageHeaderProps) {
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
-      <PageTitle>{title}</PageTitle>
+      <PageHeaderTitle>{title}</PageHeaderTitle>
       {aside}
     </div>
   );
 }
 
-interface SectionTitleProps {
-  children: ReactNode;
-  aside?: ReactNode;
-}
-
-export function SectionTitle({ children, aside }: SectionTitleProps) {
-  return (
-    <div className="mb-3 flex items-baseline justify-between gap-4">
-      <h2 className="text-body font-medium text-fg-secondary">{children}</h2>
-      {aside}
-    </div>
-  );
-}
-
-interface SectionAsideProps {
+interface PageHeaderAsideProps {
   children: ReactNode;
 }
 
-export function SectionAside({ children }: SectionAsideProps) {
+function PageHeaderAside({ children }: PageHeaderAsideProps) {
   return <span className="text-body-sm text-fg-muted tabular-nums">{children}</span>;
 }
+
+export { PageHeader as Root, PageHeaderTitle as Title, PageHeaderAside as Aside };

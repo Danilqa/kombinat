@@ -1,6 +1,4 @@
-import { CodeBlock } from 'design-system/components/code-block';
-import { Markdown } from 'design-system/components/markdown';
-import { Separator } from 'design-system/components/separator';
+import { CodeBlock, Markdown, Separator } from 'design-system/components';
 
 import type { RunRecord } from '../types';
 

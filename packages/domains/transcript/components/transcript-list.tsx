@@ -2,9 +2,7 @@ import { Check, ChevronRight, CircleAlert, Loader, X } from 'lucide-react';
 import { memo, useId, useState } from 'react';
 import { match } from 'ts-pattern';
 
-import { CodeBlock } from 'design-system/components/code-block';
-import { Markdown } from 'design-system/components/markdown';
-import { EmptyState } from 'design-system/components/page-states';
+import { CodeBlock, EmptyState, Markdown } from 'design-system/components';
 import { cn } from 'design-system/utils';
 import { formatDuration } from 'utils/date-time';
 

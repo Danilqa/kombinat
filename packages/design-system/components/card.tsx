@@ -81,4 +81,12 @@ function CardFooter({ className, ...props }: CardFooterProps) {
   );
 }
 
-export { Card, CardHeader, CardFooter, CardTitle, CardAction, CardDescription, CardContent };
+export {
+  Card as Root,
+  CardHeader as Header,
+  CardTitle as Title,
+  CardDescription as Description,
+  CardAction as Action,
+  CardContent as Content,
+  CardFooter as Footer,
+};

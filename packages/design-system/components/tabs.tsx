@@ -73,4 +73,10 @@ function TabsContent({ className, ...props }: TabsContentProps) {
   );
 }
 
-export { Tabs, TabsList, TabsTrigger, TabsContent, tabsListVariants };
+export {
+  Tabs as Root,
+  TabsList as List,
+  TabsTrigger as Trigger,
+  TabsContent as Content,
+  tabsListVariants,
+};

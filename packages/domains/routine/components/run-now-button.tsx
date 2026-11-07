@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Play } from 'lucide-react';
 
-import { Button } from 'design-system/components/button';
+import { Button } from 'design-system/components';
 import { getErrorMessage } from 'utils/error';
 import { sameOriginApi } from 'utils/http';
 

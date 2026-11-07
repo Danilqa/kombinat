@@ -71,4 +71,9 @@ function DropdownMenuCheckboxItem({
   );
 }
 
-export { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuCheckboxItem };
+export {
+  DropdownMenu as Root,
+  DropdownMenuTrigger as Trigger,
+  DropdownMenuContent as Content,
+  DropdownMenuCheckboxItem as CheckboxItem,
+};
