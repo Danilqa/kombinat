@@ -2,7 +2,7 @@ import type { AgentName } from 'domains/agent/types';
 import type { RunRecord, RunTrigger } from 'domains/run/types';
 import type { TranscriptItem } from 'domains/transcript/types';
 
-import type { Routine } from '../routines';
+import type { Routine } from '../routine/utils';
 
 export type { AgentName } from 'domains/agent/types';
 

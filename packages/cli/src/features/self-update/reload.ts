@@ -7,7 +7,7 @@ import { z } from 'zod';
 
 import { getErrorMessage } from 'utils/error';
 
-import { config } from './config';
+import { config } from '../../config';
 
 type Log = (line: string) => void;
 

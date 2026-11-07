@@ -6,8 +6,8 @@ import { isMatching } from 'ts-pattern';
 import { makeRunRecord } from 'domains/run/mocks';
 import type { RunRecord, RunStatus } from 'domains/run/types';
 
-import { buildCalendar, estimatePlannedMinutes } from './calendar';
-import { buildRoutine } from './routines';
+import { buildRoutine } from '../routine/utils';
+import { buildCalendar, estimatePlannedMinutes } from './utils';
 
 const routine = (name: string, schedule: string, timeout = 55) =>
   buildRoutine(

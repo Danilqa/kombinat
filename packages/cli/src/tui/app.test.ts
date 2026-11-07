@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import type { RunRecord } from 'domains/run/types';
 
-import { buildTranscript } from '../agents';
+import { buildTranscript } from '../domains/agent/registry';
 import type { DaemonClient, Overview } from './api';
 import { TuiApp } from './app';
 import { lineWidth, plain } from './text';

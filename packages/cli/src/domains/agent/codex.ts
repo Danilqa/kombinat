@@ -3,8 +3,8 @@ import { z } from 'zod';
 
 import type { ToolResult, TranscriptItem } from 'domains/transcript/types';
 
-import { config } from '../config';
-import { toPreview } from '../transcript';
+import { config } from '../../config';
+import { toPreview } from '../run/event-log';
 import { getUnattendedNote, pickOne, rejectUnsupported, withoutEnv } from './settings';
 import type { Agent, RunUpdate } from './types';
 

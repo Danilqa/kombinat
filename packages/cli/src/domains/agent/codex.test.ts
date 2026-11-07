@@ -3,10 +3,10 @@ import { test } from 'node:test';
 
 import { makeRunRecord } from 'domains/run/mocks';
 
-import { buildRoutine } from '../routines';
-import { expectResult, expectText, expectTool } from '../testing';
+import { buildRoutine } from '../routine/utils';
 import { codexAgent } from './codex';
-import { buildTranscript } from './index';
+import { buildTranscript } from './registry';
+import { expectResult, expectText, expectTool } from './testing';
 
 const events = [
   { type: 'thread.started', thread_id: 'thread-1' },

@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { config, getCliArgs, PACKAGE_NAME } from './config';
+import { config, getCliArgs, PACKAGE_NAME } from '../../config';
 
 const plistPath = () =>
   path.join(os.homedir(), 'Library', 'LaunchAgents', `${config.launchdLabel}.plist`);

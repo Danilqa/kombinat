@@ -3,9 +3,9 @@ import { test } from 'node:test';
 
 import { makeRunRecord } from 'domains/run/mocks';
 
-import { buildRoutine } from '../routines';
+import { buildRoutine } from '../routine/utils';
 import { commandAgent } from './command';
-import { buildTranscript } from './index';
+import { buildTranscript } from './registry';
 
 test('pipes the prompt into a shell command', () => {
   const routine = buildRoutine(

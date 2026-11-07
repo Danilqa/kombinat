@@ -7,8 +7,8 @@ import { test } from 'node:test';
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kombinat-test-'));
 process.env['KOMBINAT_STATE_DIR'] = path.join(tmp, 'state');
 
-const { buildRoutine } = await import('./routines');
-const { runRoutine } = await import('./run');
+const { buildRoutine } = await import('../routine/utils');
+const { runRoutine } = await import('./runner');
 
 test('a command that ignores the prompt still finishes its run', async () => {
   // Larger than a pipe buffer, so the command exits before the whole prompt is written.

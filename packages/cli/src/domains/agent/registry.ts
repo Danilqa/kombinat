@@ -3,7 +3,7 @@ import { match } from 'ts-pattern';
 import { agentNameSchema } from 'domains/agent/schemas';
 import type { HookItem, Transcript } from 'domains/transcript/types';
 
-import { beforeHookEventSchema, toHookItem } from '../transcript';
+import { beforeHookEventSchema, toHookItem } from '../run/event-log';
 import { claudeAgent } from './claude';
 import { codexAgent } from './codex';
 import { commandAgent } from './command';

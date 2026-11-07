@@ -4,10 +4,10 @@ import path from 'node:path';
 
 import { getErrorMessage } from 'utils/error';
 
-import { getAgent, parseAgentName } from './agents';
-import type { AgentName, AgentSettings } from './agents/types';
-import { config } from './config';
-import { parseCron } from './cron';
+import { config } from '../../config';
+import { parseCron } from '../../utils/cron';
+import { getAgent, parseAgentName } from '../agent/registry';
+import type { AgentName, AgentSettings } from '../agent/types';
 
 export interface Routine extends AgentSettings {
   name: string;

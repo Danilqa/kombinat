@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { config } from './config';
+import { config } from '../../config';
 import { buildDaemonPath, renderPlist } from './install';
 
 test('daemon PATH drops plugin dirs and duplicates but keeps user entries', () => {

@@ -6,8 +6,11 @@ import { isMatching, match, P } from 'ts-pattern';
 import type { RunTrigger } from 'domains/run/types';
 
 import { config, DEFAULT_PORT } from './config';
-import { connect } from './connect';
-import { describeCron } from './cron';
+import { getRoutine, loadRoutines } from './domains/routine/utils';
+import { runRoutine } from './domains/run/runner';
+import { ensureStateDirs, listRuns, readSchedulerState } from './domains/run/storage';
+import { getNextRun, startSchedulerLoop } from './domains/scheduler/tick';
+import { connect } from './features/connect/connect';
 import {
   getDaemonFolder,
   getLaunchdStatus,
@@ -16,21 +19,18 @@ import {
   startLaunchd,
   stopLaunchd,
   uninstall,
-} from './install';
-import { updateReadme } from './readme';
+} from './features/launchd/install';
+import { updateReadme } from './features/readme/readme';
 import {
   buildWebAppIfStale,
   installDepsIfStale,
   pullLatest,
   startAutoPull,
   startReloadWatchers,
-} from './reload';
-import { getRoutine, loadRoutines } from './routines';
-import { runRoutine } from './run';
-import { getNextRun, startSchedulerLoop } from './scheduler';
+} from './features/self-update/reload';
 import { startServer } from './server';
-import { ensureStateDirs, listRuns, readSchedulerState } from './state';
 import { runTui } from './tui';
+import { describeCron } from './utils/cron';
 
 const USAGE = `kombinat, run from the folder that holds routines/ (connect and tui --url work anywhere)
 

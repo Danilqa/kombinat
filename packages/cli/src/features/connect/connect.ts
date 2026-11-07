@@ -6,8 +6,8 @@ import { match } from 'ts-pattern';
 
 import { getErrorMessage } from 'utils/error';
 
-import { runTui } from './tui';
-import { createDaemonClient } from './tui/api';
+import { runTui } from '../../tui';
+import { createDaemonClient } from '../../tui/api';
 
 export interface ConnectOptions {
   destination: string;

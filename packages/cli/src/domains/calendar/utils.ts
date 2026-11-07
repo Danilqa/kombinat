@@ -3,8 +3,8 @@ import { isMatching } from 'ts-pattern';
 import type { CalendarEntry, PlannedCalendarEntry, RunCalendarEntry } from 'domains/calendar/types';
 import type { RunRecord } from 'domains/run/types';
 
-import { cronRunsBetween } from './cron';
-import type { Routine } from './routines';
+import { cronRunsBetween } from '../../utils/cron';
+import type { Routine } from '../routine/utils';
 
 export interface PlannedLength {
   minutes: number;

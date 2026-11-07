@@ -3,10 +3,10 @@ import { test } from 'node:test';
 
 import { makeRunRecord } from 'domains/run/mocks';
 
-import { buildRoutine } from '../routines';
-import { expectInit, expectResult, expectText, expectTool } from '../testing';
-import { buildTranscript } from './index';
+import { buildRoutine } from '../routine/utils';
 import { claudeAgent } from './claude';
+import { buildTranscript } from './registry';
+import { expectInit, expectResult, expectText, expectTool } from './testing';
 
 const events = [
   { type: 'before_hook', command: 'ensure-docker.sh', exitCode: 0, output: '' },

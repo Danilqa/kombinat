@@ -9,8 +9,8 @@ import type { RunRecord } from 'domains/run/types';
 import { schedulerStateSchema } from 'domains/scheduler/schemas';
 import type { SchedulerState } from 'domains/scheduler/types';
 
-import { config } from './config';
-import { parseJson } from './json';
+import { config } from '../../config';
+import { parseJson } from '../../utils/json';
 
 function readJsonFile<T>(file: string, schema: z.ZodType<T>): T | null {
   if (!fs.existsSync(file)) return null;

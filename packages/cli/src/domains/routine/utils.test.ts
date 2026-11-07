@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import os from 'node:os';
 import { test } from 'node:test';
 
-import { buildRoutine, parseFrontmatter } from './routines';
+import { buildRoutine, parseFrontmatter } from './utils';
 
 const routineFile = (frontmatter: string): string =>
   `---\nname: demo\ncwd: /tmp\n${frontmatter}\n---\nHello`;

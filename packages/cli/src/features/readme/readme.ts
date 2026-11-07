@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { config } from './config';
-import { describeCron } from './cron';
-import { loadRoutines } from './routines';
+import { config } from '../../config';
+import { loadRoutines } from '../../domains/routine/utils';
+import { describeCron } from '../../utils/cron';
 
 const START = '<!-- routines:start -->';
 const END = '<!-- routines:end -->';
