@@ -17,6 +17,7 @@ import { formatDuration, formatShort } from 'utils/date-time';
 import { usePolledData } from 'utils/hooks/use-polled-data';
 import { sameOriginApi } from 'utils/http';
 import { Breadcrumbs } from '@web-app/components/breadcrumbs';
+import { RUNS_PATH, getRoutinePath } from '@web-app/constants/path';
 import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 
 function getIsRunActive(data: RunWithTranscript): boolean {
@@ -114,8 +115,8 @@ export function RunPage() {
     <div>
       <Breadcrumbs
         crumbs={[
-          { label: 'Runs', to: '/runs' },
-          { label: routine, to: `/routines/${encodeURIComponent(routine)}` },
+          { label: 'Runs', to: RUNS_PATH },
+          { label: routine, to: getRoutinePath(routine) },
         ]}
       />
       {/* The title comes from the route, so the page has its heading while loading and on errors too. */}

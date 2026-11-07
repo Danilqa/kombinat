@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router';
 import { BrandMark } from 'design-system/icons/brand-mark';
 import { cn } from 'design-system/utils';
 import { DaemonStatusIndicator } from 'domains/daemon/components';
+import { CALENDAR_PATH, ROUTINES_PATH, RUNS_PATH } from '@web-app/constants/path';
 
 interface NavItem {
   label: string;
@@ -15,21 +16,21 @@ interface NavItem {
 const navItems: NavItem[] = [
   {
     label: 'Routines',
-    to: '/',
+    to: ROUTINES_PATH,
     icon: Workflow,
-    getIsActive: pathname => pathname === '/' || pathname.startsWith('/routines/'),
+    getIsActive: pathname => pathname === ROUTINES_PATH || pathname.startsWith('/routines/'),
   },
   {
     label: 'Calendar',
-    to: '/calendar',
+    to: CALENDAR_PATH,
     icon: CalendarDays,
-    getIsActive: pathname => pathname.startsWith('/calendar'),
+    getIsActive: pathname => pathname.startsWith(CALENDAR_PATH),
   },
   {
     label: 'Runs',
-    to: '/runs',
+    to: RUNS_PATH,
     icon: History,
-    getIsActive: pathname => pathname.startsWith('/runs'),
+    getIsActive: pathname => pathname.startsWith(RUNS_PATH),
   },
 ];
 
@@ -91,7 +92,7 @@ export function AppHeader() {
     <header ref={headerRef} className="sticky top-0 z-50 mb-6 bg-page">
       <div className="mx-auto flex max-w-[1180px] flex-wrap items-center gap-x-2 gap-y-2 px-4 pt-4 pb-3 sm:gap-y-3 sm:px-6 sm:pt-6 sm:pb-4">
         <Link
-          to="/"
+          to={ROUTINES_PATH}
           className="mr-auto flex shrink-0 items-center gap-2 rounded-md text-title-md text-fg"
         >
           <BrandMark />

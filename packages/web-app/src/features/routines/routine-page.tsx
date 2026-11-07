@@ -27,6 +27,7 @@ import { usePolledData } from 'utils/hooks/use-polled-data';
 import { sameOriginApi } from 'utils/http';
 import { Breadcrumbs } from '@web-app/components/breadcrumbs';
 import { RunsTable } from '@web-app/components/runs-table';
+import { ROUTINES_PATH } from '@web-app/constants/path';
 import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 
 function getIsRoutineRunning(routine: RoutineDetail): boolean {
@@ -211,7 +212,7 @@ export function RoutinePage() {
   return (
     <div>
       <Breadcrumbs
-        crumbs={[{ label: 'Routines', to: '/' }]}
+        crumbs={[{ label: 'Routines', to: ROUTINES_PATH }]}
         aside={
           data && <RunNowButton routine={data.name} isRunning={data.running} onStarted={reload} />
         }

@@ -18,6 +18,7 @@ import { getRunStatusLabel } from 'domains/run/utils';
 import { formatClock, formatDayMonth, formatWeekday } from 'utils/date-time';
 import { usePolledData } from 'utils/hooks/use-polled-data';
 import { sameOriginApi } from 'utils/http';
+import { getRoutinePath, getRunPath } from '@web-app/constants/path';
 import { useStoredBoolean } from '@web-app/hooks/use-stored-boolean';
 import {
   addDays,
@@ -127,11 +128,8 @@ function getBlockVariant(entry: CalendarEntry): BlockVariant {
 
 function getEntryHref(entry: CalendarEntry): string {
   return match(entry)
-    .with(
-      { kind: 'run' },
-      run => `/runs/${encodeURIComponent(run.routine)}/${encodeURIComponent(run.runId)}`,
-    )
-    .with({ kind: 'planned' }, planned => `/routines/${encodeURIComponent(planned.routine)}`)
+    .with({ kind: 'run' }, run => getRunPath(run.routine, run.runId))
+    .with({ kind: 'planned' }, planned => getRoutinePath(planned.routine))
     .exhaustive();
 }
 

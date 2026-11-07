@@ -13,6 +13,7 @@ import { RunStatusBadge } from 'domains/run/components';
 import type { RunRecord } from 'domains/run/types';
 import { getRunDurationMs, getTriggerLabel } from 'domains/run/utils';
 import { formatDuration } from 'utils/date-time';
+import { getRoutinePath, getRunPath } from '@web-app/constants/path';
 import { useRowLink } from '@web-app/hooks/use-row-link';
 
 interface RunsTableProps {
@@ -42,14 +43,12 @@ export function RunsTable({ runs, hasRoutineColumn }: RunsTableProps) {
           <TableRow
             key={`${run.routine}/${run.id}`}
             className="cursor-pointer"
-            onClick={getRowClickHandler(
-              `/runs/${encodeURIComponent(run.routine)}/${encodeURIComponent(run.id)}`,
-            )}
+            onClick={getRowClickHandler(getRunPath(run.routine, run.id))}
           >
             {hasRoutineColumn && (
               <TableCell>
                 <Link
-                  to={`/routines/${encodeURIComponent(run.routine)}`}
+                  to={getRoutinePath(run.routine)}
                   className="text-body font-medium text-fg underline-offset-4 hover:underline"
                 >
                   {run.routine}
@@ -61,7 +60,7 @@ export function RunsTable({ runs, hasRoutineColumn }: RunsTableProps) {
             </TableCell>
             <TableCell>
               <Link
-                to={`/runs/${encodeURIComponent(run.routine)}/${encodeURIComponent(run.id)}`}
+                to={getRunPath(run.routine, run.id)}
                 className={cn(
                   'font-mono text-body-sm underline-offset-4 transition-colors hover:underline',
                   hasRoutineColumn ? 'text-fg-secondary hover:text-fg' : 'text-fg',

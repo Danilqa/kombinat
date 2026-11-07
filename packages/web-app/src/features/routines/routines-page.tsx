@@ -20,6 +20,7 @@ import { RunStatusBadge } from 'domains/run/components';
 import { getSkipReasonLabel } from 'domains/scheduler/utils';
 import { usePolledData } from 'utils/hooks/use-polled-data';
 import { sameOriginApi } from 'utils/http';
+import { getRoutinePath, getRunPath } from '@web-app/constants/path';
 import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 import { useRowLink } from '@web-app/hooks/use-row-link';
 
@@ -37,7 +38,7 @@ function LastRunCell({ routine }: LastRunCellProps) {
     <div className="space-y-1">
       {lastRun ? (
         <Link
-          to={`/runs/${encodeURIComponent(lastRun.routine)}/${encodeURIComponent(lastRun.id)}`}
+          to={getRunPath(lastRun.routine, lastRun.id)}
           className="flex flex-col items-start gap-1"
         >
           <RunStatusBadge status={lastRun.status} />
@@ -86,12 +87,12 @@ function RoutinesTable({ routines, onStarted }: RoutinesTableProps) {
           <TableRow
             key={routine.name}
             className="cursor-pointer"
-            onClick={getRowClickHandler(`/routines/${encodeURIComponent(routine.name)}`)}
+            onClick={getRowClickHandler(getRoutinePath(routine.name))}
           >
             <TableCell className="max-sm:whitespace-normal">
               <div className="flex items-center gap-2">
                 <Link
-                  to={`/routines/${encodeURIComponent(routine.name)}`}
+                  to={getRoutinePath(routine.name)}
                   className={cn(
                     'text-body font-medium underline-offset-4 hover:underline',
                     routine.enabled ? 'text-fg' : 'text-fg-secondary',
