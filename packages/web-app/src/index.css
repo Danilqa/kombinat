@@ -1,0 +1,24 @@
+@import 'design-system/styles.css';
+@source '../../domains';
+/* Words in the docs, such as "fixed", would otherwise become classes. */
+@source not '../../domains/**/*.md';
+
+@layer components {
+  .skip-link {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 100;
+    padding: 6px 12px;
+    border-radius: 9999px;
+    background-color: var(--fg);
+    color: var(--page);
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-body);
+    font-weight: 500;
+    transform: translateY(-200%);
+  }
+  .skip-link:focus-visible {
+    transform: none;
+  }
+}

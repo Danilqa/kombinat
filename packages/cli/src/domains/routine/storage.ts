@@ -1,0 +1,24 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
+import { config } from '../../config';
+import type { Routine } from './types';
+import { buildRoutine } from './utils';
+
+export function loadRoutines(dir = config.routinesDir): Routine[] {
+  if (!fs.existsSync(dir)) return [];
+  return fs
+    .readdirSync(dir)
+    .filter(entry => entry.endsWith('.md'))
+    .sort()
+    .map(entry => {
+      const file = path.join(dir, entry);
+      return buildRoutine(file, fs.readFileSync(file, 'utf8'));
+    });
+}
+
+export function getRoutine(name: string, dir = config.routinesDir): Routine {
+  const routine = loadRoutines(dir).find(candidate => candidate.name === name);
+  if (!routine) throw new Error(`Unknown routine "${name}" (looked in ${dir})`);
+  return routine;
+}

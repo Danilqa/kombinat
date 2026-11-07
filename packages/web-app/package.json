@@ -1,0 +1,28 @@
+{
+  "name": "web-app",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test": "tsx --test 'src/**/*.test.ts'",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "design-system": "workspace:*",
+    "domains": "workspace:*",
+    "lucide-react": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "react-router": "7.18.4",
+    "ts-pattern": "catalog:",
+    "utils": "workspace:*"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.3",
+    "@vitejs/plugin-react": "6.1.1",
+    "e2e": "workspace:*",
+    "vite": "8.3.1"
+  }
+}

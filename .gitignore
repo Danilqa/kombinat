@@ -1,7 +1,7 @@
 node_modules/
-ui/dist/
 .env.local
 .DS_Store
 dist/
 playwright-report/
 test-results/
+packages/cli/README.md

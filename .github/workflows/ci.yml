@@ -19,10 +19,57 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm validate
-      - run: pnpm exec playwright install --with-deps chromium
+      - name: Pack, install and start the npm package
+        run: |
+          tarball="$RUNNER_TEMP/kombinat.tgz"
+          pnpm --filter @danilqa/kombinat pack --out "$tarball"
+          contents="$(tar -tzf "$tarball")"
+          for file in bin/kombinat.js dist/cli.js dist/web-app/index.html README.md LICENSE; do
+            grep -qxF "package/$file" <<< "$contents" || { echo "$file is not packed"; exit 1; }
+          done
+          if grep -q '^package/src/' <<< "$contents"; then echo 'src/ is packed'; exit 1; fi
+          tar -xzOf "$tarball" package/package.json | node -e '
+            const manifest = JSON.parse(require("node:fs").readFileSync(0, "utf8"));
+            if ("devDependencies" in manifest) throw new Error("devDependencies are packed");
+            if (/"(workspace|catalog):/.test(JSON.stringify(manifest))) {
+              throw new Error("workspace: or catalog: specifiers are packed");
+            }
+          '
+          tar -xzOf "$tarball" package/dist/cli.js | node -e '
+            const code = require("node:fs").readFileSync(0, "utf8");
+            const specifiers = [
+              ...code.matchAll(/^(?:import|export)\s[^"]*"([^"]+)";$/gm),
+              ...code.matchAll(/\b(?:import|require)\(\s*"([^"]+)"\s*\)/g),
+            ].map(([, specifier]) => specifier);
+            const unexpected = specifiers.filter(
+              specifier => !/^(node:|(zod|ts-pattern)(\/|$))/.test(specifier),
+            );
+            if (unexpected.length > 0) {
+              throw new Error(`dist/cli.js imports ${[...new Set(unexpected)].join(", ")}`);
+            }
+          '
+          project="$RUNNER_TEMP/project"
+          mkdir -p "$project/routines"
+          cp routines/*.md "$project/routines/"
+          cd "$project"
+          npm init -y > /dev/null
+          npm install --no-audit --no-fund --loglevel=error "$tarball"
+          npx kombinat validate
+          port="$(node -e 'const server = require("node:net").createServer().listen(0, () => { console.log(server.address().port); server.close(); })')"
+          KOMBINAT_PORT="$port" KOMBINAT_STATE_DIR="$RUNNER_TEMP/state" \
+            node node_modules/@danilqa/kombinat/bin/kombinat.js serve --no-scheduler --no-watch > serve.log 2>&1 &
+          daemon=$!
+          for _ in $(seq 50); do grep -q 'ui at ' serve.log && break; sleep 0.2; done
+          cat serve.log
+          status="$(curl --fail --silent "http://127.0.0.1:$port/api/status")"
+          page="$(curl --fail --silent "http://127.0.0.1:$port/")"
+          kill "$daemon"
+          grep -q '"pid":' <<< "$status"
+          grep -qF '<div id="root"></div>' <<< "$page"
+      - run: pnpm --filter e2e exec playwright install --with-deps chromium
       - run: pnpm test:e2e
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-traces
-          path: test-results/
+          path: packages/e2e/web-app/test-results/
