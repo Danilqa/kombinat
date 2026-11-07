@@ -13,8 +13,12 @@ import { ErrorState } from 'design-system/components/page-states';
 import { cn } from 'design-system/utils';
 import { getCalendar } from 'domains/calendar/requests';
 import type { CalendarEntry } from 'domains/calendar/types';
+import {
+  countOverlapPairs,
+  getCalendarEntryOverlapLabel,
+  getCalendarEntryTitle,
+} from 'domains/calendar/utils';
 import type { RunStatus } from 'domains/run/types';
-import { getRunStatusLabel } from 'domains/run/utils';
 import { formatClock, formatDayMonth, formatWeekday } from 'utils/date-time';
 import { usePolledData } from 'utils/hooks/use-polled-data';
 import { sameOriginApi } from 'utils/http';
@@ -22,7 +26,6 @@ import { getRoutinePath, getRunPath } from '@web-app/constants/path';
 import { useStoredBoolean } from '@web-app/hooks/use-stored-boolean';
 import {
   addDays,
-  countOverlapPairs,
   getIsSameDay,
   getMinutesIntoDay,
   getWeekStart,
@@ -133,36 +136,6 @@ function getEntryHref(entry: CalendarEntry): string {
     .exhaustive();
 }
 
-function getDurationMinutes(entry: CalendarEntry): number {
-  return Math.round((new Date(entry.end).getTime() - new Date(entry.start).getTime()) / 60_000);
-}
-
-function getStateLabel(entry: CalendarEntry): string {
-  return match(entry)
-    .with(
-      { kind: 'planned', estimated: true },
-      planned => `planned (estimated ${getDurationMinutes(planned)} min)`,
-    )
-    .with(
-      { kind: 'planned', estimated: false },
-      planned => `planned (default ${getDurationMinutes(planned)} min, no past runs)`,
-    )
-    .with({ kind: 'run' }, run => getRunStatusLabel(run.status).toLowerCase())
-    .exhaustive();
-}
-
-function getOverlapLabel(entry: CalendarEntry, routinesById: Map<string, string>): string | null {
-  const names = [...new Set(entry.overlaps.map(id => routinesById.get(id) ?? id))];
-  return names.length > 0 ? `Overlaps with ${names.join(', ')}` : null;
-}
-
-function getEntryTitle(entry: CalendarEntry, overlapLabel: string | null): string {
-  const start = new Date(entry.start);
-  const day = `${formatWeekday(start)} ${formatDayMonth(start)}`;
-  const summary = `${entry.routine}, ${day}, ${formatClock(start)}–${formatClock(new Date(entry.end))}, ${getStateLabel(entry)}`;
-  return [summary, overlapLabel].filter(Boolean).join('\n');
-}
-
 function formatWeekRange(weekStart: Date): string {
   return `${formatDayMonth(weekStart)} – ${formatDayMonth(addDays(weekStart, 6))}`;
 }
@@ -222,7 +195,7 @@ function CalendarBlock({ positioned, overlapLabel }: CalendarBlockProps) {
   const { entry, top, height, left, width } = positioned;
   const style = blockStyles[getBlockVariant(entry)];
   const hasTimeLabel = height >= MIN_TIME_LABEL_MINUTES;
-  const title = getEntryTitle(entry, overlapLabel);
+  const title = getCalendarEntryTitle(entry, overlapLabel);
   const Icon = style.icon?.component;
   return (
     <Link
@@ -374,7 +347,7 @@ function DayColumn({ day, entries, now, isToday, isSelected, routinesById }: Day
         <CalendarBlock
           key={item.entry.id}
           positioned={item}
-          overlapLabel={routinesById && getOverlapLabel(item.entry, routinesById)}
+          overlapLabel={routinesById && getCalendarEntryOverlapLabel(item.entry, routinesById)}
         />
       ))}
       {isToday && <CurrentTimeLine now={now} dayStart={day} />}

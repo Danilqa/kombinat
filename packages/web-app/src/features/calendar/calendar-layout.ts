@@ -7,7 +7,6 @@ export interface TimedEntry {
   id: string;
   start: string;
   end: string;
-  overlaps: string[];
 }
 
 export interface PositionedEntry<T extends TimedEntry> {
@@ -103,11 +102,4 @@ export function layoutDay<T extends TimedEntry>(
       : Math.max(clusterBottom, item.top + item.height);
   }
   return clusters.flatMap(cluster => assignColumns(cluster));
-}
-
-export function countOverlapPairs(entries: TimedEntry[]): number {
-  const pairs = new Set(
-    entries.flatMap(entry => entry.overlaps.map(other => [entry.id, other].sort().join('\u0000'))),
-  );
-  return pairs.size;
 }

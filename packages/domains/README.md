@@ -19,7 +19,7 @@ Each domain has up to two halves with the same name:
 | **run**        | `RunRecord`, status and trigger, requests, labels, id, duration, `RECENT_RUNS_LIMIT`, `makeRunRecord`, `RunStatusBadge` | runner, record storage with orphan reconciliation, event log and transcript     |
 | **scheduler**  | `Skip`, `SkipReason`, `SchedulerState`, skip label                                                                      | tick loop, `scheduler.json` storage                                             |
 | **routine**    | `RoutineSummary`, `RoutineDetail`, requests, `RunNowButton`                                                             | frontmatter parsing, validation and defaults, loading, next run, schedule label |
-| **calendar**   | entry schemas and types, `getCalendar`                                                                                  | `buildCalendar`, planned lengths                                                |
+| **calendar**   | entry schemas and types, `getCalendar`, entry title and overlap labels, overlap count                                   | `buildCalendar`, planned lengths                                                |
 | **daemon**     | status schema, `getDaemonStatus`, health rules, `DaemonStatusIndicator`                                                 | none, `cli/src/server.ts` builds the status                                     |
 
 Not domains:
@@ -127,6 +127,7 @@ A domain folder in this package can have:
 - `constants.ts`: fixed values, such as `RECENT_RUNS_LIMIT` and `STALE_TICK_MS`;
 - `utils.ts`: pure rules and labels;
 - `mocks.ts`: test data, imported only from `*.test.ts`, `*.e2e.ts` and `packages/e2e`;
+- `*.test.ts`: unit tests next to the rules they cover, run by `pnpm test`;
 - `components/`: router-free React components, exported through `components/index.ts` as `domains/<domain>/components`.
 
 Components per domain: run `RunStatusBadge`, transcript `TranscriptList`, daemon `DaemonStatusIndicator`, routine `RunNowButton`.
