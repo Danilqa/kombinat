@@ -22,8 +22,11 @@ function getProcessOutput(error: unknown): string {
 
 const SKIPPED_FOLDERS = ['node_modules', 'dist'];
 
+// Docs such as packages/domains/README.md change no code.
 function isSkipped(file: string): boolean {
-  return file.split(path.sep).some(segment => SKIPPED_FOLDERS.includes(segment));
+  return (
+    file.endsWith('.md') || file.split(path.sep).some(segment => SKIPPED_FOLDERS.includes(segment))
+  );
 }
 
 function getNewestMtime(root: string): number {
@@ -43,11 +46,11 @@ const SHARED_PACKAGES = ['domains', 'utils'];
 
 const RESTART_SOURCES = ['tui/src', ...SHARED_PACKAGES];
 
-const REBUILD_SOURCES = ['web-app/src', 'design-system'];
+const REBUILD_SOURCES = ['web-app/src', 'design-system', ...SHARED_PACKAGES];
 
 const webAppSources = (workspaceRoot: string) =>
-  [...REBUILD_SOURCES, 'web-app/index.html', 'web-app/vite.config.ts', ...SHARED_PACKAGES].map(
-    source => path.join(workspaceRoot, 'packages', source),
+  [...REBUILD_SOURCES, 'web-app/index.html', 'web-app/vite.config.ts'].map(source =>
+    path.join(workspaceRoot, 'packages', source),
   );
 
 export function isWebAppStale(workspaceRoot = config.workspaceRoot): boolean {

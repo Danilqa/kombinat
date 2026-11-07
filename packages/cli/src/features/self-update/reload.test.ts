@@ -48,6 +48,18 @@ test('shared packages are web app sources, their node_modules and dist are not',
   assert.equal(isWebAppStale(root), true);
 });
 
+test('docs next to the web app sources do not make it stale', () => {
+  const root = makeRepo();
+  const domains = path.join(root, 'packages', 'domains');
+  fs.mkdirSync(domains);
+  touch(path.join(domains, 'README.md'), 3_000_000);
+  touch(path.join(root, 'packages', 'cli', 'dist', 'web-app', 'index.html'), 2_000_000);
+  for (const folder of [domains, path.join(root, 'packages', 'web-app', 'src')]) {
+    fs.utimesSync(folder, 1000, 1000);
+  }
+  assert.equal(isWebAppStale(root), false);
+});
+
 test('the design system is a web app source', () => {
   const root = makeRepo();
   const designSystem = path.join(root, 'packages', 'design-system');
