@@ -24,7 +24,7 @@ Run them from the repo root.
 
 ```bash
 pnpm install
-pnpm build                         # dist/cli.js and the dashboard in packages/cli/dist/web-app
+pnpm build                         # packages/cli/dist/cli.js and the dashboard in packages/cli/dist/web-app
 pnpm validate                      # format check, lint, typecheck and unit tests
 pnpm test:e2e                      # Playwright against a real daemon from this checkout
 pnpm --filter e2e run web-app:ui   # the same in Playwright's UI mode
@@ -49,7 +49,7 @@ Packages, bottom to top: `utils` → `design-system` → `domains` → `web-app`
 - Browser code never imports `node:*`. Tests and `vite.config.ts` may.
 - Specs import `test` and `expect` only from `e2e/web-app`, and only `packages/e2e` imports `@playwright/test`. Mocks are imported only from `*.test.ts`, `*.e2e.ts` and `packages/e2e`.
 
-`no-restricted-imports` blocks in `eslint.config.js` enforce these rules and the domain orders below.
+`no-restricted-imports` blocks in `eslint.config.js` enforce these rules and the domain orders below. They check static imports only, not `await import()`. In `cli`, which has `domains/` and `utils/` folders of its own, they also miss a relative import of the `domains` and `utils` packages.
 
 ### Domains
 
@@ -58,10 +58,10 @@ Each domain has up to two halves with the same name:
 - `packages/domains/<domain>`: the shared half that every app needs.
 - `packages/cli/src/domains/<domain>`: the daemon half, with files, child processes and config.
 
-A domain imports only the domains before it in its order. Any daemon domain may import any shared domain.
+Each half has an order of levels. A domain imports only the domains on the levels before its own, never one on its own level. Any daemon domain may import any shared domain.
 
 - Shared: `agent`, `transcript`, `scheduler` and `daemon`, then `run`, then `routine` and `calendar`.
-- Daemon: `agent`, `routine`, `run`, then `scheduler` and `calendar`.
+- Daemon: `agent`, then `routine`, then `run`, then `scheduler` and `calendar`.
 
 A shared domain can have `types.ts`, `schemas.ts` (zod), `requests.ts` (each request takes the `HttpClient` first), `constants.ts`, `utils.ts`, `mocks.ts` and `components/`. Inside `packages/domains`, files import each other by relative path. Other packages import them per file, such as `domains/run/utils`, and import components through the domain's barrel, `domains/run/components`. When a domain gets its first component, add `components/index.ts` and its key in `exports` in `packages/domains/package.json`.
 

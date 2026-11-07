@@ -110,12 +110,12 @@ Its health is `unreachable` when the request fails, `stale` when there has been 
 
 ## Dependency orders
 
-A domain imports only the domains before it in its order. There is one order per half:
+A domain imports only the domains on the levels before its own, never one on its own level. There is one order of levels per half:
 
 - Shared: `agent`, `transcript`, `scheduler` and `daemon`, then `run`, then `routine` and `calendar`. A run record holds its agent's name, a run's transcript request returns a transcript, a routine summary embeds its last run and last skip, and calendar entries carry run statuses and triggers.
-- Daemon: `agent`, `routine`, `run`, then `scheduler` and `calendar`. A routine validates its agent's settings, a run starts a routine's agent, the scheduler loads routines and starts runs, and the calendar plans from routines.
+- Daemon: `agent`, then `routine`, then `run`, then `scheduler` and `calendar`. A routine validates its agent's settings, a run starts a routine's agent, the scheduler loads routines and starts runs, and the calendar plans from routines.
 
-The orders differ, because routine is below run in the daemon but above it in the shared half. Each half is acyclic on its own, and any daemon domain may import any shared domain. ESLint enforces both orders, tests included: the agent adapter tests build their task with `makeAgentTask` instead of importing routine code.
+The orders differ, because routine is below run in the daemon but above it in the shared half. Each half is acyclic on its own, and any daemon domain may import any shared domain. ESLint enforces both orders on static imports, tests included: the agent adapter tests build their task with `makeAgentTask` instead of importing routine code. It does not see `await import()`, which tests use to load modules after they set the environment, so check those imports by hand.
 
 ## Files
 

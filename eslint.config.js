@@ -61,19 +61,34 @@ const packagesAbove = (...folders) => ({
     'Packages import only the packages below them: utils, design-system, domains, then web-app and tui, then cli.',
 });
 
-const daemonDomainsAbove = (...domains) => ({
-  regex: String.raw`^(\.\./)+(domains/)?(${domains.join('|')})(/|$)`,
-  message: 'Daemon domains import in one order: agent, routine, run, then scheduler and calendar.',
+// '../../domains/run/utils' would skip the manifest and the exports of domains.
+const packagesByPath = (...folders) => ({
+  regex: String.raw`^(\.\./)+(${folders.join('|')})/`,
+  message: 'Import other workspace packages by name, not by a relative path.',
 });
 
-const sharedDomainsAbove = (...domains) => ({
+const daemonDomains = (...domains) => ({
+  regex: String.raw`^(\.\./)+(domains/)?(${domains.join('|')})(/|$)`,
+  message:
+    'Daemon domains import only the levels before their own: agent, then routine, then run, then scheduler and calendar.',
+});
+
+const sharedDomains = (...domains) => ({
   regex: String.raw`^((\.\./)+|domains/)(${domains.join('|')})(/|$)`,
   message:
-    'Shared domains import in one order: agent, transcript, scheduler and daemon, then run, then routine and calendar.',
+    'Shared domains import only the levels before their own: agent, transcript, scheduler and daemon, then run, then routine and calendar.',
 });
 
+const DAEMON_DOMAIN_LEVELS = [['agent'], ['routine'], ['run'], ['scheduler', 'calendar']];
+
+const SHARED_DOMAIN_LEVELS = [
+  ['agent', 'transcript', 'scheduler', 'daemon'],
+  ['run'],
+  ['routine', 'calendar'],
+];
+
 const NO_UI_IN_TERMINAL = {
-  regex: String.raw`^(react|react-dom|react-router|design-system|domains/[^/]+/components|utils/hooks)(/|$)`,
+  regex: String.raw`^(react|react-dom|react-router|lucide-react|design-system|domains/[^/]+/components|utils/hooks)(/|$)`,
   message: 'cli and tui never import React, design-system, domain components or utils/hooks.',
 };
 
@@ -128,14 +143,39 @@ const TEST_ONLY_IMPORTS = [
   ONLY_TESTS_IMPORT_MOCKS,
 ];
 
-const CLI_IMPORTS = [packagesAbove('web-app'), NO_UI_IN_TERMINAL];
+// cli has domains/ and utils/ folders of its own, so packagesByPath leaves those names out.
+const CLI_IMPORTS = [
+  {
+    ...packagesAbove('web-app'),
+    message: 'cli serves the web-app build from dist/web-app and never imports web-app.',
+  },
+  NO_UI_IN_TERMINAL,
+  packagesByPath('design-system', 'tui', 'e2e'),
+];
 
-const DOMAINS_IMPORTS = [packagesAbove('web-app', 'tui', 'cli'), NO_ROUTER];
+const DOMAINS_IMPORTS = [
+  packagesAbove('web-app', 'tui', 'cli'),
+  NO_ROUTER,
+  packagesByPath('utils', 'design-system', 'e2e'),
+];
 
 const restrictImports = (files, ...patterns) => ({
   files,
   rules: { 'no-restricted-imports': ['error', { patterns }] },
 });
+
+// A domain imports only the levels before its own, so never a domain on its own level.
+const restrictDomainOrder = (folder, levels, domainsPattern, imports) =>
+  levels.flatMap((level, index) => {
+    const notBelow = levels.slice(index).flat();
+    return level.map(domain =>
+      restrictImports(
+        [`${folder}/${domain}/**`],
+        ...imports,
+        domainsPattern(...notBelow.filter(other => other !== domain)),
+      ),
+    );
+  });
 
 const restrictImportsOfKind = (files, ignores, ...patterns) => ({
   files,
@@ -237,43 +277,36 @@ export default defineConfig(
   },
   // Where a file lives. A later block replaces the options of an earlier one, so each lists them all.
   restrictImports(['packages/cli/**'], ...CLI_IMPORTS),
-  restrictImports(
-    ['packages/cli/src/domains/agent/**'],
-    ...CLI_IMPORTS,
-    daemonDomainsAbove('routine', 'run', 'scheduler', 'calendar'),
+  ...restrictDomainOrder(
+    'packages/cli/src/domains',
+    DAEMON_DOMAIN_LEVELS,
+    daemonDomains,
+    CLI_IMPORTS,
   ),
   restrictImports(
-    ['packages/cli/src/domains/routine/**'],
-    ...CLI_IMPORTS,
-    daemonDomainsAbove('run', 'scheduler', 'calendar'),
+    ['packages/tui/**'],
+    packagesAbove('web-app', 'cli'),
+    NO_UI_IN_TERMINAL,
+    packagesByPath('utils', 'design-system', 'domains', 'e2e'),
   ),
   restrictImports(
-    ['packages/cli/src/domains/run/**'],
-    ...CLI_IMPORTS,
-    daemonDomainsAbove('scheduler', 'calendar'),
+    ['packages/web-app/**'],
+    packagesAbove('tui', 'cli'),
+    packagesByPath('utils', 'design-system', 'domains', 'e2e'),
   ),
-  restrictImports(['packages/tui/**'], packagesAbove('web-app', 'cli'), NO_UI_IN_TERMINAL),
-  restrictImports(['packages/web-app/**'], packagesAbove('tui', 'cli')),
   restrictImports(['packages/domains/**'], ...DOMAINS_IMPORTS),
-  restrictImports(
-    ['packages/domains/{agent,transcript,scheduler,daemon}/**'],
-    ...DOMAINS_IMPORTS,
-    sharedDomainsAbove('run', 'routine', 'calendar'),
-  ),
-  restrictImports(
-    ['packages/domains/run/**'],
-    ...DOMAINS_IMPORTS,
-    sharedDomainsAbove('routine', 'calendar'),
-  ),
+  ...restrictDomainOrder('packages/domains', SHARED_DOMAIN_LEVELS, sharedDomains, DOMAINS_IMPORTS),
   restrictImports(
     ['packages/design-system/**'],
     packagesAbove('domains', 'web-app', 'tui', 'cli'),
     NO_ROUTER,
+    packagesByPath('utils', 'e2e'),
   ),
   restrictImports(
     ['packages/utils/**'],
     packagesAbove('design-system', 'domains', 'web-app', 'tui', 'cli'),
     NO_ROUTER,
+    packagesByPath('e2e'),
   ),
   // What a file is. The typescript-eslint copy of the rule keeps these apart from the blocks above.
   restrictImportsOfKind(['packages/**/*.{ts,tsx}'], ['packages/e2e/**'], ...TEST_ONLY_IMPORTS),
