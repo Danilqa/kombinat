@@ -50,6 +50,7 @@ const WHEEL_STEP_SHARE = 0.15;
 const WHEEL_LINE_PX = 16;
 
 type StepDirection = -1 | 1;
+type PreviewDirection = StepDirection | 0;
 
 type BlockVariant = 'planned' | 'plannedDefault' | RunStatus;
 
@@ -488,6 +489,7 @@ function useCalendarWeek(weekStart: Date, isPolling: boolean): UseQueryResult<Ca
 interface SwipePanels {
   scrollerRef: RefObject<HTMLDivElement | null>;
   headerTrackRef: RefObject<HTMLDivElement | null>;
+  preview: PreviewDirection;
   slide: (direction: StepDirection) => void;
 }
 
@@ -498,6 +500,7 @@ function useSwipePanels(
 ): SwipePanels {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const headerTrackRef = useRef<HTMLDivElement>(null);
+  const [preview, setPreview] = useState<PreviewDirection>(0);
   const onStepRef = useRef(onStep);
   useLayoutEffect(() => {
     onStepRef.current = onStep;
@@ -524,6 +527,25 @@ function useSwipePanels(
     let timer: ReturnType<typeof setTimeout> | undefined;
     let wheelTimer: ReturnType<typeof setTimeout> | undefined;
     let isWheeling = false;
+    let shownPreview: PreviewDirection = 0;
+    const updatePreview = () => {
+      const width = scroller.clientWidth;
+      const offset = width === 0 ? 0 : (scroller.scrollLeft - width) / width;
+      const next = match(offset)
+        .returnType<PreviewDirection>()
+        .when(
+          value => value >= 0.5,
+          () => 1,
+        )
+        .when(
+          value => value <= -0.5,
+          () => -1,
+        )
+        .otherwise(() => 0);
+      if (next === shownPreview) return;
+      shownPreview = next;
+      setPreview(next);
+    };
     const settle = () => {
       clearTimeout(timer);
       if (isWheeling) return;
@@ -536,12 +558,17 @@ function useSwipePanels(
         .with(2, () => 1)
         .otherwise(() => null);
       if (direction === null) return;
-      flushSync(() => onStepRef.current(direction));
+      flushSync(() => {
+        onStepRef.current(direction);
+        setPreview(0);
+      });
+      shownPreview = 0;
       recentre();
     };
     // Safari before 26 has no scrollend, so a pause in scrolling counts as the end too.
     const handleScroll = () => {
       syncHeader();
+      updatePreview();
       clearTimeout(timer);
       timer = setTimeout(settle, SETTLE_DELAY_MS);
     };
@@ -591,7 +618,7 @@ function useSwipePanels(
     });
   }, []);
 
-  return { scrollerRef, headerTrackRef, slide };
+  return { scrollerRef, headerTrackRef, preview, slide };
 }
 
 interface CalendarPanelProps {
@@ -650,9 +677,7 @@ export function WeekCalendar() {
   const currentWeek = useCalendarWeek(weekStart, true);
   const nextWeek = useCalendarWeek(addDays(weekStart, 7), false);
   const entries = currentWeek.data ?? [];
-  const days = useMemo(() => getWeekDays(weekStart), [weekStart]);
   const overlapCount = useMemo(() => countOverlapPairs(entries), [entries]);
-  const isCurrentWeek = checkIsSameDay(weekStart, getWeekStart(now));
   const panelAnchors = [-1, 0, 1].map(offset => addDays(selectedDay, offset * stepDays));
 
   const getWeekEntries = (day: Date): CalendarEntry[] => {
@@ -664,10 +689,13 @@ export function WeekCalendar() {
     return week.data ?? [];
   };
 
-  const { scrollerRef, headerTrackRef, slide } = useSwipePanels(
+  const { scrollerRef, headerTrackRef, preview, slide } = useSwipePanels(
     `${selectedDay.toISOString()}:${stepDays}`,
     direction => setSelectedDay(day => addDays(day, direction * stepDays)),
   );
+  const visibleDay = addDays(selectedDay, preview * stepDays);
+  const visibleWeekStart = getWeekStart(visibleDay);
+  const isCurrentWeek = checkIsSameDay(visibleWeekStart, getWeekStart(now));
 
   const showWeek = (direction: StepDirection) => {
     if (isPhone) setSelectedDay(day => addDays(day, direction * 7));
@@ -706,7 +734,7 @@ export function WeekCalendar() {
           <div className="rounded-t-xl border-x border-t border-line bg-surface">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
               <h2 aria-live="polite" className="text-title-md text-fg tabular-nums">
-                {formatWeekRange(weekStart)}
+                {formatWeekRange(visibleWeekStart)}
               </h2>
               <div className="flex items-center gap-1">
                 <Button
@@ -771,10 +799,10 @@ export function WeekCalendar() {
               )}
               {isPhone && (
                 <DayPicker
-                  days={days}
-                  selectedIndex={getWeekdayIndex(selectedDay)}
+                  days={getWeekDays(visibleWeekStart)}
+                  selectedIndex={getWeekdayIndex(visibleDay)}
                   now={now}
-                  onSelect={index => setSelectedDay(addDays(weekStart, index))}
+                  onSelect={index => setSelectedDay(addDays(visibleWeekStart, index))}
                 />
               )}
             </div>
