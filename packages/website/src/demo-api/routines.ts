@@ -71,9 +71,11 @@ export interface DemoRoutine {
 const REPO = `${HOME}/Projects/acme-web`;
 const OPUS = 'claude-opus-5-5';
 const SONNET = 'claude-sonnet-5-5';
+const FABLE = 'claude-fable-5-1';
 
 const opusInit = init({ model: OPUS, cwd: REPO, toolCount: 32, permissionMode: 'auto' });
 const sonnetInit = init({ model: SONNET, cwd: REPO, toolCount: 32, permissionMode: 'auto' });
+const fableInit = init({ model: FABLE, cwd: REPO, toolCount: 32, permissionMode: 'auto' });
 const codexInit = init({ model: null, cwd: null, toolCount: null, permissionMode: null });
 
 const AGENT_QUEUE_COMMAND =
@@ -433,25 +435,51 @@ c03a5f2 Merge pull request #478 from acme/cache-browsers`,
 
 const onCallEngineer: DemoRoutine = {
   name: 'on-call-engineer',
-  description: 'Investigates a production incident and proposes a fix',
-  schedule: null,
+  description: 'Checks for production incidents and proposes fixes',
+  schedule: '0 9,13,17,21 * * *',
   enabled: true,
   agent: 'claude',
-  model: OPUS,
+  model: FABLE,
   effort: 'max',
   permissionMode: 'auto',
   command: null,
   cwd: REPO,
   timeoutMinutes: 60,
   maxBudgetUsd: 5,
-  prompt: `An incident is open. Read the latest alert in #incidents, then find the cause with Sentry, Grafana and the logs. Post what you know to the incident channel as you go.
+  prompt: `Check #incidents for an open incident. If there is none, say so and stop.
+
+Otherwise read the latest alert, then find the cause with Sentry, Grafana and the logs. Post what you know to the incident channel as you go.
 
 If the cause is in our code, open a pull request with the fix and ask the on-call engineer to review it. Never merge, deploy or roll back yourself.`,
-  runModel: OPUS,
+  runModel: FABLE,
   outcomes: [
     {
-      id: 'fixed',
+      id: 'quiet',
       weight: 1,
+      status: 'succeeded',
+      minutes: 1,
+      costUsd: 0.07,
+      numTurns: 3,
+      resultText: 'No open incidents. The 5xx rate is 0.02% and p95 latency is 208 ms.',
+      steps: [
+        fableInit,
+        mcp(
+          'mcp__slack__read_channel',
+          { channel: '#incidents', limit: 3 },
+          'PagerDuty: [P2] payments error rate is 12% (resolved)',
+        ),
+        mcp(
+          'mcp__grafana__query_prometheus',
+          {
+            expr: 'sum(rate(http_requests_total{status=~"5.."}[1h])) / sum(rate(http_requests_total[1h]))',
+          },
+          '0.0002',
+        ),
+      ],
+    },
+    {
+      id: 'fixed',
+      weight: 0,
       status: 'succeeded',
       minutes: 16,
       costUsd: 1.42,
@@ -459,7 +487,7 @@ If the cause is in our code, open a pull request with the fix and ask the on-cal
       resultText:
         'Cause: the v2.8.2 migration added a NOT NULL column without a default, so inserts from the old invoice worker fail. Posted the timeline to #incidents and opened #495, which adds the default. It needs a human to merge and deploy.',
       steps: [
-        opusInit,
+        fableInit,
         mcp(
           'mcp__slack__read_channel',
           { channel: '#incidents', limit: 3 },
@@ -504,7 +532,7 @@ e9a4c70 Add archived_at to clients (#451)`,
     },
     {
       id: 'not-ours',
-      weight: 1,
+      weight: 0,
       status: 'succeeded',
       minutes: 9,
       costUsd: 0.66,
@@ -512,7 +540,7 @@ e9a4c70 Add archived_at to clients (#451)`,
       resultText:
         'Cause: Stripe returns 503 for 12% of charge requests, and status.stripe.com confirms an incident. Nothing to fix on our side, and retries are working. Posted to #incidents.',
       steps: [
-        opusInit,
+        fableInit,
         mcp(
           'mcp__slack__read_channel',
           { channel: '#incidents', limit: 3 },
@@ -539,10 +567,75 @@ e9a4c70 Add archived_at to clients (#451)`,
       ],
     },
   ],
+  pins: [
+    { slotsAgo: 3, outcome: 'fixed' },
+    { slotsAgo: 9, outcome: 'not-ours' },
+  ],
+};
+
+const writeReleaseNotes: DemoRoutine = {
+  name: 'write-release-notes',
+  description: 'Drafts release notes from what was merged since the last tag',
+  schedule: null,
+  enabled: true,
+  agent: 'claude',
+  model: OPUS,
+  effort: 'high',
+  permissionMode: 'acceptEdits',
+  command: null,
+  cwd: REPO,
+  timeoutMinutes: 15,
+  maxBudgetUsd: 1,
+  prompt: `Draft release notes for everything merged since the last tag.
+
+Group the changes into Added, Changed and Fixed, one line each with the pull request number, written for users rather than developers. Save the draft as \`RELEASE_NOTES.md\` and do not commit it.`,
+  runModel: OPUS,
+  outcomes: [
+    {
+      id: 'drafted',
+      weight: 1,
+      status: 'succeeded',
+      minutes: 6,
+      costUsd: 0.48,
+      numTurns: 14,
+      resultText:
+        'Drafted RELEASE_NOTES.md for v2.8.0: 4 added, 6 changed and 5 fixed since v2.7.3.',
+      steps: [
+        init({ model: OPUS, cwd: REPO, toolCount: 32, permissionMode: 'acceptEdits' }),
+        bash('git describe --tags --abbrev=0', 'v2.7.3'),
+        bash(
+          'git log v2.7.3..HEAD --merges --oneline',
+          `9f2c1ab Merge pull request #482 from acme/csv-export
+4e81d07 Merge pull request #480 from acme/session-expiry
+c03a5f2 Merge pull request #478 from acme/cache-browsers
+…12 more`,
+        ),
+        text(
+          '15 pull requests since v2.7.3. Reading their descriptions to write the notes for users.',
+        ),
+        bash(
+          'gh pr view 482 --json title,body',
+          '{"body":"Adds a CSV button to every report…","title":"Add CSV export to reports"}',
+        ),
+        write(
+          `${REPO}/RELEASE_NOTES.md`,
+          `# v2.8.0
+
+## Added
+- Export any report as CSV (#482)
+
+## Changed
+- You stay signed in for up to 30 days (#480)
+
+## Fixed
+- Report totals no longer drift by a cent (#474)`,
+        ),
+      ],
+    },
+  ],
   manualRuns: [
-    { minutesAgo: 4, outcome: 'fixed' },
-    { minutesAgo: 2 * 24 * 60 + 190, outcome: 'not-ours' },
-    { minutesAgo: 6 * 24 * 60 + 75, outcome: 'fixed' },
+    { minutesAgo: 2, outcome: 'drafted' },
+    { minutesAgo: 3 * 24 * 60 + 125, outcome: 'drafted' },
   ],
 };
 
@@ -1135,6 +1228,7 @@ export const demoRoutines: DemoRoutine[] = [
   designUxIssues,
   postReleaseMonitoring,
   onCallEngineer,
+  writeReleaseNotes,
   flakyE2eFixer,
   bugFixPickup,
   prReviewSweep,
