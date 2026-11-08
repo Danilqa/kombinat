@@ -3,6 +3,11 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "exports": {
+    "./app": "./src/app.tsx",
+    "./constants/path": "./src/constants/path.ts",
+    "./index.css": "./src/index.css"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",

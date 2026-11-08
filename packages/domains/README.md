@@ -19,12 +19,12 @@ Each domain has up to two halves with the same name:
 | **run**        | `RunRecord`, status and trigger, requests, labels, id, duration, `RECENT_RUNS_LIMIT`, `makeRunRecord`, `RunStatusBadge`, `RunDetailList`, `RunOutput` | runner, record storage with orphan reconciliation, event log and transcript     |
 | **scheduler**  | `Skip`, `SkipReason`, `SchedulerState`, skip label, `SkipsTable`                                                                                      | tick loop, `scheduler.json` storage                                             |
 | **routine**    | `RoutineSummary`, `RoutineDetail`, requests, `RunNowButton`, `RoutineBadges`, `RoutineDetailList`                                                     | frontmatter parsing, validation and defaults, loading, next run, schedule label |
-| **calendar**   | entry schemas and types, `getCalendar`, entry title and overlap labels, overlap count                                                                 | `buildCalendar`, planned lengths                                                |
+| **calendar**   | entry schemas and types, `getCalendar`, `buildCalendar`, planned lengths, entry title and overlap labels, overlap count                               | none, `cli/src/server.ts` serves `buildCalendar`                                |
 | **daemon**     | status schema, `getDaemonStatus`, health rules, `DaemonStatusIndicator`                                                                               | none, `cli/src/server.ts` builds the status                                     |
 
 Not domains:
 
-- **cron** is a generic engine with one consumer, `cli/src/utils/cron.ts`. A schedule is a value of a routine.
+- **cron** is a generic engine in `utils/cron.ts`. A schedule is a value of a routine.
 - **launchd, self-update, connect and readme** are features of the cli, in `cli/src/features/`.
 - **HTTP routing and read models** belong to the cli's `server.ts`.
 
@@ -113,7 +113,7 @@ Its health is `unreachable` when the request fails, `stale` when there has been 
 A domain imports only the domains on the levels before its own, never one on its own level. There is one order of levels per half:
 
 - Shared: `agent`, `transcript`, `scheduler` and `daemon`, then `run`, then `routine` and `calendar`. A run record holds its agent's name, a run's transcript request returns a transcript, a routine summary embeds its last run and last skip, and calendar entries carry run statuses and triggers.
-- Daemon: `agent`, then `routine`, then `run`, then `scheduler` and `calendar`. A routine validates its agent's settings, a run starts a routine's agent, the scheduler loads routines and starts runs, and the calendar plans from routines.
+- Daemon: `agent`, then `routine`, then `run`, then `scheduler`. A routine validates its agent's settings, a run starts a routine's agent, and the scheduler loads routines and starts runs.
 
 The orders differ, because routine is below run in the daemon but above it in the shared half. Each half is acyclic on its own, and any daemon domain may import any shared domain. ESLint enforces both orders on static imports, tests included: the agent adapter tests build their task with `makeAgentTask` instead of importing routine code. It does not see `await import()`, which tests use to load modules after they set the environment, so check those imports by hand.
 
