@@ -211,10 +211,10 @@ export function WelcomeBanner() {
       ),
     },
     {
-      label: 'Demo data',
+      label: 'Playground',
       content: (
         <WelcomeCard
-          label="Demo data"
+          label="Playground"
           icon={Compass}
           glow="mint"
           title="Make yourself at home"
