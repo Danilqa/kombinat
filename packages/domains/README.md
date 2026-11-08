@@ -137,5 +137,5 @@ Other packages import everything else per file, such as `domains/run/schemas`. I
 ## Rules
 
 - No routing, no `node:*` outside `*.test.ts`, no env and no cli config: the daemon, the TUI and the web app all run this code.
-- Only `components/` imports React, lucide-react, `design-system` and `utils/hooks`, because cli and tui import the rest.
+- Only `components/` imports React, React Query, lucide-react and `design-system`, because cli and tui import the rest.
 - Labels that the web app and the TUI share live in `utils.ts`. Each renderer keeps its own icons and colours.

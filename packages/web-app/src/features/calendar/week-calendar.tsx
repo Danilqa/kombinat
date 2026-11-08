@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Ban, Check, ChevronLeft, ChevronRight, Clock, Ellipsis, Loader, X } from 'lucide-react';
 import { Link } from 'react-router';
-import { isMatching, match } from 'ts-pattern';
+import { match } from 'ts-pattern';
 import { Button, DropdownMenu, ErrorState } from 'design-system/components';
 import { cn } from 'design-system/utils';
 import { getCalendar } from 'domains/calendar/requests';
@@ -13,7 +14,6 @@ import {
 } from 'domains/calendar/utils';
 import type { RunStatus } from 'domains/run/types';
 import { formatClock, formatDayMonth, formatWeekday } from 'utils/date-time';
-import { usePolledData } from 'utils/hooks/use-polled-data';
 import { sameOriginApi } from 'utils/http';
 import { getRoutinePath, getRunPath } from '@web-app/constants/path';
 import { useStoredBoolean } from '@web-app/hooks/use-stored-boolean';
@@ -27,7 +27,7 @@ import {
   type PositionedEntry,
 } from './calendar-layout';
 
-const POLL_INTERVALS = { activeMs: 60_000, idleMs: 60_000 };
+const POLL_MS = 60_000;
 const NOW_TICK_MS = 60_000;
 const MIN_TIME_LABEL_MINUTES = 45;
 const HIGHLIGHT_OVERLAPS_KEY = 'kombinat:calendar:highlight-overlaps';
@@ -143,10 +143,6 @@ function formatHour(hour: number): string {
 
 function checkIsWeekend(day: Date): boolean {
   return day.getDay() === 0 || day.getDay() === 6;
-}
-
-function checkHasRunningEntry(entries: CalendarEntry[]): boolean {
-  return entries.some(isMatching({ status: 'running' }));
 }
 
 function useNow(intervalMs: number): Date {
@@ -434,13 +430,11 @@ export function WeekCalendar() {
     HIGHLIGHT_OVERLAPS_KEY,
     false,
   );
-  const weekEnd = addDays(weekStart, 7);
-  const { data, error } = usePolledData(
-    `calendar:${weekStart.toISOString()}`,
-    () => getCalendar(sameOriginApi, weekStart, weekEnd),
-    checkHasRunningEntry,
-    POLL_INTERVALS,
-  );
+  const { data, error } = useQuery({
+    queryKey: ['calendar', weekStart.toISOString()],
+    queryFn: () => getCalendar(sameOriginApi, weekStart, addDays(weekStart, 7)),
+    refetchInterval: POLL_MS,
+  });
   const entries = data ?? [];
   const days = useMemo(
     () => Array.from({ length: 7 }, (_, index) => addDays(weekStart, index)),
@@ -461,7 +455,7 @@ export function WeekCalendar() {
 
   return (
     <>
-      {error && <ErrorState message={error} />}
+      {error && <ErrorState message={error.message} />}
       <div className="text-fg [--hour-height:48px] max-sm:[--hour-height:60px]">
         <div className="sticky top-[var(--app-header-height,0px)] z-40 bg-page">
           <div className="rounded-t-xl border-x border-t border-line bg-surface">

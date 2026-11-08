@@ -11,7 +11,7 @@ Kombinat runs routines, markdown files in `routines/`, with AI agents on a sched
 | `tui`           | Terminal dashboard, an HTTP client of the daemon. Bundled into `cli`                                                                  |
 | `domains`       | Shared domain layer: schemas, types, requests, labels, mocks and router-free components, see [its README](packages/domains/README.md) |
 | `design-system` | Tailwind tokens and styles, shadcn/radix components and generic layout pieces                                                         |
-| `utils`         | Business-agnostic helpers that more than one package uses: http, error, date-time and hooks                                           |
+| `utils`         | Business-agnostic helpers that more than one package uses: http, error, date-time and polling                                         |
 | `e2e`           | Playwright config and fixtures. The specs live next to the pages as `*.e2e.ts`                                                        |
 
 ## Package manager
@@ -45,7 +45,7 @@ Packages, bottom to top: `utils` → `design-system` → `domains` → `web-app`
 
 - `domains` and `utils` never import `cli`, its config, env, `node:*` or react-router.
 - Only `web-app` imports react-router, so components that link or navigate stay there: the app header, breadcrumbs, runs table, week calendar and the pages.
-- `cli` and `tui` never import React, `design-system`, domain components or `utils/hooks`. They do import the rest of `domains` and `utils`, so there only `components/` and `hooks/` use React.
+- `cli` and `tui` never import React, React Query, `design-system` or domain components. They do import the rest of `domains` and `utils`, so there only `components/` use React.
 - Browser code never imports `node:*`. Tests and `vite.config.ts` may.
 - Specs import `test` and `expect` only from `e2e/web-app`, and only `packages/e2e` imports `@playwright/test`. Mocks are imported only from `*.test.ts`, `*.e2e.ts` and `packages/e2e`.
 
@@ -76,6 +76,7 @@ The domain map, definitions and invariants are in [packages/domains/README.md](p
 ### web-app
 
 - `src/app.tsx`, `app-providers.tsx` and `app-routes.tsx` make the shell. Route patterns and path helpers live in `src/constants/path.ts`.
+- Server data comes through React Query, used as its docs show: `useQuery` with a `queryFn` that calls a domain request, and `useMutation` for writes. A query key starts with the API path, such as `['routines', name]` for `/api/routines/<name>`. Queries poll with `refetchInterval`, and a mutation invalidates the keys of all the data it changes.
 - Pages live in `src/features/<feature>/` next to their `.e2e.ts` specs. Files in a feature folder import each other by relative path; other imports inside `web-app` use the `@web-app/*` alias.
 - `src/index.css` imports the design-system stylesheet and adds `@source` for `domains`, so Tailwind sees the classes of domain components.
 

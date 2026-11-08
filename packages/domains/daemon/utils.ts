@@ -6,7 +6,7 @@ export function checkIsTickStale(status: DaemonStatus): boolean {
   return new Date(status.now).getTime() - new Date(status.lastTickAt).getTime() > STALE_TICK_MS;
 }
 
-export function getDaemonHealth(status: DaemonStatus | null, hasError: boolean): DaemonHealth {
-  if (hasError || status === null) return 'unreachable';
+export function getDaemonHealth(status: DaemonStatus | undefined, hasError: boolean): DaemonHealth {
+  if (hasError || status === undefined) return 'unreachable';
   return checkIsTickStale(status) ? 'stale' : 'healthy';
 }
