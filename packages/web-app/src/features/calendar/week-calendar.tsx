@@ -1,5 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type RefObject,
+} from 'react';
+import { flushSync } from 'react-dom';
+import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { Ban, Check, ChevronLeft, ChevronRight, Clock, Ellipsis, Loader, X } from 'lucide-react';
 import { Link } from 'react-router';
 import { match } from 'ts-pattern';
@@ -20,6 +30,7 @@ import { useStoredBoolean } from '@web-app/hooks/use-stored-boolean';
 import {
   addDays,
   checkIsSameDay,
+  getDayStart,
   getMinutesIntoDay,
   getWeekStart,
   getWeekdayIndex,
@@ -32,6 +43,15 @@ const NOW_TICK_MS = 60_000;
 const MIN_TIME_LABEL_MINUTES = 45;
 const HIGHLIGHT_OVERLAPS_KEY = 'kombinat:calendar:highlight-overlaps';
 const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
+const PHONE_QUERY = '(width < 40rem)';
+const SETTLE_DELAY_MS = 150;
+const WHEEL_RELEASE_MS = 120;
+const WHEEL_STEP_SHARE = 0.15;
+const WHEEL_LINE_PX = 16;
+// Room for quick swipes in a row on a phone before the scroller recentres.
+const PHONE_PANEL_RADIUS = 3;
+
+type StepDirection = -1 | 1;
 
 type BlockVariant = 'planned' | 'plannedDefault' | RunStatus;
 
@@ -247,7 +267,7 @@ function CurrentTimeLine({ now, dayStart }: CurrentTimeLineProps) {
       className="pointer-events-none absolute inset-x-0 z-[5] h-0.5 bg-warning"
       style={{ top: `calc(${getLengthForMinutes(getMinutesIntoDay(now, dayStart))} - 1px)` }}
     >
-      <span className="absolute -top-[3px] -left-1 size-2 rounded-full bg-warning" />
+      <span className="absolute -top-[3px] left-0 size-2 rounded-full bg-warning" />
     </div>
   );
 }
@@ -314,19 +334,14 @@ interface DayColumnProps {
   entries: CalendarEntry[];
   now: Date;
   isToday: boolean;
-  isSelected: boolean;
   routinesById: Map<string, string> | null;
 }
 
-function DayColumn({ day, entries, now, isToday, isSelected, routinesById }: DayColumnProps) {
+function DayColumn({ day, entries, now, isToday, routinesById }: DayColumnProps) {
   const positioned = useMemo(() => layoutDay(entries, day), [entries, day]);
   return (
     <div
-      className={cn(
-        'relative border-l border-line-faint',
-        checkIsWeekend(day) && 'bg-hover',
-        !isSelected && 'max-sm:hidden',
-      )}
+      className={cn('relative border-l border-line-faint', checkIsWeekend(day) && 'bg-hover')}
       style={{
         backgroundImage: `linear-gradient(to bottom, var(--line-faint) 1px, transparent 1px)`,
         backgroundSize: '100% var(--hour-height)',
@@ -422,53 +437,328 @@ function CalendarLegend({ isHighlightingOverlaps }: CalendarLegendProps) {
   );
 }
 
-export function WeekCalendar() {
-  const now = useNow(NOW_TICK_MS);
-  const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()));
-  const [selectedDayIndex, setSelectedDayIndex] = useState(() => getWeekdayIndex(new Date()));
-  const [isHighlightingOverlaps, setIsHighlightingOverlaps] = useStoredBoolean(
-    HIGHLIGHT_OVERLAPS_KEY,
-    false,
+function subscribeToPhoneQuery(onChange: () => void): () => void {
+  const query = window.matchMedia(PHONE_QUERY);
+  query.addEventListener('change', onChange);
+  return () => query.removeEventListener('change', onChange);
+}
+
+function checkIsPhone(): boolean {
+  return window.matchMedia(PHONE_QUERY).matches;
+}
+
+function useIsPhone(): boolean {
+  return useSyncExternalStore(subscribeToPhoneQuery, checkIsPhone);
+}
+
+// Rounded, so a day that is 23 or 25 hours long around a clock change still counts as one.
+function countWholeDays(from: Date, to: Date): number {
+  return Math.round((to.getTime() - from.getTime()) / 86_400_000);
+}
+
+function getWeekDays(weekStart: Date): Date[] {
+  return Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
+}
+
+function getScrollBehavior(): ScrollBehavior {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth';
+}
+
+function getWheelDeltaX(event: WheelEvent, pageWidth: number): number {
+  const delta = event.shiftKey && event.deltaX === 0 ? event.deltaY : event.deltaX;
+  return match(event.deltaMode)
+    .with(WheelEvent.DOM_DELTA_LINE, () => delta * WHEEL_LINE_PX)
+    .with(WheelEvent.DOM_DELTA_PAGE, () => delta * pageWidth)
+    .otherwise(() => delta);
+}
+
+function checkIsTypingTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLElement &&
+    (target.isContentEditable || ['INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName))
   );
-  const { data, error } = useQuery({
+}
+
+function useCalendarWeek(weekStart: Date, isPolling: boolean): UseQueryResult<CalendarEntry[]> {
+  return useQuery({
     queryKey: ['calendar', weekStart.toISOString()],
     queryFn: () => getCalendar(sameOriginApi, weekStart, addDays(weekStart, 7)),
-    refetchInterval: POLL_MS,
+    refetchInterval: isPolling ? POLL_MS : false,
   });
-  const entries = data ?? [];
-  const days = useMemo(
-    () => Array.from({ length: 7 }, (_, index) => addDays(weekStart, index)),
-    [weekStart],
+}
+
+interface SwipePanels {
+  scrollerRef: RefObject<HTMLDivElement | null>;
+  headerTrackRef: RefObject<HTMLDivElement | null>;
+  preview: number;
+  slide: (direction: StepDirection) => void;
+}
+
+// Once scrolling stops, the period moves to the panel in view and the scroller recentres in one frame.
+function useSwipePanels(
+  periodKey: string,
+  radius: number,
+  onStep: (steps: number) => void,
+): SwipePanels {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const headerTrackRef = useRef<HTMLDivElement>(null);
+  const [preview, setPreview] = useState(0);
+  const onStepRef = useRef(onStep);
+  useLayoutEffect(() => {
+    onStepRef.current = onStep;
+  });
+
+  const syncHeader = useCallback(() => {
+    const scroller = scrollerRef.current;
+    const track = headerTrackRef.current;
+    if (scroller && track) track.style.translate = `${-scroller.scrollLeft}px 0`;
+  }, []);
+
+  const recentre = useCallback(() => {
+    const scroller = scrollerRef.current;
+    if (scroller === null) return;
+    scroller.scrollLeft = scroller.clientWidth * radius;
+    syncHeader();
+  }, [radius, syncHeader]);
+
+  useLayoutEffect(recentre, [periodKey, recentre]);
+
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (scroller === null) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let wheelTimer: ReturnType<typeof setTimeout> | undefined;
+    let isWheeling = false;
+    let isTouching = false;
+    let shownPreview = 0;
+    const getPanelOffset = () => {
+      const width = scroller.clientWidth;
+      return width === 0 ? 0 : scroller.scrollLeft / width - radius;
+    };
+    const updatePreview = () => {
+      const next = Math.max(-radius, Math.min(radius, Math.round(getPanelOffset())));
+      if (next === shownPreview) return;
+      shownPreview = next;
+      setPreview(next);
+    };
+    const settle = () => {
+      clearTimeout(timer);
+      if (isWheeling || isTouching) return;
+      const offset = getPanelOffset();
+      const steps = Math.round(offset);
+      if (steps === 0 || Math.abs(offset - steps) * scroller.clientWidth > 1) return;
+      flushSync(() => {
+        onStepRef.current(steps);
+        setPreview(0);
+      });
+      shownPreview = 0;
+      recentre();
+    };
+    // Safari before 26 has no scrollend, so a pause in scrolling counts as the end too.
+    const scheduleSettle = () => {
+      clearTimeout(timer);
+      timer = setTimeout(settle, SETTLE_DELAY_MS);
+    };
+    const handleScroll = () => {
+      syncHeader();
+      updatePreview();
+      scheduleSettle();
+    };
+    const handleTouchStart = () => {
+      isTouching = true;
+      clearTimeout(timer);
+    };
+    const handleTouchEnd = () => {
+      isTouching = false;
+      scheduleSettle();
+    };
+    // Snapping would undo every mouse wheel notch, so the wheel moves the panels until it stops.
+    const releaseWheel = () => {
+      isWheeling = false;
+      const offset = getPanelOffset();
+      const direction = Math.abs(offset) > WHEEL_STEP_SHARE ? Math.sign(offset) : 0;
+      const target = scroller.clientWidth * (radius + direction);
+      scroller.style.scrollSnapType = '';
+      if (Math.abs(scroller.scrollLeft - target) <= 1) settle();
+      else scroller.scrollTo({ left: target, behavior: getScrollBehavior() });
+    };
+    const handleWheel = (event: WheelEvent) => {
+      const width = scroller.clientWidth;
+      const deltaX = getWheelDeltaX(event, width);
+      if (Math.abs(deltaX) <= Math.abs(event.shiftKey ? 0 : event.deltaY)) return;
+      event.preventDefault();
+      isWheeling = true;
+      scroller.style.scrollSnapType = 'none';
+      const centre = width * radius;
+      scroller.scrollLeft = Math.min(
+        Math.max(scroller.scrollLeft + deltaX, centre - width),
+        centre + width,
+      );
+      clearTimeout(wheelTimer);
+      wheelTimer = setTimeout(releaseWheel, WHEEL_RELEASE_MS);
+    };
+    const resizeObserver = new ResizeObserver(recentre);
+    scroller.addEventListener('scroll', handleScroll, { passive: true });
+    scroller.addEventListener('scrollend', settle);
+    scroller.addEventListener('wheel', handleWheel, { passive: false });
+    scroller.addEventListener('touchstart', handleTouchStart, { passive: true });
+    scroller.addEventListener('touchend', handleTouchEnd, { passive: true });
+    scroller.addEventListener('touchcancel', handleTouchEnd, { passive: true });
+    resizeObserver.observe(scroller);
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(wheelTimer);
+      scroller.removeEventListener('scroll', handleScroll);
+      scroller.removeEventListener('scrollend', settle);
+      scroller.removeEventListener('wheel', handleWheel);
+      scroller.removeEventListener('touchstart', handleTouchStart);
+      scroller.removeEventListener('touchend', handleTouchEnd);
+      scroller.removeEventListener('touchcancel', handleTouchEnd);
+      resizeObserver.disconnect();
+    };
+  }, [radius, recentre, syncHeader]);
+
+  const slide = useCallback(
+    (direction: StepDirection) => {
+      const scroller = scrollerRef.current;
+      if (scroller === null) return;
+      scroller.scrollTo({
+        left: scroller.clientWidth * (radius + direction),
+        behavior: getScrollBehavior(),
+      });
+    },
+    [radius],
   );
+
+  return { scrollerRef, headerTrackRef, preview, slide };
+}
+
+interface CalendarPanelProps {
+  days: Date[];
+  entries: CalendarEntry[];
+  now: Date;
+  isCurrent: boolean;
+  isHighlightingOverlaps: boolean;
+}
+
+function CalendarPanel({
+  days,
+  entries,
+  now,
+  isCurrent,
+  isHighlightingOverlaps,
+}: CalendarPanelProps) {
   const routinesById = useMemo(
     () => new Map(entries.map(entry => [entry.id, entry.routine])),
     [entries],
   );
+  return (
+    <div
+      inert={!isCurrent}
+      aria-hidden={!isCurrent || undefined}
+      className={cn(
+        'grid h-full w-full shrink-0 snap-center snap-always',
+        days.length === 1 ? 'grid-cols-1' : 'grid-cols-7',
+      )}
+    >
+      {days.map(day => (
+        <DayColumn
+          key={day.toISOString()}
+          day={day}
+          entries={entries}
+          now={now}
+          isToday={checkIsSameDay(day, now)}
+          routinesById={isHighlightingOverlaps ? routinesById : null}
+        />
+      ))}
+    </div>
+  );
+}
+
+export function WeekCalendar() {
+  const now = useNow(NOW_TICK_MS);
+  const isPhone = useIsPhone();
+  const [selectedDay, setSelectedDay] = useState(() => getDayStart(new Date()));
+  const [isHighlightingOverlaps, setIsHighlightingOverlaps] = useStoredBoolean(
+    HIGHLIGHT_OVERLAPS_KEY,
+    false,
+  );
+  const weekStart = getWeekStart(selectedDay);
+  const stepDays = isPhone ? 1 : 7;
+  const panelRadius = isPhone ? PHONE_PANEL_RADIUS : 1;
+  const previousWeek = useCalendarWeek(addDays(weekStart, -7), false);
+  const currentWeek = useCalendarWeek(weekStart, true);
+  const nextWeek = useCalendarWeek(addDays(weekStart, 7), false);
+  const entries = currentWeek.data ?? [];
   const overlapCount = useMemo(() => countOverlapPairs(entries), [entries]);
-  const isCurrentWeek = checkIsSameDay(weekStart, getWeekStart(now));
+  const panelAnchors = Array.from({ length: panelRadius * 2 + 1 }, (_, index) =>
+    addDays(selectedDay, (index - panelRadius) * stepDays),
+  );
+
+  const getWeekEntries = (day: Date): CalendarEntry[] => {
+    const offset = countWholeDays(weekStart, getWeekStart(day)) / 7;
+    const week = match(offset)
+      .with(-1, () => previousWeek)
+      .with(1, () => nextWeek)
+      .otherwise(() => currentWeek);
+    return week.data ?? [];
+  };
+
+  const { scrollerRef, headerTrackRef, preview, slide } = useSwipePanels(
+    `${selectedDay.toISOString()}:${stepDays}`,
+    panelRadius,
+    steps => setSelectedDay(day => addDays(day, steps * stepDays)),
+  );
+  const visibleDay = addDays(selectedDay, preview * stepDays);
+  const visibleWeekStart = getWeekStart(visibleDay);
+  const isCurrentWeek = checkIsSameDay(visibleWeekStart, getWeekStart(now));
+
+  const showWeek = (direction: StepDirection) => {
+    if (isPhone) setSelectedDay(day => addDays(day, direction * 7));
+    else slide(direction);
+  };
 
   const showToday = () => {
-    const today = new Date();
-    setWeekStart(getWeekStart(today));
-    setSelectedDayIndex(getWeekdayIndex(today));
+    const today = getDayStart(new Date());
+    const steps = isPhone
+      ? countWholeDays(selectedDay, today)
+      : countWholeDays(weekStart, getWeekStart(today)) / 7;
+    if (steps === 1 || steps === -1) slide(steps);
+    else setSelectedDay(today);
   };
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey || checkIsTypingTarget(event.target)) {
+        return;
+      }
+      match(event.key.toLowerCase())
+        .with('j', 'n', () => slide(1))
+        .with('k', 'p', () => slide(-1))
+        .with('t', showToday)
+        .otherwise(() => undefined);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  });
 
   return (
     <>
-      {error && <ErrorState message={error.message} />}
+      {currentWeek.error && <ErrorState message={currentWeek.error.message} />}
       <div className="text-fg [--hour-height:48px] max-sm:[--hour-height:60px]">
         <div className="sticky top-[var(--app-header-height,0px)] z-40 bg-page">
           <div className="rounded-t-xl border-x border-t border-line bg-surface">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
               <h2 aria-live="polite" className="text-title-md text-fg tabular-nums">
-                {formatWeekRange(weekStart)}
+                {formatWeekRange(visibleWeekStart)}
               </h2>
               <div className="flex items-center gap-1">
                 <Button
                   variant="tertiary"
                   size="icon-small"
                   aria-label="Previous week"
-                  onClick={() => setWeekStart(addDays(weekStart, -7))}
+                  aria-keyshortcuts="K"
+                  onClick={() => showWeek(-1)}
                 >
                   <ChevronLeft />
                 </Button>
@@ -476,6 +766,7 @@ export function WeekCalendar() {
                   variant="tertiary"
                   size="small"
                   isActive={isCurrentWeek}
+                  aria-keyshortcuts="T"
                   className="text-nav-sm"
                   onClick={showToday}
                 >
@@ -485,37 +776,58 @@ export function WeekCalendar() {
                   variant="tertiary"
                   size="icon-small"
                   aria-label="Next week"
-                  onClick={() => setWeekStart(addDays(weekStart, 7))}
+                  aria-keyshortcuts="J"
+                  onClick={() => showWeek(1)}
                 >
                   <ChevronRight />
                 </Button>
                 <CalendarOptions
                   isHighlightingOverlaps={isHighlightingOverlaps}
-                  overlapCount={data ? overlapCount : null}
+                  overlapCount={currentWeek.data ? overlapCount : null}
                   onHighlightOverlapsChange={setIsHighlightingOverlaps}
                 />
               </div>
             </div>
             <div className="border-b border-line">
-              <div className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] pr-2 max-sm:hidden">
-                <div />
-                {days.map(day => (
-                  <DayHeader key={day.toISOString()} day={day} isToday={checkIsSameDay(day, now)} />
-                ))}
-              </div>
-              <DayPicker
-                days={days}
-                selectedIndex={selectedDayIndex}
-                now={now}
-                onSelect={setSelectedDayIndex}
-              />
+              {!isPhone && (
+                <div className="flex pr-2">
+                  <div className="w-14 shrink-0" />
+                  <div className="min-w-0 flex-1 overflow-hidden">
+                    <div ref={headerTrackRef} className="flex">
+                      {panelAnchors.map((anchor, index) => (
+                        <div
+                          key={anchor.toISOString()}
+                          aria-hidden={index !== panelRadius || undefined}
+                          className="grid w-full shrink-0 grid-cols-7"
+                        >
+                          {getWeekDays(getWeekStart(anchor)).map(day => (
+                            <DayHeader
+                              key={day.toISOString()}
+                              day={day}
+                              isToday={checkIsSameDay(day, now)}
+                            />
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {isPhone && (
+                <DayPicker
+                  days={getWeekDays(visibleWeekStart)}
+                  selectedIndex={getWeekdayIndex(visibleDay)}
+                  now={now}
+                  onSelect={index => setSelectedDay(addDays(visibleWeekStart, index))}
+                />
+              )}
             </div>
           </div>
         </div>
         <div className="rounded-b-xl border-x border-b border-line bg-surface">
           <div className="py-2 pr-2">
-            <div className="grid h-[calc(var(--hour-height)*24)] grid-cols-[48px_minmax(0,1fr)] border-b border-line-faint sm:grid-cols-[56px_repeat(7,minmax(0,1fr))]">
-              <div className="relative">
+            <div className="flex h-[calc(var(--hour-height)*24)] border-b border-line-faint">
+              <div className="relative w-12 shrink-0 sm:w-14">
                 {HOURS.map(hour => (
                   <span
                     key={hour}
@@ -526,17 +838,21 @@ export function WeekCalendar() {
                   </span>
                 ))}
               </div>
-              {days.map((day, index) => (
-                <DayColumn
-                  key={day.toISOString()}
-                  day={day}
-                  entries={entries}
-                  now={now}
-                  isToday={checkIsSameDay(day, now)}
-                  isSelected={index === selectedDayIndex}
-                  routinesById={isHighlightingOverlaps ? routinesById : null}
-                />
-              ))}
+              <div
+                ref={scrollerRef}
+                className="flex min-w-0 flex-1 snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              >
+                {panelAnchors.map((anchor, index) => (
+                  <CalendarPanel
+                    key={anchor.toISOString()}
+                    days={isPhone ? [anchor] : getWeekDays(getWeekStart(anchor))}
+                    entries={getWeekEntries(anchor)}
+                    now={now}
+                    isCurrent={index === panelRadius}
+                    isHighlightingOverlaps={isHighlightingOverlaps}
+                  />
+                ))}
+              </div>
             </div>
           </div>
           <CalendarLegend isHighlightingOverlaps={isHighlightingOverlaps} />
