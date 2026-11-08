@@ -13,6 +13,7 @@
     "tui:local": "tsx --env-file=.env.local packages/cli/src/cli.ts tui",
     "test": "pnpm -r test",
     "test:e2e": "pnpm --filter e2e run web-app",
+    "test:e2e:ui": "pnpm --filter e2e run web-app --ui",
     "typecheck": "pnpm -r typecheck",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
