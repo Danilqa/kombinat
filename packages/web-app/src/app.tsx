@@ -7,37 +7,45 @@ import { useFocusMainOnNavigate } from '@web-app/hooks/use-focus-main-on-navigat
 const MAIN_ID = 'main';
 
 interface AppLayoutProps {
+  announcement: ReactNode;
   banner: ReactNode;
+  footer: ReactNode;
 }
 
-function AppLayout({ banner }: AppLayoutProps) {
+function AppLayout({ announcement, banner, footer }: AppLayoutProps) {
   useFocusMainOnNavigate(MAIN_ID);
   return (
-    <div className="pb-20">
-      <a href={`#${MAIN_ID}`} className="skip-link">
-        Skip to content
-      </a>
-      <AppHeader />
-      {banner}
-      <main
-        id={MAIN_ID}
-        tabIndex={-1}
-        className="mx-auto max-w-[1180px] px-4 outline-none focus-visible:shadow-none sm:px-6"
-      >
-        <AppRoutes />
-      </main>
-    </div>
+    <>
+      <div className="pb-20">
+        <a href={`#${MAIN_ID}`} className="skip-link">
+          Skip to content
+        </a>
+        {announcement}
+        <AppHeader />
+        {banner}
+        <main
+          id={MAIN_ID}
+          tabIndex={-1}
+          className="mx-auto max-w-[1180px] px-4 outline-none focus-visible:shadow-none sm:px-6"
+        >
+          <AppRoutes />
+        </main>
+      </div>
+      {footer}
+    </>
   );
 }
 
 interface AppProps {
+  announcement?: ReactNode;
   banner?: ReactNode;
+  footer?: ReactNode;
 }
 
-export function App({ banner }: AppProps) {
+export function App({ announcement, banner, footer }: AppProps) {
   return (
     <AppProviders>
-      <AppLayout banner={banner} />
+      <AppLayout announcement={announcement} banner={banner} footer={footer} />
     </AppProviders>
   );
 }

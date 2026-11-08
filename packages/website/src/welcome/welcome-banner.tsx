@@ -15,13 +15,11 @@ import { Link, useLocation } from 'react-router';
 import { Button } from 'design-system/components';
 import { cn } from 'design-system/utils';
 import { CALENDAR_PATH, ROUTINES_PATH, RUNS_PATH, getRoutinePath } from 'web-app/constants/path';
+import { NPM_URL, REPO_URL } from '../constants';
 import { demoRoutines } from '../demo-api/routines';
 import { CodePanel } from './code-panel';
 import { WelcomeCard } from './welcome-card';
 import { SandBucket, WavingHand } from './welcome-icons';
-
-const REPO_URL = 'https://github.com/Danilqa/kombinat';
-const NPM_URL = 'https://www.npmjs.com/package/@danilqa/kombinat';
 
 interface Slide {
   label: string;

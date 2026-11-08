@@ -6,6 +6,7 @@
   "exports": {
     "./app": "./src/app.tsx",
     "./constants/path": "./src/constants/path.ts",
+    "./hooks/use-stored-boolean": "./src/hooks/use-stored-boolean.ts",
     "./index.css": "./src/index.css"
   },
   "scripts": {
