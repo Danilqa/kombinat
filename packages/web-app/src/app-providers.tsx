@@ -3,7 +3,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router';
 import { Tooltip } from 'design-system/components';
 
-// Queries poll, so a failed request shows its error at once instead of after retries.
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
 interface AppProvidersProps {

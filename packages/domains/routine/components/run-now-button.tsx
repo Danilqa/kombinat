@@ -6,7 +6,6 @@ import { sameOriginApi } from 'utils/http';
 
 import { startRoutineRun } from '../requests';
 
-// A new run changes the routines, the runs, the calendar and the daemon's running count.
 const QUERY_KEYS_CHANGED_BY_RUN = [['routines'], ['runs'], ['calendar'], ['status']];
 
 type RunNowVariant = 'primary' | 'secondary';
