@@ -12,7 +12,7 @@ interface AppProvidersProps {
 export function AppProviders({ children }: AppProvidersProps) {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <BrowserRouter basename={import.meta.env.BASE_URL}>
         <Tooltip.Provider delayDuration={300}>{children}</Tooltip.Provider>
       </BrowserRouter>
     </QueryClientProvider>

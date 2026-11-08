@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import { isMatching, match, P } from 'ts-pattern';
 
+import { buildCalendar } from 'domains/calendar/utils';
 import type { DaemonStatus } from 'domains/daemon/types';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import { RECENT_RUNS_LIMIT } from 'domains/run/constants';
@@ -11,7 +12,6 @@ import type { RunRecord } from 'domains/run/types';
 import { getErrorMessage } from 'utils/error';
 
 import { config } from './config';
-import { buildCalendar } from './domains/calendar/utils';
 import { loadRoutines } from './domains/routine/storage';
 import type { Routine } from './domains/routine/types';
 import { describeSchedule, getNextRun } from './domains/routine/utils';

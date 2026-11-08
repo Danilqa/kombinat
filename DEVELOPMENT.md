@@ -14,7 +14,7 @@ pnpm test:e2e   # dashboard tests in Chromium
 
 A checkout also works as a routines folder of its own: use `pnpm cli <command>` where the README says `pnpm kombinat`. Then code changes restart the daemon and UI changes rebuild the dashboard. To try it on a laptop, put the variables in `.env.local` (see `.env.local.example`) and use the `:local` scripts, for example `pnpm cli:local list`.
 
-The code is a pnpm workspace in `packages/`: the CLI and daemon in `packages/cli`, the dashboards in `packages/web-app` and `packages/tui`, and the packages they share. [AGENTS.md](AGENTS.md) describes each package and the rules between them.
+The code is a pnpm workspace in `packages/`: the CLI and daemon in `packages/cli`, the dashboards in `packages/web-app` and `packages/tui`, the demo site in `packages/website`, and the packages they share. [AGENTS.md](AGENTS.md) describes each package and the rules between them.
 
 A daemon installed from a checkout before the move to `packages/` still starts the temporary root `bin/kombinat.js`. Run `pnpm cli install` once, so that it starts `packages/cli/bin/kombinat.js`.
 

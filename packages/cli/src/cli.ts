@@ -6,6 +6,7 @@ import { isMatching, match } from 'ts-pattern';
 import { runTriggerSchema } from 'domains/run/schemas';
 import type { RunTrigger } from 'domains/run/types';
 import { runTui } from 'tui';
+import { describeCron } from 'utils/cron';
 
 import { config, DEFAULT_PORT } from './config';
 import { getRoutine, loadRoutines } from './domains/routine/storage';
@@ -33,7 +34,6 @@ import {
   startReloadWatchers,
 } from './features/self-update/reload';
 import { startServer } from './server';
-import { describeCron } from './utils/cron';
 
 const USAGE = `kombinat, run from the folder that holds routines/ (connect and tui --url work anywhere)
 

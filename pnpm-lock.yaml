@@ -241,6 +241,37 @@ importers:
         specifier: 8.3.1
         version: 8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
 
+  packages/website:
+    dependencies:
+      domains:
+        specifier: workspace:*
+        version: link:../domains
+      react:
+        specifier: 'catalog:'
+        version: 19.3.0
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.3.0(react@19.3.0)
+      ts-pattern:
+        specifier: 'catalog:'
+        version: 5.9.2
+      utils:
+        specifier: workspace:*
+        version: link:../utils
+      web-app:
+        specifier: workspace:*
+        version: link:../web-app
+    devDependencies:
+      '@tailwindcss/vite':
+        specifier: 4.3.3
+        version: 4.3.3(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+      '@vitejs/plugin-react':
+        specifier: 6.1.1
+        version: 6.1.1(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+      vite:
+        specifier: 8.3.1
+        version: 8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
+
 packages:
 
   '@cacheable/memory@2.2.0':
