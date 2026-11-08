@@ -1,5 +1,5 @@
 import { CalendarDays, History, Workflow } from 'lucide-react';
-import { useLayoutEffect, useRef, type RefObject } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { Link, useLocation } from 'react-router';
 import { BrandMark } from 'design-system/icons';
 import { cn } from 'design-system/utils';
@@ -54,17 +54,56 @@ function NavLinkItem({ item, pathname }: NavLinkItemProps) {
     <Link
       to={item.to}
       aria-current={getNavCurrent(item, pathname)}
+      data-active={isActive || undefined}
       className={cn(
-        'flex h-8 items-center gap-1.5 rounded-full px-3 text-nav font-medium transition-colors forced-colors:underline-offset-4',
-        isActive
-          ? 'bg-overlay text-fg forced-colors:underline'
-          : 'text-fg-muted hover:bg-hover hover:text-fg',
+        'relative flex h-8 items-center gap-1.5 rounded-full px-3 text-nav font-medium transition-colors forced-colors:underline-offset-4',
+        isActive ? 'text-fg forced-colors:underline' : 'text-fg-muted hover:bg-hover hover:text-fg',
       )}
     >
       <Icon aria-hidden="true" className="size-3.5 shrink-0" />
       {item.label}
     </Link>
   );
+}
+
+interface ActivePill {
+  left: number;
+  width: number;
+  isVisible: boolean;
+}
+
+// One pill behind the links slides to the active one. It keeps its last place while no link is
+// active, so it fades out and back in where it was instead of sliding in from the edge.
+function useActivePill(navRef: RefObject<HTMLElement | null>, pathname: string): ActivePill {
+  const [pill, setPill] = useState<ActivePill>({ left: 0, width: 0, isVisible: false });
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    if (nav === null) return;
+    const update = () => {
+      const active = nav.querySelector<HTMLElement>('[data-active]');
+      setPill(previous =>
+        active === null
+          ? { ...previous, isVisible: false }
+          : { left: active.offsetLeft, width: active.offsetWidth, isVisible: true },
+      );
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(nav);
+    for (const link of nav.querySelectorAll('a')) observer.observe(link);
+    return () => observer.disconnect();
+  }, [navRef, pathname]);
+  return pill;
+}
+
+// The pill only animates after the first paint, so a page load does not slide it in.
+function useIsAfterFirstPaint(): boolean {
+  const [isAfterFirstPaint, setIsAfterFirstPaint] = useState(false);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setIsAfterFirstPaint(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
+  return isAfterFirstPaint;
 }
 
 function useHeightProperty(ref: RefObject<HTMLElement | null>, property: string) {
@@ -86,7 +125,10 @@ function useHeightProperty(ref: RefObject<HTMLElement | null>, property: string)
 export function AppHeader() {
   const { pathname } = useLocation();
   const headerRef = useRef<HTMLElement>(null);
+  const navRef = useRef<HTMLElement>(null);
   useHeightProperty(headerRef, '--app-header-height');
+  const pill = useActivePill(navRef, pathname);
+  const isAfterFirstPaint = useIsAfterFirstPaint();
   // On phones the brand and the status share the first row and the nav takes a row of its own.
   return (
     <header
@@ -101,7 +143,17 @@ export function AppHeader() {
           <BrandMark />
           Kombinat
         </Link>
-        <nav aria-label="Main" className="max-sm:order-last max-sm:w-full">
+        <nav ref={navRef} aria-label="Main" className="relative max-sm:order-last max-sm:w-full">
+          <span
+            aria-hidden="true"
+            className={cn(
+              'absolute top-0 left-0 h-8 rounded-full bg-overlay',
+              isAfterFirstPaint &&
+                'transition-[translate,width,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
+              !pill.isVisible && 'opacity-0',
+            )}
+            style={{ width: pill.width, translate: `${pill.left}px 0` }}
+          />
           <ul className="flex items-center gap-1">
             {navItems.map(item => (
               <li key={item.to}>
