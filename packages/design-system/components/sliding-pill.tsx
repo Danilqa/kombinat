@@ -21,7 +21,6 @@ function checkIsSameBox(a: PillBox, b: PillBox): boolean {
   );
 }
 
-// The pill animates only after the first paint, so a page load does not slide it in.
 function useIsAfterFirstPaint(): boolean {
   const [isAfterFirstPaint, setIsAfterFirstPaint] = useState(false);
   useEffect(() => {
@@ -36,9 +35,6 @@ interface SlidingPillProps {
   className?: string;
 }
 
-// Slides behind the item of its parent that matches activeSelector. The parent must be positioned
-// and its items must be positioned too, so they paint above the pill. Without an active item the
-// pill fades out where it was.
 export function SlidingPill({ activeSelector, className }: SlidingPillProps) {
   const pillRef = useRef<HTMLSpanElement>(null);
   const [box, setBox] = useState<PillBox>({ x: 0, y: 0, width: 0, height: 0, isVisible: false });
