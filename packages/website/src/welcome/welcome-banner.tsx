@@ -4,22 +4,21 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
-  Compass,
   History,
   MoonStar,
   Play,
-  Sparkles,
   SquareTerminal,
   type LucideIcon,
 } from 'lucide-react';
 import { useRef, useState, type ComponentProps, type ReactNode } from 'react';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import { Button } from 'design-system/components';
 import { cn } from 'design-system/utils';
-import { CALENDAR_PATH, RUNS_PATH, getRoutinePath } from 'web-app/constants/path';
+import { CALENDAR_PATH, ROUTINES_PATH, RUNS_PATH, getRoutinePath } from 'web-app/constants/path';
 import { demoRoutines } from '../demo-api/routines';
 import { CodePanel } from './code-panel';
 import { WelcomeCard } from './welcome-card';
+import { SandBucket, WavingHand } from './welcome-icons';
 
 const REPO_URL = 'https://github.com/Danilqa/kombinat';
 const NPM_URL = 'https://www.npmjs.com/package/@danilqa/kombinat';
@@ -126,6 +125,7 @@ function ExploreLinks() {
 }
 
 export function WelcomeBanner() {
+  const { pathname } = useLocation();
   const trackRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -156,7 +156,7 @@ export function WelcomeBanner() {
       content: (
         <WelcomeCard
           label="Welcome"
-          icon={Sparkles}
+          icon={WavingHand}
           glow="lavender"
           title="Background agents, on a schedule"
           aside={<RoutineFile />}
@@ -215,7 +215,7 @@ export function WelcomeBanner() {
       content: (
         <WelcomeCard
           label="Playground"
-          icon={Compass}
+          icon={SandBucket}
           glow="mint"
           title="Make yourself at home"
           aside={<ExploreLinks />}
@@ -230,6 +230,8 @@ export function WelcomeBanner() {
       ),
     },
   ];
+
+  if (pathname !== ROUTINES_PATH) return null;
 
   return (
     <section

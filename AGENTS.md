@@ -84,7 +84,7 @@ The domain map, definitions and invariants are in [packages/domains/README.md](p
 
 ### website
 
-- `src/main.tsx` renders the web-app's `App`, exported as `web-app/app`, with the swipeable cards of `src/welcome/` in its `banner` slot under the header. Vite builds it with the base `/kombinat/`, which the router takes as its basename, and the build copies `index.html` to `404.html` so that GitHub Pages opens deep links.
+- `src/main.tsx` renders the web-app's `App`, exported as `web-app/app`, with the swipeable cards of `src/welcome/` in its `banner` slot under the header of the routines page. Vite builds it with the base `/kombinat/`, which the router takes as its basename, and the build copies `index.html` to `404.html` so that GitHub Pages opens deep links.
 - `src/demo-api/` answers the dashboard's `/api` requests in the browser, as `cli/src/server.ts` does: `routines.ts` holds the sample routines with their run outcomes and transcripts, and `history.ts` builds runs and skips from their schedules relative to now.
 - `.github/workflows/website.yml` deploys it on every push to `main`.
 

@@ -41,8 +41,8 @@ export function WelcomeCard({
       <div className="relative grid h-full gap-6 p-5 sm:p-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] lg:items-center lg:gap-10">
         <div className="flex flex-col items-start gap-4">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-raised py-0.5 pr-2.5 pl-1 text-caption text-fg-secondary">
-            <span className="flex size-4 items-center justify-center rounded-full bg-fg text-page">
-              <Icon aria-hidden="true" className="size-2.5" strokeWidth={2.5} />
+            <span className="flex size-[18px] items-center justify-center rounded-full bg-fg text-page">
+              <Icon aria-hidden="true" className="size-3" strokeWidth={2.25} />
             </span>
             {label}
           </span>
