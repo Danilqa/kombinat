@@ -235,12 +235,12 @@ export function WelcomeBanner() {
     <section
       aria-roledescription="carousel"
       aria-label="About this demo"
-      className="mx-auto mb-6 max-w-[1180px] px-4 sm:px-6"
+      className="mx-auto mb-6 max-w-[1180px]"
     >
       <div
         ref={trackRef}
         onScroll={updateActiveIndex}
-        className="relative flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="relative flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {slides.map((slide, index) => (
           <div
@@ -249,13 +249,13 @@ export function WelcomeBanner() {
             aria-roledescription="slide"
             aria-label={`${index + 1} of ${slides.length}: ${slide.label}`}
             inert={index !== activeIndex}
-            className="w-full shrink-0 snap-start"
+            className="w-full shrink-0 snap-start px-4 sm:px-6"
           >
             {slide.content}
           </div>
         ))}
       </div>
-      <div className="mt-3 flex items-center justify-between">
+      <div className="mt-3 flex items-center justify-between px-4 sm:px-6">
         <div className="flex items-center">
           {slides.map((slide, index) => (
             <button
