@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '../utils';
+import { SlidingPill } from './sliding-pill';
 import { Tabs as TabsPrimitive } from 'radix-ui';
 
 interface TabsProps extends React.ComponentProps<typeof TabsPrimitive.Root> {}
@@ -18,7 +19,7 @@ function Tabs({ className, orientation = 'horizontal', ...props }: TabsProps) {
 }
 
 const tabsListVariants = cva(
-  'group/tabs-list inline-flex items-center gap-1 group-data-[orientation=vertical]/tabs:h-fit group-data-[orientation=vertical]/tabs:flex-col',
+  'group/tabs-list relative inline-flex items-center gap-1 group-data-[orientation=vertical]/tabs:h-fit group-data-[orientation=vertical]/tabs:flex-col',
   {
     variants: {
       variant: {
@@ -35,14 +36,17 @@ const tabsListVariants = cva(
 type TabsListProps = React.ComponentProps<typeof TabsPrimitive.List> &
   VariantProps<typeof tabsListVariants>;
 
-function TabsList({ className, variant = 'default', ...props }: TabsListProps) {
+function TabsList({ className, variant = 'default', children, ...props }: TabsListProps) {
   return (
     <TabsPrimitive.List
       data-slot="tabs-list"
       data-variant={variant}
       className={cn(tabsListVariants({ variant }), className)}
       {...props}
-    />
+    >
+      <SlidingPill activeSelector="[data-state=active]" />
+      {children}
+    </TabsPrimitive.List>
   );
 }
 
@@ -53,7 +57,7 @@ function TabsTrigger({ className, ...props }: TabsTriggerProps) {
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
       className={cn(
-        "inline-flex h-8 items-center gap-1.5 rounded-full px-3.5 text-nav font-medium whitespace-nowrap text-fg-muted transition-colors hover:text-fg focus-visible:text-fg disabled:pointer-events-none disabled:opacity-40 data-[state=active]:bg-overlay data-[state=active]:text-fg forced-colors:underline-offset-4 forced-colors:data-[state=active]:underline [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
+        "relative inline-flex h-8 items-center gap-1.5 rounded-full px-3.5 text-nav font-medium whitespace-nowrap text-fg-muted transition-colors hover:text-fg focus-visible:text-fg disabled:pointer-events-none disabled:opacity-40 data-[state=active]:text-fg forced-colors:underline-offset-4 forced-colors:data-[state=active]:underline [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
         className,
       )}
       {...props}
