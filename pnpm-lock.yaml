@@ -243,15 +243,24 @@ importers:
 
   packages/website:
     dependencies:
+      design-system:
+        specifier: workspace:*
+        version: link:../design-system
       domains:
         specifier: workspace:*
         version: link:../domains
+      lucide-react:
+        specifier: 'catalog:'
+        version: 1.49.0(@types/react@19.3.0)(react@19.3.0)
       react:
         specifier: 'catalog:'
         version: 19.3.0
       react-dom:
         specifier: 'catalog:'
         version: 19.3.0(react@19.3.0)
+      react-router:
+        specifier: 7.18.4
+        version: 7.18.4(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       ts-pattern:
         specifier: 'catalog:'
         version: 5.9.2

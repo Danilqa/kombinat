@@ -95,7 +95,7 @@ const NO_UI_IN_TERMINAL = {
 
 const NO_ROUTER = {
   regex: '^react-router(/|$)',
-  message: 'Only web-app imports react-router, so components that link stay in web-app.',
+  message: 'Only web-app and website import react-router, so components that link stay there.',
 };
 
 const NO_NODE = {

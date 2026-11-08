@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./app": "./src/app.tsx",
+    "./constants/path": "./src/constants/path.ts",
     "./index.css": "./src/index.css"
   },
   "scripts": {

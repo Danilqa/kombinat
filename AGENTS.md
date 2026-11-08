@@ -7,7 +7,7 @@ Kombinat runs routines, markdown files in `routines/`, with AI agents on a sched
 | Package         | Description                                                                                                                           |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
 | `cli`           | `@danilqa/kombinat`, the only published package: CLI commands and the daemon                                                          |
-| `web-app`       | Browser dashboard (React, Vite, Tailwind), built into `packages/cli/dist/web-app`. The only package that imports react-router         |
+| `web-app`       | Browser dashboard (React, Vite, Tailwind), built into `packages/cli/dist/web-app`                                                     |
 | `tui`           | Terminal dashboard, an HTTP client of the daemon. Bundled into `cli`                                                                  |
 | `website`       | Demo of the browser dashboard with sample data, deployed to GitHub Pages at https://danilqa.github.io/kombinat/                       |
 | `domains`       | Shared domain layer: schemas, types, requests, labels, mocks and router-free components, see [its README](packages/domains/README.md) |
@@ -46,7 +46,7 @@ To release, bump `version` in `packages/cli/package.json` and run `pnpm --filter
 Packages, bottom to top: `utils` → `design-system` → `domains` → `web-app` and `tui` → `cli` and `website`. A package imports only the packages below it, by name. `e2e` is tooling beside them: it imports `domains` and reaches `packages/cli` by relative path.
 
 - `domains` and `utils` never import `cli`, its config, env, `node:*` or react-router.
-- Only `web-app` imports react-router, so components that link or navigate stay there: the app header, breadcrumbs, runs table, week calendar and the pages.
+- Only `web-app` and `website` import react-router, so components that link or navigate stay there: the app header, breadcrumbs, runs table, week calendar, the pages and the website's banner.
 - `cli` and `tui` never import React, React Query, `design-system` or domain components. They do import the rest of `domains` and `utils`, so there only `components/` use React.
 - Browser code never imports `node:*`. Tests and `vite.config.ts` may.
 - Specs import `test` and `expect` only from `e2e/web-app`, and only `packages/e2e` imports `@playwright/test`. Mocks are imported only from `*.test.ts`, `*.e2e.ts` and `packages/e2e`.
@@ -84,7 +84,7 @@ The domain map, definitions and invariants are in [packages/domains/README.md](p
 
 ### website
 
-- `src/main.tsx` renders the web-app's `App`, exported as `web-app/app`. Vite builds it with the base `/kombinat/`, which the router takes as its basename, and the build copies `index.html` to `404.html` so that GitHub Pages opens deep links.
+- `src/main.tsx` renders the web-app's `App`, exported as `web-app/app`, with the swipeable cards of `src/welcome/` in its `banner` slot under the header. Vite builds it with the base `/kombinat/`, which the router takes as its basename, and the build copies `index.html` to `404.html` so that GitHub Pages opens deep links.
 - `src/demo-api/` answers the dashboard's `/api` requests in the browser, as `cli/src/server.ts` does: `routines.ts` holds the sample routines with their run outcomes and transcripts, and `history.ts` builds runs and skips from their schedules relative to now.
 - `.github/workflows/website.yml` deploys it on every push to `main`.
 

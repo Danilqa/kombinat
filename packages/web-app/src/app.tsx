@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { AppProviders } from '@web-app/app-providers';
 import { AppRoutes } from '@web-app/app-routes';
 import { AppHeader } from '@web-app/components/app-header';
@@ -5,7 +6,11 @@ import { useFocusMainOnNavigate } from '@web-app/hooks/use-focus-main-on-navigat
 
 const MAIN_ID = 'main';
 
-function AppLayout() {
+interface AppLayoutProps {
+  banner: ReactNode;
+}
+
+function AppLayout({ banner }: AppLayoutProps) {
   useFocusMainOnNavigate(MAIN_ID);
   return (
     <div className="pb-20">
@@ -13,6 +18,7 @@ function AppLayout() {
         Skip to content
       </a>
       <AppHeader />
+      {banner}
       <main
         id={MAIN_ID}
         tabIndex={-1}
@@ -24,10 +30,14 @@ function AppLayout() {
   );
 }
 
-export function App() {
+interface AppProps {
+  banner?: ReactNode;
+}
+
+export function App({ banner }: AppProps) {
   return (
     <AppProviders>
-      <AppLayout />
+      <AppLayout banner={banner} />
     </AppProviders>
   );
 }
