@@ -5,11 +5,11 @@ Background AI agents that run routines defined in your repository, 24/7. They ru
 Ready to use in your organisation or at home.
 
 1. **Version-controlled by design.** Merge a `.md` file and the change is picked up automatically.
-2. **Minimal and lightweight.** Run one command on a machine that is on 24/7. Easy to contribute by non-engineers.
+2. **Minimal and lightweight.** Run one command on a machine that is on 24/7. Easy for non-engineers to contribute to.
 3. **Your own integrations.** Agents use your local environment as is, including skills, MCP, browser control and more.
 4. **Cheap.** Works with your existing Claude or Codex subscription. Don't burn your money on tokens.
 5. **Remote control.** Debug and monitor your remote machine from your mobile on your commute.
-6. **Battle tested.** Polished against real use cases across engineering, design, product managements, and gtm use cases.
+6. **Battle-tested.** Polished on real use cases across engineering, design, product management and GTM.
 
 **Ideas:**
 
@@ -17,8 +17,8 @@ Ready to use in your organisation or at home.
 2. **On-call engineer.** Investigates production incidents and opens PRs to fix them.
 3. **Flaky E2E test fixer.**
 4. **Dead code and feature flag clean-up.**
-5. **Pick-up bug fixes.**
-6. **Product signals in support chat monitoring**
+5. **Picking up bug fixes.**
+6. **Monitoring support chats for product signals.**
 
 **Quickstart:**
 
@@ -47,17 +47,16 @@ Ready to use in your organisation or at home.
 
 4. Monitor and debug runs in the dashboard at http://localhost:7433, or in the terminal with `pnpm kombinat tui`, which also works over ssh. See [Monitoring](#monitoring). To open them from another machine, see [Remote access](#remote-access).
 
-
 ## Monitoring
 
 <img src=".github/assets/dashboard.png" alt="Kombinat dashboard: routines list, week calendar and a run transcript" width="100%" />
 
 The daemon serves a dashboard at http://localhost:7433.
 
-- **Routines.** 
+- **Routines.**
 - **Calendar.**
-- **Runs.** 
-- **Daemon status.** 
+- **Runs.**
+- **Daemon status.**
 
 ### In the terminal
 

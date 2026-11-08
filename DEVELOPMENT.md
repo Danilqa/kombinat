@@ -12,7 +12,7 @@ pnpm test:e2e   # dashboard tests in Chromium
 
 `pnpm dev` pauses the launchd daemon until you press Ctrl-C. Add `--no-scheduler` to stop routines from running while you work. If the daemon runs another folder, the scheduler stays off anyway, and its routines catch up when it is back.
 
-A checkout also works as a routines folder of its own: use `pnpm cli <command>` where this README says `pnpm kombinat`. Then code changes restart the daemon and UI changes rebuild the dashboard. To try it on a laptop, put the variables in `.env.local` (see `.env.local.example`) and use the `:local` scripts, for example `pnpm cli:local list`.
+A checkout also works as a routines folder of its own: use `pnpm cli <command>` where the README says `pnpm kombinat`. Then code changes restart the daemon and UI changes rebuild the dashboard. To try it on a laptop, put the variables in `.env.local` (see `.env.local.example`) and use the `:local` scripts, for example `pnpm cli:local list`.
 
 The code is a pnpm workspace in `packages/`: the CLI and daemon in `packages/cli`, the dashboards in `packages/web-app` and `packages/tui`, and the packages they share. [AGENTS.md](AGENTS.md) describes each package and the rules between them.
 
