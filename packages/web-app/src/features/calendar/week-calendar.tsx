@@ -48,9 +48,10 @@ const SETTLE_DELAY_MS = 150;
 const WHEEL_RELEASE_MS = 120;
 const WHEEL_STEP_SHARE = 0.15;
 const WHEEL_LINE_PX = 16;
+// Room for quick swipes in a row on a phone before the scroller recentres.
+const PHONE_PANEL_RADIUS = 3;
 
 type StepDirection = -1 | 1;
-type PreviewDirection = StepDirection | 0;
 
 type BlockVariant = 'planned' | 'plannedDefault' | RunStatus;
 
@@ -489,18 +490,19 @@ function useCalendarWeek(weekStart: Date, isPolling: boolean): UseQueryResult<Ca
 interface SwipePanels {
   scrollerRef: RefObject<HTMLDivElement | null>;
   headerTrackRef: RefObject<HTMLDivElement | null>;
-  preview: PreviewDirection;
+  preview: number;
   slide: (direction: StepDirection) => void;
 }
 
-// After a swipe settles on a side panel, the period changes and the scroller recentres in one frame.
+// Once scrolling stops, the period moves to the panel in view and the scroller recentres in one frame.
 function useSwipePanels(
   periodKey: string,
-  onStep: (direction: StepDirection) => void,
+  radius: number,
+  onStep: (steps: number) => void,
 ): SwipePanels {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const headerTrackRef = useRef<HTMLDivElement>(null);
-  const [preview, setPreview] = useState<PreviewDirection>(0);
+  const [preview, setPreview] = useState(0);
   const onStepRef = useRef(onStep);
   useLayoutEffect(() => {
     onStepRef.current = onStep;
@@ -515,9 +517,9 @@ function useSwipePanels(
   const recentre = useCallback(() => {
     const scroller = scrollerRef.current;
     if (scroller === null) return;
-    scroller.scrollLeft = scroller.clientWidth;
+    scroller.scrollLeft = scroller.clientWidth * radius;
     syncHeader();
-  }, [syncHeader]);
+  }, [radius, syncHeader]);
 
   useLayoutEffect(recentre, [periodKey, recentre]);
 
@@ -527,58 +529,55 @@ function useSwipePanels(
     let timer: ReturnType<typeof setTimeout> | undefined;
     let wheelTimer: ReturnType<typeof setTimeout> | undefined;
     let isWheeling = false;
-    let shownPreview: PreviewDirection = 0;
-    const updatePreview = () => {
+    let isTouching = false;
+    let shownPreview = 0;
+    const getPanelOffset = () => {
       const width = scroller.clientWidth;
-      const offset = width === 0 ? 0 : (scroller.scrollLeft - width) / width;
-      const next = match(offset)
-        .returnType<PreviewDirection>()
-        .when(
-          value => value >= 0.5,
-          () => 1,
-        )
-        .when(
-          value => value <= -0.5,
-          () => -1,
-        )
-        .otherwise(() => 0);
+      return width === 0 ? 0 : scroller.scrollLeft / width - radius;
+    };
+    const updatePreview = () => {
+      const next = Math.max(-radius, Math.min(radius, Math.round(getPanelOffset())));
       if (next === shownPreview) return;
       shownPreview = next;
       setPreview(next);
     };
     const settle = () => {
       clearTimeout(timer);
-      if (isWheeling) return;
-      const width = scroller.clientWidth;
-      const index = Math.round(scroller.scrollLeft / width);
-      if (width === 0 || Math.abs(scroller.scrollLeft - index * width) > 1) return;
-      const direction = match(index)
-        .returnType<StepDirection | null>()
-        .with(0, () => -1)
-        .with(2, () => 1)
-        .otherwise(() => null);
-      if (direction === null) return;
+      if (isWheeling || isTouching) return;
+      const offset = getPanelOffset();
+      const steps = Math.round(offset);
+      if (steps === 0 || Math.abs(offset - steps) * scroller.clientWidth > 1) return;
       flushSync(() => {
-        onStepRef.current(direction);
+        onStepRef.current(steps);
         setPreview(0);
       });
       shownPreview = 0;
       recentre();
     };
     // Safari before 26 has no scrollend, so a pause in scrolling counts as the end too.
+    const scheduleSettle = () => {
+      clearTimeout(timer);
+      timer = setTimeout(settle, SETTLE_DELAY_MS);
+    };
     const handleScroll = () => {
       syncHeader();
       updatePreview();
+      scheduleSettle();
+    };
+    const handleTouchStart = () => {
+      isTouching = true;
       clearTimeout(timer);
-      timer = setTimeout(settle, SETTLE_DELAY_MS);
+    };
+    const handleTouchEnd = () => {
+      isTouching = false;
+      scheduleSettle();
     };
     // Snapping would undo every mouse wheel notch, so the wheel moves the panels until it stops.
     const releaseWheel = () => {
       isWheeling = false;
-      const width = scroller.clientWidth;
-      const offset = scroller.scrollLeft - width;
-      const direction = Math.abs(offset) > width * WHEEL_STEP_SHARE ? Math.sign(offset) : 0;
-      const target = width * (1 + direction);
+      const offset = getPanelOffset();
+      const direction = Math.abs(offset) > WHEEL_STEP_SHARE ? Math.sign(offset) : 0;
+      const target = scroller.clientWidth * (radius + direction);
       scroller.style.scrollSnapType = '';
       if (Math.abs(scroller.scrollLeft - target) <= 1) settle();
       else scroller.scrollTo({ left: target, behavior: getScrollBehavior() });
@@ -590,7 +589,11 @@ function useSwipePanels(
       event.preventDefault();
       isWheeling = true;
       scroller.style.scrollSnapType = 'none';
-      scroller.scrollLeft = Math.min(Math.max(scroller.scrollLeft + deltaX, 0), width * 2);
+      const centre = width * radius;
+      scroller.scrollLeft = Math.min(
+        Math.max(scroller.scrollLeft + deltaX, centre - width),
+        centre + width,
+      );
       clearTimeout(wheelTimer);
       wheelTimer = setTimeout(releaseWheel, WHEEL_RELEASE_MS);
     };
@@ -598,6 +601,9 @@ function useSwipePanels(
     scroller.addEventListener('scroll', handleScroll, { passive: true });
     scroller.addEventListener('scrollend', settle);
     scroller.addEventListener('wheel', handleWheel, { passive: false });
+    scroller.addEventListener('touchstart', handleTouchStart, { passive: true });
+    scroller.addEventListener('touchend', handleTouchEnd, { passive: true });
+    scroller.addEventListener('touchcancel', handleTouchEnd, { passive: true });
     resizeObserver.observe(scroller);
     return () => {
       clearTimeout(timer);
@@ -605,18 +611,24 @@ function useSwipePanels(
       scroller.removeEventListener('scroll', handleScroll);
       scroller.removeEventListener('scrollend', settle);
       scroller.removeEventListener('wheel', handleWheel);
+      scroller.removeEventListener('touchstart', handleTouchStart);
+      scroller.removeEventListener('touchend', handleTouchEnd);
+      scroller.removeEventListener('touchcancel', handleTouchEnd);
       resizeObserver.disconnect();
     };
-  }, [recentre, syncHeader]);
+  }, [radius, recentre, syncHeader]);
 
-  const slide = useCallback((direction: StepDirection) => {
-    const scroller = scrollerRef.current;
-    if (scroller === null) return;
-    scroller.scrollTo({
-      left: scroller.clientWidth * (1 + direction),
-      behavior: getScrollBehavior(),
-    });
-  }, []);
+  const slide = useCallback(
+    (direction: StepDirection) => {
+      const scroller = scrollerRef.current;
+      if (scroller === null) return;
+      scroller.scrollTo({
+        left: scroller.clientWidth * (radius + direction),
+        behavior: getScrollBehavior(),
+      });
+    },
+    [radius],
+  );
 
   return { scrollerRef, headerTrackRef, preview, slide };
 }
@@ -673,12 +685,15 @@ export function WeekCalendar() {
   );
   const weekStart = getWeekStart(selectedDay);
   const stepDays = isPhone ? 1 : 7;
+  const panelRadius = isPhone ? PHONE_PANEL_RADIUS : 1;
   const previousWeek = useCalendarWeek(addDays(weekStart, -7), false);
   const currentWeek = useCalendarWeek(weekStart, true);
   const nextWeek = useCalendarWeek(addDays(weekStart, 7), false);
   const entries = currentWeek.data ?? [];
   const overlapCount = useMemo(() => countOverlapPairs(entries), [entries]);
-  const panelAnchors = [-1, 0, 1].map(offset => addDays(selectedDay, offset * stepDays));
+  const panelAnchors = Array.from({ length: panelRadius * 2 + 1 }, (_, index) =>
+    addDays(selectedDay, (index - panelRadius) * stepDays),
+  );
 
   const getWeekEntries = (day: Date): CalendarEntry[] => {
     const offset = countWholeDays(weekStart, getWeekStart(day)) / 7;
@@ -691,7 +706,8 @@ export function WeekCalendar() {
 
   const { scrollerRef, headerTrackRef, preview, slide } = useSwipePanels(
     `${selectedDay.toISOString()}:${stepDays}`,
-    direction => setSelectedDay(day => addDays(day, direction * stepDays)),
+    panelRadius,
+    steps => setSelectedDay(day => addDays(day, steps * stepDays)),
   );
   const visibleDay = addDays(selectedDay, preview * stepDays);
   const visibleWeekStart = getWeekStart(visibleDay);
@@ -781,7 +797,7 @@ export function WeekCalendar() {
                       {panelAnchors.map((anchor, index) => (
                         <div
                           key={anchor.toISOString()}
-                          aria-hidden={index !== 1 || undefined}
+                          aria-hidden={index !== panelRadius || undefined}
                           className="grid w-full shrink-0 grid-cols-7"
                         >
                           {getWeekDays(getWeekStart(anchor)).map(day => (
@@ -832,7 +848,7 @@ export function WeekCalendar() {
                     days={isPhone ? [anchor] : getWeekDays(getWeekStart(anchor))}
                     entries={getWeekEntries(anchor)}
                     now={now}
-                    isCurrent={index === 1}
+                    isCurrent={index === panelRadius}
                     isHighlightingOverlaps={isHighlightingOverlaps}
                   />
                 ))}
