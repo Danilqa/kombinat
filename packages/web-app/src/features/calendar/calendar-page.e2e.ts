@@ -35,6 +35,24 @@ test('plans the next runs and highlights overlaps', async ({ page, kombinat }) =
   await expect(page.getByRole('menuitemcheckbox', { name: /Highlight overlaps/ })).toBeChecked();
 });
 
+test('switches weeks with a sideways swipe and the keyboard', async ({ page, kombinat, time }) => {
+  kombinat.addRoutine({ name: 'daily-check', schedule: '0 9 * * *' });
+  kombinat.addRun({ routine: 'daily-check', startedAt: time.todayAt(6) });
+  await page.goto('/calendar');
+  const weekRange = page.getByRole('heading', { level: 2 });
+  const thisWeek = await weekRange.innerText();
+
+  await page.keyboard.press('j');
+  await expect(weekRange).not.toHaveText(thisWeek);
+  await page.keyboard.press('k');
+  await expect(weekRange).toHaveText(thisWeek);
+
+  await page.getByRole('link', { name: /^daily-check, .*, succeeded$/ }).hover();
+  for (let step = 0; step < 10; step++) await page.mouse.wheel(80, 0);
+  await expect(weekRange).not.toHaveText(thisWeek);
+  await expect(page.getByRole('link', { name: /^daily-check, .*, planned/ })).toHaveCount(7);
+});
+
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 
@@ -54,5 +72,19 @@ test.describe('on a phone', () => {
     await page.getByRole('button', { name: time.formatDay(otherDay), exact: true }).tap();
     await expect(otherDayRun).toBeVisible();
     await expect(todayRun).toBeHidden();
+  });
+
+  test('swipes to the next day', async ({ page, kombinat, time }) => {
+    const tomorrow = new Date(new Date(time.todayAt(12)).getTime() + DAY_MS);
+    kombinat.addRoutine({ name: 'morning-digest' });
+    kombinat.addRun({ routine: 'morning-digest', startedAt: time.todayAt(6) });
+    await page.goto('/calendar');
+
+    await page.getByRole('link', { name: /^morning-digest/ }).hover();
+    for (let step = 0; step < 10; step++) await page.mouse.wheel(60, 0);
+
+    await expect(
+      page.getByRole('button', { name: time.formatDay(tomorrow), exact: true }),
+    ).toHaveAttribute('aria-pressed', 'true');
   });
 });
