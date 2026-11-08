@@ -217,14 +217,14 @@ export function WelcomeBanner() {
           label="Demo data"
           icon={Compass}
           glow="mint"
-          title="Everything here is made up"
+          title="Make yourself at home"
           aside={<ExploreLinks />}
         >
           <p>
-            <strong>{demoRoutines.length} routines</strong> of an imaginary team: night agents,
-            on-call checks, flaky test fixes and more. Runs, transcripts and the calendar are
-            generated in your browser around the current time, so nothing leaves this page.{' '}
-            <strong>Run now</strong> works too and finishes in 30 seconds.
+            Click around, open any run and press <strong>Run now</strong>: it finishes in 30
+            seconds. Everything here is made up. The {demoRoutines.length} routines of an imaginary
+            team and their runs, transcripts and calendar are generated in your browser, so nothing
+            leaves this page.
           </p>
         </WelcomeCard>
       ),
