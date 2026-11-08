@@ -1,6 +1,7 @@
 import { CalendarDays, History, Workflow } from 'lucide-react';
 import { useLayoutEffect, useRef, type RefObject } from 'react';
 import { Link, useLocation } from 'react-router';
+import { SlidingPill } from 'design-system/components';
 import { BrandMark } from 'design-system/icons';
 import { cn } from 'design-system/utils';
 import { DaemonStatusIndicator } from 'domains/daemon/components';
@@ -54,11 +55,10 @@ function NavLinkItem({ item, pathname }: NavLinkItemProps) {
     <Link
       to={item.to}
       aria-current={getNavCurrent(item, pathname)}
+      data-active={isActive || undefined}
       className={cn(
-        'flex h-8 items-center gap-1.5 rounded-full px-3 text-nav font-medium transition-colors forced-colors:underline-offset-4',
-        isActive
-          ? 'bg-overlay text-fg forced-colors:underline'
-          : 'text-fg-muted hover:bg-hover hover:text-fg',
+        'relative flex h-8 items-center gap-1.5 rounded-full px-3 text-nav font-medium transition-colors forced-colors:underline-offset-4',
+        isActive ? 'text-fg forced-colors:underline' : 'text-fg-muted hover:bg-hover hover:text-fg',
       )}
     >
       <Icon aria-hidden="true" className="size-3.5 shrink-0" />
@@ -101,7 +101,8 @@ export function AppHeader() {
           <BrandMark />
           Kombinat
         </Link>
-        <nav aria-label="Main" className="max-sm:order-last max-sm:w-full">
+        <nav aria-label="Main" className="relative max-sm:order-last max-sm:w-full">
+          <SlidingPill activeSelector="[data-active]" />
           <ul className="flex items-center gap-1">
             {navItems.map(item => (
               <li key={item.to}>
