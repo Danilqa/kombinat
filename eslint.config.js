@@ -1,4 +1,5 @@
 import js from '@eslint/js';
+import pluginQuery from '@tanstack/eslint-plugin-query';
 import tsPattern from '@danilqa/eslint-plugin-ts-pattern';
 import unicorn from 'eslint-plugin-unicorn';
 import { defineConfig, globalIgnores } from 'eslint/config';
@@ -87,8 +88,8 @@ const SHARED_DOMAIN_LEVELS = [
 ];
 
 const NO_UI_IN_TERMINAL = {
-  regex: String.raw`^(react|react-dom|react-router|lucide-react|design-system|domains/[^/]+/components|utils/hooks)(/|$)`,
-  message: 'cli and tui never import React, design-system, domain components or utils/hooks.',
+  regex: String.raw`^(react|react-dom|react-router|@tanstack/react-query|lucide-react|design-system|domains/[^/]+/components)(/|$)`,
+  message: 'cli and tui never import React, React Query, design-system or domain components.',
 };
 
 const NO_ROUTER = {
@@ -102,23 +103,20 @@ const NO_NODE = {
 };
 
 const UNIVERSAL_DOMAINS_MESSAGE =
-  'cli and tui import this code too, so only domain components/ import React, lucide-react, design-system and utils/hooks.';
+  'cli and tui import this code too, so only domain components/ import React, React Query, lucide-react and design-system.';
 
 const NO_UI_IN_UNIVERSAL_DOMAINS = [
   {
-    regex: String.raw`^(react|react-dom|lucide-react|design-system|utils/hooks)(/|$)`,
+    regex: String.raw`^(react|react-dom|@tanstack/react-query|lucide-react|design-system)(/|$)`,
     message: UNIVERSAL_DOMAINS_MESSAGE,
   },
   { regex: '(^|/)components(/|$)', message: UNIVERSAL_DOMAINS_MESSAGE },
 ];
 
-const UNIVERSAL_UTILS_MESSAGE =
-  'cli and tui import this code too, so only utils/hooks imports React.';
-
-const NO_REACT_IN_UNIVERSAL_UTILS = [
-  { regex: '^(react|react-dom)(/|$)', message: UNIVERSAL_UTILS_MESSAGE },
-  { regex: '(^|/)hooks(/|$)', message: UNIVERSAL_UTILS_MESSAGE },
-];
+const NO_REACT_IN_UTILS = {
+  regex: '^(react|react-dom|@tanstack/react-query)(/|$)',
+  message: 'cli and tui import utils too, so it never imports React.',
+};
 
 const NO_BARREL_INSIDE_DESIGN_SYSTEM = {
   regex: String.raw`^\.{1,2}(/(components|layouts|icons))?(/index)?/?$`,
@@ -201,6 +199,7 @@ export default defineConfig(
     },
   },
   js.configs.recommended,
+  pluginQuery.configs['flat/recommended'],
   KEBAB_CASE_FILES,
   {
     files: ['**/*.js'],
@@ -335,8 +334,8 @@ export default defineConfig(
   ),
   restrictImportsOfKind(
     ['packages/utils/**/*.{ts,tsx}'],
-    ['packages/utils/hooks/**'],
-    ...NO_REACT_IN_UNIVERSAL_UTILS,
+    [],
+    NO_REACT_IN_UTILS,
     NO_NODE,
     ...TEST_ONLY_IMPORTS,
   ),

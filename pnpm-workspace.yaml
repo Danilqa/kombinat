@@ -1,6 +1,7 @@
 packages:
   - packages/*
 catalog:
+  '@tanstack/react-query': 5.107.1
   lucide-react: 1.49.0
   react: 19.3.0
   react-dom: 19.3.0

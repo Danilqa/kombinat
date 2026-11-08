@@ -10,6 +10,7 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@tanstack/react-query": "catalog:",
     "design-system": "workspace:*",
     "domains": "workspace:*",
     "lucide-react": "catalog:",

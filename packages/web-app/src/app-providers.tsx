@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router';
 import { Tooltip } from 'design-system/components';
+
+const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
 interface AppProvidersProps {
   children: ReactNode;
@@ -8,8 +11,10 @@ interface AppProvidersProps {
 
 export function AppProviders({ children }: AppProvidersProps) {
   return (
-    <BrowserRouter>
-      <Tooltip.Provider delayDuration={300}>{children}</Tooltip.Provider>
-    </BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <Tooltip.Provider delayDuration={300}>{children}</Tooltip.Provider>
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 }

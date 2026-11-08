@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router';
 import { isMatching } from 'ts-pattern';
 import { Card, ErrorState, LoadingState, Separator } from 'design-system/components';
@@ -6,14 +7,14 @@ import { RunDetailList, RunOutput, RunStatusBadge } from 'domains/run/components
 import { getRunWithTranscript } from 'domains/run/requests';
 import type { RunWithTranscript } from 'domains/run/types';
 import { TranscriptList } from 'domains/transcript/components';
-import { usePolledData } from 'utils/hooks/use-polled-data';
 import { sameOriginApi } from 'utils/http';
+import { getPollInterval } from 'utils/polling';
 import { Breadcrumbs } from '@web-app/components/breadcrumbs';
 import { RUNS_PATH, getRoutinePath } from '@web-app/constants/path';
 import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 
-function checkIsRunActive(data: RunWithTranscript): boolean {
-  return isMatching({ status: 'running' }, data.run);
+function checkIsRunActive(data: RunWithTranscript | undefined): boolean {
+  return isMatching({ run: { status: 'running' } }, data);
 }
 
 interface RunViewProps extends RunWithTranscript {}
@@ -47,11 +48,11 @@ function RunView({ run, transcript }: RunViewProps) {
 export function RunPage() {
   const { routine = '', id = '' } = useParams();
   useDocumentTitle(`${routine} run ${id}`);
-  const { data, error } = usePolledData(
-    `run/${routine}/${id}`,
-    () => getRunWithTranscript(sameOriginApi, routine, id),
-    checkIsRunActive,
-  );
+  const { data, error, isPending } = useQuery({
+    queryKey: ['runs', routine, id],
+    queryFn: () => getRunWithTranscript(sameOriginApi, routine, id),
+    refetchInterval: query => getPollInterval(checkIsRunActive(query.state.data)),
+  });
 
   return (
     <div>
@@ -66,8 +67,8 @@ export function RunPage() {
         <PageHeader.Title className="max-w-full font-mono">{id}</PageHeader.Title>
         {data && <RunStatusBadge status={data.run.status} />}
       </header>
-      {error && <ErrorState message={error} />}
-      {!data && !error && <LoadingState />}
+      {error && <ErrorState message={error.message} />}
+      {isPending && <LoadingState />}
       {data && <RunView run={data.run} transcript={data.transcript} />}
     </div>
   );

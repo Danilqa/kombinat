@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router';
 import { Card, ErrorState, LoadingState, Markdown, Tabs } from 'design-system/components';
 import { PageHeader, SectionHeader } from 'design-system/layouts';
@@ -5,20 +6,20 @@ import { RoutineBadges, RoutineDetailList, RunNowButton } from 'domains/routine/
 import { getRoutine } from 'domains/routine/requests';
 import type { RoutineDetail } from 'domains/routine/types';
 import { SkipsTable } from 'domains/scheduler/components';
-import { usePolledData } from 'utils/hooks/use-polled-data';
 import { sameOriginApi } from 'utils/http';
+import { getPollInterval } from 'utils/polling';
 import { Breadcrumbs } from '@web-app/components/breadcrumbs';
 import { RunsTable } from '@web-app/components/runs-table';
 import { ROUTINES_PATH } from '@web-app/constants/path';
 import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 
-function checkIsRoutineRunning(routine: RoutineDetail): boolean {
-  return routine.running;
+function checkIsRoutineRunning(routine: RoutineDetail | undefined): boolean {
+  return routine?.running === true;
 }
 
 interface RoutineHeaderProps {
   name: string;
-  routine: RoutineDetail | null;
+  routine: RoutineDetail | undefined;
 }
 
 // The title comes from the route, so the page has its heading while loading and on errors too.
@@ -84,23 +85,21 @@ function RoutineView({ routine }: RoutineViewProps) {
 export function RoutinePage() {
   const { name = '' } = useParams();
   useDocumentTitle(name);
-  const { data, error, reload } = usePolledData(
-    `routine/${name}`,
-    () => getRoutine(sameOriginApi, name),
-    checkIsRoutineRunning,
-  );
+  const { data, error, isPending } = useQuery({
+    queryKey: ['routines', name],
+    queryFn: () => getRoutine(sameOriginApi, name),
+    refetchInterval: query => getPollInterval(checkIsRoutineRunning(query.state.data)),
+  });
 
   return (
     <div>
       <Breadcrumbs
         crumbs={[{ label: 'Routines', to: ROUTINES_PATH }]}
-        aside={
-          data && <RunNowButton routine={data.name} isRunning={data.running} onStarted={reload} />
-        }
+        aside={data && <RunNowButton routine={data.name} isRunning={data.running} />}
       />
       <RoutineHeader name={name} routine={data} />
-      {error && <ErrorState message={error} />}
-      {!data && !error && <LoadingState />}
+      {error && <ErrorState message={error.message} />}
+      {isPending && <LoadingState />}
       {data && <RoutineView routine={data} />}
     </div>
   );

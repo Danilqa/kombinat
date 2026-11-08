@@ -1,64 +1,56 @@
-import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Play } from 'lucide-react';
 
 import { Button } from 'design-system/components';
-import { getErrorMessage } from 'utils/error';
 import { sameOriginApi } from 'utils/http';
 
 import { startRoutineRun } from '../requests';
+
+const QUERY_KEYS_CHANGED_BY_RUN = [['routines'], ['runs'], ['calendar'], ['status']];
 
 type RunNowVariant = 'primary' | 'secondary';
 
 interface RunNowButtonProps {
   routine: string;
   isRunning: boolean;
-  onStarted: () => void;
   variant?: RunNowVariant;
 }
 
-export function RunNowButton({
-  routine,
-  isRunning,
-  onStarted,
-  variant = 'primary',
-}: RunNowButtonProps) {
-  const [isStarting, setIsStarting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [announcement, setAnnouncement] = useState('');
+export function RunNowButton({ routine, isRunning, variant = 'primary' }: RunNowButtonProps) {
+  const queryClient = useQueryClient();
+  const { mutate, isPending, isSuccess, error } = useMutation({
+    mutationFn: () => startRoutineRun(sameOriginApi, routine),
+    onSuccess: () =>
+      Promise.all(
+        QUERY_KEYS_CHANGED_BY_RUN.map(queryKey => queryClient.invalidateQueries({ queryKey })),
+      ),
+  });
   // aria-disabled instead of disabled keeps keyboard focus on the button after it is pressed.
-  const isUnavailable = isRunning || isStarting;
+  const isUnavailable = isRunning || isPending;
 
-  async function startRun() {
-    if (isUnavailable) return;
-    setIsStarting(true);
-    setError(null);
-    setAnnouncement('');
-    try {
-      await startRoutineRun(sameOriginApi, routine);
-      setAnnouncement(`Started a run of ${routine}`);
-      onStarted();
-    } catch (err) {
-      setError(getErrorMessage(err));
-    } finally {
-      setIsStarting(false);
-    }
+  function startRun() {
+    if (!isUnavailable) mutate();
   }
 
   return (
     <div className="flex items-center justify-end gap-2">
       <span role="status" className="sr-only">
-        {announcement}
+        {isSuccess && `Started a run of ${routine}`}
       </span>
       {error && (
-        <span role="alert" className="max-w-56 truncate text-body-sm text-negative" title={error}>
-          {error}
+        <span
+          role="alert"
+          className="max-w-56 truncate text-body-sm text-negative"
+          title={error.message}
+        >
+          {error.message}
         </span>
       )}
       <Button
         variant={variant}
         size="small"
         aria-disabled={isUnavailable || undefined}
-        onClick={() => void startRun()}
+        onClick={startRun}
       >
         <Play aria-hidden="true" className="size-3.5 fill-current" />
         {isRunning ? 'Running' : 'Run now'}

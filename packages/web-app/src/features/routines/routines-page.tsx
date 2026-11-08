@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import {
   Badge,
@@ -15,13 +16,13 @@ import { getRoutines } from 'domains/routine/requests';
 import type { RoutineSummary } from 'domains/routine/types';
 import { RunStatusBadge } from 'domains/run/components';
 import { getSkipReasonLabel } from 'domains/scheduler/utils';
-import { usePolledData } from 'utils/hooks/use-polled-data';
 import { sameOriginApi } from 'utils/http';
+import { getPollInterval } from 'utils/polling';
 import { getRoutinePath, getRunPath } from '@web-app/constants/path';
 import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 import { useRowLink } from '@web-app/hooks/use-row-link';
 
-function checkHasRunningRoutine(routines: RoutineSummary[]): boolean {
+function checkHasRunningRoutine(routines: RoutineSummary[] = []): boolean {
   return routines.some(routine => routine.running);
 }
 
@@ -57,10 +58,9 @@ function LastRunCell({ routine }: LastRunCellProps) {
 
 interface RoutinesTableProps {
   routines: RoutineSummary[];
-  onStarted: () => void;
 }
 
-function RoutinesTable({ routines, onStarted }: RoutinesTableProps) {
+function RoutinesTable({ routines }: RoutinesTableProps) {
   const getRowClickHandler = useRowLink();
   if (routines.length === 0) return <EmptyState>No routines yet.</EmptyState>;
   return (
@@ -136,7 +136,6 @@ function RoutinesTable({ routines, onStarted }: RoutinesTableProps) {
               <RunNowButton
                 routine={routine.name}
                 isRunning={routine.running}
-                onStarted={onStarted}
                 variant="secondary"
               />
             </Table.Cell>
@@ -149,11 +148,11 @@ function RoutinesTable({ routines, onStarted }: RoutinesTableProps) {
 
 export function RoutinesPage() {
   useDocumentTitle('Routines');
-  const { data, error, reload } = usePolledData(
-    'routines',
-    () => getRoutines(sameOriginApi),
-    checkHasRunningRoutine,
-  );
+  const { data, error, isPending } = useQuery({
+    queryKey: ['routines'],
+    queryFn: () => getRoutines(sameOriginApi),
+    refetchInterval: query => getPollInterval(checkHasRunningRoutine(query.state.data)),
+  });
 
   return (
     <div>
@@ -161,11 +160,11 @@ export function RoutinesPage() {
         title="Routines"
         aside={data && <PageHeader.Aside>{data.length} routines</PageHeader.Aside>}
       />
-      {error && <ErrorState message={error} />}
-      {!data && !error && <LoadingState />}
+      {error && <ErrorState message={error.message} />}
+      {isPending && <LoadingState />}
       {data && (
         <Card.Root className="gap-0 overflow-visible py-0">
-          <RoutinesTable routines={data} onStarted={reload} />
+          <RoutinesTable routines={data} />
         </Card.Root>
       )}
     </div>

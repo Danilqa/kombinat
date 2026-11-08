@@ -1,10 +1,11 @@
+import { useQuery } from '@tanstack/react-query';
 import { P, match } from 'ts-pattern';
 
 import { Popover } from 'design-system/components';
 import { cn } from 'design-system/utils';
 import { formatRelative } from 'utils/date-time';
-import { usePolledData } from 'utils/hooks/use-polled-data';
 import { sameOriginApi } from 'utils/http';
+import { getPollInterval } from 'utils/polling';
 
 import { getDaemonStatus } from '../requests';
 import type { DaemonHealth, DaemonStatus } from '../types';
@@ -24,13 +25,13 @@ const daemonHealthAppearances: Record<DaemonHealth, DaemonHealthAppearance> = {
 const triggerClassName =
   'flex h-8 items-center gap-2 rounded-full px-2.5 text-body-sm text-fg-muted tabular-nums';
 
-function checkHasRunning(status: DaemonStatus): boolean {
-  return status.running > 0;
+function checkHasRunning(status: DaemonStatus | undefined): boolean {
+  return status !== undefined && status.running > 0;
 }
 
 interface DaemonStatusSummaryProps {
   health: DaemonHealth;
-  status: DaemonStatus | null;
+  status: DaemonStatus | undefined;
 }
 
 // Every unhealthy state gets its own visible text, so the dot colour is not the only cue.
@@ -74,12 +75,12 @@ function DaemonStatusDetails({ status }: DaemonStatusDetailsProps) {
 }
 
 export function DaemonStatusIndicator() {
-  const { data, error, isLoading } = usePolledData(
-    'status',
-    () => getDaemonStatus(sameOriginApi),
-    checkHasRunning,
-  );
-  if (isLoading) {
+  const { data, isError, isPending } = useQuery({
+    queryKey: ['status'],
+    queryFn: () => getDaemonStatus(sameOriginApi),
+    refetchInterval: query => getPollInterval(checkHasRunning(query.state.data)),
+  });
+  if (isPending) {
     // Holds the width of the loaded summary so the navigation next to it does not jump.
     return (
       <span aria-hidden="true" className={cn(triggerClassName, 'invisible')}>
@@ -87,7 +88,7 @@ export function DaemonStatusIndicator() {
       </span>
     );
   }
-  const health = getDaemonHealth(data, error !== null);
+  const health = getDaemonHealth(data, isError);
   const appearance = daemonHealthAppearances[health];
   return (
     <>
