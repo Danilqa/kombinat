@@ -50,6 +50,15 @@ export function read(filePath: string, output: string): TranscriptStep {
   return tool('Read', { file_path: filePath }, filePath, output);
 }
 
+export function edit(filePath: string, oldString: string, newString: string): TranscriptStep {
+  return tool(
+    'Edit',
+    { file_path: filePath, old_string: oldString, new_string: newString },
+    filePath,
+    `The file ${filePath} has been updated.`,
+  );
+}
+
 export function write(filePath: string, content: string): TranscriptStep {
   return tool(
     'Write',
