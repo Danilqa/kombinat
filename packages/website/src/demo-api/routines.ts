@@ -449,7 +449,7 @@ const onCallEngineer: DemoRoutine = {
   cwd: REPO,
   timeoutMinutes: 60,
   maxBudgetUsd: 5,
-  prompt: `When PagerDuty starts this run through the webhook, its alert follows this prompt. Otherwise check #incidents for an open incident, and if there is none, say so and stop.
+  prompt: `When a 3rd-party alert starts this run through the webhook, it follows this prompt. Otherwise check #incidents for an open incident, and if there is none, say so and stop.
 
 Then find the cause with Sentry, Grafana and the logs. Post what you know to the incident channel as you go.
 
@@ -492,7 +492,7 @@ If the cause is in our code, open a pull request with the fix and ask the on-cal
       steps: [
         fableInit,
         text(
-          'PagerDuty sent a P1 alert: the invoice-worker error rate is 34%. Looking at its logs first.',
+          'A 3rd-party alert came in, P1: the invoice-worker error rate is 34%. Looking at its logs first.',
         ),
         mcp(
           'mcp__grafana__query_loki',
@@ -543,7 +543,7 @@ e9a4c70 Add archived_at to clients (#451)`,
       steps: [
         fableInit,
         text(
-          'PagerDuty sent a P2 alert: the payments error rate is 12%. Looking at its logs first.',
+          'A 3rd-party alert came in, P2: the payments error rate is 12%. Looking at its logs first.',
         ),
         mcp(
           'mcp__grafana__query_loki',

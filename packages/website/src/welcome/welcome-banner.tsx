@@ -146,8 +146,8 @@ function WebhookRoutineFile() {
       <span className="text-fg-muted">webhook:</span> true{'\n'}
       <span className="text-fg-faint">---</span>
       {'\n\n'}
-      When PagerDuty starts this run through{'\n'}
-      the webhook, its alert follows this prompt.
+      When a 3rd-party alert starts this run{'\n'}
+      through the webhook, it follows this prompt.
     </CodePanel>
   );
 }
@@ -303,8 +303,8 @@ export function WelcomeBanner() {
           <p>
             Add <strong>webhook: true</strong> and any app that can send a POST request starts the
             routine: an alert, a deploy or a form. The request body is added to the prompt, so the
-            agent knows what happened. Here PagerDuty calls <strong>on-call-engineer</strong> on
-            every alert.
+            agent knows what happened. Here a 3rd-party service calls{' '}
+            <strong>on-call-engineer</strong> on every alert.
           </p>
         </WelcomeCard>
       ),
