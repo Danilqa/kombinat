@@ -1,13 +1,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import type { QueuedWebhook } from 'domains/run/types';
+
 import { config } from '../../config';
 
 export const WEBHOOK_QUEUE_LIMIT = 100;
+const PREVIEW_CHARS = 2000;
 
 let lastQueuedAt = 0;
 
-export interface QueuedWebhook {
+export interface QueuedPayload {
   runId: string;
   payload: string;
 }
@@ -41,14 +44,29 @@ export function enqueueWebhook(routine: string, runId: string, payload: string):
   return true;
 }
 
-export function takeQueuedWebhook(routine: string): QueuedWebhook | null {
+function getRunId(entry: string): string {
+  return entry.slice(entry.indexOf('-') + 1, -'.payload'.length);
+}
+
+export function takeQueuedWebhook(routine: string): QueuedPayload | null {
   const [oldest] = listQueueFiles(routine);
   if (oldest === undefined) return null;
   const file = path.join(getQueueDir(routine), oldest);
   const payload = fs.readFileSync(file, 'utf8');
   fs.rmSync(file);
-  const runId = oldest.slice(oldest.indexOf('-') + 1, -'.payload'.length);
-  return { runId, payload };
+  return { runId: getRunId(oldest), payload };
+}
+
+export function listQueuedWebhooks(routine: string): QueuedWebhook[] {
+  return listQueueFiles(routine).map(entry => {
+    const file = path.join(getQueueDir(routine), entry);
+    return {
+      runId: getRunId(entry),
+      queuedAt: new Date(Number(entry.slice(0, entry.indexOf('-')))).toISOString(),
+      bytes: fs.statSync(file).size,
+      preview: fs.readFileSync(file, 'utf8').slice(0, PREVIEW_CHARS),
+    };
+  });
 }
 
 export function listQueuedRoutines(): string[] {

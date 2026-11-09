@@ -31,10 +31,17 @@ export interface RunFile extends Partial<Omit<RunRecord, 'routine' | 'logFile'>>
   events?: unknown[];
 }
 
+export interface QueuedWebhookFile {
+  routine: string;
+  payload: string;
+  minutesAgo: number;
+}
+
 export interface Kombinat {
   addRoutine: (routine: RoutineFile) => void;
   addRun: (run: RunFile) => RunRecord;
   addSkip: (routine: string, reason: SkipReason) => void;
+  addQueuedWebhook: (webhook: QueuedWebhookFile) => void;
   stallScheduler: () => void;
 }
 
@@ -88,6 +95,13 @@ export function createKombinat(root: string): Kombinat {
       const entry = (scheduler.routines[routine] ??= { lastScheduledFor: null, skips: [] });
       entry.skips.push({ at: minutesAgo(30), scheduledFor: minutesAgo(30), reason });
       saveScheduler();
+    },
+    addQueuedWebhook: ({ routine, payload, minutesAgo: minutes }) => {
+      const queuedAt = new Date(minutesAgo(minutes));
+      const queueDir = path.join(stateDir, 'queue', routine);
+      const file = `${String(queuedAt.getTime()).padStart(15, '0')}-${createRunId(queuedAt)}.payload`;
+      fs.mkdirSync(queueDir, { recursive: true });
+      fs.writeFileSync(path.join(queueDir, file), payload);
     },
     stallScheduler: () => {
       scheduler.lastTickAt = minutesAgo(10);

@@ -48,6 +48,7 @@ function makeRoutine(name: string, overrides: Partial<RoutineSummary> = {}): Rou
     enabled: true,
     webhook: false,
     webhookGate: null,
+    queuedWebhooks: 0,
     agent: 'claude',
     model: 'claude-opus-5-5',
     effort: 'high',
@@ -153,6 +154,7 @@ function makeClient(overview: Overview, options: FakeOptions) {
         prompt: '# Steps\n\n- look at the queue',
         runs: overview.runs.filter(r => r.routine === name),
         skips: [],
+        queue: [],
       };
       return Promise.resolve(detail);
     },

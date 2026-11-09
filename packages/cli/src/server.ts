@@ -18,7 +18,12 @@ import type { Routine } from './domains/routine/types';
 import { describeSchedule, getNextRun } from './domains/routine/utils';
 import { buildRunTranscript, readRunEvents } from './domains/run/event-log';
 import { writePayload } from './domains/run/payload';
-import { countQueuedWebhooks, enqueueWebhook, WEBHOOK_QUEUE_LIMIT } from './domains/run/queue';
+import {
+  countQueuedWebhooks,
+  enqueueWebhook,
+  listQueuedWebhooks,
+  WEBHOOK_QUEUE_LIMIT,
+} from './domains/run/queue';
 import { checkIsStarting, startDetachedRun } from './domains/run/runner';
 import { decideWebhook, WEBHOOK_GATE_TIMEOUT_MS } from './domains/run/webhook-gate';
 import type { WebhookRequest } from './domains/run/webhook-gate';
@@ -66,6 +71,7 @@ function toRoutineSummary(routine: Routine, runs: RunRecord[]): RoutineSummary {
     enabled: routine.enabled,
     webhook: routine.webhook,
     webhookGate: routine.webhookGate,
+    queuedWebhooks: countQueuedWebhooks(routine.name),
     agent: routine.agent,
     model: routine.model,
     effort: routine.effort,
@@ -121,6 +127,7 @@ function getRoutineDetail(routine: Routine): ApiResponse {
     prompt: routine.prompt,
     runs,
     skips: getSkips(routine.name),
+    queue: listQueuedWebhooks(routine.name),
   };
   return ok(detail);
 }
