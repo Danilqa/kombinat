@@ -149,13 +149,13 @@ function InstallCommands() {
 
 function ReasonList() {
   return (
-    <ul className="grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+    <ul className="grid items-start gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
       {REASONS.map(({ icon: Icon, title, text }) => (
-        <li key={title} className="flex items-center gap-3 sm:items-start">
+        <li key={title} className="flex items-center gap-3">
           <span className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-line bg-raised text-fg-secondary">
             <Icon aria-hidden="true" className="size-3.5" />
           </span>
-          <span className="flex flex-col gap-0.5 sm:pt-0.5">
+          <span className="flex flex-col gap-0.5">
             <span className="text-body font-medium text-fg">{title}</span>
             <span className="text-body-sm text-fg-muted max-sm:hidden">{text}</span>
           </span>
