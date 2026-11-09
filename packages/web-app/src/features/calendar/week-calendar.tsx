@@ -618,14 +618,14 @@ function useSwipePanels(
     };
   }, [radius, recentre, syncHeader]);
 
+  // Steps from the panel in view: during a slide the period has not moved to it yet.
   const slide = useCallback(
     (direction: StepDirection) => {
       const scroller = scrollerRef.current;
-      if (scroller === null) return;
-      scroller.scrollTo({
-        left: scroller.clientWidth * (radius + direction),
-        behavior: getScrollBehavior(),
-      });
+      if (scroller === null || scroller.clientWidth === 0) return;
+      const inView = Math.round(scroller.scrollLeft / scroller.clientWidth);
+      const target = Math.max(0, Math.min(radius * 2, inView + direction));
+      scroller.scrollTo({ left: scroller.clientWidth * target, behavior: getScrollBehavior() });
     },
     [radius],
   );
