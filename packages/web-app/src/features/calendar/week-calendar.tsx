@@ -504,6 +504,7 @@ function useSwipePanels(
   const headerTrackRef = useRef<HTMLDivElement>(null);
   const [preview, setPreview] = useState(0);
   const onStepRef = useRef(onStep);
+  const settleRef = useRef<() => void>(() => undefined);
   useLayoutEffect(() => {
     onStepRef.current = onStep;
   });
@@ -605,6 +606,7 @@ function useSwipePanels(
     scroller.addEventListener('touchend', handleTouchEnd, { passive: true });
     scroller.addEventListener('touchcancel', handleTouchEnd, { passive: true });
     resizeObserver.observe(scroller);
+    settleRef.current = settle;
     return () => {
       clearTimeout(timer);
       clearTimeout(wheelTimer);
@@ -618,11 +620,13 @@ function useSwipePanels(
     };
   }, [radius, recentre, syncHeader]);
 
-  // Steps from the panel in view: during a slide the period has not moved to it yet.
+  // A slide that reached its panel is committed first, or its pending settle would recentre over
+  // this one. During a slide the period has not moved yet, so the step counts from the panel in view.
   const slide = useCallback(
     (direction: StepDirection) => {
       const scroller = scrollerRef.current;
       if (scroller === null || scroller.clientWidth === 0) return;
+      settleRef.current();
       const inView = Math.round(scroller.scrollLeft / scroller.clientWidth);
       const target = Math.max(0, Math.min(radius * 2, inView + direction));
       scroller.scrollTo({ left: scroller.clientWidth * target, behavior: getScrollBehavior() });

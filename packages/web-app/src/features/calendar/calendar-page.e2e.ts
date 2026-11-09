@@ -48,7 +48,8 @@ test('switches weeks with a sideways swipe and the keyboard', async ({ page, kom
   await expect(weekRange).toHaveText(thisWeek);
 
   await page.getByRole('link', { name: /^daily-check, .*, succeeded$/ }).hover();
-  for (let step = 0; step < 10; step++) await page.mouse.wheel(80, 0);
+  // One event: on a slow runner, notches arrive after the release pause and become many swipes.
+  await page.mouse.wheel(400, 0);
   await expect(weekRange).not.toHaveText(thisWeek);
   await expect(page.getByRole('link', { name: /^daily-check, .*, planned/ })).toHaveCount(7);
 });
@@ -81,7 +82,7 @@ test.describe('on a phone', () => {
     await page.goto('/calendar');
 
     await page.getByRole('link', { name: /^morning-digest/ }).hover();
-    for (let step = 0; step < 10; step++) await page.mouse.wheel(60, 0);
+    await page.mouse.wheel(300, 0);
 
     await expect(
       page.getByRole('button', { name: time.formatDay(tomorrow), exact: true }),
