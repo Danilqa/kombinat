@@ -27,6 +27,16 @@ function getStatEntries(routine: RoutineSummary): DetailEntry[] {
           },
         ]
       : []),
+    ...(routine.webhookGate === null
+      ? []
+      : [
+          {
+            label: 'Webhook gate',
+            value: routine.webhookGate,
+            isMono: true,
+            span: 'wide' as const,
+          },
+        ]),
     ...(routine.command === null
       ? []
       : [{ label: 'Command', value: routine.command, isMono: true, span: 'full' as const }]),

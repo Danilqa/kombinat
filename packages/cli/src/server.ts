@@ -19,6 +19,8 @@ import { describeSchedule, getNextRun } from './domains/routine/utils';
 import { buildRunTranscript, readRunEvents } from './domains/run/event-log';
 import { writePayload } from './domains/run/payload';
 import { startDetachedRun } from './domains/run/runner';
+import { decideWebhook, WEBHOOK_GATE_TIMEOUT_MS } from './domains/run/webhook-gate';
+import type { WebhookRequest } from './domains/run/webhook-gate';
 import { listAllRuns, listRuns, readRunRecord } from './domains/run/storage';
 import { getSkips, readSchedulerState } from './domains/scheduler/storage';
 
@@ -28,6 +30,13 @@ interface ApiResponse {
 }
 
 type ApiRequest = [method: string, segments: string[]];
+
+interface ApiContext {
+  url: URL;
+  startedAt: Date;
+  request: WebhookRequest;
+  log: (line: string) => void;
+}
 
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -55,6 +64,7 @@ function toRoutineSummary(routine: Routine, runs: RunRecord[]): RoutineSummary {
     nextRunAt: getNextRun(routine),
     enabled: routine.enabled,
     webhook: routine.webhook,
+    webhookGate: routine.webhookGate,
     agent: routine.agent,
     model: routine.model,
     effort: routine.effort,
@@ -86,7 +96,10 @@ function getStatus(startedAt: Date): DaemonStatus {
   };
 }
 
-function withRoutine(name: string, respond: (routine: Routine) => ApiResponse): ApiResponse {
+function withRoutine<T extends ApiResponse | Promise<ApiResponse>>(
+  name: string,
+  respond: (routine: Routine) => T,
+): T | ApiResponse {
   const routine = loadRoutines().find(candidate => candidate.name === name);
   return routine === undefined ? fail(404, `Unknown routine ${name}`) : respond(routine);
 }
@@ -122,15 +135,32 @@ function startRun(routine: Routine): ApiResponse {
 }
 
 function startWebhookRun(routine: Routine, payload: string): ApiResponse {
-  if (!routine.webhook) {
-    return fail(404, `${routine.name} has no webhook, add webhook: true to its frontmatter`);
-  }
   if (!routine.enabled) return fail(409, `${routine.name} is disabled`);
   if (checkIsRunning(routine)) return fail(409, `${routine.name} is already running`);
   const runId = createRunId();
   if (payload !== '') writePayload(routine.name, runId, payload);
   startDetachedRun(routine.name, { trigger: 'webhook', runId });
-  return { status: 202, body: { ok: true, runId } };
+  return ok({ ok: true, runId });
+}
+
+// Linear and others count only 200 as delivered, so ignored requests get it too.
+async function handleWebhook(routine: Routine, context: ApiContext): Promise<ApiResponse> {
+  if (!routine.webhook) {
+    return fail(404, `${routine.name} has no webhook, add webhook: true to its frontmatter`);
+  }
+  const decision = await decideWebhook(routine, context.request);
+  return match(decision)
+    .with({ outcome: 'run' }, ({ payload }) => startWebhookRun(routine, payload))
+    .with({ outcome: 'ignore' }, ({ response }) => ok(response ?? { ok: true, runId: null }))
+    .with({ outcome: 'reject' }, ({ reason }) => {
+      context.log(`webhookGate of ${routine.name} ${reason}`);
+      return fail(401, 'webhookGate rejected the request');
+    })
+    .with({ outcome: 'timeout' }, () => {
+      context.log(`webhookGate of ${routine.name} timed out`);
+      return fail(504, `webhookGate took longer than ${WEBHOOK_GATE_TIMEOUT_MS / 1000} s`);
+    })
+    .exhaustive();
 }
 
 function getCalendar(url: URL): ApiResponse {
@@ -147,7 +177,8 @@ function getCalendar(url: URL): ApiResponse {
   return ok(buildCalendar(loadRoutines(), listAllRuns(), from, to));
 }
 
-function routeApi(request: ApiRequest, url: URL, startedAt: Date, body: string): ApiResponse {
+function routeApi(request: ApiRequest, context: ApiContext): ApiResponse | Promise<ApiResponse> {
+  const { url, startedAt } = context;
   return match(request)
     .with(['GET', ['status']], () => ok(getStatus(startedAt)))
     .with(['GET', ['routines']], () =>
@@ -156,7 +187,7 @@ function routeApi(request: ApiRequest, url: URL, startedAt: Date, body: string):
     .with(['GET', ['routines', P.string]], ([, [, name]]) => withRoutine(name, getRoutineDetail))
     .with(['POST', ['routines', P.string, 'run']], ([, [, name]]) => withRoutine(name, startRun))
     .with(['POST', ['routines', P.string, 'webhook']], ([, [, name]]) =>
-      withRoutine(name, routine => startWebhookRun(routine, body)),
+      withRoutine(name, routine => handleWebhook(routine, context)),
     )
     .with(['GET', ['calendar']], () => getCalendar(url))
     .with(['GET', ['runs']], () =>
@@ -202,7 +233,7 @@ export function checkIsCrossSite(headers: http.IncomingHttpHeaders): boolean {
 }
 
 // A body over the limit is still read to the end, so that the client gets the 413.
-function readBody(req: http.IncomingMessage): Promise<string | null> {
+function readBody(req: http.IncomingMessage): Promise<Buffer | null> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     let size = 0;
@@ -211,7 +242,7 @@ function readBody(req: http.IncomingMessage): Promise<string | null> {
       if (size <= MAX_BODY_KB * 1024) chunks.push(chunk);
     });
     req.on('end', () => {
-      resolve(size > MAX_BODY_KB * 1024 ? null : Buffer.concat(chunks).toString('utf8'));
+      resolve(size > MAX_BODY_KB * 1024 ? null : Buffer.concat(chunks));
     });
     req.on('error', reject);
   });
@@ -220,17 +251,22 @@ function readBody(req: http.IncomingMessage): Promise<string | null> {
 async function handleApi(
   req: http.IncomingMessage,
   segments: string[],
-  url: URL,
-  startedAt: Date,
+  context: Omit<ApiContext, 'request'>,
 ): Promise<ApiResponse> {
   const method = req.method ?? 'GET';
-  if (method === 'GET') return routeApi([method, segments], url, startedAt, '');
-  if (checkIsCrossSite(req.headers)) {
+  const { headers } = req;
+  if (method === 'GET') {
+    return routeApi([method, segments], {
+      ...context,
+      request: { body: Buffer.alloc(0), headers },
+    });
+  }
+  if (checkIsCrossSite(headers)) {
     return fail(403, 'Requests from other sites cannot change anything');
   }
   const body = await readBody(req);
   if (body === null) return fail(413, `The request body is larger than ${MAX_BODY_KB} KB`);
-  return routeApi([method, segments], url, startedAt, body);
+  return routeApi([method, segments], { ...context, request: { body, headers } });
 }
 
 export function startServer(log: (line: string) => void): http.Server {
@@ -240,7 +276,7 @@ export function startServer(log: (line: string) => void): http.Server {
     const [root, ...segments] = url.pathname.split('/').filter(Boolean);
     const respond = async (): Promise<void> => {
       if (root !== 'api') serveStatic(res, url);
-      else sendJson(res, await handleApi(req, segments, url, startedAt));
+      else sendJson(res, await handleApi(req, segments, { url, startedAt, log }));
     };
     respond().catch((error: unknown) => {
       const message = getErrorMessage(error);

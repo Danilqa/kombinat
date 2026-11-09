@@ -12,6 +12,7 @@ export const routineSummarySchema = z.object({
   nextRunAt: z.string().nullable(),
   enabled: z.boolean(),
   webhook: z.boolean(),
+  webhookGate: z.string().nullable(),
   agent: agentNameSchema,
   model: z.string().nullable(),
   effort: z.string().nullable(),

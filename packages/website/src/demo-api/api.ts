@@ -46,6 +46,7 @@ function toRoutineSummary(
       schedule === null || !enabled ? null : (nextCronRun(schedule, now)?.toISOString() ?? null),
     enabled,
     webhook: routine.webhook ?? false,
+    webhookGate: routine.webhookGate ?? null,
     agent: routine.agent,
     model: routine.model,
     effort: routine.effort,

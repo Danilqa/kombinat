@@ -101,6 +101,9 @@ export function buildRoutine(file: string, source: string): Routine {
   if (cwd === null) throw new Error(`${file}: cwd is required`);
   if (!body) throw new Error(`${file}: prompt body is empty`);
   const agent = withFile(file, () => parseAgentName(readString(data, 'agent') ?? 'claude'));
+  const webhook = withFile(file, () => readBoolean(data, 'webhook')) ?? false;
+  const webhookGate = readString(data, 'webhookGate');
+  if (webhookGate !== null && !webhook) throw new Error(`${file}: webhookGate needs webhook: true`);
   return {
     name,
     description: readString(data, 'description') ?? '',
@@ -109,7 +112,8 @@ export function buildRoutine(file: string, source: string): Routine {
     agent,
     ...withFile(file, () => readAgentSettings(data, agent)),
     enabled: data['enabled'] === undefined ? true : Boolean(data['enabled']),
-    webhook: withFile(file, () => readBoolean(data, 'webhook')) ?? false,
+    webhook,
+    webhookGate,
     timeoutMinutes:
       withFile(file, () => readNumber(data, 'timeoutMinutes')) ?? DEFAULT_TIMEOUT_MINUTES,
     before: readString(data, 'before'),

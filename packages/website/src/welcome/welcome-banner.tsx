@@ -144,6 +144,7 @@ function WebhookRoutineFile() {
       <span className="text-fg-muted">name:</span> on-call-engineer{'\n'}
       <span className="text-fg-muted">schedule:</span> '0 9,13,17,21 * * *'{'\n'}
       <span className="text-fg-muted">webhook:</span> true{'\n'}
+      <span className="text-fg-muted">webhookGate:</span> node scripts/verify-alert.ts{'\n'}
       <span className="text-fg-faint">---</span>
       {'\n\n'}
       When a 3rd-party alert starts this run{'\n'}
