@@ -8,7 +8,7 @@ import { cronRunsBetween } from 'utils/cron';
 
 import { STATE_DIR } from './constants';
 import { createRandom, randomId, randomInt, randomUuid, type Random } from './random';
-import type { DemoOutcome, DemoPin, DemoRoutine } from './routines';
+import type { DemoOutcome, DemoPin, DemoRoutine, DemoStartedRun } from './routines';
 
 const HISTORY_DAYS = 14;
 const DAY_MS = 86_400_000;
@@ -253,13 +253,20 @@ function buildScheduledEvents(
 
 export function createDemoHistory(routines: DemoRoutine[], loadedAt: Date): DemoHistory {
   const historyStart = new Date(loadedAt.getTime() - HISTORY_DAYS * DAY_MS);
-  const startedRuns: DemoRun[] = routines.flatMap(routine =>
-    (routine.manualRuns ?? []).map(({ minutesAgo, outcome }) => {
+  const toStartedRuns = (
+    routine: DemoRoutine,
+    trigger: RunTrigger,
+    started: DemoStartedRun[] = [],
+  ): DemoRun[] =>
+    started.map(({ minutesAgo, outcome }) => {
       const startedAt = new Date(loadedAt.getTime() - minutesAgo * 60_000);
-      const random = createRandom(`${routine.name}:manual:${startedAt.toISOString()}`);
-      return createRun(routine, findOutcome(routine, outcome), 'manual', null, startedAt, random);
-    }),
-  );
+      const random = createRandom(`${routine.name}:${trigger}:${startedAt.toISOString()}`);
+      return createRun(routine, findOutcome(routine, outcome), trigger, null, startedAt, random);
+    });
+  const startedRuns: DemoRun[] = routines.flatMap(routine => [
+    ...toStartedRuns(routine, 'manual', routine.manualRuns),
+    ...toStartedRuns(routine, 'webhook', routine.webhookRuns),
+  ]);
   const slotsBeforeLoad = new Map(
     routines.map(routine => [
       routine.name,

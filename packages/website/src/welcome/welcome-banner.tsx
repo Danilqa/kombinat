@@ -15,6 +15,7 @@ import {
   MoonStar,
   Play,
   SquareTerminal,
+  Webhook,
   type LucideIcon,
 } from 'lucide-react';
 import { useRef, useState, type ComponentProps, type ReactNode } from 'react';
@@ -135,6 +136,22 @@ function RoutineFile() {
   );
 }
 
+function WebhookRoutineFile() {
+  return (
+    <CodePanel title="routines/on-call-engineer.md">
+      <span className="text-fg-faint">---</span>
+      {'\n'}
+      <span className="text-fg-muted">name:</span> on-call-engineer{'\n'}
+      <span className="text-fg-muted">schedule:</span> '0 9,13,17,21 * * *'{'\n'}
+      <span className="text-fg-muted">webhook:</span> true{'\n'}
+      <span className="text-fg-faint">---</span>
+      {'\n\n'}
+      When PagerDuty starts this run through{'\n'}
+      the webhook, its alert follows this prompt.
+    </CodePanel>
+  );
+}
+
 function InstallCommands() {
   return (
     <CodePanel title="Terminal">
@@ -227,7 +244,7 @@ export function WelcomeBanner() {
               <Button asChild size="small">
                 <ExternalLink href={REPO_URL}>View on GitHub</ExternalLink>
               </Button>
-              <Button variant="secondary" size="small" onClick={() => showSlide(2)}>
+              <Button variant="secondary" size="small" onClick={() => showSlide(3)}>
                 How to install
                 <ArrowRight aria-hidden="true" />
               </Button>
@@ -236,9 +253,9 @@ export function WelcomeBanner() {
         >
           <p>
             <strong>Kombinat</strong> is a dead simple engine for 24/7 AI agents. A routine is a
-            markdown file with a cron schedule, and <strong>Claude</strong>, <strong>Codex</strong>{' '}
-            or any shell command runs it with the subscription you already have. This is a live demo
-            of its dashboard.
+            markdown file with a cron schedule or a webhook, and <strong>Claude</strong>,{' '}
+            <strong>Codex</strong> or any shell command runs it with the subscription you already
+            have. This is a live demo of its dashboard.
           </p>
         </WelcomeCard>
       ),
@@ -256,6 +273,38 @@ export function WelcomeBanner() {
           <p>
             A cron job, a CI workflow or a hosted agent platform can run a prompt too. Here is what
             Kombinat does differently.
+          </p>
+        </WelcomeCard>
+      ),
+    },
+    {
+      label: 'Webhooks',
+      content: (
+        <WelcomeCard
+          label="Webhooks"
+          icon={Webhook}
+          glow="mint"
+          title="Runs when something happens"
+          aside={<WebhookRoutineFile />}
+          actions={
+            <>
+              <Button asChild size="small">
+                <ExternalLink href={`${REPO_URL}#webhooks`}>How webhooks work</ExternalLink>
+              </Button>
+              <Button asChild variant="secondary" size="small">
+                <Link to={getRoutinePath('on-call-engineer')}>
+                  See its runs
+                  <ArrowRight aria-hidden="true" />
+                </Link>
+              </Button>
+            </>
+          }
+        >
+          <p>
+            Add <strong>webhook: true</strong> and any app that can send a POST request starts the
+            routine: an alert, a deploy or a form. The request body is added to the prompt, so the
+            agent knows what happened. Here PagerDuty calls <strong>on-call-engineer</strong> on
+            every alert.
           </p>
         </WelcomeCard>
       ),
