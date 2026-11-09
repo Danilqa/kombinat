@@ -1,5 +1,12 @@
 import {
   ArrowRight,
+  Bot,
+  Feather,
+  GitMerge,
+  PiggyBank,
+  Plug,
+  Scale,
+  Users,
   ArrowUpRight,
   CalendarDays,
   ChevronLeft,
@@ -50,6 +57,45 @@ const EXPLORE_LINKS: ExploreLink[] = [
   { to: RUNS_PATH, icon: History, title: 'Every run', caption: 'Status, turns and cost' },
 ];
 
+interface Reason {
+  icon: LucideIcon;
+  title: string;
+  text: string;
+}
+
+const REASONS: Reason[] = [
+  {
+    icon: Bot,
+    title: 'Any agent',
+    text: 'Claude Code, Codex or any shell command, chosen per routine.',
+  },
+  {
+    icon: GitMerge,
+    title: 'Lives in git',
+    text: 'Routines are markdown files in your repo. Merge one and it is live within 5 minutes.',
+  },
+  {
+    icon: Plug,
+    title: 'Your setup, as is',
+    text: 'Agents run with your logins, skills, MCP servers and CLAUDE.md. No extra config.',
+  },
+  {
+    icon: PiggyBank,
+    title: 'No API bills',
+    text: 'Runs on the Claude or Codex subscription you already pay for, never on API keys.',
+  },
+  {
+    icon: Users,
+    title: 'Made for teams',
+    text: 'Anyone can add a routine with a pull request, engineers or not, and review approves it.',
+  },
+  {
+    icon: Feather,
+    title: 'Small and predictable',
+    text: 'Two dependencies, no cloud or database. Timeouts, cost caps and no overlapping runs.',
+  },
+];
+
 function checkPrefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
@@ -98,6 +144,24 @@ function InstallCommands() {
       <span className="text-fg-faint">$ </span>pnpm kombinat serve{'\n'}
       <span className="text-positive">ui at http://localhost:7433</span>
     </CodePanel>
+  );
+}
+
+function ReasonList() {
+  return (
+    <ul className="grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+      {REASONS.map(({ icon: Icon, title, text }) => (
+        <li key={title} className="flex items-center gap-3 sm:items-start">
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-line bg-raised text-fg-secondary">
+            <Icon aria-hidden="true" className="size-3.5" />
+          </span>
+          <span className="flex flex-col gap-0.5 sm:pt-0.5">
+            <span className="text-body font-medium text-fg">{title}</span>
+            <span className="text-body-sm text-fg-muted max-sm:hidden">{text}</span>
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -163,7 +227,7 @@ export function WelcomeBanner() {
               <Button asChild size="small">
                 <ExternalLink href={REPO_URL}>View on GitHub</ExternalLink>
               </Button>
-              <Button variant="secondary" size="small" onClick={() => showSlide(1)}>
+              <Button variant="secondary" size="small" onClick={() => showSlide(2)}>
                 How to install
                 <ArrowRight aria-hidden="true" />
               </Button>
@@ -175,6 +239,23 @@ export function WelcomeBanner() {
             markdown file with a cron schedule, and <strong>Claude</strong>, <strong>Codex</strong>{' '}
             or any shell command runs it with the subscription you already have. This is a live demo
             of its dashboard.
+          </p>
+        </WelcomeCard>
+      ),
+    },
+    {
+      label: 'Why not X?',
+      content: (
+        <WelcomeCard
+          label="Why Kombinat"
+          icon={Scale}
+          glow="sky"
+          title="Why not X?"
+          details={<ReasonList />}
+        >
+          <p>
+            A cron job, a CI workflow or a hosted agent platform can run a prompt too. Here is what
+            Kombinat does differently.
           </p>
         </WelcomeCard>
       ),

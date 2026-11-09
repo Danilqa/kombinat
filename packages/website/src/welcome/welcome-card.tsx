@@ -2,12 +2,13 @@ import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cn } from 'design-system/utils';
 
-export type WelcomeGlow = 'lavender' | 'peach' | 'mint';
+export type WelcomeGlow = 'lavender' | 'peach' | 'mint' | 'sky';
 
 const GLOW_CLASSES: Record<WelcomeGlow, string> = {
   lavender: 'bg-[radial-gradient(closest-side,rgba(185,168,255,0.2),transparent)]',
   peach: 'bg-[radial-gradient(closest-side,rgba(245,169,127,0.18),transparent)]',
   mint: 'bg-[radial-gradient(closest-side,rgba(76,195,138,0.16),transparent)]',
+  sky: 'bg-[radial-gradient(closest-side,rgba(107,156,255,0.16),transparent)]',
 };
 
 interface WelcomeCardProps {
@@ -16,8 +17,9 @@ interface WelcomeCardProps {
   glow: WelcomeGlow;
   title: string;
   children: ReactNode;
+  details?: ReactNode;
   actions?: ReactNode;
-  aside: ReactNode;
+  aside?: ReactNode;
 }
 
 export function WelcomeCard({
@@ -26,6 +28,7 @@ export function WelcomeCard({
   glow,
   title,
   children,
+  details,
   actions,
   aside,
 }: WelcomeCardProps) {
@@ -38,7 +41,12 @@ export function WelcomeCard({
           GLOW_CLASSES[glow],
         )}
       />
-      <div className="relative grid h-full gap-6 p-5 sm:p-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] lg:items-center lg:gap-10">
+      <div
+        className={cn(
+          'relative grid h-full gap-6 p-5 sm:p-8 lg:gap-10',
+          aside && 'lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] lg:items-center',
+        )}
+      >
         <div className="flex flex-col items-start gap-4">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-raised py-0.5 pr-2.5 pl-1 text-caption text-fg-secondary">
             <span className="flex size-[18px] items-center justify-center rounded-full bg-fg text-page">
@@ -52,9 +60,10 @@ export function WelcomeCard({
           <div className="max-w-[56ch] text-body text-fg-secondary [&_strong]:font-medium [&_strong]:text-fg">
             {children}
           </div>
+          {details && <div className="mt-2 w-full">{details}</div>}
           {actions && <div className="mt-1 flex flex-wrap items-center gap-2">{actions}</div>}
         </div>
-        <div className="max-sm:hidden">{aside}</div>
+        {aside && <div className="max-sm:hidden">{aside}</div>}
       </div>
     </div>
   );
