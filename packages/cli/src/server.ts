@@ -18,7 +18,8 @@ import type { Routine } from './domains/routine/types';
 import { describeSchedule, getNextRun } from './domains/routine/utils';
 import { buildRunTranscript, readRunEvents } from './domains/run/event-log';
 import { writePayload } from './domains/run/payload';
-import { startDetachedRun } from './domains/run/runner';
+import { countQueuedWebhooks, enqueueWebhook, WEBHOOK_QUEUE_LIMIT } from './domains/run/queue';
+import { checkIsStarting, startDetachedRun } from './domains/run/runner';
 import { decideWebhook, WEBHOOK_GATE_TIMEOUT_MS } from './domains/run/webhook-gate';
 import type { WebhookRequest } from './domains/run/webhook-gate';
 import { listAllRuns, listRuns, readRunRecord } from './domains/run/storage';
@@ -125,7 +126,9 @@ function getRoutineDetail(routine: Routine): ApiResponse {
 }
 
 function checkIsRunning(routine: Routine): boolean {
-  return listRuns(routine.name).some(isMatching({ status: 'running' }));
+  return (
+    checkIsStarting(routine.name) || listRuns(routine.name).some(isMatching({ status: 'running' }))
+  );
 }
 
 function startRun(routine: Routine): ApiResponse {
@@ -134,10 +137,14 @@ function startRun(routine: Routine): ApiResponse {
   return { status: 202, body: { ok: true } };
 }
 
+// The scheduler starts queued webhooks one by one, so a new one waits behind them.
 function startWebhookRun(routine: Routine, payload: string): ApiResponse {
   if (!routine.enabled) return fail(409, `${routine.name} is disabled`);
-  if (checkIsRunning(routine)) return fail(409, `${routine.name} is already running`);
   const runId = createRunId();
+  if (checkIsRunning(routine) || countQueuedWebhooks(routine.name) > 0) {
+    if (enqueueWebhook(routine.name, runId, payload)) return ok({ ok: true, runId });
+    return fail(429, `${routine.name} already has ${WEBHOOK_QUEUE_LIMIT} webhooks waiting`);
+  }
   if (payload !== '') writePayload(routine.name, runId, payload);
   startDetachedRun(routine.name, { trigger: 'webhook', runId });
   return ok({ ok: true, runId });

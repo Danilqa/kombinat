@@ -5,7 +5,9 @@ import { getErrorMessage } from 'utils/error';
 import { config } from '../../config';
 import { loadRoutines } from '../routine/storage';
 import type { Routine } from '../routine/types';
-import { startDetachedRun } from '../run/runner';
+import { writePayload } from '../run/payload';
+import { listQueuedRoutines, takeQueuedWebhook } from '../run/queue';
+import { checkIsStarting, startDetachedRun } from '../run/runner';
 import { getRunningRuns } from '../run/storage';
 import { readSchedulerState, writeSchedulerState } from './storage';
 
@@ -52,10 +54,14 @@ export function tick(now = new Date()): TickResult {
   const skipped: string[] = [];
   const floor = new Date(now.getTime() - config.catchUpWindowDays * 86_400_000);
   const lastTick = new Date(state.lastTickAt);
-  let runningCount = getRunningRuns().length;
-  const runningNames = new Set(getRunningRuns().map(r => r.routine));
+  const routines = loadRoutines();
+  const runningNames = new Set([
+    ...getRunningRuns().map(r => r.routine),
+    ...routines.map(r => r.name).filter(name => checkIsStarting(name)),
+  ]);
+  let runningCount = runningNames.size;
 
-  for (const routine of loadRoutines()) {
+  for (const routine of routines) {
     if (!routine.schedule) continue;
     const entry = state.routines[routine.name];
     const lastScheduled = entry?.lastScheduledFor ? new Date(entry.lastScheduledFor) : null;
@@ -90,6 +96,20 @@ export function tick(now = new Date()): TickResult {
     runningCount += 1;
     runningNames.add(routine.name);
     started.push(routine.name);
+  }
+
+  // After the schedules, so a queue never makes a scheduled time skip.
+  for (const name of listQueuedRoutines()) {
+    const routine = routines.find(candidate => candidate.name === name);
+    if (routine === undefined || !routine.enabled || !routine.webhook) continue;
+    if (runningNames.has(name) || runningCount >= config.maxConcurrentRuns) continue;
+    const queued = takeQueuedWebhook(name);
+    if (queued === null) continue;
+    if (queued.payload !== '') writePayload(name, queued.runId, queued.payload);
+    startDetachedRun(name, { trigger: 'webhook', runId: queued.runId });
+    runningCount += 1;
+    runningNames.add(name);
+    started.push(name);
   }
 
   state.lastTickAt = now.toISOString();

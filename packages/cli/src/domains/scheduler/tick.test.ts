@@ -14,6 +14,8 @@ fs.mkdirSync(routinesDir);
 const { tick } = await import('./tick');
 const { readSchedulerState, writeSchedulerState } = await import('./storage');
 const { writeRunRecord } = await import('../run/storage');
+const { countQueuedWebhooks, enqueueWebhook } = await import('../run/queue');
+const { makeRunRecord } = await import('domains/run/mocks');
 
 function writeRoutine(name: string, frontmatter: string): void {
   fs.writeFileSync(
@@ -80,4 +82,32 @@ test('catch-up window never reaches back before the last tick', () => {
   tick(new Date('2026-10-02T10:00:00'));
   const skips = readSchedulerState()?.routines['every-minute']?.skips ?? [];
   assert.equal(skips.at(-1)?.scheduledFor, new Date('2026-10-02T09:00:00').toISOString());
+});
+
+test('queued webhooks start one at a time once their routine is idle', () => {
+  writeRoutine('triage', 'webhook: true\nagent: command\ncommand: "true"');
+  enqueueWebhook('triage', '20261109T120000Z-aaaa', '{"n":1}');
+  enqueueWebhook('triage', '20261109T120000Z-bbbb', '{"n":2}');
+  const running = makeRunRecord({
+    id: 'r2',
+    routine: 'triage',
+    status: 'running',
+    pid: process.pid,
+  });
+  writeRunRecord(running);
+  assert.deepEqual(tick(new Date('2026-10-02T10:01:00')).started, []);
+  assert.equal(countQueuedWebhooks('triage'), 2);
+
+  writeRunRecord({ ...running, status: 'succeeded' });
+  assert.deepEqual(tick(new Date('2026-10-02T10:02:00')).started, ['triage']);
+  assert.equal(countQueuedWebhooks('triage'), 1);
+  assert.deepEqual(tick(new Date('2026-10-02T10:03:00')).started, []);
+  assert.equal(countQueuedWebhooks('triage'), 1);
+});
+
+test('a disabled routine keeps its queued webhooks', () => {
+  writeRoutine('paused', 'webhook: true\nenabled: false\nagent: command\ncommand: "true"');
+  enqueueWebhook('paused', '20261109T120000Z-cccc', '');
+  assert.deepEqual(tick(new Date('2026-10-02T10:04:00')).started, []);
+  assert.equal(countQueuedWebhooks('paused'), 1);
 });

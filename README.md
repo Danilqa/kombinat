@@ -194,16 +194,17 @@ With `webhook: true`, a POST request also starts the routine, and its body is ad
 curl -X POST http://localhost:7433/api/routines/review-pr/webhook -d '{"pullRequest": 42}'
 ```
 
-| Status | When                                                                                        |
-| ------ | ------------------------------------------------------------------------------------------- |
-| `200`  | The run started: `{"ok":true,"runId":"…"}`, or the gate ignored the request: `"runId":null` |
-| `401`  | The gate rejected the request                                                               |
-| `404`  | The routine has no `webhook: true`                                                          |
-| `409`  | The routine is disabled or running. The request is not queued                               |
-| `413`  | The body is over 256 KB                                                                     |
-| `504`  | The gate took longer than 3 seconds                                                         |
+| Status | When                                                                                                     |
+| ------ | -------------------------------------------------------------------------------------------------------- |
+| `200`  | The run started or is queued: `{"ok":true,"runId":"…"}`, or the gate ignored the request: `"runId":null` |
+| `401`  | The gate rejected the request                                                                            |
+| `404`  | The routine has no `webhook: true`                                                                       |
+| `409`  | The routine is disabled                                                                                  |
+| `413`  | The body is over 256 KB                                                                                  |
+| `429`  | 100 requests already wait in the queue                                                                   |
+| `504`  | The gate took longer than 3 seconds                                                                      |
 
-The agent gets only the body, not the headers or the query string.
+While the routine runs, new requests wait in a queue and start one by one, oldest first, at the daemon's 30-second check. The agent gets only the body, not the headers or the query string.
 
 ### Gate
 
