@@ -18,7 +18,7 @@ Each domain has up to two halves with the same name:
 | **transcript** | item schemas and types, preview rule, subagent check, empty and result labels, `TranscriptList`                                                       | none                                                                            |
 | **run**        | `RunRecord`, status and trigger, requests, labels, id, duration, `RECENT_RUNS_LIMIT`, `makeRunRecord`, `RunStatusBadge`, `RunDetailList`, `RunOutput` | runner, record storage with orphan reconciliation, event log and transcript     |
 | **scheduler**  | `Skip`, `SkipReason`, `SchedulerState`, skip label, `SkipsTable`                                                                                      | tick loop, `scheduler.json` storage                                             |
-| **routine**    | `RoutineSummary`, `RoutineDetail`, requests, `RunNowButton`, `RoutineBadges`, `RoutineDetailList`                                                     | frontmatter parsing, validation and defaults, loading, next run, schedule label |
+| **routine**    | `RoutineSummary`, `RoutineDetail`, requests, webhook path, `RunNowButton`, `RoutineBadges`, `RoutineDetailList`                                       | frontmatter parsing, validation and defaults, loading, next run, schedule label |
 | **calendar**   | entry schemas and types, `getCalendar`, `buildCalendar`, planned lengths, entry title and overlap labels, overlap count                               | none, `cli/src/server.ts` serves `buildCalendar`                                |
 | **daemon**     | status schema, `getDaemonStatus`, health rules, `DaemonStatusIndicator`                                                                               | none, `cli/src/server.ts` builds the status                                     |
 
@@ -56,7 +56,7 @@ The preview is the first line of the input, at most 160 characters. `isSubagent`
 
 ### run
 
-One execution of a routine by its agent. The scheduler and Run now start each run as a detached `kombinat run <name>` process, and `kombinat run <name>` in a terminal runs one in the foreground.
+One execution of a routine by its agent. The scheduler, Run now and webhooks start each run as a detached `kombinat run <name>` process, and `kombinat run <name>` in a terminal runs one in the foreground.
 
 1. Preflight checks that the routine's `cwd` exists and that the agent binary is found.
 2. The optional before hook runs with `/bin/sh -c` in `cwd`, with a 3-minute limit, `KOMBINAT_REPO` set to the project folder (the one with the `package.json`), and its `scripts/` first on `PATH`. A failure or a non-zero exit fails the run.
@@ -69,6 +69,7 @@ Invariants:
 - A record still marked `running` whose process is gone becomes `aborted` the next time runs are listed.
 - The id is a UTC timestamp plus 4 base-36 characters, such as `20261006T110000Z-k3x9`.
 - The record is `<state dir>/runs/<routine>/<id>.json` and the event log `<id>.jsonl` next to it. This layout is a compatibility contract.
+- A webhook run's request body is `<id>.payload` next to them. The daemon writes it before it starts the run with `--run-id <id>`. The runner adds it to the end of the prompt in a code fence and passes its path in `KOMBINAT_PAYLOAD_FILE` to the before hook and the agent.
 - The transcript is built from the event log: the before hook's line becomes a `hook` item, and the agent turns the other lines into items.
 
 ### scheduler
@@ -82,16 +83,18 @@ The daemon's decision of when routines start. Every `KOMBINAT_TICK_SECONDS` (def
 
 ### routine
 
-A named, version-controlled unit of recurring agent work: one markdown file, `routines/<name>.md`. Its frontmatter holds scalar values only and sets `name`, `description`, `schedule`, `cwd`, `agent` and its settings, `enabled`, `timeoutMinutes` and an optional `before` hook. The body is the prompt.
+A named, version-controlled unit of recurring agent work: one markdown file, `routines/<name>.md`. Its frontmatter holds scalar values only and sets `name`, `description`, `schedule`, `cwd`, `agent` and its settings, `enabled`, `webhook`, `timeoutMinutes` and an optional `before` hook. The body is the prompt.
 
 - `name` equals the file name and is lowercase kebab-case.
 - `schedule` is a 5-field cron in local time, or `manual`, which is stored as `null`.
 - `cwd` is required, and a leading `~` is expanded.
 - The prompt is not empty.
-- `agent` defaults to `claude`, `enabled` to `true` and `timeoutMinutes` to 55.
+- `agent` defaults to `claude`, `enabled` to `true`, `webhook` to `false` and `timeoutMinutes` to 55. `webhook` must be `true` or `false`.
 - The schedule gives the routine its next run, `null` when it is manual or disabled, and its label: `Manual` or the cron in words.
 
 Clients see a routine as a summary (its definition plus next run, running, last run and last skip) or a detail (plus the prompt, runs and skips). They can start it with Run now, which answers 409 while the routine is running.
+
+A routine with `webhook: true` also starts with `POST /api/routines/<name>/webhook`. Its request body, at most 256 KB, becomes the run's payload, and the answer is 202 with the run's id. Without the flag it answers 404, and 409 when the routine is disabled or running. Each such run has the trigger `webhook`.
 
 ### calendar
 

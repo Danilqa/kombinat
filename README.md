@@ -160,6 +160,7 @@ timeoutMinutes: 55
 - `timeoutMinutes` stops the run after this time. Default 55.
 - `before` is an optional shell command that runs first. If it fails or takes more than 3 minutes, the run fails.
 - `enabled: false` keeps the file but stops the schedule.
+- `webhook: true` lets other apps start the routine with a request, see [Webhooks](#webhooks).
 
 Changes apply on the next check, no restart needed. Write the prompt so the agent never has to ask a question: nobody will answer.
 
@@ -184,6 +185,21 @@ A setting the agent does not support fails validation.
 - If the Mac was asleep, each routine runs once for its latest missed time, up to 7 days back.
 - A routine never runs twice at the same time. If it is still running at its next time, that run is skipped.
 - At most 3 routines run at once.
+
+## Webhooks
+
+A routine with `webhook: true` also runs when an app sends a POST request to its webhook:
+
+```bash
+curl -X POST http://localhost:7433/api/routines/review-pr/webhook \
+  -H 'content-type: application/json' -d '{"pullRequest": 42}'
+```
+
+- The request body, up to 256 KB, is added to the end of the prompt. It is also saved to the file in `KOMBINAT_PAYLOAD_FILE`, which suits `command` routines and `before` hooks. Headers and the query string are not passed on.
+- The answer is `202` with the new run's id: `{"ok":true,"runId":"20261109T120000Z-k3x9"}`.
+- The answer is `404` when the routine has no `webhook: true`, `409` when it is disabled or still running, and `413` when the body is too large. A refused request is not queued, so the app has to send it again later.
+
+The daemon only listens on this Mac. Other machines in your tailnet reach it through [Tailscale Serve](#with-tailscale-serve). Do not make it public, for example with Tailscale Funnel: there is no login, and anyone who can reach the webhook writes into the prompt of an agent that runs on your Mac.
 
 ## Updating
 

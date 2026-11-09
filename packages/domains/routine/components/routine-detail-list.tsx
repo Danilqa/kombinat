@@ -1,6 +1,7 @@
 import { DetailList, RelativeTime, type DetailEntry } from 'design-system/components';
 
 import type { RoutineSummary } from '../types';
+import { getWebhookPath } from '../utils';
 
 function getStatEntries(routine: RoutineSummary): DetailEntry[] {
   return [
@@ -16,6 +17,16 @@ function getStatEntries(routine: RoutineSummary): DetailEntry[] {
     },
     { label: 'Working directory', value: routine.cwd, isMono: true, span: 'wide' },
     { label: 'File', value: routine.file, isMono: true, span: 'wide' },
+    ...(routine.webhook
+      ? [
+          {
+            label: 'Webhook',
+            value: `POST ${getWebhookPath(routine.name)}`,
+            isMono: true,
+            span: 'wide' as const,
+          },
+        ]
+      : []),
     ...(routine.command === null
       ? []
       : [{ label: 'Command', value: routine.command, isMono: true, span: 'full' as const }]),

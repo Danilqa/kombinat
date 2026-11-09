@@ -58,3 +58,31 @@ test('runs a routine on demand and shows its output', async ({ page, kombinat })
     - paragraph: Hello from Kombinat
   `);
 });
+
+test('runs a routine from a webhook with its request body', async ({ page, kombinat }) => {
+  test.slow();
+  kombinat.addRoutine({
+    name: 'echo-payload',
+    agent: 'command',
+    command: 'cat "$KOMBINAT_PAYLOAD_FILE"',
+    webhook: true,
+  });
+
+  const response = await page.request.post('/api/routines/echo-payload/webhook', {
+    data: { pullRequest: 42 },
+  });
+  expect(response.status()).toBe(202);
+  await page.goto('/');
+
+  const lastRun = page
+    .getByRole('row', { name: /echo-payload/ })
+    .getByRole('link', { name: /Succeeded/ });
+  await expect(lastRun).toBeVisible({ timeout: NEW_RUN_TIMEOUT_MS });
+  await lastRun.click();
+  await expect(page.getByRole('main')).toMatchAriaSnapshot(`
+    - term: Trigger
+    - definition: Webhook
+    - text: Result
+    - paragraph: '{"pullRequest":42}'
+  `);
+});

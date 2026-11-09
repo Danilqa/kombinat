@@ -4,7 +4,7 @@ import { agentNameSchema } from '../agent/schemas';
 
 export const runStatusSchema = z.enum(['running', 'succeeded', 'failed', 'timed_out', 'aborted']);
 
-export const runTriggerSchema = z.enum(['schedule', 'manual', 'catch_up']);
+export const runTriggerSchema = z.enum(['schedule', 'manual', 'catch_up', 'webhook']);
 
 export const runRecordSchema = z.object({
   id: z.string(),

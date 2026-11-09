@@ -9,6 +9,7 @@ import type { DaemonStatus } from 'domains/daemon/types';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import { RECENT_RUNS_LIMIT } from 'domains/run/constants';
 import type { RunRecord } from 'domains/run/types';
+import { createRunId } from 'domains/run/utils';
 import { getErrorMessage } from 'utils/error';
 
 import { config } from './config';
@@ -16,6 +17,7 @@ import { loadRoutines } from './domains/routine/storage';
 import type { Routine } from './domains/routine/types';
 import { describeSchedule, getNextRun } from './domains/routine/utils';
 import { buildRunTranscript, readRunEvents } from './domains/run/event-log';
+import { writePayload } from './domains/run/payload';
 import { startDetachedRun } from './domains/run/runner';
 import { listAllRuns, listRuns, readRunRecord } from './domains/run/storage';
 import { getSkips, readSchedulerState } from './domains/scheduler/storage';
@@ -39,6 +41,7 @@ const MIME: Record<string, string> = {
 };
 
 const MAX_CALENDAR_DAYS = 32;
+const MAX_BODY_KB = 256;
 
 const ok = (body: unknown): ApiResponse => ({ status: 200, body });
 const fail = (status: number, error: string): ApiResponse => ({ status, body: { error } });
@@ -51,6 +54,7 @@ function toRoutineSummary(routine: Routine, runs: RunRecord[]): RoutineSummary {
     scheduleHuman: describeSchedule(routine),
     nextRunAt: getNextRun(routine),
     enabled: routine.enabled,
+    webhook: routine.webhook,
     agent: routine.agent,
     model: routine.model,
     effort: routine.effort,
@@ -107,12 +111,26 @@ function getRoutineDetail(routine: Routine): ApiResponse {
   return ok(detail);
 }
 
+function checkIsRunning(routine: Routine): boolean {
+  return listRuns(routine.name).some(isMatching({ status: 'running' }));
+}
+
 function startRun(routine: Routine): ApiResponse {
-  if (listRuns(routine.name).some(isMatching({ status: 'running' }))) {
-    return fail(409, `${routine.name} is already running`);
-  }
+  if (checkIsRunning(routine)) return fail(409, `${routine.name} is already running`);
   startDetachedRun(routine.name, { trigger: 'manual' });
   return { status: 202, body: { ok: true } };
+}
+
+function startWebhookRun(routine: Routine, payload: string): ApiResponse {
+  if (!routine.webhook) {
+    return fail(404, `${routine.name} has no webhook, add webhook: true to its frontmatter`);
+  }
+  if (!routine.enabled) return fail(409, `${routine.name} is disabled`);
+  if (checkIsRunning(routine)) return fail(409, `${routine.name} is already running`);
+  const runId = createRunId();
+  if (payload !== '') writePayload(routine.name, runId, payload);
+  startDetachedRun(routine.name, { trigger: 'webhook', runId });
+  return { status: 202, body: { ok: true, runId } };
 }
 
 function getCalendar(url: URL): ApiResponse {
@@ -129,7 +147,7 @@ function getCalendar(url: URL): ApiResponse {
   return ok(buildCalendar(loadRoutines(), listAllRuns(), from, to));
 }
 
-function routeApi(request: ApiRequest, url: URL, startedAt: Date): ApiResponse {
+function routeApi(request: ApiRequest, url: URL, startedAt: Date, body: string): ApiResponse {
   return match(request)
     .with(['GET', ['status']], () => ok(getStatus(startedAt)))
     .with(['GET', ['routines']], () =>
@@ -137,6 +155,9 @@ function routeApi(request: ApiRequest, url: URL, startedAt: Date): ApiResponse {
     )
     .with(['GET', ['routines', P.string]], ([, [, name]]) => withRoutine(name, getRoutineDetail))
     .with(['POST', ['routines', P.string, 'run']], ([, [, name]]) => withRoutine(name, startRun))
+    .with(['POST', ['routines', P.string, 'webhook']], ([, [, name]]) =>
+      withRoutine(name, routine => startWebhookRun(routine, body)),
+    )
     .with(['GET', ['calendar']], () => getCalendar(url))
     .with(['GET', ['runs']], () =>
       ok(listAllRuns().slice(0, Number(url.searchParams.get('limit') ?? RECENT_RUNS_LIMIT))),
@@ -180,21 +201,52 @@ export function checkIsCrossSite(headers: http.IncomingHttpHeaders): boolean {
   return headers.origin !== undefined && URL.parse(headers.origin)?.host !== headers.host;
 }
 
+// A body over the limit is still read to the end, so that the client gets the 413.
+function readBody(req: http.IncomingMessage): Promise<string | null> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let size = 0;
+    req.on('data', (chunk: Buffer) => {
+      size += chunk.length;
+      if (size <= MAX_BODY_KB * 1024) chunks.push(chunk);
+    });
+    req.on('end', () => {
+      resolve(size > MAX_BODY_KB * 1024 ? null : Buffer.concat(chunks).toString('utf8'));
+    });
+    req.on('error', reject);
+  });
+}
+
+async function handleApi(
+  req: http.IncomingMessage,
+  segments: string[],
+  url: URL,
+  startedAt: Date,
+): Promise<ApiResponse> {
+  const method = req.method ?? 'GET';
+  if (method === 'GET') return routeApi([method, segments], url, startedAt, '');
+  if (checkIsCrossSite(req.headers)) {
+    return fail(403, 'Requests from other sites cannot change anything');
+  }
+  const body = await readBody(req);
+  if (body === null) return fail(413, `The request body is larger than ${MAX_BODY_KB} KB`);
+  return routeApi([method, segments], url, startedAt, body);
+}
+
 export function startServer(log: (line: string) => void): http.Server {
   const startedAt = new Date();
   const server = http.createServer((req, res) => {
     const url = new URL(req.url ?? '/', `http://localhost:${config.port}`);
     const [root, ...segments] = url.pathname.split('/').filter(Boolean);
-    try {
+    const respond = async (): Promise<void> => {
       if (root !== 'api') serveStatic(res, url);
-      else if (req.method !== 'GET' && checkIsCrossSite(req.headers)) {
-        sendJson(res, fail(403, 'Requests from other sites cannot change anything'));
-      } else sendJson(res, routeApi([req.method ?? 'GET', segments], url, startedAt));
-    } catch (error) {
+      else sendJson(res, await handleApi(req, segments, url, startedAt));
+    };
+    respond().catch((error: unknown) => {
       const message = getErrorMessage(error);
       log(`request failed ${url.pathname}: ${message}`);
       sendJson(res, fail(500, message));
-    }
+    });
   });
   server.listen(config.port, '127.0.0.1', () => {
     log(`ui at http://localhost:${config.port}`);

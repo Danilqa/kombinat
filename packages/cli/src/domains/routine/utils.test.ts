@@ -44,6 +44,16 @@ test('before hook is optional', () => {
   assert.equal(without.before, null);
 });
 
+test('webhooks are off unless the frontmatter turns them on', () => {
+  assert.equal(buildRoutine('/tmp/demo.md', routineFile('schedule: manual')).webhook, false);
+  assert.equal(buildRoutine('/tmp/demo.md', routineFile('webhook: true')).webhook, true);
+  assert.equal(buildRoutine('/tmp/demo.md', routineFile('webhook: false')).webhook, false);
+  assert.throws(
+    () => buildRoutine('/tmp/demo.md', routineFile('webhook: "false"')),
+    /webhook must be true or false/,
+  );
+});
+
 test('manual routines have no schedule', () => {
   const r = buildRoutine(
     '/tmp/demo.md',

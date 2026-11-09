@@ -52,6 +52,7 @@ export interface DemoRoutine {
   description: string;
   schedule: string | null;
   enabled: boolean;
+  webhook?: boolean;
   agent: AgentName;
   model: string | null;
   effort: string | null;

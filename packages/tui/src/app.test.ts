@@ -46,6 +46,7 @@ function makeRoutine(name: string, overrides: Partial<RoutineSummary> = {}): Rou
     scheduleHuman: 'Hourly at :10, 07:00-22:59',
     nextRunAt: '2026-10-06T12:10:00Z',
     enabled: true,
+    webhook: false,
     agent: 'claude',
     model: 'claude-opus-5-5',
     effort: 'high',

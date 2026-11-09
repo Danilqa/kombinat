@@ -8,6 +8,7 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kombinat-test-'));
 process.env['KOMBINAT_STATE_DIR'] = path.join(tmp, 'state');
 
 const { buildRoutine } = await import('../routine/utils');
+const { writePayload } = await import('./payload');
 const { runRoutine } = await import('./runner');
 
 test('a command that ignores the prompt still finishes its run', async () => {
@@ -20,4 +21,22 @@ test('a command that ignores the prompt still finishes its run', async () => {
   const record = await runRoutine(routine, { trigger: 'manual' });
   assert.equal(record.status, 'succeeded');
   assert.equal(record.resultText, 'Hello');
+});
+
+test('a webhook run gets its payload in the prompt and as a file', async () => {
+  const routine = buildRoutine(
+    path.join(tmp, 'echo-payload.md'),
+    `---\ncwd: ${tmp}\nagent: command\ncommand: cat && cat "$KOMBINAT_PAYLOAD_FILE"\n---\nTriage.`,
+  );
+  writePayload('echo-payload', '20261109T120000Z-abcd', '{"number":42}');
+  const record = await runRoutine(routine, {
+    trigger: 'webhook',
+    runId: '20261109T120000Z-abcd',
+  });
+  assert.equal(record.id, '20261109T120000Z-abcd');
+  assert.equal(record.status, 'succeeded');
+  assert.equal(
+    record.resultText,
+    'Triage.\n\nThis run was started by a webhook. Its request body:\n\n```\n{"number":42}\n```\n\n{"number":42}',
+  );
 });

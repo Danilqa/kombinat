@@ -9,6 +9,7 @@ export interface Routine extends AgentSettings {
   cwd: string;
   agent: AgentName;
   enabled: boolean;
+  webhook: boolean;
   timeoutMinutes: number;
   before: string | null;
   prompt: string;
