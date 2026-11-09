@@ -3,13 +3,13 @@ import { ListOrdered } from 'lucide-react';
 import { useState } from 'react';
 import { match } from 'ts-pattern';
 
-import { Button, Popover } from 'design-system/components';
+import { Badge, Button, Popover } from 'design-system/components';
 import { sameOriginApi } from 'utils/http';
 
 import { WebhookQueueList } from '../../webhook/components/webhook-queue-list';
 import { getRoutine } from '../requests';
 
-type WebhookQueueButtonLook = 'button' | 'inline';
+type WebhookQueueButtonLook = 'button' | 'chip';
 
 interface WebhookQueueButtonProps {
   routine: string;
@@ -26,27 +26,22 @@ export function WebhookQueueButton({ routine, count, look = 'button' }: WebhookQ
   });
   if (count === 0) return null;
   const shownCount = data?.queue.length ?? count;
-  const label = (
-    <>
-      {count} in queue
-      <span className="sr-only"> of {routine}</span>
-    </>
-  );
+  const routineLabel = <span className="sr-only"> for {routine}</span>;
   const trigger = match(look)
     .with('button', () => (
       <Button variant="tertiary" size="small">
         <ListOrdered aria-hidden="true" className="size-3.5" />
-        {label}
+        {count} in queue
+        {routineLabel}
       </Button>
     ))
-    .with('inline', () => (
-      <button
-        type="button"
-        className="flex cursor-pointer items-center gap-1 text-body-sm text-fg-muted underline-offset-4 hover:text-fg hover:underline"
-      >
-        <ListOrdered aria-hidden="true" className="size-3" />
-        {label}
-      </button>
+    .with('chip', () => (
+      <Badge asChild size="medium">
+        <button type="button" className="cursor-pointer hover:text-fg hover:brightness-125">
+          {count} queued
+          {routineLabel}
+        </button>
+      </Badge>
     ))
     .exhaustive();
 

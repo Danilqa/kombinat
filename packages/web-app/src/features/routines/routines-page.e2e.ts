@@ -127,7 +127,7 @@ test('shows the webhooks that wait in the queue of a routine', async ({ page, ko
   kombinat.addQueuedWebhook({ routine: 'triage-issue', payload: '', minutesAgo: 1 });
   await page.goto('/');
 
-  await page.getByRole('button', { name: '2 in queue of triage-issue' }).click();
+  await page.getByRole('button', { name: '2 queued for triage-issue' }).click();
 
   const queue = page.getByRole('dialog', { name: 'Webhook queue of triage-issue' });
   await expect(queue).toContainText('2 webhooks in queue');

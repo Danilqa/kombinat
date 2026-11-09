@@ -34,20 +34,22 @@ function LastRunCell({ routine }: LastRunCellProps) {
   const { lastRun, lastSkip } = routine;
   return (
     <div className="space-y-1">
-      {lastRun ? (
-        <Link
-          to={getRunPath(lastRun.routine, lastRun.id)}
-          className="flex flex-col items-start gap-1"
-        >
-          <RunStatusBadge status={lastRun.status} />
-          <span className="text-body-sm text-fg-muted tabular-nums">
-            <RelativeTime iso={lastRun.startedAt} />
-          </span>
-        </Link>
-      ) : (
-        <span className="text-fg-muted">Never run</span>
-      )}
-      <WebhookQueueButton routine={routine.name} count={routine.queuedWebhooks} look="inline" />
+      <div className="flex items-start gap-1.5">
+        {lastRun ? (
+          <Link
+            to={getRunPath(lastRun.routine, lastRun.id)}
+            className="flex flex-col items-start gap-1"
+          >
+            <RunStatusBadge status={lastRun.status} />
+            <span className="text-body-sm text-fg-muted tabular-nums">
+              <RelativeTime iso={lastRun.startedAt} />
+            </span>
+          </Link>
+        ) : (
+          <span className="text-fg-muted">Never run</span>
+        )}
+        <WebhookQueueButton routine={routine.name} count={routine.queuedWebhooks} look="chip" />
+      </div>
       {lastSkip && (
         <div className="text-body-sm text-fg-muted">
           Skipped <RelativeTime iso={lastSkip.at} /> ({getSkipReasonLabel(lastSkip.reason)})
