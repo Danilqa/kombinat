@@ -194,8 +194,14 @@ With `webhook: true`, a POST request also starts the routine, and its body is ad
 curl -X POST http://localhost:7433/api/routines/review-pr/webhook -d '{"pullRequest": 42}'
 ```
 
-- The answer is `202` with the run id, `404` without `webhook: true`, `409` when the routine is disabled or running, and `413` for a body over 256 KB. Refused requests are not queued.
-- Headers and the query string are not passed on.
+| Status | When                                                          |
+| ------ | ------------------------------------------------------------- |
+| `202`  | The run started: `{"ok":true,"runId":"…"}`                    |
+| `404`  | The routine has no `webhook: true`                            |
+| `409`  | The routine is disabled or running. The request is not queued |
+| `413`  | The body is over 256 KB                                       |
+
+Headers and the query string are not passed on.
 
 ## Updating
 
