@@ -143,7 +143,7 @@ function startWebhookRun(routine: Routine, payload: string): ApiResponse {
   return ok({ ok: true, runId });
 }
 
-// Linear and others count only 200 as delivered, so ignored requests get it too.
+// Linear treats anything but 200 as a failed delivery.
 async function handleWebhook(routine: Routine, context: ApiContext): Promise<ApiResponse> {
   if (!routine.webhook) {
     return fail(404, `${routine.name} has no webhook, add webhook: true to its frontmatter`);

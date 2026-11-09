@@ -6,10 +6,10 @@ import { match } from 'ts-pattern';
 import { config } from '../../config';
 import { parseJson } from '../../utils/json';
 import type { Routine } from '../routine/types';
-import { withHookEnv } from './hook-env';
+import { buildHookEnv } from './hook-env';
 
 export const WEBHOOK_GATE_TIMEOUT_MS = 3_000;
-// EX_CONFIG of sysexits.h: a crash exits with 1 or 2, so it cannot pass for an ignore.
+// EX_CONFIG: crashes exit with 1 or 2, never with this.
 export const WEBHOOK_GATE_IGNORE_EXIT_CODE = 78;
 
 export interface WebhookRequest {
@@ -38,7 +38,7 @@ interface TimeoutDecision {
 
 export type WebhookGateDecision = RunDecision | IgnoreDecision | RejectDecision | TimeoutDecision;
 
-function toDecision(
+function buildDecision(
   exitCode: number | null,
   stdout: string,
   stderr: string,
@@ -70,7 +70,7 @@ export function decideWebhook(
   return new Promise(resolve => {
     const child = spawn('/bin/sh', ['-c', gate], {
       cwd: config.projectRoot,
-      env: withHookEnv({
+      env: buildHookEnv({
         ...process.env,
         KOMBINAT_ROUTINE: routine.name,
         KOMBINAT_WEBHOOK_HEADERS: JSON.stringify(request.headers),
@@ -97,7 +97,7 @@ export function decideWebhook(
         return;
       }
       resolve(
-        toDecision(
+        buildDecision(
           exitCode,
           Buffer.concat(stdout).toString('utf8'),
           Buffer.concat(stderr).toString('utf8'),
@@ -105,7 +105,7 @@ export function decideWebhook(
         ),
       );
     });
-    // A gate that only reads headers can exit before the body is written.
+    // The gate may exit before it reads the body.
     child.stdin.on('error', () => undefined);
     child.stdin.end(request.body);
   });
