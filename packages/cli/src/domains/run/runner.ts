@@ -15,7 +15,7 @@ import { getAgent } from '../agent/registry';
 import type { Agent, OutputEvent } from '../agent/types';
 import type { Routine } from '../routine/types';
 import type { BeforeHookEvent } from './event-log';
-import { withHookEnv } from './hook-env';
+import { buildHookEnv } from './hook-env';
 import { appendPayload, takePayload } from './payload';
 import { getRunsDir, readRunRecord, writeRunRecord } from './storage';
 
@@ -53,7 +53,7 @@ interface BeforeHook {
 function runBeforeHook({ command, cwd, env, logFile }: BeforeHook): string | null {
   const result = spawnSync('/bin/sh', ['-c', command], {
     cwd,
-    env: withHookEnv(env),
+    env: buildHookEnv(env),
     timeout: BEFORE_HOOK_TIMEOUT_MS,
     encoding: 'utf8',
   });

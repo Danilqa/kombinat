@@ -12,7 +12,6 @@ export function writePayload(routine: string, runId: string, payload: string): v
   fs.writeFileSync(getPayloadFile(routine, runId), payload);
 }
 
-// The file only hands the body over from the daemon to the run process.
 export function takePayload(routine: string, runId: string): string | null {
   const file = getPayloadFile(routine, runId);
   if (!fs.existsSync(file)) return null;
@@ -21,7 +20,7 @@ export function takePayload(routine: string, runId: string): string | null {
   return payload;
 }
 
-// The fence is longer than any run of backticks in the payload, so the payload cannot close it.
+// Longer than any backtick run in the payload, so the payload cannot close the fence.
 export function appendPayload(prompt: string, payload: string): string {
   const longestRun = (payload.match(/`+/g) ?? []).reduce(
     (max, run) => Math.max(max, run.length),
