@@ -16,7 +16,7 @@ import { loadRoutines } from './domains/routine/storage';
 import type { Routine } from './domains/routine/types';
 import { describeSchedule, getNextRun } from './domains/routine/utils';
 import { buildRunTranscript, readRunEvents } from './domains/run/event-log';
-import { checkIsRunning, startDetachedRun } from './domains/run/runner';
+import { checkIsRunning, checkIsStarting, startDetachedRun } from './domains/run/runner';
 import { listAllRuns, listRuns, readRunRecord } from './domains/run/storage';
 import { getSkips, readSchedulerState } from './domains/scheduler/storage';
 import { WEBHOOK_GATE_TIMEOUT_MS } from './domains/webhook/gate';
@@ -79,7 +79,7 @@ function toRoutineSummary(routine: Routine, runs: RunRecord[]): RoutineSummary {
     timeoutMinutes: routine.timeoutMinutes,
     maxBudgetUsd: routine.maxBudgetUsd,
     file: path.relative(config.projectRoot, routine.file),
-    running: runs.some(isMatching({ status: 'running' })),
+    running: checkIsStarting(routine.name) || runs.some(isMatching({ status: 'running' })),
     lastRun: runs[0] ?? null,
     lastSkip: getSkips(routine.name).at(-1) ?? null,
   };
@@ -95,7 +95,9 @@ function getStatus(startedAt: Date): DaemonStatus {
     claudeBin: config.claudeBin,
     codexBin: config.codexBin,
     maxConcurrentRuns: config.maxConcurrentRuns,
-    running: listAllRuns().filter(isMatching({ status: 'running' })).length,
+    running:
+      listAllRuns().filter(isMatching({ status: 'running' })).length +
+      loadRoutines().filter(routine => checkIsStarting(routine.name)).length,
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     now: new Date().toISOString(),
   };
