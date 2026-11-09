@@ -620,8 +620,7 @@ function useSwipePanels(
     };
   }, [radius, recentre, syncHeader]);
 
-  // A slide that reached its panel is committed first, or its pending settle would recentre over
-  // this one. During a slide the period has not moved yet, so the step counts from the panel in view.
+  // Commits a finished slide first, or its pending settle would undo this one.
   const slide = useCallback(
     (direction: StepDirection) => {
       const scroller = scrollerRef.current;

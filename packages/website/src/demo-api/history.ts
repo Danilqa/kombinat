@@ -253,7 +253,7 @@ function buildScheduledEvents(
 
 export function createDemoHistory(routines: DemoRoutine[], loadedAt: Date): DemoHistory {
   const historyStart = new Date(loadedAt.getTime() - HISTORY_DAYS * DAY_MS);
-  const toStartedRuns = (
+  const buildStartedRuns = (
     routine: DemoRoutine,
     trigger: RunTrigger,
     started: DemoStartedRun[] = [],
@@ -264,8 +264,8 @@ export function createDemoHistory(routines: DemoRoutine[], loadedAt: Date): Demo
       return createRun(routine, findOutcome(routine, outcome), trigger, null, startedAt, random);
     });
   const startedRuns: DemoRun[] = routines.flatMap(routine => [
-    ...toStartedRuns(routine, 'manual', routine.manualRuns),
-    ...toStartedRuns(routine, 'webhook', routine.webhookRuns),
+    ...buildStartedRuns(routine, 'manual', routine.manualRuns),
+    ...buildStartedRuns(routine, 'webhook', routine.webhookRuns),
   ]);
   const slotsBeforeLoad = new Map(
     routines.map(routine => [

@@ -232,7 +232,7 @@ export function checkIsCrossSite(headers: http.IncomingHttpHeaders): boolean {
   return headers.origin !== undefined && URL.parse(headers.origin)?.host !== headers.host;
 }
 
-// A body over the limit is still read to the end, so that the client gets the 413.
+// Read to the end anyway, so the client gets the 413.
 function readBody(req: http.IncomingMessage): Promise<Buffer | null> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
