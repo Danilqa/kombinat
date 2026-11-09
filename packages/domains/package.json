@@ -10,7 +10,8 @@
     "./routine/components": "./routine/components/index.ts",
     "./run/components": "./run/components/index.ts",
     "./scheduler/components": "./scheduler/components/index.ts",
-    "./transcript/components": "./transcript/components/index.ts"
+    "./transcript/components": "./transcript/components/index.ts",
+    "./webhook/components": "./webhook/components/index.ts"
   },
   "scripts": {
     "test": "tsx --test '*/*.test.ts'",

@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
 
-import { match } from 'ts-pattern';
+import { isMatching, match } from 'ts-pattern';
 
 import type { RunRecord, RunTrigger } from 'domains/run/types';
 import { createRunId } from 'domains/run/utils';
@@ -17,7 +17,7 @@ import type { Routine } from '../routine/types';
 import type { BeforeHookEvent } from './event-log';
 import { buildHookEnv } from './hook-env';
 import { appendPayload, takePayload } from './payload';
-import { getRunsDir, readRunRecord, writeRunRecord } from './storage';
+import { getRunsDir, listRuns, readRunRecord, writeRunRecord } from './storage';
 
 export interface RunOptions {
   trigger: RunTrigger;
@@ -226,6 +226,12 @@ export function checkIsStarting(routineName: string, now = Date.now()): boolean 
     readRunRecord(routineName, pending.runId) === null;
   if (!isWaiting) pendingStarts.delete(routineName);
   return isWaiting;
+}
+
+export function checkIsRunning(routineName: string): boolean {
+  return (
+    checkIsStarting(routineName) || listRuns(routineName).some(isMatching({ status: 'running' }))
+  );
 }
 
 export function startDetachedRun(routineName: string, options: RunOptions): void {

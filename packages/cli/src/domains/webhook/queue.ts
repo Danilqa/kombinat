@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import type { QueuedWebhook } from 'domains/run/types';
+import type { QueuedWebhook } from 'domains/webhook/types';
 
 import { config } from '../../config';
 

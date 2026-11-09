@@ -27,10 +27,3 @@ export const runRecordSchema = z.object({
   error: z.string().nullable(),
   logFile: z.string(),
 });
-
-export const queuedWebhookSchema = z.object({
-  runId: z.string(),
-  queuedAt: z.string(),
-  bytes: z.number(),
-  preview: z.string(),
-});

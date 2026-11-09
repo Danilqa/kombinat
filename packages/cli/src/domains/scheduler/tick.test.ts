@@ -14,7 +14,7 @@ fs.mkdirSync(routinesDir);
 const { tick } = await import('./tick');
 const { readSchedulerState, writeSchedulerState } = await import('./storage');
 const { writeRunRecord } = await import('../run/storage');
-const { countQueuedWebhooks, enqueueWebhook } = await import('../run/queue');
+const { countQueuedWebhooks, enqueueWebhook } = await import('../webhook/queue');
 const { makeRunRecord } = await import('domains/run/mocks');
 
 function writeRoutine(name: string, frontmatter: string): void {

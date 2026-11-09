@@ -6,7 +6,7 @@ import { match } from 'ts-pattern';
 import { config } from '../../config';
 import { parseJson } from '../../utils/json';
 import type { Routine } from '../routine/types';
-import { buildHookEnv } from './hook-env';
+import { buildHookEnv } from '../run/hook-env';
 
 export const WEBHOOK_GATE_TIMEOUT_MS = 3_000;
 // EX_CONFIG: crashes exit with 1 or 2, never with this.

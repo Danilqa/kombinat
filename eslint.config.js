@@ -71,19 +71,19 @@ const packagesByPath = (...folders) => ({
 const daemonDomains = (...domains) => ({
   regex: String.raw`^(\.\./)+(domains/)?(${domains.join('|')})(/|$)`,
   message:
-    'Daemon domains import only the levels before their own: agent, then routine, then run, then scheduler.',
+    'Daemon domains import only the levels before their own: agent, then routine, then run, then webhook, then scheduler.',
 });
 
 const sharedDomains = (...domains) => ({
   regex: String.raw`^((\.\./)+|domains/)(${domains.join('|')})(/|$)`,
   message:
-    'Shared domains import only the levels before their own: agent, transcript, scheduler and daemon, then run, then routine and calendar.',
+    'Shared domains import only the levels before their own: agent, transcript, scheduler, daemon and webhook, then run, then routine and calendar.',
 });
 
-const DAEMON_DOMAIN_LEVELS = [['agent'], ['routine'], ['run'], ['scheduler']];
+const DAEMON_DOMAIN_LEVELS = [['agent'], ['routine'], ['run'], ['webhook'], ['scheduler']];
 
 const SHARED_DOMAIN_LEVELS = [
-  ['agent', 'transcript', 'scheduler', 'daemon'],
+  ['agent', 'transcript', 'scheduler', 'daemon', 'webhook'],
   ['run'],
   ['routine', 'calendar'],
 ];

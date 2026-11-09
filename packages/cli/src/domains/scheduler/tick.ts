@@ -6,9 +6,9 @@ import { config } from '../../config';
 import { loadRoutines } from '../routine/storage';
 import type { Routine } from '../routine/types';
 import { writePayload } from '../run/payload';
-import { listQueuedRoutines, takeQueuedWebhook } from '../run/queue';
 import { checkIsStarting, startDetachedRun } from '../run/runner';
 import { getRunningRuns } from '../run/storage';
+import { listQueuedRoutines, takeQueuedWebhook } from '../webhook/queue';
 import { readSchedulerState, writeSchedulerState } from './storage';
 
 function loadState(now: Date): SchedulerState {

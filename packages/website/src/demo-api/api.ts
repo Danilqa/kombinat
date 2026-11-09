@@ -4,8 +4,9 @@ import { buildCalendar } from 'domains/calendar/utils';
 import type { DaemonStatus } from 'domains/daemon/types';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import { RECENT_RUNS_LIMIT } from 'domains/run/constants';
-import type { QueuedWebhook, RunRecord } from 'domains/run/types';
+import type { RunRecord } from 'domains/run/types';
 import { createRunId } from 'domains/run/utils';
+import type { QueuedWebhook } from 'domains/webhook/types';
 import type { Skip } from 'domains/scheduler/types';
 import { describeCron, nextCronRun } from 'utils/cron';
 

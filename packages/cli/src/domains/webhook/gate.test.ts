@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { buildRoutine } from '../routine/utils';
-import { decideWebhook } from './webhook-gate';
+import { decideWebhook } from './gate';
 
 const buildGatedRoutine = (gate: string | null) =>
   buildRoutine(
