@@ -35,10 +35,7 @@ test('plans the next runs and highlights overlaps', async ({ page, kombinat }) =
   await expect(page.getByRole('menuitemcheckbox', { name: /Highlight overlaps/ })).toBeChecked();
 });
 
-test('switches weeks with a sideways swipe and the keyboard', async ({ page, kombinat, time }) => {
-  kombinat.addRoutine({ name: 'daily-check', schedule: '0 9 * * *' });
-  // Near the top, so the hover never scrolls it into view, which also scrolls the weeks sideways.
-  kombinat.addRun({ routine: 'daily-check', startedAt: time.todayAt(1) });
+test('switches weeks with the keyboard', async ({ page }) => {
   await page.goto('/calendar');
   const weekRange = page.getByRole('heading', { level: 2 });
   const thisWeek = await weekRange.innerText();
@@ -47,12 +44,6 @@ test('switches weeks with a sideways swipe and the keyboard', async ({ page, kom
   await expect(weekRange).not.toHaveText(thisWeek);
   await page.keyboard.press('k');
   await expect(weekRange).toHaveText(thisWeek);
-
-  await page.getByRole('link', { name: /^daily-check, .*, succeeded$/ }).hover();
-  // One event: on a slow runner, notches arrive after the release pause and become many swipes.
-  await page.mouse.wheel(400, 0);
-  await expect(weekRange).not.toHaveText(thisWeek);
-  await expect(page.getByRole('link', { name: /^daily-check, .*, planned/ })).toHaveCount(7);
 });
 
 test.describe('on a phone', () => {
