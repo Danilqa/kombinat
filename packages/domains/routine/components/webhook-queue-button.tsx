@@ -66,7 +66,6 @@ export function WebhookQueueButton({ routine, count, look = 'button' }: WebhookQ
           <div className="font-medium">
             {shownCount} {shownCount === 1 ? 'webhook' : 'webhooks'} in queue
           </div>
-          <div className="text-fg-muted">They start one by one, oldest first.</div>
         </div>
         {error && (
           <p role="alert" className="px-3 py-2.5 text-negative">
