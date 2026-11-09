@@ -37,7 +37,8 @@ test('plans the next runs and highlights overlaps', async ({ page, kombinat }) =
 
 test('switches weeks with a sideways swipe and the keyboard', async ({ page, kombinat, time }) => {
   kombinat.addRoutine({ name: 'daily-check', schedule: '0 9 * * *' });
-  kombinat.addRun({ routine: 'daily-check', startedAt: time.todayAt(6) });
+  // Near the top, so the hover never scrolls it into view, which also scrolls the weeks sideways.
+  kombinat.addRun({ routine: 'daily-check', startedAt: time.todayAt(1) });
   await page.goto('/calendar');
   const weekRange = page.getByRole('heading', { level: 2 });
   const thisWeek = await weekRange.innerText();
@@ -78,7 +79,7 @@ test.describe('on a phone', () => {
   test('swipes to the next day', async ({ page, kombinat, time }) => {
     const tomorrow = new Date(new Date(time.todayAt(12)).getTime() + DAY_MS);
     kombinat.addRoutine({ name: 'morning-digest' });
-    kombinat.addRun({ routine: 'morning-digest', startedAt: time.todayAt(6) });
+    kombinat.addRun({ routine: 'morning-digest', startedAt: time.todayAt(1) });
     await page.goto('/calendar');
 
     await page.getByRole('link', { name: /^morning-digest/ }).hover();
