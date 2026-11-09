@@ -19,7 +19,6 @@ function getQueueDir(routine: string): string {
   return path.join(config.stateDir, 'queue', routine);
 }
 
-// Names start with the enqueue time in milliseconds, so sorting them gives the oldest first.
 function listQueueFiles(routine: string): string[] {
   const dir = getQueueDir(routine);
   if (!fs.existsSync(dir)) return [];
@@ -37,7 +36,7 @@ export function enqueueWebhook(routine: string, runId: string, payload: string):
   if (countQueuedWebhooks(routine) >= WEBHOOK_QUEUE_LIMIT) return false;
   const dir = getQueueDir(routine);
   fs.mkdirSync(dir, { recursive: true });
-  // Strictly increasing, so webhooks that arrive in the same millisecond keep their order.
+  // Keeps the order of webhooks that arrive in the same millisecond.
   lastQueuedAt = Math.max(Date.now(), lastQueuedAt + 1);
   const queuedAt = String(lastQueuedAt).padStart(15, '0');
   fs.writeFileSync(path.join(dir, `${queuedAt}-${runId}.payload`), payload);

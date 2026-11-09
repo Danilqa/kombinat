@@ -144,7 +144,6 @@ function startRun(routine: Routine): ApiResponse {
   return { status: 202, body: { ok: true } };
 }
 
-// The scheduler starts queued webhooks one by one, so a new one waits behind them.
 function startWebhookRun(routine: Routine, payload: string): ApiResponse {
   if (!routine.enabled) return fail(409, `${routine.name} is disabled`);
   const runId = createRunId();

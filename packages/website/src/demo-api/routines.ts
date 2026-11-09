@@ -74,7 +74,6 @@ export interface DemoRoutine {
   pins?: DemoPin[];
   manualRuns?: DemoStartedRun[];
   webhookRuns?: DemoStartedRun[];
-  // Shown while the routine runs, as the daemon would start them after it.
   queuedWebhooks?: DemoQueuedWebhook[];
 }
 

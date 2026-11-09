@@ -243,7 +243,7 @@ export function statusLines(
   ];
 }
 
-function queueLabel(count: number): string {
+function formatQueueLabel(count: number): string {
   return `${count} in queue`;
 }
 
@@ -270,7 +270,7 @@ export function routineRow(routine: RoutineSummary, width: number, now: number):
         line: [
           text(routine.name, routine.running ? S.boldYellow : routine.enabled ? undefined : S.dim),
           ...(routine.queuedWebhooks > 0
-            ? [text(`  ${queueLabel(routine.queuedWebhooks)}`, S.yellow)]
+            ? [text(`  ${formatQueueLabel(routine.queuedWebhooks)}`, S.yellow)]
             : []),
         ],
         width: Math.max(4, width - 13),
@@ -350,12 +350,13 @@ interface Tab {
 }
 
 function getTabLabel(tab: RoutineTab, detail: RoutineDetail | undefined): string {
-  const count = (items: unknown[] | undefined) => (items === undefined ? '' : ` ${items.length}`);
+  const formatCount = (items: unknown[] | undefined) =>
+    items === undefined ? '' : ` ${items.length}`;
   return match(tab)
-    .with('runs', () => `Runs${count(detail?.runs)}`)
+    .with('runs', () => `Runs${formatCount(detail?.runs)}`)
     .with('prompt', () => 'Prompt')
-    .with('skips', () => `Skipped${count(detail?.skips)}`)
-    .with('queue', () => `Queue${count(detail?.queue)}`)
+    .with('skips', () => `Skipped${formatCount(detail?.skips)}`)
+    .with('queue', () => `Queue${formatCount(detail?.queue)}`)
     .exhaustive();
 }
 
@@ -433,8 +434,8 @@ function skipsTable(skips: Skip[], now: number): ContentLine[] {
 
 const QUEUE_BODY_LINES = 3;
 
-// Bodies from one sender often start alike, so a single line would hide what tells them apart.
-function queueBodyLines(preview: string, width: number): Line[] {
+// Bodies from one sender often start alike.
+function wrapQueueBody(preview: string, width: number): Line[] {
   const body = sanitize(preview.replace(/\s+/g, ' ').trim());
   if (body === '') return [[text('empty body', S.dim)]];
   const lines = wrapLine([text(body)], width);
@@ -444,7 +445,7 @@ function queueBodyLines(preview: string, width: number): Line[] {
   return [...kept, [...sliceLine(last, 0, width - 1), text('…')]];
 }
 
-function queueTable(queue: QueuedWebhook[], width: number, now: number): ContentLine[] {
+function buildQueueTable(queue: QueuedWebhook[], width: number, now: number): ContentLine[] {
   if (queue.length === 0) return [{ line: [text('Nothing in the queue.', S.dim)] }];
   const bodyWidth = Math.max(8, width - 30);
   const bodyIndent = text(' '.repeat(width - bodyWidth));
@@ -458,7 +459,7 @@ function queueTable(queue: QueuedWebhook[], width: number, now: number): Content
     S.dim,
   );
   const rows = queue.flatMap((webhook, index): Line[] => {
-    const [first = [], ...rest] = queueBodyLines(webhook.preview, bodyWidth);
+    const [first = [], ...rest] = wrapQueueBody(webhook.preview, bodyWidth);
     const position = text(getQueuePositionLabel(index), index === 0 ? S.boldYellow : undefined);
     return [
       columns([
@@ -546,7 +547,7 @@ export function routinePage({
       text(routine.name, S.boldMagenta),
       ...(routine.running ? [text(`  ${spinner(now)} running`, S.boldYellow)] : []),
       ...(routine.queuedWebhooks > 0
-        ? [text(`  · ${queueLabel(routine.queuedWebhooks)}`, S.yellow)]
+        ? [text(`  · ${formatQueueLabel(routine.queuedWebhooks)}`, S.yellow)]
         : []),
     ],
     ...wrapLine([text(sanitize(routine.description))], width),
@@ -582,7 +583,7 @@ export function routinePage({
     }))
     .with('queue', (): PageContent => ({
       mode: 'scroll',
-      lines: [...header, ...queueTable(detail.queue, width, now)],
+      lines: [...header, ...buildQueueTable(detail.queue, width, now)],
     }))
     .exhaustive();
 }

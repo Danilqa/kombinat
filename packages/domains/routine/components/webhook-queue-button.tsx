@@ -17,7 +17,6 @@ interface WebhookQueueButtonProps {
   look?: WebhookQueueButtonLook;
 }
 
-// The routines list only knows the count, so the queue loads when it opens.
 export function WebhookQueueButton({ routine, count, look = 'button' }: WebhookQueueButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { data, error } = useQuery({
@@ -55,7 +54,7 @@ export function WebhookQueueButton({ routine, count, look = 'button' }: WebhookQ
   return (
     <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
       <Popover.Trigger asChild>{trigger}</Popover.Trigger>
-      {/* The content is portaled, but its clicks still bubble to the table row that opens the routine. */}
+      {/* Portaled clicks still bubble to the row link. */}
       <Popover.Content
         align="end"
         aria-label={`Webhook queue of ${routine}`}

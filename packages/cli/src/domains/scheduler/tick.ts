@@ -98,7 +98,7 @@ export function tick(now = new Date()): TickResult {
     started.push(routine.name);
   }
 
-  // After the schedules, so a queue never makes a scheduled time skip.
+  // After the schedules, so the queue never makes one skip.
   for (const name of listQueuedRoutines()) {
     const routine = routines.find(candidate => candidate.name === name);
     if (routine === undefined || !routine.enabled || !routine.webhook) continue;

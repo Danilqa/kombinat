@@ -31,7 +31,7 @@ const TICK_MS = 30_000;
 const ok = (body: unknown): ApiResponse => ({ status: 200, body });
 const fail = (status: number, error: string): ApiResponse => ({ status, body: { error } });
 
-function toQueuedWebhook(
+function buildQueuedWebhook(
   { minutesAgo, payload }: DemoQueuedWebhook,
   loadedAt: Date,
 ): QueuedWebhook {
@@ -84,7 +84,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
   const queues = new Map(
     demoRoutines.map(routine => [
       routine.name,
-      (routine.queuedWebhooks ?? []).map(webhook => toQueuedWebhook(webhook, loadedAt)),
+      (routine.queuedWebhooks ?? []).map(webhook => buildQueuedWebhook(webhook, loadedAt)),
     ]),
   );
 

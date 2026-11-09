@@ -215,7 +215,7 @@ interface PendingStart {
   startedAt: number;
 }
 
-// A run writes its record only once its agent starts, so until then only this process knows.
+// Until a run writes its record, only this process knows it started.
 const pendingStarts = new Map<string, PendingStart>();
 
 export function checkIsStarting(routineName: string, now = Date.now()): boolean {
