@@ -6,7 +6,7 @@ import { match } from 'ts-pattern';
 import { config } from '../../config';
 import { parseJson } from '../../utils/json';
 import type { Routine } from '../routine/types';
-import { buildHookEnv } from './hook-env';
+import { withHookEnv } from './hook-env';
 
 export const WEBHOOK_GATE_TIMEOUT_MS = 3_000;
 // EX_CONFIG: crashes exit with 1 or 2, never with this.
@@ -38,7 +38,7 @@ interface TimeoutDecision {
 
 export type WebhookGateDecision = RunDecision | IgnoreDecision | RejectDecision | TimeoutDecision;
 
-function buildDecision(
+function toDecision(
   exitCode: number | null,
   stdout: string,
   stderr: string,
@@ -70,7 +70,7 @@ export function decideWebhook(
   return new Promise(resolve => {
     const child = spawn('/bin/sh', ['-c', gate], {
       cwd: config.projectRoot,
-      env: buildHookEnv({
+      env: withHookEnv({
         ...process.env,
         KOMBINAT_ROUTINE: routine.name,
         KOMBINAT_WEBHOOK_HEADERS: JSON.stringify(request.headers),
@@ -97,7 +97,7 @@ export function decideWebhook(
         return;
       }
       resolve(
-        buildDecision(
+        toDecision(
           exitCode,
           Buffer.concat(stdout).toString('utf8'),
           Buffer.concat(stderr).toString('utf8'),

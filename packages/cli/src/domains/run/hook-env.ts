@@ -2,7 +2,7 @@ import path from 'node:path';
 
 import { config } from '../../config';
 
-export function buildHookEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+export function withHookEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   return {
     ...env,
     KOMBINAT_REPO: config.projectRoot,
