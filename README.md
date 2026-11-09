@@ -199,7 +199,6 @@ curl -X POST http://localhost:7433/api/routines/review-pr/webhook \
 - The answer is `202` with the new run's id: `{"ok":true,"runId":"20261109T120000Z-k3x9"}`.
 - The answer is `404` when the routine has no `webhook: true`, `409` when it is disabled or still running, and `413` when the body is too large. A refused request is not queued, so the app has to send it again later.
 
-The daemon only listens on this Mac. Other machines in your tailnet reach it through [Tailscale Serve](#with-tailscale-serve). Do not make it public, for example with Tailscale Funnel: there is no login, and anyone who can reach the webhook writes into the prompt of an agent that runs on your Mac.
 
 ## Updating
 
