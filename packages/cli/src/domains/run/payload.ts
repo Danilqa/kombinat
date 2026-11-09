@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { getRunsDir } from './storage';
 
-export function getPayloadFile(routine: string, runId: string): string {
+function getPayloadFile(routine: string, runId: string): string {
   return path.join(getRunsDir(routine), `${runId}.payload`);
 }
 
@@ -12,9 +12,13 @@ export function writePayload(routine: string, runId: string, payload: string): v
   fs.writeFileSync(getPayloadFile(routine, runId), payload);
 }
 
-export function readPayload(routine: string, runId: string): string | null {
+// The file only hands the body over from the daemon to the run process.
+export function takePayload(routine: string, runId: string): string | null {
   const file = getPayloadFile(routine, runId);
-  return fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null;
+  if (!fs.existsSync(file)) return null;
+  const payload = fs.readFileSync(file, 'utf8');
+  fs.rmSync(file);
+  return payload;
 }
 
 // The fence is longer than any run of backticks in the payload, so the payload cannot close it.

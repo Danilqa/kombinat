@@ -23,10 +23,10 @@ test('a command that ignores the prompt still finishes its run', async () => {
   assert.equal(record.resultText, 'Hello');
 });
 
-test('a webhook run gets its payload in the prompt and as a file', async () => {
+test('a webhook run gets its payload at the end of the prompt', async () => {
   const routine = buildRoutine(
     path.join(tmp, 'echo-payload.md'),
-    `---\ncwd: ${tmp}\nagent: command\ncommand: cat && cat "$KOMBINAT_PAYLOAD_FILE"\n---\nTriage.`,
+    `---\ncwd: ${tmp}\nagent: command\ncommand: cat\n---\nTriage.`,
   );
   writePayload('echo-payload', '20261109T120000Z-abcd', '{"number":42}');
   const record = await runRoutine(routine, {
@@ -37,6 +37,12 @@ test('a webhook run gets its payload in the prompt and as a file', async () => {
   assert.equal(record.status, 'succeeded');
   assert.equal(
     record.resultText,
-    'Triage.\n\nThis run was started by a webhook. Its request body:\n\n```\n{"number":42}\n```\n\n{"number":42}',
+    'Triage.\n\nThis run was started by a webhook. Its request body:\n\n```\n{"number":42}\n```\n',
+  );
+  assert.deepEqual(
+    fs
+      .readdirSync(path.join(tmp, 'state', 'runs', 'echo-payload'))
+      .filter(file => file.endsWith('.payload')),
+    [],
   );
 });

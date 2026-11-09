@@ -15,7 +15,7 @@ import { getAgent } from '../agent/registry';
 import type { Agent, OutputEvent } from '../agent/types';
 import type { Routine } from '../routine/types';
 import type { BeforeHookEvent } from './event-log';
-import { appendPayload, getPayloadFile, readPayload } from './payload';
+import { appendPayload, takePayload } from './payload';
 import { getRunsDir, writeRunRecord } from './storage';
 
 export interface RunOptions {
@@ -127,14 +127,10 @@ export async function runRoutine(routine: Routine, options: RunOptions): Promise
     logFile,
   };
 
-  const payload = readPayload(routine.name, id);
+  const payload = takePayload(routine.name, id);
   const task =
     payload === null ? routine : { ...routine, prompt: appendPayload(routine.prompt, payload) };
   const invocation = agent.buildInvocation({ routine: task, runId: id, trigger: options.trigger });
-  const env =
-    payload === null
-      ? invocation.env
-      : { ...invocation.env, KOMBINAT_PAYLOAD_FILE: getPayloadFile(routine.name, id) };
   if (!fs.existsSync(routine.cwd)) {
     return finishRecord(record, { status: 'failed', error: `cwd does not exist: ${routine.cwd}` });
   }
@@ -149,7 +145,7 @@ export async function runRoutine(routine: Routine, options: RunOptions): Promise
     const beforeError = runBeforeHook({
       command: routine.before,
       cwd: routine.cwd,
-      env,
+      env: invocation.env,
       logFile,
     });
     if (beforeError !== null) return finishRecord(record, { status: 'failed', error: beforeError });
@@ -157,7 +153,7 @@ export async function runRoutine(routine: Routine, options: RunOptions): Promise
 
   const child = spawn(invocation.command, invocation.args, {
     cwd: routine.cwd,
-    env,
+    env: invocation.env,
     stdio: ['pipe', 'pipe', 'pipe'],
   });
   record.pid = child.pid ?? null;

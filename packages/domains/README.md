@@ -69,7 +69,7 @@ Invariants:
 - A record still marked `running` whose process is gone becomes `aborted` the next time runs are listed.
 - The id is a UTC timestamp plus 4 base-36 characters, such as `20261006T110000Z-k3x9`.
 - The record is `<state dir>/runs/<routine>/<id>.json` and the event log `<id>.jsonl` next to it. This layout is a compatibility contract.
-- A webhook run's request body is `<id>.payload` next to them. The daemon writes it before it starts the run with `--run-id <id>`. The runner adds it to the end of the prompt in a code fence and passes its path in `KOMBINAT_PAYLOAD_FILE` to the before hook and the agent.
+- A webhook run's request body waits in `<id>.payload` next to them until the run starts: the daemon writes it and starts the run with `--run-id <id>`, and the runner deletes it and adds the body to the end of the prompt in a code fence.
 - The transcript is built from the event log: the before hook's line becomes a `hook` item, and the agent turns the other lines into items.
 
 ### scheduler

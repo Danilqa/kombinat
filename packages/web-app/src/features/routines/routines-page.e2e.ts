@@ -64,7 +64,7 @@ test('runs a routine from a webhook with its request body', async ({ page, kombi
   kombinat.addRoutine({
     name: 'echo-payload',
     agent: 'command',
-    command: 'cat "$KOMBINAT_PAYLOAD_FILE"',
+    command: 'grep pullRequest',
     webhook: true,
   });
 

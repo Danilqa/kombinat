@@ -188,17 +188,14 @@ A setting the agent does not support fails validation.
 
 ## Webhooks
 
-A routine with `webhook: true` also runs when an app sends a POST request to its webhook:
+With `webhook: true`, a POST request also starts the routine, and its body is added to the end of the prompt:
 
 ```bash
-curl -X POST http://localhost:7433/api/routines/review-pr/webhook \
-  -H 'content-type: application/json' -d '{"pullRequest": 42}'
+curl -X POST http://localhost:7433/api/routines/review-pr/webhook -d '{"pullRequest": 42}'
 ```
 
-- The request body, up to 256 KB, is added to the end of the prompt. It is also saved to the file in `KOMBINAT_PAYLOAD_FILE`, which suits `command` routines and `before` hooks. Headers and the query string are not passed on.
-- The answer is `202` with the new run's id: `{"ok":true,"runId":"20261109T120000Z-k3x9"}`.
-- The answer is `404` when the routine has no `webhook: true`, `409` when it is disabled or still running, and `413` when the body is too large. A refused request is not queued, so the app has to send it again later.
-
+- The answer is `202` with the run id, `404` without `webhook: true`, `409` when the routine is disabled or running, and `413` for a body over 256 KB. Refused requests are not queued.
+- Headers and the query string are not passed on.
 
 ## Updating
 
