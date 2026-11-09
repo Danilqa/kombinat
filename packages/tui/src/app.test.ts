@@ -154,7 +154,15 @@ function makeClient(overview: Overview, options: FakeOptions) {
         prompt: '# Steps\n\n- look at the queue',
         runs: overview.runs.filter(r => r.routine === name),
         skips: [],
-        queue: [],
+        queue: Array.from({ length: summary.queuedWebhooks }, (_, index) => ({
+          runId: `20261006T11${String(50 + index)}00Z-q${index}`,
+          queuedAt: `2026-10-06T11:${String(50 + index)}:00Z`,
+          bytes: 26,
+          preview:
+            ['{"alert":"api is slow"}\n', '', `{\n  "issue": "${'a long title '.repeat(40)}"\n}`][
+              index
+            ] ?? '',
+        })),
       };
       return Promise.resolve(detail);
     },
@@ -348,6 +356,39 @@ test('every row fits exactly in narrow and wide terminals, on every page', async
   check('run expanded');
   await press('?');
   check('help');
+});
+
+test('the routines list and the queue tab show the webhooks that wait', async () => {
+  const overview = makeOverview();
+  overview.routines = overview.routines.map(routine =>
+    routine.name === 'smoke-test' ? { ...routine, webhook: true, queuedWebhooks: 3 } : routine,
+  );
+  const { app, screen, press } = await makeApp({ overview });
+  assert.match(screen(), /smoke-test {2}3 in queue/);
+  await press('j', 'enter');
+  assert.match(screen(), /smoke-test {2}· 3 in queue/);
+  const queueTab = await press(']', ']', ']');
+  assert.match(queueTab, /Queue 3/);
+  assert.match(queueTab, /Next\s+10m ago\s+26 B\s+\{"alert":"api is slow"\}/);
+  assert.match(queueTab, /#2\s+9m ago\s+26 B\s+empty body/);
+  const longBody = queueTab.split('\n').filter(line => line.includes('a long title'));
+  assert.equal(longBody.length, 3);
+  assert.match(longBody[0] ?? '', /#3\s+8m ago\s+26 B\s+\{ "issue": "a long title/);
+  assert.match(longBody[2] ?? '', /…\s*$/);
+  for (const [width, height] of [
+    [60, 16],
+    [100, 30],
+    [200, 50],
+  ] as const) {
+    for (const line of app.render(width, height)) assert.equal(lineWidth(line), width);
+  }
+  assert.match(await press(']'), /Runs 1/);
+});
+
+test('routines without a webhook have no queue tab', async () => {
+  const { press } = await makeApp();
+  await press('enter');
+  assert.doesNotMatch(await press(']', ']', ']'), /Queue/);
 });
 
 test('asks for a bigger terminal when it is too small', async () => {

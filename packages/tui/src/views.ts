@@ -1,8 +1,14 @@
 import { isMatching, match, P } from 'ts-pattern';
 
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
-import type { RunRecord, RunStatus } from 'domains/run/types';
-import { getRunDurationMs, getRunStatusLabel, getTriggerLabel } from 'domains/run/utils';
+import type { QueuedWebhook, RunRecord, RunStatus } from 'domains/run/types';
+import {
+  formatPayloadSize,
+  getQueuePositionLabel,
+  getRunDurationMs,
+  getRunStatusLabel,
+  getTriggerLabel,
+} from 'domains/run/utils';
 import type { Skip } from 'domains/scheduler/types';
 import { getSkipReasonLabel } from 'domains/scheduler/utils';
 import type { ToolItem, TranscriptItem } from 'domains/transcript/types';
@@ -51,7 +57,7 @@ export interface PageContent {
   mode: CursorMode;
 }
 
-export type RoutineTab = 'runs' | 'prompt' | 'skips';
+export type RoutineTab = 'runs' | 'prompt' | 'skips' | 'queue';
 
 const SPINNER = '⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏';
 // Caps for expanded tool input/output: a 1MB minified line must not become 10k rows.
@@ -237,6 +243,14 @@ export function statusLines(
   ];
 }
 
+function queueLabel(count: number): string {
+  return `${count} in queue`;
+}
+
+export function getRoutineTabs(routine: RoutineSummary): RoutineTab[] {
+  return routine.webhook ? ['runs', 'prompt', 'skips', 'queue'] : ['runs', 'prompt', 'skips'];
+}
+
 export function routineRow(routine: RoutineSummary, width: number, now: number): Line {
   const icon = routine.running
     ? text(spinner(now), S.yellow)
@@ -255,6 +269,9 @@ export function routineRow(routine: RoutineSummary, width: number, now: number):
       {
         line: [
           text(routine.name, routine.running ? S.boldYellow : routine.enabled ? undefined : S.dim),
+          ...(routine.queuedWebhooks > 0
+            ? [text(`  ${queueLabel(routine.queuedWebhooks)}`, S.yellow)]
+            : []),
         ],
         width: Math.max(4, width - 13),
       },
@@ -332,6 +349,16 @@ interface Tab {
   label: string;
 }
 
+function getTabLabel(tab: RoutineTab, detail: RoutineDetail | undefined): string {
+  const count = (items: unknown[] | undefined) => (items === undefined ? '' : ` ${items.length}`);
+  return match(tab)
+    .with('runs', () => `Runs${count(detail?.runs)}`)
+    .with('prompt', () => 'Prompt')
+    .with('skips', () => `Skipped${count(detail?.skips)}`)
+    .with('queue', () => `Queue${count(detail?.queue)}`)
+    .exhaustive();
+}
+
 function tabBar(tabs: Tab[], active: RoutineTab): Line {
   return [
     ...tabs.flatMap(tab => [
@@ -401,6 +428,48 @@ function skipsTable(skips: Skip[], now: number): ContentLine[] {
       { line: [text(getSkipReasonLabel(skip.reason), S.yellow)], width: 20 },
     ]),
   );
+  return toContent([header, ...rows]);
+}
+
+const QUEUE_BODY_LINES = 3;
+
+// Bodies from one sender often start alike, so a single line would hide what tells them apart.
+function queueBodyLines(preview: string, width: number): Line[] {
+  const body = sanitize(preview.replace(/\s+/g, ' ').trim());
+  if (body === '') return [[text('empty body', S.dim)]];
+  const lines = wrapLine([text(body)], width);
+  if (lines.length <= QUEUE_BODY_LINES) return lines;
+  const kept = lines.slice(0, QUEUE_BODY_LINES - 1);
+  const last = lines[QUEUE_BODY_LINES - 1] ?? [];
+  return [...kept, [...sliceLine(last, 0, width - 1), text('…')]];
+}
+
+function queueTable(queue: QueuedWebhook[], width: number, now: number): ContentLine[] {
+  if (queue.length === 0) return [{ line: [text('Nothing in the queue.', S.dim)] }];
+  const bodyWidth = Math.max(8, width - 30);
+  const bodyIndent = text(' '.repeat(width - bodyWidth));
+  const header = withStyle(
+    columns([
+      { line: [text('#')], width: 6 },
+      { line: [text('QUEUED')], width: 10 },
+      { line: [text('SIZE')], width: 8, align: 'right' },
+      { line: [text('BODY')], width: bodyWidth },
+    ]),
+    S.dim,
+  );
+  const rows = queue.flatMap((webhook, index): Line[] => {
+    const [first = [], ...rest] = queueBodyLines(webhook.preview, bodyWidth);
+    const position = text(getQueuePositionLabel(index), index === 0 ? S.boldYellow : undefined);
+    return [
+      columns([
+        { line: [position], width: 6 },
+        { line: [text(formatRelativeCompact(webhook.queuedAt, now), S.cyan)], width: 10 },
+        { line: [text(formatPayloadSize(webhook.bytes), S.magenta)], width: 8, align: 'right' },
+        { line: first, width: bodyWidth },
+      ]),
+      ...rest.map(line => [bodyIndent, ...line]),
+    ];
+  });
   return toContent([header, ...rows]);
 }
 
@@ -476,6 +545,9 @@ export function routinePage({
     [
       text(routine.name, S.boldMagenta),
       ...(routine.running ? [text(`  ${spinner(now)} running`, S.boldYellow)] : []),
+      ...(routine.queuedWebhooks > 0
+        ? [text(`  · ${queueLabel(routine.queuedWebhooks)}`, S.yellow)]
+        : []),
     ],
     ...wrapLine([text(sanitize(routine.description))], width),
     [],
@@ -484,11 +556,7 @@ export function routinePage({
     ...detailRows(pairs, width),
     [],
     tabBar(
-      [
-        { id: 'runs', label: `Runs ${detail ? detail.runs.length : ''}`.trim() },
-        { id: 'prompt', label: 'Prompt' },
-        { id: 'skips', label: `Skipped ${detail ? detail.skips.length : ''}`.trim() },
-      ],
+      getRoutineTabs(routine).map((id): Tab => ({ id, label: getTabLabel(id, detail) })),
       tab,
     ),
     [text('─'.repeat(width), S.grey)],
@@ -511,6 +579,10 @@ export function routinePage({
     .with('skips', (): PageContent => ({
       mode: 'scroll',
       lines: [...header, ...skipsTable(detail.skips, now)],
+    }))
+    .with('queue', (): PageContent => ({
+      mode: 'scroll',
+      lines: [...header, ...queueTable(detail.queue, width, now)],
     }))
     .exhaustive();
 }
