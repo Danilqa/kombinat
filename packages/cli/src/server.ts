@@ -9,8 +9,9 @@ import type { DaemonStatus } from 'domains/daemon/types';
 import { routineNameSchema, runIdSchema } from 'domains/id/schemas';
 import type { RoutineName, RunId } from 'domains/id/types';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
-import { RECENT_RUNS_LIMIT } from 'domains/run/constants';
+import { RUNS_CURSOR_ERROR } from 'domains/run/constants';
 import type { RunRecord } from 'domains/run/types';
+import { paginateRuns, parseRunsPageQuery } from 'domains/run/utils';
 import { getErrorMessage } from 'utils/error';
 
 import { config } from './config';
@@ -123,11 +124,9 @@ function withRun(
 }
 
 function getRoutineDetail(routine: Routine): ApiResponse {
-  const runs = listRuns(routine.name);
   const detail: RoutineDetail = {
-    ...toRoutineSummary(routine, runs),
+    ...toRoutineSummary(routine, listRuns(routine.name)),
     prompt: routine.prompt,
-    runs,
     skips: getSkips(routine.name),
     queue: listQueuedWebhooks(routine.name),
   };
@@ -179,6 +178,15 @@ function getCalendar(url: URL): ApiResponse {
   return ok(buildCalendar(loadRoutines(), listAllRuns(), from, to));
 }
 
+function getRunsPage(url: URL): ApiResponse {
+  const query = parseRunsPageQuery(url.searchParams);
+  if (query === null) return fail(400, RUNS_CURSOR_ERROR);
+  if (query.routine === null) return ok(paginateRuns(listAllRuns(), query.cursor));
+  return withRoutine(query.routine, routine =>
+    ok(paginateRuns(listRuns(routine.name), query.cursor)),
+  );
+}
+
 function routeApi(request: ApiRequest, context: ApiContext): ApiResponse | Promise<ApiResponse> {
   const { url, startedAt } = context;
   return match(request)
@@ -196,9 +204,7 @@ function routeApi(request: ApiRequest, context: ApiContext): ApiResponse | Promi
       withRoutine(routineNameSchema.parse(name), routine => handleWebhook(routine, context)),
     )
     .with(['GET', ['calendar']], () => getCalendar(url))
-    .with(['GET', ['runs']], () =>
-      ok(listAllRuns().slice(0, Number(url.searchParams.get('limit') ?? RECENT_RUNS_LIMIT))),
-    )
+    .with(['GET', ['runs']], () => getRunsPage(url))
     .with(['GET', ['runs', P.string, P.string]], ([, [, routine, id]]) =>
       withRun(routineNameSchema.parse(routine), runIdSchema.parse(id), ok),
     )

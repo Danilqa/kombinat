@@ -2,7 +2,7 @@ import { isMatching, match, P } from 'ts-pattern';
 
 import type { RoutineName, RunId } from 'domains/id/types';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
-import type { RunRecord, RunStatus } from 'domains/run/types';
+import type { RunRecord, RunsPage, RunStatus } from 'domains/run/types';
 import { getRunDurationMs, getRunStatusLabel, getTriggerLabel } from 'domains/run/utils';
 import type { Skip } from 'domains/scheduler/types';
 import { getSkipReasonLabel } from 'domains/scheduler/utils';
@@ -346,11 +346,15 @@ interface Tab {
   label: string;
 }
 
-function getTabLabel(tab: RoutineTab, detail: RoutineDetail | undefined): string {
+function getTabLabel(
+  tab: RoutineTab,
+  detail: RoutineDetail | undefined,
+  runs: RunsPage | undefined,
+): string {
   const formatCount = (items: unknown[] | undefined) =>
     items === undefined ? '' : ` ${items.length}`;
   return match(tab)
-    .with('runs', () => `Runs${formatCount(detail?.runs)}`)
+    .with('runs', () => (runs === undefined ? 'Runs' : `Runs ${runs.total}`))
     .with('prompt', () => 'Prompt')
     .with('skips', () => `Skipped${formatCount(detail?.skips)}`)
     .with('queue', () => `Queue${formatCount(detail?.queue)}`)
@@ -369,7 +373,7 @@ function tabBar(tabs: Tab[], active: RoutineTab): Line {
 
 function runsTable(
   routine: RoutineName,
-  runs: RunRecord[],
+  { runs, total }: RunsPage,
   width: number,
   now: number,
 ): ContentLine[] {
@@ -411,7 +415,12 @@ function runsTable(
         ];
     return { line: columns(cells), action: { kind: 'open-run', routine, id: run.id } };
   });
-  return [{ line: headerLine }, ...rows];
+  const more = total - runs.length;
+  return [
+    { line: headerLine },
+    ...rows,
+    ...(more > 0 ? [{ line: [text(`${more} more…`, S.dim)] }] : []),
+  ];
 }
 
 function skipsTable(skips: Skip[], now: number): ContentLine[] {
@@ -479,6 +488,7 @@ function buildQueueTable(queue: QueuedWebhook[], width: number, now: number): Co
 interface RoutinePageInput {
   summary: RoutineSummary;
   detail: RoutineDetail | undefined;
+  runs: RunsPage | undefined;
   tab: RoutineTab;
   width: number;
   now: number;
@@ -488,6 +498,7 @@ interface RoutinePageInput {
 export function routinePage({
   summary,
   detail,
+  runs,
   tab,
   width,
   now,
@@ -559,7 +570,7 @@ export function routinePage({
     ...detailRows(pairs, width),
     [],
     tabBar(
-      getRoutineTabs(routine).map((id): Tab => ({ id, label: getTabLabel(id, detail) })),
+      getRoutineTabs(routine).map((id): Tab => ({ id, label: getTabLabel(id, detail, runs) })),
       tab,
     ),
     [text('─'.repeat(width), S.grey)],
@@ -573,7 +584,12 @@ export function routinePage({
   return match(tab)
     .with('runs', (): PageContent => ({
       mode: 'select',
-      lines: [...header, ...runsTable(routine.name, detail.runs, width, now)],
+      lines: [
+        ...header,
+        ...(runs === undefined
+          ? [{ line: [text('loading…', S.dim)] }]
+          : runsTable(routine.name, runs, width, now)),
+      ],
     }))
     .with('prompt', (): PageContent => ({
       mode: 'scroll',

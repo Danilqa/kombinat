@@ -16,9 +16,10 @@ import { SkipsTable } from 'domains/scheduler/components';
 import { sameOriginApi } from 'utils/http';
 import { getPollInterval } from 'utils/polling';
 import { Breadcrumbs } from '@web-app/components/breadcrumbs';
-import { RunsTable } from '@web-app/components/runs-table';
+import { RunsList } from '@web-app/components/runs-list';
 import { ROUTINES_PATH } from '@web-app/constants/path';
 import { useDocumentTitle } from '@web-app/hooks/use-document-title';
+import { useRuns } from '@web-app/hooks/use-runs';
 
 function checkIsRoutineRunning(routine: RoutineDetail | undefined): boolean {
   return routine?.running === true;
@@ -49,6 +50,7 @@ interface RoutineViewProps {
 }
 
 function RoutineView({ routine }: RoutineViewProps) {
+  const runs = useRuns(routine.name, routine.lastRun);
   return (
     <div className="space-y-10">
       <Card.Root className="gap-0 py-0">
@@ -58,14 +60,12 @@ function RoutineView({ routine }: RoutineViewProps) {
         <Tabs.List>
           <Tabs.Trigger value="runs">
             Runs
-            <span className="text-fg-secondary tabular-nums">{routine.runs.length}</span>
+            {runs.data && <span className="text-fg-secondary tabular-nums">{runs.data.total}</span>}
           </Tabs.Trigger>
           <Tabs.Trigger value="prompt">Prompt</Tabs.Trigger>
         </Tabs.List>
         <Tabs.Content value="runs" className="space-y-10">
-          <Card.Root className="gap-0 overflow-visible py-0">
-            <RunsTable runs={routine.runs} hasRoutineColumn={false} />
-          </Card.Root>
+          <RunsList runs={runs} hasRoutineColumn={false} />
           {routine.skips.length > 0 && (
             <section>
               <SectionHeader.Root

@@ -38,9 +38,38 @@ test("shows a routine's settings, runs, skipped runs and prompt", async ({ page,
   await expect(page.getByRole('heading', { name: 'Steps' })).toBeVisible();
 });
 
-test('explains that a routine does not exist', async ({ page }) => {
+test('loads older runs page by page as you scroll a long history', async ({
+  page,
+  kombinat,
+  time,
+}) => {
+  kombinat.addRoutine({ name: 'inbox-triage', schedule: '*/5 * * * *' });
+  const newest = kombinat.addRun({ routine: 'inbox-triage', startedAt: time.minutesAgo(5) });
+  for (let index = 2; index < 120; index++) {
+    kombinat.addRun({ routine: 'inbox-triage', startedAt: time.minutesAgo(index * 5) });
+  }
+  const oldest = kombinat.addRun({ routine: 'inbox-triage', startedAt: time.minutesAgo(600) });
+  await page.goto('/routines/inbox-triage');
+
+  const table = page.getByRole('table');
+  await expect(table.getByRole('row', { name: new RegExp(newest.id) })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Runs 120' })).toBeVisible();
+  await expect(table).toHaveAttribute('aria-rowcount', '121');
+  const oldestRow = table.getByRole('row', { name: new RegExp(oldest.id) });
+  await expect(async () => {
+    await page.keyboard.press('End');
+    await expect(oldestRow).toBeVisible({ timeout: 1000 });
+  }).toPass();
+  expect(await table.getByRole('row').count()).toBeLessThan(60);
+});
+
+test('explains that a routine does not exist', async ({ page, kombinat }) => {
+  kombinat.addRoutine({ name: 'inbox-triage' });
+  kombinat.addRun({ routine: 'inbox-triage' });
   await page.goto('/routines/nightly-digest');
 
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('nightly-digest');
   await expect(page.getByRole('alert')).toHaveText('Unknown routine nightly-digest');
+  const runs = await page.request.get('/api/runs?routine=nightly-digest%2F..%2Finbox-triage');
+  expect(runs.status()).toBe(404);
 });

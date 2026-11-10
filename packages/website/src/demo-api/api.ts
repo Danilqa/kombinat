@@ -5,9 +5,9 @@ import type { DaemonStatus } from 'domains/daemon/types';
 import { routineNameSchema, runIdSchema } from 'domains/id/schemas';
 import type { RoutineName } from 'domains/id/types';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
-import { RECENT_RUNS_LIMIT } from 'domains/run/constants';
+import { RUNS_CURSOR_ERROR } from 'domains/run/constants';
 import type { RunRecord } from 'domains/run/types';
-import { createRunId } from 'domains/run/utils';
+import { createRunId, paginateRuns, parseRunsPageQuery } from 'domains/run/utils';
 import type { QueuedWebhook } from 'domains/webhook/types';
 import type { Skip } from 'domains/scheduler/types';
 import { describeCron, nextCronRun } from 'utils/cron';
@@ -138,7 +138,6 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     return {
       ...getSummary(routine, now),
       prompt: routine.prompt,
-      runs: listRoutineRuns(routine, now),
       skips: history.listSkips(routine, now),
       queue: listQueue(routine, now),
     };
@@ -150,6 +149,15 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     }
     history.startRun(routine, now);
     return { status: 202, body: { ok: true } };
+  }
+
+  function getRunsPage(url: URL, now: Date): ApiResponse {
+    const query = parseRunsPageQuery(url.searchParams);
+    if (query === null) return fail(400, RUNS_CURSOR_ERROR);
+    if (query.routine === null) return ok(paginateRuns(history.listRuns(now), query.cursor));
+    return withRoutine(query.routine, routine =>
+      ok(paginateRuns(listRoutineRuns(routine, now), query.cursor)),
+    );
   }
 
   function getCalendar(url: URL, now: Date): ApiResponse {
@@ -177,13 +185,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
         withRoutine(routineNameSchema.parse(name), routine => startRun(routine, now)),
       )
       .with(['GET', ['calendar']], () => getCalendar(url, now))
-      .with(['GET', ['runs']], () =>
-        ok(
-          history
-            .listRuns(now)
-            .slice(0, Number(url.searchParams.get('limit') ?? RECENT_RUNS_LIMIT)),
-        ),
-      )
+      .with(['GET', ['runs']], () => getRunsPage(url, now))
       .with(['GET', ['runs', P.string, P.string]], ([, [, routine, id]]) => {
         const run = history.findRun(routineNameSchema.parse(routine), runIdSchema.parse(id), now);
         return run === null ? fail(404, 'Run not found') : ok(run);

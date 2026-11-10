@@ -3,9 +3,8 @@ import type { DaemonStatus } from 'domains/daemon/types';
 import type { RoutineName, RunId } from 'domains/id/types';
 import { getRoutine, getRoutines, startRoutineRun } from 'domains/routine/requests';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
-import { RECENT_RUNS_LIMIT } from 'domains/run/constants';
-import { getRuns, getRunWithTranscript } from 'domains/run/requests';
-import type { RunRecord, RunWithTranscript } from 'domains/run/types';
+import { getRunsPage, getRunWithTranscript } from 'domains/run/requests';
+import type { RunRecord, RunsCursor, RunsPage, RunWithTranscript } from 'domains/run/types';
 import { createHttpClient } from 'utils/http';
 
 export interface Overview {
@@ -18,6 +17,7 @@ export interface Overview {
 export interface DaemonClient {
   getOverview(): Promise<Overview>;
   getRoutine(name: RoutineName): Promise<RoutineDetail>;
+  getRuns(routine: RoutineName, cursor: RunsCursor | null): Promise<RunsPage>;
   getRun(routine: RoutineName, id: RunId): Promise<RunWithTranscript>;
   startRun(name: RoutineName): Promise<void>;
 }
@@ -31,14 +31,15 @@ export function createDaemonClient(baseUrl: string): DaemonClient {
 
   return {
     async getOverview() {
-      const [status, routines, runs] = await Promise.all([
+      const [status, routines, { runs }] = await Promise.all([
         getDaemonStatus(http),
         getRoutines(http),
-        getRuns(http, RECENT_RUNS_LIMIT),
+        getRunsPage(http, null, null),
       ]);
       return { status, routines, runs };
     },
     getRoutine: async name => getRoutine(http, name),
+    getRuns: async (routine, cursor) => getRunsPage(http, routine, cursor),
     getRun: async (routine, id) => getRunWithTranscript(http, routine, id),
     async startRun(name) {
       await startRoutineRun(http, name);

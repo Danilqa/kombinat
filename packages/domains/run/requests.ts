@@ -1,19 +1,24 @@
-import { z } from 'zod';
-
 import type { HttpClient } from 'utils/http';
 
 import type { RoutineName, RunId } from '../id/types';
 import { transcriptSchema } from '../transcript/schemas';
 import type { Transcript } from '../transcript/types';
-import { runRecordSchema } from './schemas';
-import type { RunRecord, RunWithTranscript } from './types';
+import { runRecordSchema, runsPageSchema } from './schemas';
+import type { RunRecord, RunsCursor, RunsPage, RunWithTranscript } from './types';
 
 function getRunApiPath(routine: RoutineName, id: RunId): string {
   return `/api/runs/${encodeURIComponent(routine)}/${encodeURIComponent(id)}`;
 }
 
-export async function getRuns(http: HttpClient, limit: number): Promise<RunRecord[]> {
-  return http.request(`/api/runs?limit=${limit}`, z.array(runRecordSchema));
+export async function getRunsPage(
+  http: HttpClient,
+  routine: RoutineName | null,
+  cursor: RunsCursor | null,
+): Promise<RunsPage> {
+  const params = new URLSearchParams();
+  if (routine !== null) params.set('routine', routine);
+  if (cursor !== null) params.set('cursor', cursor);
+  return http.request(`/api/runs?${params.toString()}`, runsPageSchema);
 }
 
 export async function getRun(

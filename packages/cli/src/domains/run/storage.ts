@@ -7,6 +7,7 @@ import { routineNameSchema } from 'domains/id/schemas';
 import type { RoutineName, RunId } from 'domains/id/types';
 import { runRecordSchema } from 'domains/run/schemas';
 import type { RunRecord } from 'domains/run/types';
+import { compareRunsByNewest } from 'domains/run/utils';
 
 import { config } from '../../config';
 import { readJsonFile, writeJsonFile } from '../../utils/json';
@@ -51,7 +52,7 @@ function reconcileRecord(record: RunRecord): RunRecord {
   return reconciled;
 }
 
-export function listRuns(routine: RoutineName): RunRecord[] {
+function readRuns(routine: RoutineName): RunRecord[] {
   const dir = getRunsDir(routine);
   if (!fs.existsSync(dir)) return [];
   return fs
@@ -60,8 +61,11 @@ export function listRuns(routine: RoutineName): RunRecord[] {
     .flatMap(entry => {
       const record = readJsonFile(path.join(dir, entry), runRecordSchema);
       return record === null ? [] : [reconcileRecord(record)];
-    })
-    .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+    });
+}
+
+export function listRuns(routine: RoutineName): RunRecord[] {
+  return readRuns(routine).sort(compareRunsByNewest);
 }
 
 export function listAllRuns(): RunRecord[] {
@@ -69,8 +73,8 @@ export function listAllRuns(): RunRecord[] {
   if (!fs.existsSync(root)) return [];
   return fs
     .readdirSync(root)
-    .flatMap(routine => listRuns(routineNameSchema.parse(routine)))
-    .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+    .flatMap(routine => readRuns(routineNameSchema.parse(routine)))
+    .sort(compareRunsByNewest);
 }
 
 export function getRunningRuns(): RunRecord[] {
