@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { Webhook } from 'lucide-react';
 import { Link } from 'react-router';
 import {
   Badge,
@@ -8,6 +9,7 @@ import {
   LoadingState,
   RelativeTime,
   Table,
+  Tooltip,
 } from 'design-system/components';
 import { PageHeader } from 'design-system/layouts';
 import { cn } from 'design-system/utils';
@@ -24,6 +26,40 @@ import { useRowLink } from '@web-app/hooks/use-row-link';
 
 function checkHasRunningRoutine(routines: RoutineSummary[] = []): boolean {
   return routines.some(routine => routine.running);
+}
+
+interface ScheduleCellProps {
+  routine: RoutineSummary;
+}
+
+function ScheduleCell({ routine }: ScheduleCellProps) {
+  const webhookLabel = routine.schedule ? 'Also runs on webhook' : 'Runs on webhook';
+  return (
+    <>
+      <div className="text-fg">
+        {routine.scheduleHuman}
+        {routine.webhook && (
+          <Tooltip.Root>
+            <Tooltip.Trigger asChild>
+              <span
+                role="img"
+                aria-label={webhookLabel}
+                className="ml-1.5 inline-flex cursor-default align-[-2px] text-fg-muted"
+              >
+                <Webhook aria-hidden="true" className="size-3.5" />
+              </span>
+            </Tooltip.Trigger>
+            <Tooltip.Content>{webhookLabel}</Tooltip.Content>
+          </Tooltip.Root>
+        )}
+      </div>
+      {routine.schedule && (
+        <div className="font-mono text-body-sm whitespace-nowrap text-fg-muted">
+          {routine.schedule}
+        </div>
+      )}
+    </>
+  );
 }
 
 interface LastRunCellProps {
@@ -112,12 +148,7 @@ function RoutinesTable({ routines }: RoutinesTableProps) {
               </div>
             </Table.Cell>
             <Table.Cell className="min-w-36 whitespace-normal max-sm:min-w-56">
-              <div className="text-fg">{routine.scheduleHuman}</div>
-              {routine.schedule && (
-                <div className="font-mono text-body-sm whitespace-nowrap text-fg-muted">
-                  {routine.schedule}
-                </div>
-              )}
+              <ScheduleCell routine={routine} />
             </Table.Cell>
             <Table.Cell className="text-fg-secondary tabular-nums">
               <RelativeTime iso={routine.nextRunAt} />
