@@ -4,7 +4,7 @@ import { cronRunsBetween } from 'utils/cron';
 import { formatClock, formatDayMonth, formatWeekday } from 'utils/date-time';
 
 import { calendarEntryIdSchema } from '../id/schemas';
-import type { CalendarEntryId, RoutineId } from '../id/types';
+import type { CalendarEntryId, RoutineName } from '../id/types';
 import type { RunRecord } from '../run/types';
 import { getRunStatusLabel } from '../run/utils';
 import type {
@@ -38,7 +38,7 @@ function getStateLabel(entry: CalendarEntry): string {
 
 export function getCalendarEntryOverlapLabel(
   entry: CalendarEntry,
-  routinesById: Map<CalendarEntryId, RoutineId>,
+  routinesById: Map<CalendarEntryId, RoutineName>,
 ): string | null {
   const names = [...new Set(entry.overlaps.map(id => routinesById.get(id) ?? id))];
   return names.length > 0 ? `Overlaps with ${names.join(', ')}` : null;

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 
 import { match } from 'ts-pattern';
 
-import { routineIdSchema } from 'domains/id/schemas';
+import { routineNameSchema } from 'domains/id/schemas';
 import type {
   InitItem,
   ResultItem,
@@ -15,7 +15,7 @@ import type { AgentTask } from './types';
 
 export function makeAgentTask(overrides: Partial<AgentTask> = {}): AgentTask {
   return {
-    name: routineIdSchema.parse('demo'),
+    name: routineNameSchema.parse('demo'),
     prompt: 'Hello',
     model: null,
     effort: null,

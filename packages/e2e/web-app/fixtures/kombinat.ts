@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import type { AgentName } from 'domains/agent/types';
-import { routineIdSchema, sessionIdSchema } from 'domains/id/schemas';
+import { routineNameSchema, sessionIdSchema } from 'domains/id/schemas';
 import { makeRunRecord } from 'domains/run/mocks';
 import type { RunRecord } from 'domains/run/types';
 import { createRunId } from 'domains/run/utils';
@@ -85,7 +85,7 @@ export function createKombinat(root: string): Kombinat {
         exitCode: 0,
         ...run,
         id,
-        routine: routineIdSchema.parse(routine),
+        routine: routineNameSchema.parse(routine),
         sessionId: sessionId === undefined ? null : sessionIdSchema.parse(sessionId),
         startedAt,
         logFile: path.join(runsDir, `${id}.jsonl`),
@@ -96,7 +96,7 @@ export function createKombinat(root: string): Kombinat {
       return record;
     },
     addSkip: (routine, reason) => {
-      const entry = (scheduler.routines[routineIdSchema.parse(routine)] ??= {
+      const entry = (scheduler.routines[routineNameSchema.parse(routine)] ??= {
         lastScheduledFor: null,
         skips: [],
       });

@@ -1,6 +1,6 @@
 import { isMatching, match, P } from 'ts-pattern';
 
-import type { RoutineId, RunId } from 'domains/id/types';
+import type { RoutineName, RunId } from 'domains/id/types';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import type { RunRecord, RunStatus } from 'domains/run/types';
 import { getRunDurationMs, getRunStatusLabel, getTriggerLabel } from 'domains/run/utils';
@@ -28,7 +28,7 @@ import type { Line, Span } from './terminal/text';
 
 export interface OpenRunAction {
   kind: 'open-run';
-  routine: RoutineId;
+  routine: RoutineName;
   id: RunId;
 }
 
@@ -368,7 +368,7 @@ function tabBar(tabs: Tab[], active: RoutineTab): Line {
 }
 
 function runsTable(
-  routine: RoutineId,
+  routine: RoutineName,
   runs: RunRecord[],
   width: number,
   now: number,
@@ -853,7 +853,7 @@ export function helpPopup(width: number, height: number): Line[] {
   });
 }
 
-export function confirmPopup(routine: RoutineId, width: number): Line[] {
+export function confirmPopup(routine: RoutineName, width: number): Line[] {
   const popupWidth = Math.min(Math.max(44, textWidth(routine) + 20), width - 4);
   const body: Line[] = [
     [],

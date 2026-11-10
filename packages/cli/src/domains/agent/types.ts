@@ -1,7 +1,7 @@
 import type { z } from 'zod';
 
 import type { AgentName } from 'domains/agent/types';
-import type { RoutineId, RunId, SessionId } from 'domains/id/types';
+import type { RoutineName, RunId, SessionId } from 'domains/id/types';
 import type { RunRecord, RunTrigger } from 'domains/run/types';
 import type { TranscriptItem } from 'domains/transcript/types';
 
@@ -18,7 +18,7 @@ export interface AgentSettings {
 }
 
 export interface AgentTask extends AgentSettings {
-  name: RoutineId;
+  name: RoutineName;
   prompt: string;
 }
 

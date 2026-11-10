@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const routineIdSchema = z.string().brand<'RoutineId'>();
+export const routineNameSchema = z.string().brand<'RoutineName'>();
 
 export const runIdSchema = z.string().brand<'RunId'>();
 

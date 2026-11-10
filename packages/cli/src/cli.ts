@@ -3,7 +3,7 @@ import { parseArgs } from 'node:util';
 
 import { isMatching, match } from 'ts-pattern';
 
-import { routineIdSchema, runIdSchema } from 'domains/id/schemas';
+import { routineNameSchema, runIdSchema } from 'domains/id/schemas';
 import type { RunId } from 'domains/id/types';
 import { runTriggerSchema } from 'domains/run/schemas';
 import type { RunTrigger } from 'domains/run/types';
@@ -147,7 +147,7 @@ function listRoutines(): void {
 async function runOne(name: string | undefined, options: CliOptions): Promise<void> {
   if (name === undefined) throw new Error('run needs a routine name');
   ensureStateDirs();
-  const record = await runRoutine(getRoutine(routineIdSchema.parse(name)), {
+  const record = await runRoutine(getRoutine(routineNameSchema.parse(name)), {
     trigger: options.trigger,
     scheduledFor: options.scheduledFor,
     runId: options.runId,

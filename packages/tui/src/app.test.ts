@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { routineIdSchema, runIdSchema, sessionIdSchema } from 'domains/id/schemas';
+import { routineNameSchema, runIdSchema, sessionIdSchema } from 'domains/id/schemas';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import type { RunRecord } from 'domains/run/types';
 import type { Transcript } from 'domains/transcript/types';
@@ -17,7 +17,7 @@ const HEIGHT = 40;
 function makeRun(routine: string, id: string, overrides: Partial<RunRecord> = {}): RunRecord {
   return {
     id: runIdSchema.parse(id),
-    routine: routineIdSchema.parse(routine),
+    routine: routineNameSchema.parse(routine),
     agent: 'claude',
     trigger: 'schedule',
     scheduledFor: null,
@@ -41,7 +41,7 @@ function makeRun(routine: string, id: string, overrides: Partial<RunRecord> = {}
 
 function makeRoutine(name: string, overrides: Partial<RoutineSummary> = {}): RoutineSummary {
   return {
-    name: routineIdSchema.parse(name),
+    name: routineNameSchema.parse(name),
     description: `${name} does things`,
     schedule: '10 7-22 * * *',
     scheduleHuman: 'Hourly at :10, 07:00-22:59',

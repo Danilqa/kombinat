@@ -2,8 +2,8 @@ import { isMatching, match, P } from 'ts-pattern';
 
 import { buildCalendar } from 'domains/calendar/utils';
 import type { DaemonStatus } from 'domains/daemon/types';
-import { routineIdSchema, runIdSchema } from 'domains/id/schemas';
-import type { RoutineId } from 'domains/id/types';
+import { routineNameSchema, runIdSchema } from 'domains/id/schemas';
+import type { RoutineName } from 'domains/id/types';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import { RECENT_RUNS_LIMIT } from 'domains/run/constants';
 import type { RunRecord } from 'domains/run/types';
@@ -111,7 +111,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
   }
 
   function withRoutine(
-    name: RoutineId,
+    name: RoutineName,
     respond: (routine: DemoRoutine) => ApiResponse,
   ): ApiResponse {
     const routine = demoRoutines.find(candidate => candidate.name === name);
@@ -171,10 +171,10 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
       .with(['GET', ['status']], () => ok(getStatus(now)))
       .with(['GET', ['routines']], () => ok(demoRoutines.map(routine => getSummary(routine, now))))
       .with(['GET', ['routines', P.string]], ([, [, name]]) =>
-        withRoutine(routineIdSchema.parse(name), routine => ok(getRoutineDetail(routine, now))),
+        withRoutine(routineNameSchema.parse(name), routine => ok(getRoutineDetail(routine, now))),
       )
       .with(['POST', ['routines', P.string, 'run']], ([, [, name]]) =>
-        withRoutine(routineIdSchema.parse(name), routine => startRun(routine, now)),
+        withRoutine(routineNameSchema.parse(name), routine => startRun(routine, now)),
       )
       .with(['GET', ['calendar']], () => getCalendar(url, now))
       .with(['GET', ['runs']], () =>
@@ -185,12 +185,12 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
         ),
       )
       .with(['GET', ['runs', P.string, P.string]], ([, [, routine, id]]) => {
-        const run = history.findRun(routineIdSchema.parse(routine), runIdSchema.parse(id), now);
+        const run = history.findRun(routineNameSchema.parse(routine), runIdSchema.parse(id), now);
         return run === null ? fail(404, 'Run not found') : ok(run);
       })
       .with(['GET', ['runs', P.string, P.string, 'transcript']], ([, [, routine, id]]) => {
         const transcript = history.getTranscript(
-          routineIdSchema.parse(routine),
+          routineNameSchema.parse(routine),
           runIdSchema.parse(id),
           now,
         );

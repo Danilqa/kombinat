@@ -3,14 +3,14 @@ import { test } from 'node:test';
 
 import { isMatching } from 'ts-pattern';
 
-import { calendarEntryIdSchema, routineIdSchema, runIdSchema } from '../id/schemas';
+import { calendarEntryIdSchema, routineNameSchema, runIdSchema } from '../id/schemas';
 import { makeRunRecord } from '../run/mocks';
 import type { RunRecord, RunStatus } from '../run/types';
 import type { ScheduledRoutine } from './types';
 import { buildCalendar, countOverlapPairs, estimatePlannedMinutes } from './utils';
 
 const routine = (name: string, schedule: string, timeoutMinutes = 55): ScheduledRoutine => ({
-  name: routineIdSchema.parse(name),
+  name: routineNameSchema.parse(name),
   schedule,
   enabled: true,
   timeoutMinutes,
@@ -24,7 +24,7 @@ const run = (
 ): RunRecord =>
   makeRunRecord({
     id: runIdSchema.parse(startedAt),
-    routine: routineIdSchema.parse(name),
+    routine: routineNameSchema.parse(name),
     startedAt,
     endedAt,
     status,

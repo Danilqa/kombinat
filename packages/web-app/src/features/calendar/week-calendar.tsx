@@ -17,7 +17,7 @@ import { Button, DropdownMenu, ErrorState } from 'design-system/components';
 import { cn } from 'design-system/utils';
 import { getCalendar } from 'domains/calendar/requests';
 import type { CalendarEntry } from 'domains/calendar/types';
-import type { CalendarEntryId, RoutineId } from 'domains/id/types';
+import type { CalendarEntryId, RoutineName } from 'domains/id/types';
 import {
   countOverlapPairs,
   getCalendarEntryOverlapLabel,
@@ -335,7 +335,7 @@ interface DayColumnProps {
   entries: CalendarEntry[];
   now: Date;
   isToday: boolean;
-  routinesById: Map<CalendarEntryId, RoutineId> | null;
+  routinesById: Map<CalendarEntryId, RoutineName> | null;
 }
 
 function DayColumn({ day, entries, now, isToday, routinesById }: DayColumnProps) {

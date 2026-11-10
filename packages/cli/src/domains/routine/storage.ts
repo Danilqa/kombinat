@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import type { RoutineId } from 'domains/id/types';
+import type { RoutineName } from 'domains/id/types';
 
 import { config } from '../../config';
 import type { Routine } from './types';
@@ -19,7 +19,7 @@ export function loadRoutines(dir = config.routinesDir): Routine[] {
     });
 }
 
-export function getRoutine(name: RoutineId, dir = config.routinesDir): Routine {
+export function getRoutine(name: RoutineName, dir = config.routinesDir): Routine {
   const routine = loadRoutines(dir).find(candidate => candidate.name === name);
   if (!routine) throw new Error(`Unknown routine "${name}" (looked in ${dir})`);
   return routine;

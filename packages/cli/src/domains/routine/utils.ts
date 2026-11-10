@@ -2,7 +2,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import type { AgentName } from 'domains/agent/types';
-import { routineIdSchema } from 'domains/id/schemas';
+import { routineNameSchema } from 'domains/id/schemas';
 import { describeCron, nextCronRun, parseCron } from 'utils/cron';
 import { getErrorMessage } from 'utils/error';
 
@@ -106,7 +106,7 @@ export function buildRoutine(file: string, source: string): Routine {
   const webhookGate = readString(data, 'webhookGate');
   if (webhookGate !== null && !webhook) throw new Error(`${file}: webhookGate needs webhook: true`);
   return {
-    name: routineIdSchema.parse(name),
+    name: routineNameSchema.parse(name),
     description: readString(data, 'description') ?? '',
     schedule,
     cwd: cwd.replace(/^~(?=\/|$)/, os.homedir()),

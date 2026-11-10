@@ -14,7 +14,7 @@ Each domain has up to two halves with the same name:
 
 | Domain         | Shared half                                                                                                                                           | Daemon half                                                                     |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| **id**         | `RoutineId`, `RunId`, `CalendarEntryId` and `SessionId` with their branded schemas                                                                    | none                                                                            |
+| **id**         | `RoutineName`, `RunId`, `CalendarEntryId` and `SessionId` with their branded schemas                                                                  | none                                                                            |
 | **agent**      | `AgentName`, agent label                                                                                                                              | claude, codex and command adapters, registry, settings validation, `AgentTask`  |
 | **transcript** | item schemas and types, preview rule, subagent check, empty and result labels, `TranscriptList`                                                       | none                                                                            |
 | **run**        | `RunRecord`, status and trigger, requests, labels, id, duration, `RECENT_RUNS_LIMIT`, `makeRunRecord`, `RunStatusBadge`, `RunDetailList`, `RunOutput` | runner, record storage with orphan reconciliation, event log and transcript     |
@@ -34,7 +34,7 @@ Not domains:
 
 ### id
 
-The identifiers that cross domains, as branded strings: `RoutineId` is a routine's name, `RunId` a run's id, `CalendarEntryId` a calendar entry's id and `SessionId` an agent's session. A plain `string` does not pass for an id, and one id does not pass for another. A string becomes an id only through its schema's `parse`, where it comes in: a routine file, a state folder, a URL, a CLI argument, an agent's output or a test. The brand exists only in types, so the JSON stays the same.
+The identifiers that cross domains, as branded strings: `RoutineName` is a routine's name, which is its id, `RunId` a run's id, `CalendarEntryId` a calendar entry's id and `SessionId` an agent's session. A plain `string` does not pass for an id, and one id does not pass for another. A string becomes an id only through its schema's `parse`, where it comes in: a routine file, a state folder, a URL, a CLI argument, an agent's output or a test. The brand exists only in types, so the JSON stays the same.
 
 The ids live in a domain of their own, below all the others, because a run record holds its routine's id and a queued webhook its run's id, while routine and run sit above them.
 

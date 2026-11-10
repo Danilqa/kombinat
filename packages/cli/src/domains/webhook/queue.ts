@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { routineIdSchema, runIdSchema } from 'domains/id/schemas';
-import type { RoutineId, RunId } from 'domains/id/types';
+import { routineNameSchema, runIdSchema } from 'domains/id/schemas';
+import type { RoutineName, RunId } from 'domains/id/types';
 import type { QueuedWebhook } from 'domains/webhook/types';
 
 import { config } from '../../config';
@@ -17,11 +17,11 @@ export interface QueuedPayload {
   payload: string;
 }
 
-function getQueueDir(routine: RoutineId): string {
+function getQueueDir(routine: RoutineName): string {
   return path.join(config.stateDir, 'queue', routine);
 }
 
-function listQueueFiles(routine: RoutineId): string[] {
+function listQueueFiles(routine: RoutineName): string[] {
   const dir = getQueueDir(routine);
   if (!fs.existsSync(dir)) return [];
   return fs
@@ -30,11 +30,11 @@ function listQueueFiles(routine: RoutineId): string[] {
     .sort();
 }
 
-export function countQueuedWebhooks(routine: RoutineId): number {
+export function countQueuedWebhooks(routine: RoutineName): number {
   return listQueueFiles(routine).length;
 }
 
-export function enqueueWebhook(routine: RoutineId, runId: RunId, payload: string): boolean {
+export function enqueueWebhook(routine: RoutineName, runId: RunId, payload: string): boolean {
   if (countQueuedWebhooks(routine) >= WEBHOOK_QUEUE_LIMIT) return false;
   const dir = getQueueDir(routine);
   fs.mkdirSync(dir, { recursive: true });
@@ -49,7 +49,7 @@ function getRunId(entry: string): RunId {
   return runIdSchema.parse(entry.slice(entry.indexOf('-') + 1, -'.payload'.length));
 }
 
-export function takeQueuedWebhook(routine: RoutineId): QueuedPayload | null {
+export function takeQueuedWebhook(routine: RoutineName): QueuedPayload | null {
   const [oldest] = listQueueFiles(routine);
   if (oldest === undefined) return null;
   const file = path.join(getQueueDir(routine), oldest);
@@ -58,7 +58,7 @@ export function takeQueuedWebhook(routine: RoutineId): QueuedPayload | null {
   return { runId: getRunId(oldest), payload };
 }
 
-export function listQueuedWebhooks(routine: RoutineId): QueuedWebhook[] {
+export function listQueuedWebhooks(routine: RoutineName): QueuedWebhook[] {
   return listQueueFiles(routine).map(entry => {
     const file = path.join(getQueueDir(routine), entry);
     return {
@@ -70,11 +70,11 @@ export function listQueuedWebhooks(routine: RoutineId): QueuedWebhook[] {
   });
 }
 
-export function listQueuedRoutines(): RoutineId[] {
+export function listQueuedRoutines(): RoutineName[] {
   const root = path.join(config.stateDir, 'queue');
   if (!fs.existsSync(root)) return [];
   return fs
     .readdirSync(root)
-    .map(entry => routineIdSchema.parse(entry))
+    .map(entry => routineNameSchema.parse(entry))
     .filter(routine => countQueuedWebhooks(routine) > 0);
 }

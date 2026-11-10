@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 
-import { routineIdSchema, runIdSchema } from 'domains/id/schemas';
+import { routineNameSchema, runIdSchema } from 'domains/id/schemas';
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kombinat-test-'));
 const routinesDir = path.join(tmp, 'routines');
@@ -13,9 +13,9 @@ process.env['KOMBINAT_ROUTINES_DIR'] = routinesDir;
 process.env['KOMBINAT_STATE_DIR'] = stateDir;
 fs.mkdirSync(routinesDir);
 
-const everyMinute = routineIdSchema.parse('every-minute');
-const triage = routineIdSchema.parse('triage');
-const paused = routineIdSchema.parse('paused');
+const everyMinute = routineNameSchema.parse('every-minute');
+const triage = routineNameSchema.parse('triage');
+const paused = routineNameSchema.parse('paused');
 
 const { tick } = await import('./tick');
 const { readSchedulerState, writeSchedulerState } = await import('./storage');

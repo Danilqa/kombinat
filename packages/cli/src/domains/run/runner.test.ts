@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 
-import { routineIdSchema, runIdSchema } from 'domains/id/schemas';
+import { routineNameSchema, runIdSchema } from 'domains/id/schemas';
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kombinat-test-'));
 process.env['KOMBINAT_STATE_DIR'] = path.join(tmp, 'state');
@@ -50,7 +50,7 @@ test('a webhook run gets its payload at the end of the prompt', async () => {
 });
 
 test('a started run counts as starting until its record appears or time runs out', () => {
-  const routine = routineIdSchema.parse('missing-routine');
+  const routine = routineNameSchema.parse('missing-routine');
   const runId = runIdSchema.parse('20261109T120000Z-wxyz');
   startDetachedRun(routine, { trigger: 'manual', runId });
   assert.equal(checkIsStarting(routine), true);

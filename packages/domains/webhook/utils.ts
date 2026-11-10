@@ -1,6 +1,6 @@
-import type { RoutineId } from '../id/types';
+import type { RoutineName } from '../id/types';
 
-export function getWebhookPath(routine: RoutineId): string {
+export function getWebhookPath(routine: RoutineName): string {
   return `/api/routines/${encodeURIComponent(routine)}/webhook`;
 }
 

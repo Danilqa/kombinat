@@ -1,6 +1,6 @@
 import type { z } from 'zod';
 
-import type { RoutineId } from '../id/types';
+import type { RoutineName } from '../id/types';
 import type {
   calendarEntrySchema,
   plannedCalendarEntrySchema,
@@ -12,7 +12,7 @@ export type RunCalendarEntry = z.infer<typeof runCalendarEntrySchema>;
 export type PlannedCalendarEntry = z.infer<typeof plannedCalendarEntrySchema>;
 
 export interface ScheduledRoutine {
-  name: RoutineId;
+  name: RoutineName;
   schedule: string | null;
   enabled: boolean;
   timeoutMinutes: number;

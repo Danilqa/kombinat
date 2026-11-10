@@ -3,15 +3,15 @@ import path from 'node:path';
 
 import { isMatching } from 'ts-pattern';
 
-import { routineIdSchema } from 'domains/id/schemas';
-import type { RoutineId, RunId } from 'domains/id/types';
+import { routineNameSchema } from 'domains/id/schemas';
+import type { RoutineName, RunId } from 'domains/id/types';
 import { runRecordSchema } from 'domains/run/schemas';
 import type { RunRecord } from 'domains/run/types';
 
 import { config } from '../../config';
 import { readJsonFile, writeJsonFile } from '../../utils/json';
 
-export function getRunsDir(routine: RoutineId): string {
+export function getRunsDir(routine: RoutineName): string {
   return path.join(config.stateDir, 'runs', routine);
 }
 
@@ -25,7 +25,7 @@ export function writeRunRecord(record: RunRecord): void {
   writeJsonFile(path.join(dir, `${record.id}.json`), record);
 }
 
-export function readRunRecord(routine: RoutineId, id: RunId): RunRecord | null {
+export function readRunRecord(routine: RoutineName, id: RunId): RunRecord | null {
   return readJsonFile(path.join(getRunsDir(routine), `${id}.json`), runRecordSchema);
 }
 
@@ -51,7 +51,7 @@ function reconcileRecord(record: RunRecord): RunRecord {
   return reconciled;
 }
 
-export function listRuns(routine: RoutineId): RunRecord[] {
+export function listRuns(routine: RoutineName): RunRecord[] {
   const dir = getRunsDir(routine);
   if (!fs.existsSync(dir)) return [];
   return fs
@@ -69,7 +69,7 @@ export function listAllRuns(): RunRecord[] {
   if (!fs.existsSync(root)) return [];
   return fs
     .readdirSync(root)
-    .flatMap(routine => listRuns(routineIdSchema.parse(routine)))
+    .flatMap(routine => listRuns(routineNameSchema.parse(routine)))
     .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
 }
 

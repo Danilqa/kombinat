@@ -2,7 +2,7 @@ import { isMatching, match, P } from 'ts-pattern';
 
 import type { AgentName } from 'domains/agent/types';
 import { runIdSchema, sessionIdSchema } from 'domains/id/schemas';
-import type { RoutineId, RunId, SessionId } from 'domains/id/types';
+import type { RoutineName, RunId, SessionId } from 'domains/id/types';
 import type { RunRecord, RunTrigger } from 'domains/run/types';
 import type { Skip, SkipReason } from 'domains/scheduler/types';
 import type { Transcript, TranscriptItem } from 'domains/transcript/types';
@@ -37,8 +37,8 @@ interface ScheduledEvents {
 export interface DemoHistory {
   listRuns(now: Date): RunRecord[];
   listSkips(routine: DemoRoutine, now: Date): Skip[];
-  findRun(routine: RoutineId, id: RunId, now: Date): RunRecord | null;
-  getTranscript(routine: RoutineId, id: RunId, now: Date): Transcript | null;
+  findRun(routine: RoutineName, id: RunId, now: Date): RunRecord | null;
+  getTranscript(routine: RoutineName, id: RunId, now: Date): Transcript | null;
   startRun(routine: DemoRoutine, now: Date): void;
 }
 
@@ -306,7 +306,7 @@ export function createDemoHistory(routines: DemoRoutine[], loadedAt: Date): Demo
     ].sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
   }
 
-  function findDemoRun(routine: RoutineId, id: RunId, now: Date): DemoRun | undefined {
+  function findDemoRun(routine: RoutineName, id: RunId, now: Date): DemoRun | undefined {
     return listDemoRuns(now).find(run => run.routine.name === routine && run.id === id);
   }
 

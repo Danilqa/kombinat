@@ -1,6 +1,6 @@
 import type { AgentName } from 'domains/agent/types';
-import { routineIdSchema } from 'domains/id/schemas';
-import type { RoutineId } from 'domains/id/types';
+import { routineNameSchema } from 'domains/id/schemas';
+import type { RoutineName } from 'domains/id/types';
 import type { RunStatus } from 'domains/run/types';
 import type { SkipReason } from 'domains/scheduler/types';
 
@@ -55,7 +55,7 @@ export interface DemoQueuedWebhook {
 }
 
 export interface DemoRoutine {
-  name: RoutineId;
+  name: RoutineName;
   description: string;
   schedule: string | null;
   enabled: boolean;
@@ -93,7 +93,7 @@ const AGENT_QUEUE_COMMAND =
   "gh issue list --label agent --state open --json number,title --jq 'sort_by(.number)'";
 
 const nightAgentTasks: DemoRoutine = {
-  name: routineIdSchema.parse('night-agent-tasks'),
+  name: routineNameSchema.parse('night-agent-tasks'),
   description: 'Works through the issues labelled agent while I sleep',
   schedule: '0 2 * * *',
   enabled: true,
@@ -228,7 +228,7 @@ const KNOWN_DESIGN_ISSUES =
   '[{"number":498,"title":"Sidebar icons are misaligned in Safari"},{"number":503,"title":"The invoices empty state has no call to action"}]';
 
 const designUxIssues: DemoRoutine = {
-  name: routineIdSchema.parse('design-ux-issues'),
+  name: routineNameSchema.parse('design-ux-issues'),
   description: 'Clicks through the app at night and files design and UX issues',
   schedule: '30 3 * * *',
   enabled: true,
@@ -333,7 +333,7 @@ Look for broken layouts, text that overflows or is cut off, low contrast, incons
 };
 
 const postReleaseMonitoring: DemoRoutine = {
-  name: routineIdSchema.parse('post-release-monitoring'),
+  name: routineNameSchema.parse('post-release-monitoring'),
   description: 'Watches what shipped in the last 3 days and fixes regressions',
   schedule: '0 10,16 * * *',
   enabled: true,
@@ -445,7 +445,7 @@ c03a5f2 Merge pull request #478 from acme/cache-browsers`,
 };
 
 const onCallEngineer: DemoRoutine = {
-  name: routineIdSchema.parse('on-call-engineer'),
+  name: routineNameSchema.parse('on-call-engineer'),
   description: 'Checks for production incidents and proposes fixes',
   schedule: '0 9,13,17,21 * * *',
   enabled: true,
@@ -596,7 +596,7 @@ e9a4c70 Add archived_at to clients (#451)`,
 };
 
 const writeReleaseNotes: DemoRoutine = {
-  name: routineIdSchema.parse('write-release-notes'),
+  name: routineNameSchema.parse('write-release-notes'),
   description: 'Drafts release notes from what was merged since the last tag',
   schedule: null,
   enabled: true,
@@ -662,7 +662,7 @@ c03a5f2 Merge pull request #478 from acme/cache-browsers
 };
 
 const flakyE2eFixer: DemoRoutine = {
-  name: routineIdSchema.parse('flaky-e2e-fixer'),
+  name: routineNameSchema.parse('flaky-e2e-fixer'),
   description: 'Finds flaky end-to-end tests in CI and fixes them',
   schedule: '0 7 * * 1-5',
   enabled: true,
@@ -749,7 +749,7 @@ const BUGS_COMMAND =
   "gh issue list --label bug --search no:assignee --json number,title --jq 'sort_by(.number) | .[0]'";
 
 const bugFixPickup: DemoRoutine = {
-  name: routineIdSchema.parse('bug-fix-pickup'),
+  name: routineNameSchema.parse('bug-fix-pickup'),
   description: 'Fixes the oldest unassigned bug and opens a pull request',
   schedule: '30 11,14 * * *',
   enabled: true,
@@ -842,7 +842,7 @@ Reproduce it with a failing test first, then fix it. Keep the change small and r
 };
 
 const deadCodeCleanup: DemoRoutine = {
-  name: routineIdSchema.parse('dead-code-cleanup'),
+  name: routineNameSchema.parse('dead-code-cleanup'),
   description: 'Removes dead code and feature flags that are on for everyone',
   schedule: '0 10 * * 1',
   enabled: true,
@@ -951,7 +951,7 @@ src/utils/format.ts: formatLegacyDate, padCents
 };
 
 const supportSignals: DemoRoutine = {
-  name: routineIdSchema.parse('support-signals'),
+  name: routineNameSchema.parse('support-signals'),
   description: "Turns the day's support chats into product signals",
   schedule: '0 18 * * *',
   enabled: true,
@@ -1010,7 +1010,7 @@ const reviewInit = init({
 const pullLatest = hook('git pull --ff-only', 0, 'Already up to date.');
 
 const prReviewSweep: DemoRoutine = {
-  name: routineIdSchema.parse('pr-review-sweep'),
+  name: routineNameSchema.parse('pr-review-sweep'),
   description: 'Reviews pull requests that wait for my review',
   schedule: '15 9-17/2 * * *',
   enabled: true,
@@ -1144,7 +1144,7 @@ new file mode 100644
 };
 
 const umbrellaCheck: DemoRoutine = {
-  name: routineIdSchema.parse('umbrella-check'),
+  name: routineNameSchema.parse('umbrella-check'),
   description: 'Says if you need an umbrella today',
   schedule: '0 8 * * 1-5',
   enabled: false,
@@ -1200,7 +1200,7 @@ Answer in one short line: do I need an umbrella today, and why.`,
 };
 
 const notesBackup: DemoRoutine = {
-  name: routineIdSchema.parse('notes-backup'),
+  name: routineNameSchema.parse('notes-backup'),
   description: 'Copies my notes to the backup drive',
   schedule: '30 23 * * *',
   enabled: true,

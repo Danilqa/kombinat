@@ -4,7 +4,7 @@ import { Play } from 'lucide-react';
 import { Button } from 'design-system/components';
 import { sameOriginApi } from 'utils/http';
 
-import type { RoutineId } from '../../id/types';
+import type { RoutineName } from '../../id/types';
 import { startRoutineRun } from '../requests';
 
 const QUERY_KEYS_CHANGED_BY_RUN = [['routines'], ['runs'], ['calendar'], ['status']];
@@ -12,7 +12,7 @@ const QUERY_KEYS_CHANGED_BY_RUN = [['routines'], ['runs'], ['calendar'], ['statu
 type RunNowVariant = 'primary' | 'secondary';
 
 interface RunNowButtonProps {
-  routine: RoutineId;
+  routine: RoutineName;
   isRunning: boolean;
   variant?: RunNowVariant;
 }

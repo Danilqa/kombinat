@@ -2,8 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router';
 import { Card, ErrorState, LoadingState, Markdown, Tabs } from 'design-system/components';
 import { PageHeader, SectionHeader } from 'design-system/layouts';
-import { routineIdSchema } from 'domains/id/schemas';
-import type { RoutineId } from 'domains/id/types';
+import { routineNameSchema } from 'domains/id/schemas';
+import type { RoutineName } from 'domains/id/types';
 import {
   RoutineBadges,
   RoutineDetailList,
@@ -25,7 +25,7 @@ function checkIsRoutineRunning(routine: RoutineDetail | undefined): boolean {
 }
 
 interface RoutineHeaderProps {
-  name: RoutineId;
+  name: RoutineName;
   routine: RoutineDetail | undefined;
 }
 
@@ -90,7 +90,7 @@ function RoutineView({ routine }: RoutineViewProps) {
 }
 
 export function RoutinePage() {
-  const name = routineIdSchema.parse(useParams<'name'>().name ?? '');
+  const name = routineNameSchema.parse(useParams<'name'>().name ?? '');
   useDocumentTitle(name);
   const { data, error, isPending } = useQuery({
     queryKey: ['routines', name],
