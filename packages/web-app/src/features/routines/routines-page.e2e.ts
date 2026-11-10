@@ -71,7 +71,7 @@ test('runs a routine from a webhook with its request body', async ({ page, kombi
   const response = await page.request.post('/api/routines/echo-payload/webhook', {
     data: { pullRequest: 42 },
   });
-  expect(response.status()).toBe(202);
+  expect(response.status()).toBe(200);
   await page.goto('/');
 
   const lastRun = page
@@ -84,5 +84,35 @@ test('runs a routine from a webhook with its request body', async ({ page, kombi
     - definition: Webhook
     - text: Result
     - paragraph: '{"pullRequest":42}'
+  `);
+});
+
+test('runs a routine only for the webhooks its gate lets through', async ({ page, kombinat }) => {
+  test.slow();
+  kombinat.addRoutine({
+    name: 'triage-issue',
+    agent: 'command',
+    command: 'cat',
+    webhook: true,
+    webhookGate:
+      'printenv KOMBINAT_WEBHOOK_HEADERS | grep -q s3cret || exit 1; grep -q create || exit 78',
+  });
+  const url = '/api/routines/triage-issue/webhook';
+  const headers = { 'x-secret': 's3cret' };
+
+  const unsigned = await page.request.post(url, { data: { action: 'create' } });
+  expect(unsigned.status()).toBe(401);
+  const updated = await page.request.post(url, { headers, data: { action: 'update' } });
+  expect(await updated.json()).toEqual({ ok: true, runId: null });
+  const created = await page.request.post(url, { headers, data: { action: 'create' } });
+  expect(await created.json()).toEqual({ ok: true, runId: expect.any(String) });
+  await page.goto('/routines/triage-issue');
+
+  await expect(page.getByRole('tab', { name: 'Runs 1' })).toBeVisible({
+    timeout: NEW_RUN_TIMEOUT_MS,
+  });
+  await expect(page.getByRole('main')).toMatchAriaSnapshot(`
+    - term: Webhook gate
+    - definition: printenv KOMBINAT_WEBHOOK_HEADERS | grep -q s3cret || exit 1; grep -q create || exit 78
   `);
 });

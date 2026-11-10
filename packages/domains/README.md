@@ -83,18 +83,20 @@ The daemon's decision of when routines start. Every `KOMBINAT_TICK_SECONDS` (def
 
 ### routine
 
-A named, version-controlled unit of recurring agent work: one markdown file, `routines/<name>.md`. Its frontmatter holds scalar values only and sets `name`, `description`, `schedule`, `cwd`, `agent` and its settings, `enabled`, `webhook`, `timeoutMinutes` and an optional `before` hook. The body is the prompt.
+A named, version-controlled unit of recurring agent work: one markdown file, `routines/<name>.md`. Its frontmatter holds scalar values only and sets `name`, `description`, `schedule`, `cwd`, `agent` and its settings, `enabled`, `webhook` with an optional `webhookGate`, `timeoutMinutes` and an optional `before` hook. The body is the prompt.
 
 - `name` equals the file name and is lowercase kebab-case.
 - `schedule` is a 5-field cron in local time, or `manual`, which is stored as `null`.
 - `cwd` is required, and a leading `~` is expanded.
 - The prompt is not empty.
-- `agent` defaults to `claude`, `enabled` to `true`, `webhook` to `false` and `timeoutMinutes` to 55. `webhook` must be `true` or `false`.
+- `agent` defaults to `claude`, `enabled` to `true`, `webhook` to `false` and `timeoutMinutes` to 55. `webhook` must be `true` or `false`, and `webhookGate` needs `webhook: true`.
 - The schedule gives the routine its next run, `null` when it is manual or disabled, and its label: `Manual` or the cron in words.
 
 Clients see a routine as a summary (its definition plus next run, running, last run and last skip) or a detail (plus the prompt, runs and skips). They can start it with Run now, which answers 409 while the routine is running.
 
-A routine with `webhook: true` also starts with `POST /api/routines/<name>/webhook`. Its request body, at most 256 KB, becomes the run's payload, and the answer is 202 with the run's id. Without the flag it answers 404, and 409 when the routine is disabled or running. Each such run has the trigger `webhook`.
+A routine with `webhook: true` also starts with `POST /api/routines/<name>/webhook`. Its request body, at most 256 KB, becomes the run's payload, and the answer is 200 with the run's id. Without the flag it answers 404, and 409 when the routine is disabled or running. Each such run has the trigger `webhook`.
+
+The routine's `webhookGate`, a shell command, decides about each request first. It runs in the project folder with the `before` hook's `KOMBINAT_REPO` and `PATH`, gets the raw body on stdin and the headers as JSON in `KOMBINAT_WEBHOOK_HEADERS`, and is killed after 3 s, which answers 504. Exit 0 starts the run, and a non-blank output replaces the payload. Exit 78 starts nothing and answers 200, with the output as the body when it is JSON and `{"ok":true,"runId":null}` otherwise, so senders such as Linear do not retry. Any other exit answers 401 and logs the gate's stderr in the daemon log. The gate runs before the disabled and running checks, so an ignored event never gets a 409.
 
 ### calendar
 

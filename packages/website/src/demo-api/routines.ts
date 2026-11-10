@@ -53,6 +53,7 @@ export interface DemoRoutine {
   schedule: string | null;
   enabled: boolean;
   webhook?: boolean;
+  webhookGate?: string;
   agent: AgentName;
   model: string | null;
   effort: string | null;
@@ -441,6 +442,7 @@ const onCallEngineer: DemoRoutine = {
   schedule: '0 9,13,17,21 * * *',
   enabled: true,
   webhook: true,
+  webhookGate: 'node scripts/verify-alert.ts',
   agent: 'claude',
   model: FABLE,
   effort: 'max',

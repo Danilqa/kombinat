@@ -54,6 +54,16 @@ test('webhooks are off unless the frontmatter turns them on', () => {
   );
 });
 
+test('a webhook gate needs the webhook', () => {
+  const gated = buildRoutine('/tmp/demo.md', routineFile('webhook: true\nwebhookGate: check.sh'));
+  assert.equal(gated.webhookGate, 'check.sh');
+  assert.equal(buildRoutine('/tmp/demo.md', routineFile('webhook: true')).webhookGate, null);
+  assert.throws(
+    () => buildRoutine('/tmp/demo.md', routineFile('webhookGate: check.sh')),
+    /webhookGate needs webhook: true/,
+  );
+});
+
 test('manual routines have no schedule', () => {
   const r = buildRoutine(
     '/tmp/demo.md',

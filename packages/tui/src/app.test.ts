@@ -47,6 +47,7 @@ function makeRoutine(name: string, overrides: Partial<RoutineSummary> = {}): Rou
     nextRunAt: '2026-10-06T12:10:00Z',
     enabled: true,
     webhook: false,
+    webhookGate: null,
     agent: 'claude',
     model: 'claude-opus-5-5',
     effort: 'high',

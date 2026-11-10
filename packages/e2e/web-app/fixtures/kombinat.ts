@@ -20,6 +20,7 @@ export interface RoutineFile {
   command?: string;
   enabled?: boolean;
   webhook?: boolean;
+  webhookGate?: string;
   timeoutMinutes?: number;
   maxBudgetUsd?: number;
   prompt?: string;
