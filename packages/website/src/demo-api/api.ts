@@ -5,12 +5,14 @@ import type { DaemonStatus } from 'domains/daemon/types';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import { RECENT_RUNS_LIMIT } from 'domains/run/constants';
 import type { RunRecord } from 'domains/run/types';
+import { createRunId } from 'domains/run/utils';
+import type { QueuedWebhook } from 'domains/webhook/types';
 import type { Skip } from 'domains/scheduler/types';
 import { describeCron, nextCronRun } from 'utils/cron';
 
 import { HOME, STATE_DIR } from './constants';
 import { createDemoHistory } from './history';
-import { demoRoutines, type DemoRoutine } from './routines';
+import { demoRoutines, type DemoQueuedWebhook, type DemoRoutine } from './routines';
 
 export interface ApiResponse {
   status: number;
@@ -30,10 +32,24 @@ const TICK_MS = 30_000;
 const ok = (body: unknown): ApiResponse => ({ status: 200, body });
 const fail = (status: number, error: string): ApiResponse => ({ status, body: { error } });
 
+function toQueuedWebhook(
+  { minutesAgo, payload }: DemoQueuedWebhook,
+  loadedAt: Date,
+): QueuedWebhook {
+  const queuedAt = new Date(loadedAt.getTime() - minutesAgo * 60_000);
+  return {
+    runId: createRunId(queuedAt),
+    queuedAt: queuedAt.toISOString(),
+    bytes: new TextEncoder().encode(payload).length,
+    preview: payload,
+  };
+}
+
 function toRoutineSummary(
   routine: DemoRoutine,
   runs: RunRecord[],
   skips: Skip[],
+  queue: QueuedWebhook[],
   now: Date,
 ): RoutineSummary {
   const { schedule, enabled } = routine;
@@ -47,6 +63,7 @@ function toRoutineSummary(
     enabled,
     webhook: routine.webhook ?? false,
     webhookGate: routine.webhookGate ?? null,
+    queuedWebhooks: queue.length,
     agent: routine.agent,
     model: routine.model,
     effort: routine.effort,
@@ -65,9 +82,20 @@ function toRoutineSummary(
 export function createDemoApi(loadedAt = new Date()): DemoApi {
   const history = createDemoHistory(demoRoutines, loadedAt);
   const daemonStartedAt = new Date(loadedAt.getTime() - DAEMON_UPTIME_MS);
+  const queues = new Map(
+    demoRoutines.map(routine => [
+      routine.name,
+      (routine.queuedWebhooks ?? []).map(webhook => toQueuedWebhook(webhook, loadedAt)),
+    ]),
+  );
 
   function listRoutineRuns(routine: DemoRoutine, now: Date): RunRecord[] {
     return history.listRuns(now).filter(run => run.routine === routine.name);
+  }
+
+  function listQueue(routine: DemoRoutine, now: Date): QueuedWebhook[] {
+    const isRunning = listRoutineRuns(routine, now).some(isMatching({ status: 'running' }));
+    return isRunning ? (queues.get(routine.name) ?? []) : [];
   }
 
   function getSummary(routine: DemoRoutine, now: Date): RoutineSummary {
@@ -75,6 +103,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
       routine,
       listRoutineRuns(routine, now),
       history.listSkips(routine, now),
+      listQueue(routine, now),
       now,
     );
   }
@@ -106,6 +135,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
       prompt: routine.prompt,
       runs: listRoutineRuns(routine, now),
       skips: history.listSkips(routine, now),
+      queue: listQueue(routine, now),
     };
   }
 

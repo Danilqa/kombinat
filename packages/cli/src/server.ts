@@ -9,7 +9,6 @@ import type { DaemonStatus } from 'domains/daemon/types';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import { RECENT_RUNS_LIMIT } from 'domains/run/constants';
 import type { RunRecord } from 'domains/run/types';
-import { createRunId } from 'domains/run/utils';
 import { getErrorMessage } from 'utils/error';
 
 import { config } from './config';
@@ -17,12 +16,17 @@ import { loadRoutines } from './domains/routine/storage';
 import type { Routine } from './domains/routine/types';
 import { describeSchedule, getNextRun } from './domains/routine/utils';
 import { buildRunTranscript, readRunEvents } from './domains/run/event-log';
-import { writePayload } from './domains/run/payload';
-import { startDetachedRun } from './domains/run/runner';
-import { decideWebhook, WEBHOOK_GATE_TIMEOUT_MS } from './domains/run/webhook-gate';
-import type { WebhookRequest } from './domains/run/webhook-gate';
+import { checkIsRunning, checkIsStarting, startDetachedRun } from './domains/run/runner';
 import { listAllRuns, listRuns, readRunRecord } from './domains/run/storage';
 import { getSkips, readSchedulerState } from './domains/scheduler/storage';
+import { WEBHOOK_GATE_TIMEOUT_MS } from './domains/webhook/gate';
+import type { WebhookRequest } from './domains/webhook/gate';
+import {
+  countQueuedWebhooks,
+  listQueuedWebhooks,
+  WEBHOOK_QUEUE_LIMIT,
+} from './domains/webhook/queue';
+import { receiveWebhook } from './domains/webhook/receive';
 
 interface ApiResponse {
   status: number;
@@ -65,6 +69,7 @@ function toRoutineSummary(routine: Routine, runs: RunRecord[]): RoutineSummary {
     enabled: routine.enabled,
     webhook: routine.webhook,
     webhookGate: routine.webhookGate,
+    queuedWebhooks: countQueuedWebhooks(routine.name),
     agent: routine.agent,
     model: routine.model,
     effort: routine.effort,
@@ -74,7 +79,7 @@ function toRoutineSummary(routine: Routine, runs: RunRecord[]): RoutineSummary {
     timeoutMinutes: routine.timeoutMinutes,
     maxBudgetUsd: routine.maxBudgetUsd,
     file: path.relative(config.projectRoot, routine.file),
-    running: runs.some(isMatching({ status: 'running' })),
+    running: checkIsStarting(routine.name) || runs.some(isMatching({ status: 'running' })),
     lastRun: runs[0] ?? null,
     lastSkip: getSkips(routine.name).at(-1) ?? null,
   };
@@ -90,7 +95,9 @@ function getStatus(startedAt: Date): DaemonStatus {
     claudeBin: config.claudeBin,
     codexBin: config.codexBin,
     maxConcurrentRuns: config.maxConcurrentRuns,
-    running: listAllRuns().filter(isMatching({ status: 'running' })).length,
+    running:
+      listAllRuns().filter(isMatching({ status: 'running' })).length +
+      loadRoutines().filter(routine => checkIsStarting(routine.name)).length,
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     now: new Date().toISOString(),
   };
@@ -120,46 +127,39 @@ function getRoutineDetail(routine: Routine): ApiResponse {
     prompt: routine.prompt,
     runs,
     skips: getSkips(routine.name),
+    queue: listQueuedWebhooks(routine.name),
   };
   return ok(detail);
 }
 
-function checkIsRunning(routine: Routine): boolean {
-  return listRuns(routine.name).some(isMatching({ status: 'running' }));
-}
-
 function startRun(routine: Routine): ApiResponse {
-  if (checkIsRunning(routine)) return fail(409, `${routine.name} is already running`);
+  if (checkIsRunning(routine.name)) return fail(409, `${routine.name} is already running`);
   startDetachedRun(routine.name, { trigger: 'manual' });
   return { status: 202, body: { ok: true } };
 }
 
-function startWebhookRun(routine: Routine, payload: string): ApiResponse {
-  if (!routine.enabled) return fail(409, `${routine.name} is disabled`);
-  if (checkIsRunning(routine)) return fail(409, `${routine.name} is already running`);
-  const runId = createRunId();
-  if (payload !== '') writePayload(routine.name, runId, payload);
-  startDetachedRun(routine.name, { trigger: 'webhook', runId });
-  return ok({ ok: true, runId });
-}
-
 // Linear treats anything but 200 as a failed delivery.
 async function handleWebhook(routine: Routine, context: ApiContext): Promise<ApiResponse> {
-  if (!routine.webhook) {
-    return fail(404, `${routine.name} has no webhook, add webhook: true to its frontmatter`);
-  }
-  const decision = await decideWebhook(routine, context.request);
-  return match(decision)
-    .with({ outcome: 'run' }, ({ payload }) => startWebhookRun(routine, payload))
-    .with({ outcome: 'ignore' }, ({ response }) => ok(response ?? { ok: true, runId: null }))
-    .with({ outcome: 'reject' }, ({ reason }) => {
-      context.log(`webhookGate of ${routine.name} ${reason}`);
+  const { name } = routine;
+  const outcome = await receiveWebhook(routine, context.request);
+  return match(outcome)
+    .with({ outcome: 'no_webhook' }, () =>
+      fail(404, `${name} has no webhook, add webhook: true to its frontmatter`),
+    )
+    .with({ outcome: P.union('started', 'queued') }, ({ runId }) => ok({ ok: true, runId }))
+    .with({ outcome: 'ignored' }, ({ response }) => ok(response ?? { ok: true, runId: null }))
+    .with({ outcome: 'rejected' }, ({ reason }) => {
+      context.log(`webhookGate of ${name} ${reason}`);
       return fail(401, 'webhookGate rejected the request');
     })
-    .with({ outcome: 'timeout' }, () => {
-      context.log(`webhookGate of ${routine.name} timed out`);
+    .with({ outcome: 'timed_out' }, () => {
+      context.log(`webhookGate of ${name} timed out`);
       return fail(504, `webhookGate took longer than ${WEBHOOK_GATE_TIMEOUT_MS / 1000} s`);
     })
+    .with({ outcome: 'disabled' }, () => fail(409, `${name} is disabled`))
+    .with({ outcome: 'queue_full' }, () =>
+      fail(429, `${name} already has ${WEBHOOK_QUEUE_LIMIT} webhooks waiting`),
+    )
     .exhaustive();
 }
 

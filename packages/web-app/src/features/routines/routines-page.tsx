@@ -11,7 +11,7 @@ import {
 } from 'design-system/components';
 import { PageHeader } from 'design-system/layouts';
 import { cn } from 'design-system/utils';
-import { RunNowButton } from 'domains/routine/components';
+import { RunNowButton, WebhookQueueButton } from 'domains/routine/components';
 import { getRoutines } from 'domains/routine/requests';
 import type { RoutineSummary } from 'domains/routine/types';
 import { RunStatusBadge } from 'domains/run/components';
@@ -34,19 +34,22 @@ function LastRunCell({ routine }: LastRunCellProps) {
   const { lastRun, lastSkip } = routine;
   return (
     <div className="space-y-1">
-      {lastRun ? (
-        <Link
-          to={getRunPath(lastRun.routine, lastRun.id)}
-          className="flex flex-col items-start gap-1"
-        >
-          <RunStatusBadge status={lastRun.status} />
-          <span className="text-body-sm text-fg-muted tabular-nums">
-            <RelativeTime iso={lastRun.startedAt} />
-          </span>
-        </Link>
-      ) : (
-        <span className="text-fg-muted">Never run</span>
-      )}
+      <div className="flex items-start gap-1.5">
+        {lastRun ? (
+          <Link
+            to={getRunPath(lastRun.routine, lastRun.id)}
+            className="flex flex-col items-start gap-1"
+          >
+            <RunStatusBadge status={lastRun.status} />
+            <span className="text-body-sm text-fg-muted tabular-nums">
+              <RelativeTime iso={lastRun.startedAt} />
+            </span>
+          </Link>
+        ) : (
+          <span className="text-fg-muted">Never run</span>
+        )}
+        <WebhookQueueButton routine={routine.name} count={routine.queuedWebhooks} look="chip" />
+      </div>
       {lastSkip && (
         <div className="text-body-sm text-fg-muted">
           Skipped <RelativeTime iso={lastSkip.at} /> ({getSkipReasonLabel(lastSkip.reason)})
@@ -103,7 +106,7 @@ function RoutinesTable({ routines }: RoutinesTableProps) {
                 )}
               </div>
             </Table.Cell>
-            <Table.Cell className="max-w-56 min-w-36 whitespace-normal text-fg-secondary max-md:hidden">
+            <Table.Cell className="w-full min-w-48 whitespace-normal text-fg-secondary max-md:hidden">
               <div className="line-clamp-2" title={routine.description}>
                 {routine.description}
               </div>
@@ -111,7 +114,9 @@ function RoutinesTable({ routines }: RoutinesTableProps) {
             <Table.Cell className="min-w-36 whitespace-normal max-sm:min-w-56">
               <div className="text-fg">{routine.scheduleHuman}</div>
               {routine.schedule && (
-                <div className="font-mono text-body-sm text-fg-muted">{routine.schedule}</div>
+                <div className="font-mono text-body-sm whitespace-nowrap text-fg-muted">
+                  {routine.schedule}
+                </div>
               )}
             </Table.Cell>
             <Table.Cell className="text-fg-secondary tabular-nums">
@@ -119,7 +124,7 @@ function RoutinesTable({ routines }: RoutinesTableProps) {
             </Table.Cell>
             <Table.Cell>
               <div
-                className="max-w-56 truncate font-mono text-body-sm text-fg"
+                className="max-w-44 truncate font-mono text-body-sm text-fg"
                 title={routine.model ?? routine.command ?? routine.agent}
               >
                 {routine.model ?? routine.command ?? routine.agent}

@@ -17,6 +17,7 @@ import {
   checkIsExpandable,
   overlayOnto,
   routinePage,
+  getRoutineTabs,
   routineRow,
   runHeaderLines,
   runRow,
@@ -97,7 +98,6 @@ interface Viewport {
 type Hint = [string, string];
 
 const FOCUS_ORDER: Focus[] = ['routines', 'runs', 'detail'];
-const TABS: RoutineTab[] = ['runs', 'prompt', 'skips'];
 const MIN_WIDTH = 60;
 const MIN_HEIGHT = 18;
 const MESSAGE_MS = 6000;
@@ -513,7 +513,10 @@ export class TuiApp {
   }
 
   private switchTab(page: RoutinePage, direction: 1 | -1): void {
-    page.tab = TABS[(TABS.indexOf(page.tab) + direction + TABS.length) % TABS.length] ?? 'runs';
+    const routine = this.routines.find(candidate => candidate.name === page.name);
+    const tabs =
+      routine === undefined ? (['runs'] satisfies RoutineTab[]) : getRoutineTabs(routine);
+    page.tab = tabs[(tabs.indexOf(page.tab) + direction + tabs.length) % tabs.length] ?? 'runs';
     page.cursor = 0;
     page.scroll = 0;
     page.anchor = null;

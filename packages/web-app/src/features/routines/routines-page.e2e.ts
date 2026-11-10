@@ -116,3 +116,26 @@ test('runs a routine only for the webhooks its gate lets through', async ({ page
     - definition: printenv KOMBINAT_WEBHOOK_HEADERS | grep -q s3cret || exit 1; grep -q create || exit 78
   `);
 });
+
+test('shows the webhooks that wait in the queue of a routine', async ({ page, kombinat }) => {
+  kombinat.addRoutine({ name: 'triage-issue', webhook: true });
+  kombinat.addQueuedWebhook({
+    routine: 'triage-issue',
+    payload: '{"issue":"ENG-1"}',
+    minutesAgo: 3,
+  });
+  kombinat.addQueuedWebhook({ routine: 'triage-issue', payload: '', minutesAgo: 1 });
+  await page.goto('/');
+
+  await page.getByRole('button', { name: '2 queued for triage-issue' }).click();
+
+  const queue = page.getByRole('dialog', { name: 'Webhook queue of triage-issue' });
+  await expect(queue).toContainText('2 webhooks in queue');
+  const webhooks = queue.getByRole('listitem');
+  await expect(webhooks.first()).toContainText(/^Next · queued .*17 B\{"issue":"ENG-1"\}$/);
+  await expect(webhooks.last()).toContainText(/^#2 · queued .*Empty body$/);
+  await webhooks.first().click();
+  await page.keyboard.press('Escape');
+  await expect(queue).toBeHidden();
+  await expect(page).toHaveURL(/\/$/);
+});

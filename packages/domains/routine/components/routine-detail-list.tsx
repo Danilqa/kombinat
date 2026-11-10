@@ -1,7 +1,7 @@
 import { DetailList, RelativeTime, type DetailEntry } from 'design-system/components';
 
 import type { RoutineSummary } from '../types';
-import { getWebhookPath } from '../utils';
+import { getWebhookPath } from '../../webhook/utils';
 
 function getStatEntries(routine: RoutineSummary): DetailEntry[] {
   return [

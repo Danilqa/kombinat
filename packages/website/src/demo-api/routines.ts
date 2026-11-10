@@ -47,6 +47,11 @@ export interface DemoStartedRun {
   outcome: string;
 }
 
+export interface DemoQueuedWebhook {
+  minutesAgo: number;
+  payload: string;
+}
+
 export interface DemoRoutine {
   name: string;
   description: string;
@@ -69,6 +74,7 @@ export interface DemoRoutine {
   pins?: DemoPin[];
   manualRuns?: DemoStartedRun[];
   webhookRuns?: DemoStartedRun[];
+  queuedWebhooks?: DemoQueuedWebhook[];
 }
 
 const REPO = `${HOME}/Projects/acme-web`;
@@ -569,8 +575,21 @@ e9a4c70 Add archived_at to clients (#451)`,
     },
   ],
   webhookRuns: [
+    { minutesAgo: 6, outcome: 'fixed' },
     { minutesAgo: 19 * 60 + 47, outcome: 'fixed' },
     { minutesAgo: 2 * 24 * 60 + 5 * 60 + 13, outcome: 'not-ours' },
+  ],
+  queuedWebhooks: [
+    {
+      minutesAgo: 4,
+      payload:
+        '{"alert":"api-gateway p95 latency is 2.4 s","severity":"P2","service":"api-gateway","startedAt":"5 minutes ago"}',
+    },
+    {
+      minutesAgo: 1,
+      payload:
+        '{"alert":"invoice-worker error rate is 41%","severity":"P1","service":"invoice-worker","startedAt":"2 minutes ago"}',
+    },
   ],
 };
 

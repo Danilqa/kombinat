@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline';
 
-import { match } from 'ts-pattern';
+import { isMatching, match } from 'ts-pattern';
 
 import type { RunRecord, RunTrigger } from 'domains/run/types';
 import { createRunId } from 'domains/run/utils';
@@ -17,7 +17,7 @@ import type { Routine } from '../routine/types';
 import type { BeforeHookEvent } from './event-log';
 import { withHookEnv } from './hook-env';
 import { appendPayload, takePayload } from './payload';
-import { getRunsDir, writeRunRecord } from './storage';
+import { getRunsDir, listRuns, readRunRecord, writeRunRecord } from './storage';
 
 export interface RunOptions {
   trigger: RunTrigger;
@@ -26,6 +26,7 @@ export interface RunOptions {
 }
 
 const BEFORE_HOOK_TIMEOUT_MS = 3 * 60_000;
+const PENDING_START_MS = BEFORE_HOOK_TIMEOUT_MS + 60_000;
 const KILL_GRACE_MS = 60_000;
 const STDERR_CHUNKS = 200;
 
@@ -209,10 +210,35 @@ export async function runRoutine(routine: Routine, options: RunOptions): Promise
   return finishRecord(record, { status: record.error === null ? 'succeeded' : 'failed', exitCode });
 }
 
+interface PendingStart {
+  runId: string;
+  startedAt: number;
+}
+
+// Until a run writes its record, only this process knows it started.
+const pendingStarts = new Map<string, PendingStart>();
+
+export function checkIsStarting(routineName: string, now = Date.now()): boolean {
+  const pending = pendingStarts.get(routineName);
+  if (pending === undefined) return false;
+  const isWaiting =
+    now - pending.startedAt < PENDING_START_MS &&
+    readRunRecord(routineName, pending.runId) === null;
+  if (!isWaiting) pendingStarts.delete(routineName);
+  return isWaiting;
+}
+
+export function checkIsRunning(routineName: string): boolean {
+  return (
+    checkIsStarting(routineName) || listRuns(routineName).some(isMatching({ status: 'running' }))
+  );
+}
+
 export function startDetachedRun(routineName: string, options: RunOptions): void {
-  const args = getCliArgs('run', routineName, '--trigger', options.trigger);
+  const runId = options.runId ?? createRunId();
+  const args = getCliArgs('run', routineName, '--trigger', options.trigger, '--run-id', runId);
   if (options.scheduledFor) args.push('--scheduled-for', options.scheduledFor);
-  if (options.runId) args.push('--run-id', options.runId);
+  pendingStarts.set(routineName, { runId, startedAt: Date.now() });
   spawn(process.execPath, args, {
     cwd: config.projectRoot,
     env: process.env,

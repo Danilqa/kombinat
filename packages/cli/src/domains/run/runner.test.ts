@@ -9,7 +9,9 @@ process.env['KOMBINAT_STATE_DIR'] = path.join(tmp, 'state');
 
 const { buildRoutine } = await import('../routine/utils');
 const { writePayload } = await import('./payload');
-const { runRoutine } = await import('./runner');
+const { checkIsStarting, runRoutine, startDetachedRun } = await import('./runner');
+const { writeRunRecord } = await import('./storage');
+const { makeRunRecord } = await import('domains/run/mocks');
 
 test('a command that ignores the prompt still finishes its run', async () => {
   // Larger than a pipe buffer, so the command exits before the whole prompt is written.
@@ -45,4 +47,14 @@ test('a webhook run gets its payload at the end of the prompt', async () => {
       .filter(file => file.endsWith('.payload')),
     [],
   );
+});
+
+test('a started run counts as starting until its record appears or time runs out', () => {
+  const runId = '20261109T120000Z-wxyz';
+  startDetachedRun('missing-routine', { trigger: 'manual', runId });
+  assert.equal(checkIsStarting('missing-routine'), true);
+  assert.equal(checkIsStarting('missing-routine', Date.now() + 5 * 60_000), false);
+  startDetachedRun('missing-routine', { trigger: 'manual', runId });
+  writeRunRecord(makeRunRecord({ id: runId, routine: 'missing-routine', status: 'running' }));
+  assert.equal(checkIsStarting('missing-routine'), false);
 });

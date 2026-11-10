@@ -3,7 +3,7 @@
 A domain is the top path of an API request, or a type that several domains share:
 
 - API paths: `/api/routines` is routine, `/api/runs` is run, `/api/calendar` is calendar and `/api/status` is daemon.
-- Shared types: agent, transcript and scheduler (skips).
+- Shared types: agent, transcript, scheduler (skips) and webhook (queued webhooks).
 
 Each domain has up to two halves with the same name:
 
@@ -18,9 +18,10 @@ Each domain has up to two halves with the same name:
 | **transcript** | item schemas and types, preview rule, subagent check, empty and result labels, `TranscriptList`                                                       | none                                                                            |
 | **run**        | `RunRecord`, status and trigger, requests, labels, id, duration, `RECENT_RUNS_LIMIT`, `makeRunRecord`, `RunStatusBadge`, `RunDetailList`, `RunOutput` | runner, record storage with orphan reconciliation, event log and transcript     |
 | **scheduler**  | `Skip`, `SkipReason`, `SchedulerState`, skip label, `SkipsTable`                                                                                      | tick loop, `scheduler.json` storage                                             |
-| **routine**    | `RoutineSummary`, `RoutineDetail`, requests, webhook path, `RunNowButton`, `RoutineBadges`, `RoutineDetailList`                                       | frontmatter parsing, validation and defaults, loading, next run, schedule label |
+| **routine**    | `RoutineSummary`, `RoutineDetail`, requests, `RunNowButton`, `RoutineBadges`, `RoutineDetailList`, `WebhookQueueButton`                               | frontmatter parsing, validation and defaults, loading, next run, schedule label |
 | **calendar**   | entry schemas and types, `getCalendar`, `buildCalendar`, planned lengths, entry title and overlap labels, overlap count                               | none, `cli/src/server.ts` serves `buildCalendar`                                |
 | **daemon**     | status schema, `getDaemonStatus`, health rules, `DaemonStatusIndicator`                                                                               | none, `cli/src/server.ts` builds the status                                     |
+| **webhook**    | `QueuedWebhook`, webhook path, size and queue position labels, `WebhookQueueList`                                                                     | gate, queue, and receiving: start, queue, ignore or reject                      |
 
 Not domains:
 
@@ -65,7 +66,7 @@ One execution of a routine by its agent. The scheduler, Run now and webhooks sta
 
 Invariants:
 
-- A failed preflight or before hook writes a finished `failed` record at once. Until the agent is spawned there is no record, so the scheduler and Run now do not count the run as running.
+- A failed preflight or before hook writes a finished `failed` record at once. Until the agent is spawned there is no record, so the daemon remembers each run it starts and counts it as running until its record appears, for at most 4 minutes.
 - A record still marked `running` whose process is gone becomes `aborted` the next time runs are listed.
 - The id is a UTC timestamp plus 4 base-36 characters, such as `20261006T110000Z-k3x9`.
 - The record is `<state dir>/runs/<routine>/<id>.json` and the event log `<id>.jsonl` next to it. This layout is a compatibility contract.
@@ -79,6 +80,7 @@ The daemon's decision of when routines start. Every `KOMBINAT_TICK_SECONDS` (def
 - The run's trigger is `catch_up` when more than one time came due or the time is older than two ticks plus 60 s, and `schedule` otherwise.
 - A disabled routine, or one that is already running, gets a skip.
 - At the concurrency limit (`KOMBINAT_MAX_CONCURRENT`, default 3) the routine does not start and no skip is recorded.
+- After the scheduled times, each enabled routine with `webhook: true` that is idle starts its oldest queued webhook, within the same limit.
 - `scheduler.json` holds `lastTickAt` and, for each routine, its last scheduled time and its last 50 skips.
 
 ### routine
@@ -94,9 +96,17 @@ A named, version-controlled unit of recurring agent work: one markdown file, `ro
 
 Clients see a routine as a summary (its definition plus next run, running, last run and last skip) or a detail (plus the prompt, runs and skips). They can start it with Run now, which answers 409 while the routine is running.
 
-A routine with `webhook: true` also starts with `POST /api/routines/<name>/webhook`. Its request body, at most 256 KB, becomes the run's payload, and the answer is 200 with the run's id. Without the flag it answers 404, and 409 when the routine is disabled or running. Each such run has the trigger `webhook`.
+A routine with `webhook: true` also starts from a [webhook](#webhook).
 
-The routine's `webhookGate`, a shell command, decides about each request first. It runs in the project folder with the `before` hook's `KOMBINAT_REPO` and `PATH`, gets the raw body on stdin and the headers as JSON in `KOMBINAT_WEBHOOK_HEADERS`, and is killed after 3 s, which answers 504. Exit 0 starts the run, and a non-blank output replaces the payload. Exit 78 starts nothing and answers 200, with the output as the body when it is JSON and `{"ok":true,"runId":null}` otherwise, so senders such as Linear do not retry. Any other exit answers 401 and logs the gate's stderr in the daemon log. The gate runs before the disabled and running checks, so an ignored event never gets a 409.
+### webhook
+
+A request from another app that starts a routine, `POST /api/routines/<name>/webhook`. The daemon half receives it in `receive.ts`, with the gate in `gate.ts` and the queue in `queue.ts`, and `cli/src/server.ts` only turns the outcome into an HTTP answer.
+
+A routine with `webhook: true` accepts it. Its request body, at most 256 KB, becomes the run's payload, and the answer is 200 with the run's id. Without the flag it answers 404, and 409 when the routine is disabled. Each such run has the trigger `webhook`.
+
+While the routine runs or has webhooks waiting, an accepted request is queued instead, as `<state dir>/queue/<routine>/<time>-<run id>.payload`, and still answers 200 with the id its run will get. The time is in milliseconds and strictly increasing, so the file names sort oldest first. A routine holds at most 100 queued webhooks, after which the answer is 429. The scheduler starts them, so they wait while it is off.
+
+The routine's `webhookGate`, a shell command, decides about each request first. It runs in the project folder with the `before` hook's `KOMBINAT_REPO` and `PATH`, gets the raw body on stdin and the headers as JSON in `KOMBINAT_WEBHOOK_HEADERS`, and is killed after 3 s, which answers 504. Exit 0 starts the run, and a non-blank output replaces the payload. Exit 78 starts nothing and answers 200, with the output as the body when it is JSON and `{"ok":true,"runId":null}` otherwise, so senders such as Linear do not retry. Any other exit answers 401 and logs the gate's stderr in the daemon log. The gate runs before the disabled check and the queue, so an ignored event never gets a 409 or waits.
 
 ### calendar
 
@@ -117,8 +127,8 @@ Its health is `unreachable` when the request fails, `stale` when there has been 
 
 A domain imports only the domains on the levels before its own, never one on its own level. There is one order of levels per half:
 
-- Shared: `agent`, `transcript`, `scheduler` and `daemon`, then `run`, then `routine` and `calendar`. A run record holds its agent's name, a run's transcript request returns a transcript, a routine summary embeds its last run and last skip, and calendar entries carry run statuses and triggers.
-- Daemon: `agent`, then `routine`, then `run`, then `scheduler`. A routine validates its agent's settings, a run starts a routine's agent, and the scheduler loads routines and starts runs.
+- Shared: `agent`, `transcript`, `scheduler`, `daemon` and `webhook`, then `run`, then `routine` and `calendar`. A run record holds its agent's name, a run's transcript request returns a transcript, a routine summary embeds its last run and last skip and a detail its queued webhooks, and calendar entries carry run statuses and triggers.
+- Daemon: `agent`, then `routine`, then `run`, then `webhook`, then `scheduler`. A routine validates its agent's settings, a run starts a routine's agent, a webhook starts or queues a run, and the scheduler loads routines and starts runs and queued webhooks.
 
 The orders differ, because routine is below run in the daemon but above it in the shared half. Each half is acyclic on its own, and any daemon domain may import any shared domain. ESLint enforces both orders on static imports, tests included: the agent adapter tests build their task with `makeAgentTask` instead of importing routine code. It does not see `await import()`, which tests use to load modules after they set the environment, so check those imports by hand.
 
