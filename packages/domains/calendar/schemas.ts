@@ -1,21 +1,22 @@
 import { z } from 'zod';
 
+import { calendarEntryIdSchema, routineIdSchema, runIdSchema } from '../id/schemas';
 import { runStatusSchema, runTriggerSchema } from '../run/schemas';
 
 const calendarEntryBase = {
-  id: z.string(),
-  routine: z.string(),
+  id: calendarEntryIdSchema,
+  routine: routineIdSchema,
   start: z.string(),
   end: z.string(),
   estimated: z.boolean(),
-  overlaps: z.array(z.string()),
+  overlaps: z.array(calendarEntryIdSchema),
 };
 
 export const runCalendarEntrySchema = z.object({
   ...calendarEntryBase,
   kind: z.literal('run'),
   status: runStatusSchema,
-  runId: z.string(),
+  runId: runIdSchema,
   trigger: runTriggerSchema,
 });
 

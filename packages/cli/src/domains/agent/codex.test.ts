@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
+import { runIdSchema, sessionIdSchema } from 'domains/id/schemas';
 import { makeRunRecord } from 'domains/run/mocks';
 
 import { codexAgent } from './codex';
@@ -99,13 +100,16 @@ test('reads the thread, the last message, turns and failures into the run record
   assert.deepEqual(codexAgent.readEvent({ type: 'turn.failed', error: { message: 'x' } }, record), {
     error: 'x',
   });
-  assert.equal(codexAgent.getResumeCommand('thread-1'), 'codex resume thread-1');
+  assert.equal(
+    codexAgent.getResumeCommand(sessionIdSchema.parse('thread-1')),
+    'codex resume thread-1',
+  );
 });
 
 test('passes the routine settings to codex exec', () => {
   const { args, input, env } = codexAgent.buildInvocation({
     routine: makeAgentTask({ model: 'gpt-5.5', effort: 'high', permissionMode: 'workspace-write' }),
-    runId: 'r1',
+    runId: runIdSchema.parse('r1'),
     trigger: 'schedule',
   });
   assert.deepEqual(args, [

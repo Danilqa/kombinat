@@ -1,6 +1,8 @@
 import { isMatching, match, P } from 'ts-pattern';
 
 import type { AgentName } from 'domains/agent/types';
+import { runIdSchema, sessionIdSchema } from 'domains/id/schemas';
+import type { RoutineId, RunId, SessionId } from 'domains/id/types';
 import type { RunRecord, RunTrigger } from 'domains/run/types';
 import type { Skip, SkipReason } from 'domains/scheduler/types';
 import type { Transcript, TranscriptItem } from 'domains/transcript/types';
@@ -19,12 +21,12 @@ const RUN_NOW_MINUTES = 0.5;
 interface DemoRun {
   routine: DemoRoutine;
   outcome: DemoOutcome;
-  id: string;
+  id: RunId;
   trigger: RunTrigger;
   scheduledFor: Date | null;
   startedAt: Date;
   pid: number;
-  sessionId: string;
+  sessionId: SessionId;
 }
 
 interface ScheduledEvents {
@@ -35,8 +37,8 @@ interface ScheduledEvents {
 export interface DemoHistory {
   listRuns(now: Date): RunRecord[];
   listSkips(routine: DemoRoutine, now: Date): Skip[];
-  findRun(routine: string, id: string, now: Date): RunRecord | null;
-  getTranscript(routine: string, id: string, now: Date): Transcript | null;
+  findRun(routine: RoutineId, id: RunId, now: Date): RunRecord | null;
+  getTranscript(routine: RoutineId, id: RunId, now: Date): Transcript | null;
   startRun(routine: DemoRoutine, now: Date): void;
 }
 
@@ -44,12 +46,12 @@ function fail(message: string): never {
   throw new Error(message);
 }
 
-function toRunId(startedAt: Date, random: Random): string {
+function toRunId(startedAt: Date, random: Random): RunId {
   const stamp = startedAt
     .toISOString()
     .replace(/[-:]/g, '')
     .replace(/\.\d+Z$/, 'Z');
-  return `${stamp}-${randomId(random, 4)}`;
+  return runIdSchema.parse(`${stamp}-${randomId(random, 4)}`);
 }
 
 function pickOutcome(routine: DemoRoutine, random: Random): DemoOutcome {
@@ -85,7 +87,7 @@ function createRun(
     scheduledFor,
     startedAt,
     pid: randomInt(random, 20_000, 89_999),
-    sessionId: randomUuid(random),
+    sessionId: sessionIdSchema.parse(randomUuid(random)),
   };
 }
 
@@ -105,7 +107,7 @@ function getExitCode(outcome: DemoOutcome): number | null {
     .exhaustive();
 }
 
-function getResumeCommand(agent: AgentName, sessionId: string): string | null {
+function getResumeCommand(agent: AgentName, sessionId: SessionId): string | null {
   return match(agent)
     .with('claude', () => `claude --resume ${sessionId}`)
     .with('codex', () => `codex resume ${sessionId}`)
@@ -304,7 +306,7 @@ export function createDemoHistory(routines: DemoRoutine[], loadedAt: Date): Demo
     ].sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
   }
 
-  function findDemoRun(routine: string, id: string, now: Date): DemoRun | undefined {
+  function findDemoRun(routine: RoutineId, id: RunId, now: Date): DemoRun | undefined {
     return listDemoRuns(now).find(run => run.routine.name === routine && run.id === id);
   }
 

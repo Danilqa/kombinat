@@ -1,14 +1,15 @@
 import { z } from 'zod';
 
 import { agentNameSchema } from '../agent/schemas';
+import { routineIdSchema, runIdSchema, sessionIdSchema } from '../id/schemas';
 
 export const runStatusSchema = z.enum(['running', 'succeeded', 'failed', 'timed_out', 'aborted']);
 
 export const runTriggerSchema = z.enum(['schedule', 'manual', 'catch_up', 'webhook']);
 
 export const runRecordSchema = z.object({
-  id: z.string(),
-  routine: z.string(),
+  id: runIdSchema,
+  routine: routineIdSchema,
   agent: agentNameSchema,
   trigger: runTriggerSchema,
   scheduledFor: z.string().nullable(),
@@ -17,7 +18,7 @@ export const runRecordSchema = z.object({
   status: runStatusSchema,
   pid: z.number().nullable(),
   exitCode: z.number().nullable(),
-  sessionId: z.string().nullable(),
+  sessionId: sessionIdSchema.nullable(),
   resumeCommand: z.string().nullable(),
   model: z.string().nullable(),
   costUsd: z.number().nullable(),

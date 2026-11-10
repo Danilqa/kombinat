@@ -3,13 +3,14 @@ import { test } from 'node:test';
 
 import { isMatching } from 'ts-pattern';
 
+import { calendarEntryIdSchema, routineIdSchema, runIdSchema } from '../id/schemas';
 import { makeRunRecord } from '../run/mocks';
 import type { RunRecord, RunStatus } from '../run/types';
 import type { ScheduledRoutine } from './types';
 import { buildCalendar, countOverlapPairs, estimatePlannedMinutes } from './utils';
 
 const routine = (name: string, schedule: string, timeoutMinutes = 55): ScheduledRoutine => ({
-  name,
+  name: routineIdSchema.parse(name),
   schedule,
   enabled: true,
   timeoutMinutes,
@@ -20,14 +21,26 @@ const run = (
   startedAt: string,
   endedAt: string | null,
   status: RunStatus = 'succeeded',
-): RunRecord => makeRunRecord({ id: startedAt, routine: name, startedAt, endedAt, status });
+): RunRecord =>
+  makeRunRecord({
+    id: runIdSchema.parse(startedAt),
+    routine: routineIdSchema.parse(name),
+    startedAt,
+    endedAt,
+    status,
+  });
+
+const toEntry = (id: string, overlaps: string[]) => ({
+  id: calendarEntryIdSchema.parse(id),
+  overlaps: overlaps.map(other => calendarEntryIdSchema.parse(other)),
+});
 
 test('counts each overlapping pair once', () => {
   const entries = [
-    { id: 'a', overlaps: ['b', 'c'] },
-    { id: 'b', overlaps: ['a'] },
-    { id: 'c', overlaps: ['a'] },
-    { id: 'd', overlaps: [] },
+    toEntry('a', ['b', 'c']),
+    toEntry('b', ['a']),
+    toEntry('c', ['a']),
+    toEntry('d', []),
   ];
   assert.equal(countOverlapPairs(entries), 2);
 });

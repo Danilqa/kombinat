@@ -1,9 +1,10 @@
 import type { AgentName } from 'domains/agent/types';
+import type { RoutineId } from 'domains/id/types';
 
 import type { AgentSettings } from '../agent/types';
 
 export interface Routine extends AgentSettings {
-  name: string;
+  name: RoutineId;
   description: string;
   schedule: string | null;
   cwd: string;

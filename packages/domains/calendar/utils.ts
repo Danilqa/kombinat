@@ -3,6 +3,8 @@ import { isMatching, match } from 'ts-pattern';
 import { cronRunsBetween } from 'utils/cron';
 import { formatClock, formatDayMonth, formatWeekday } from 'utils/date-time';
 
+import { calendarEntryIdSchema } from '../id/schemas';
+import type { CalendarEntryId, RoutineId } from '../id/types';
 import type { RunRecord } from '../run/types';
 import { getRunStatusLabel } from '../run/utils';
 import type {
@@ -36,7 +38,7 @@ function getStateLabel(entry: CalendarEntry): string {
 
 export function getCalendarEntryOverlapLabel(
   entry: CalendarEntry,
-  routinesById: Map<string, string>,
+  routinesById: Map<CalendarEntryId, RoutineId>,
 ): string | null {
   const names = [...new Set(entry.overlaps.map(id => routinesById.get(id) ?? id))];
   return names.length > 0 ? `Overlaps with ${names.join(', ')}` : null;
@@ -92,7 +94,7 @@ function toRunEntry(run: RunRecord, now: Date): RunCalendarEntry {
   const rawEnd = run.endedAt ? new Date(run.endedAt) : now;
   const end = new Date(Math.max(rawEnd.getTime(), start.getTime() + MIN_BLOCK_MINUTES * 60_000));
   return {
-    id: `run:${run.routine}:${run.id}`,
+    id: calendarEntryIdSchema.parse(`run:${run.routine}:${run.id}`),
     routine: run.routine,
     start: start.toISOString(),
     end: end.toISOString(),
@@ -133,7 +135,7 @@ export function buildCalendar(
     if (!routine.enabled || routine.schedule === null || plannedFrom >= to) return [];
     const { minutes, estimated } = estimatePlannedMinutes(routine, runs);
     return cronRunsBetween(routine.schedule, plannedFrom, to).map(start => ({
-      id: `planned:${routine.name}:${start.toISOString()}`,
+      id: calendarEntryIdSchema.parse(`planned:${routine.name}:${start.toISOString()}`),
       routine: routine.name,
       start: start.toISOString(),
       end: new Date(start.getTime() + minutes * 60_000).toISOString(),

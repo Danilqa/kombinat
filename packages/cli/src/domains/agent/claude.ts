@@ -1,6 +1,7 @@
 import { match } from 'ts-pattern';
 import { z } from 'zod';
 
+import { sessionIdSchema } from 'domains/id/schemas';
 import type { ToolResult, TranscriptItem } from 'domains/transcript/types';
 import { toPreview } from 'domains/transcript/utils';
 
@@ -63,7 +64,7 @@ const textPartSchema = z.object({ type: z.literal('text'), text: z.string() });
 const claudeEventSchema = z.object({
   type: z.string().optional(),
   subtype: z.string().optional(),
-  session_id: z.string().optional(),
+  session_id: sessionIdSchema.optional(),
   parent_tool_use_id: z.string().nullable().optional(),
   message: z.object({ content: z.unknown().optional() }).optional(),
   model: z.string().optional(),

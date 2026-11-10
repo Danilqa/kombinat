@@ -3,7 +3,7 @@
 A domain is the top path of an API request, or a type that several domains share:
 
 - API paths: `/api/routines` is routine, `/api/runs` is run, `/api/calendar` is calendar and `/api/status` is daemon.
-- Shared types: agent, transcript, scheduler (skips) and webhook (queued webhooks).
+- Shared types: id, agent, transcript, scheduler (skips) and webhook (queued webhooks).
 
 Each domain has up to two halves with the same name:
 
@@ -14,6 +14,7 @@ Each domain has up to two halves with the same name:
 
 | Domain         | Shared half                                                                                                                                           | Daemon half                                                                     |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| **id**         | `RoutineId`, `RunId`, `CalendarEntryId` and `SessionId` with their branded schemas                                                                    | none                                                                            |
 | **agent**      | `AgentName`, agent label                                                                                                                              | claude, codex and command adapters, registry, settings validation, `AgentTask`  |
 | **transcript** | item schemas and types, preview rule, subagent check, empty and result labels, `TranscriptList`                                                       | none                                                                            |
 | **run**        | `RunRecord`, status and trigger, requests, labels, id, duration, `RECENT_RUNS_LIMIT`, `makeRunRecord`, `RunStatusBadge`, `RunDetailList`, `RunOutput` | runner, record storage with orphan reconciliation, event log and transcript     |
@@ -30,6 +31,12 @@ Not domains:
 - **HTTP routing and read models** belong to the cli's `server.ts`.
 
 ## Definitions
+
+### id
+
+The identifiers that cross domains, as branded strings: `RoutineId` is a routine's name, `RunId` a run's id, `CalendarEntryId` a calendar entry's id and `SessionId` an agent's session. A plain `string` does not pass for an id, and one id does not pass for another. A string becomes an id only through its schema's `parse`, where it comes in: a routine file, a state folder, a URL, a CLI argument, an agent's output or a test. The brand exists only in types, so the JSON stays the same.
+
+The ids live in a domain of their own, below all the others, because a run record holds its routine's id and a queued webhook its run's id, while routine and run sit above them.
 
 ### agent
 
@@ -127,7 +134,7 @@ Its health is `unreachable` when the request fails, `stale` when there has been 
 
 A domain imports only the domains on the levels before its own, never one on its own level. There is one order of levels per half:
 
-- Shared: `agent`, `transcript`, `scheduler`, `daemon` and `webhook`, then `run`, then `routine` and `calendar`. A run record holds its agent's name, a run's transcript request returns a transcript, a routine summary embeds its last run and last skip and a detail its queued webhooks, and calendar entries carry run statuses and triggers.
+- Shared: `id`, then `agent`, `transcript`, `scheduler`, `daemon` and `webhook`, then `run`, then `routine` and `calendar`. Every domain types its ids with the id domain, a run record holds its agent's name, a run's transcript request returns a transcript, a routine summary embeds its last run and last skip and a detail its queued webhooks, and calendar entries carry run statuses and triggers.
 - Daemon: `agent`, then `routine`, then `run`, then `webhook`, then `scheduler`. A routine validates its agent's settings, a run starts a routine's agent, a webhook starts or queues a run, and the scheduler loads routines and starts runs and queued webhooks.
 
 The orders differ, because routine is below run in the daemon but above it in the shared half. Each half is acyclic on its own, and any daemon domain may import any shared domain. ESLint enforces both orders on static imports, tests included: the agent adapter tests build their task with `makeAgentTask` instead of importing routine code. It does not see `await import()`, which tests use to load modules after they set the environment, so check those imports by hand.

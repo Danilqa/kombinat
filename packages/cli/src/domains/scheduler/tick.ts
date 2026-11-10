@@ -1,3 +1,4 @@
+import type { RoutineId } from 'domains/id/types';
 import type { SchedulerState, SkipReason } from 'domains/scheduler/types';
 import { cronRunsBetween } from 'utils/cron';
 import { getErrorMessage } from 'utils/error';
@@ -44,13 +45,13 @@ function markScheduled(state: SchedulerState, routine: Routine, scheduledFor: Da
 }
 
 export interface TickResult {
-  started: string[];
+  started: RoutineId[];
   skipped: string[];
 }
 
 export function tick(now = new Date()): TickResult {
   const state = loadState(now);
-  const started: string[] = [];
+  const started: RoutineId[] = [];
   const skipped: string[] = [];
   const floor = new Date(now.getTime() - config.catchUpWindowDays * 86_400_000);
   const lastTick = new Date(state.lastTickAt);

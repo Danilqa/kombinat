@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
+import { runIdSchema, sessionIdSchema } from 'domains/id/schemas';
 import { makeRunRecord } from 'domains/run/mocks';
 
 import { claudeAgent } from './claude';
@@ -84,7 +85,7 @@ test('reads the session and the result into the run record', () => {
     ),
     { resultText: 'nope', costUsd: 0.5, numTurns: null, durationMs: null, error: 'nope' },
   );
-  assert.equal(claudeAgent.getResumeCommand('s1'), 'claude --resume s1');
+  assert.equal(claudeAgent.getResumeCommand(sessionIdSchema.parse('s1')), 'claude --resume s1');
 });
 
 test('passes the routine settings to claude -p', () => {
@@ -95,7 +96,7 @@ test('passes the routine settings to claude -p', () => {
       permissionMode: 'auto',
       maxBudgetUsd: 2,
     }),
-    runId: 'r1',
+    runId: runIdSchema.parse('r1'),
     trigger: 'manual',
   });
   assert.equal(input, 'Hello');

@@ -22,6 +22,7 @@ import { useRef, useState, type ComponentProps, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
 import { Button } from 'design-system/components';
 import { cn } from 'design-system/utils';
+import { routineIdSchema } from 'domains/id/schemas';
 import { CALENDAR_PATH, ROUTINES_PATH, RUNS_PATH, getRoutinePath } from 'web-app/constants/path';
 import { NPM_URL, REPO_URL } from '../constants';
 import { demoRoutines } from '../demo-api/routines';
@@ -43,13 +44,13 @@ interface ExploreLink {
 
 const EXPLORE_LINKS: ExploreLink[] = [
   {
-    to: getRoutinePath('night-agent-tasks'),
+    to: getRoutinePath(routineIdSchema.parse('night-agent-tasks')),
     icon: MoonStar,
     title: 'Night agents',
     caption: 'Draft PRs while you sleep',
   },
   {
-    to: getRoutinePath('write-release-notes'),
+    to: getRoutinePath(routineIdSchema.parse('write-release-notes')),
     icon: Play,
     title: 'A transcript',
     caption: 'Every tool call of a run',
@@ -295,7 +296,7 @@ export function WelcomeBanner() {
                 </ExternalLink>
               </Button>
               <Button asChild variant="secondary" size="small">
-                <Link to={getRoutinePath('on-call-engineer')}>
+                <Link to={getRoutinePath(routineIdSchema.parse('on-call-engineer'))}>
                   See its runs
                   <ArrowRight aria-hidden="true" />
                 </Link>

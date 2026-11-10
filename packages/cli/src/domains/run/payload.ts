@@ -1,18 +1,20 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import type { RoutineId, RunId } from 'domains/id/types';
+
 import { getRunsDir } from './storage';
 
-function getPayloadFile(routine: string, runId: string): string {
+function getPayloadFile(routine: RoutineId, runId: RunId): string {
   return path.join(getRunsDir(routine), `${runId}.payload`);
 }
 
-export function writePayload(routine: string, runId: string, payload: string): void {
+export function writePayload(routine: RoutineId, runId: RunId, payload: string): void {
   fs.mkdirSync(getRunsDir(routine), { recursive: true });
   fs.writeFileSync(getPayloadFile(routine, runId), payload);
 }
 
-export function takePayload(routine: string, runId: string): string | null {
+export function takePayload(routine: RoutineId, runId: RunId): string | null {
   const file = getPayloadFile(routine, runId);
   if (!fs.existsSync(file)) return null;
   const payload = fs.readFileSync(file, 'utf8');

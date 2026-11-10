@@ -3,6 +3,7 @@ import { useParams } from 'react-router';
 import { isMatching } from 'ts-pattern';
 import { Card, ErrorState, LoadingState, Separator } from 'design-system/components';
 import { PageHeader, SectionHeader } from 'design-system/layouts';
+import { routineIdSchema, runIdSchema } from 'domains/id/schemas';
 import { RunDetailList, RunOutput, RunStatusBadge } from 'domains/run/components';
 import { getRunWithTranscript } from 'domains/run/requests';
 import type { RunWithTranscript } from 'domains/run/types';
@@ -46,7 +47,9 @@ function RunView({ run, transcript }: RunViewProps) {
 }
 
 export function RunPage() {
-  const { routine = '', id = '' } = useParams();
+  const params = useParams<'routine' | 'id'>();
+  const routine = routineIdSchema.parse(params.routine ?? '');
+  const id = runIdSchema.parse(params.id ?? '');
   useDocumentTitle(`${routine} run ${id}`);
   const { data, error, isPending } = useQuery({
     queryKey: ['runs', routine, id],
