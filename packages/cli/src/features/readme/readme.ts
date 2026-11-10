@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import { config } from '../../config';
 import { loadRoutines } from '../../domains/routine/storage';
+import type { Routine } from '../../domains/routine/types';
 import { describeSchedule } from '../../domains/routine/utils';
 
 const START = '<!-- routines:start -->';
@@ -14,8 +15,13 @@ export function renderRoutinesTable(): string {
       (a, b) =>
         Number(Boolean(b.schedule)) - Number(Boolean(a.schedule)) || a.name.localeCompare(b.name),
     )
-    .map(r => `| [${r.name}](routines/${r.name}.md) | ${describeSchedule(r)} | ${r.description} |`);
+    .map(r => `| [${r.name}](routines/${r.name}.md) | ${describeWhen(r)} | ${r.description} |`);
   return ['| Routine | When | What it does |', '| - | - | - |', ...rows].join('\n');
+}
+
+function describeWhen(routine: Routine): string {
+  if (!routine.webhook) return describeSchedule(routine);
+  return routine.schedule === null ? 'On webhook' : `${describeSchedule(routine)} and on webhook`;
 }
 
 export function updateReadme(file = path.join(config.projectRoot, 'README.md')): boolean {

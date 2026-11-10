@@ -9,7 +9,8 @@ Ready to use in your organisation or at home.
 3. **Your own integrations.** Agents use your local environment as is, including skills, MCP, browser control and more.
 4. **Cheap.** Works with your existing Claude or Codex subscription. Don't burn your money on tokens.
 5. **Remote control.** Debug and monitor your remote machine from your mobile on your commute.
-6. **Battle-tested.** Polished on real use cases across engineering, design, product management and GTM.
+6. **Webhooks.** Linear, GitHub or any other app can start a routine with a request, and the agent gets its body.
+7. **Battle-tested.** Polished on real use cases across engineering, design, product management and GTM.
 
 **Ideas:**
 
@@ -19,6 +20,7 @@ Ready to use in your organisation or at home.
 4. **Dead code and feature flag clean-up.**
 5. **Picking up bug fixes.**
 6. **Monitoring support chats for product signals.**
+7. **Delegating tasks to an agent from your task manager.**
 
 **Quickstart:**
 
@@ -100,6 +102,7 @@ The example routines of this repository, one row per file in [`routines/`](routi
 | Routine | When | What it does |
 | - | - | - |
 | [weather-example-routine](routines/weather-example-routine.md) | Weekdays at 08:00 | Says if you need an umbrella today |
+| [weather-webhook-example-routine](routines/weather-webhook-example-routine.md) | On webhook | Says if you need an umbrella in the city from the request |
 <!-- routines:end -->
 <!-- prettier-ignore-end -->
 
