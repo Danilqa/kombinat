@@ -14,7 +14,7 @@ const GLOW_CLASSES: Record<WelcomeGlow, string> = {
 interface WelcomeCardProps {
   label: string;
   icon: LucideIcon;
-  iconClassName?: string;
+  iconClassName: string;
   glow: WelcomeGlow;
   title: string;
   children: ReactNode;

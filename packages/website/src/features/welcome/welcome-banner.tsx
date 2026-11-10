@@ -244,7 +244,7 @@ export function WelcomeBanner() {
         <WelcomeCard
           label="Welcome"
           icon={WavingHand}
-          iconClassName="origin-[70%_80%] animate-hand-wave"
+          iconClassName="origin-[70%_80%] group-data-active/slide:animate-hand-wave"
           glow="lavender"
           title="Background agents, on a schedule or webhook"
           aside={<RoutineFile />}
@@ -278,6 +278,7 @@ export function WelcomeBanner() {
         <WelcomeCard
           label="Why Kombinat"
           icon={Scale}
+          iconClassName="group-data-active/slide:animate-scale-tip"
           glow="sky"
           title="Why another tool?"
           details={<ReasonList />}
@@ -295,6 +296,7 @@ export function WelcomeBanner() {
         <WelcomeCard
           label="Webhooks"
           icon={Webhook}
+          iconClassName="group-data-active/slide:animate-webhook-spin"
           glow="mint"
           title="Runs when something happens"
           aside={<WebhookRoutineFile />}
@@ -332,6 +334,7 @@ export function WelcomeBanner() {
         <WelcomeCard
           label="Install"
           icon={SquareTerminal}
+          iconClassName="group-data-active/slide:animate-icon-pop group-data-active/slide:[&>path:nth-of-type(2)]:animate-cursor-blink"
           glow="peach"
           title="Running in a minute"
           aside={<InstallCommands />}
@@ -361,6 +364,7 @@ export function WelcomeBanner() {
         <WelcomeCard
           label="Playground"
           icon={SandBucket}
+          iconClassName="group-data-active/slide:animate-bucket-hop"
           glow="mint"
           title="Make yourself at home"
           aside={<ExploreLinks />}
@@ -396,7 +400,8 @@ export function WelcomeBanner() {
             aria-roledescription="slide"
             aria-label={`${index + 1} of ${slides.length}: ${slide.label}`}
             inert={index !== activeIndex}
-            className="w-full shrink-0 snap-start px-4 sm:px-6"
+            data-active={index === activeIndex || undefined}
+            className="group/slide w-full shrink-0 snap-start px-4 sm:px-6"
           >
             {slide.content}
           </div>
