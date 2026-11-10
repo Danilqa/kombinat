@@ -20,7 +20,6 @@ import { RunsTable } from '@web-app/components/runs-table';
 import { ROUTINES_PATH } from '@web-app/constants/path';
 import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 import { useRuns } from '@web-app/hooks/use-runs';
-import type { RunsQuery } from '@web-app/hooks/use-runs';
 
 function checkIsRoutineRunning(routine: RoutineDetail | undefined): boolean {
   return routine?.running === true;
@@ -48,10 +47,10 @@ function RoutineHeader({ name, routine }: RoutineHeaderProps) {
 
 interface RoutineViewProps {
   routine: RoutineDetail;
-  runs: RunsQuery;
 }
 
-function RoutineView({ routine, runs }: RoutineViewProps) {
+function RoutineView({ routine }: RoutineViewProps) {
+  const runs = useRuns(routine.name, routine.lastRun);
   return (
     <div className="space-y-10">
       <Card.Root className="gap-0 py-0">
@@ -112,7 +111,6 @@ export function RoutinePage() {
     queryFn: () => getRoutine(sameOriginApi, name),
     refetchInterval: query => getPollInterval(checkIsRoutineRunning(query.state.data)),
   });
-  const runs = useRuns(name, data?.lastRun ?? null);
 
   return (
     <div>
@@ -130,7 +128,7 @@ export function RoutinePage() {
       <RoutineHeader name={name} routine={data} />
       {error && <ErrorState message={error.message} />}
       {isPending && <LoadingState />}
-      {data && <RoutineView routine={data} runs={runs} />}
+      {data && <RoutineView routine={data} />}
     </div>
   );
 }

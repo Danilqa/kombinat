@@ -2,7 +2,7 @@ import { isMatching, match, P } from 'ts-pattern';
 
 import type { RoutineName, RunId } from 'domains/id/types';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
-import type { RunRecord, RunsCursor, RunStatus } from 'domains/run/types';
+import type { RunRecord, RunsPage, RunStatus } from 'domains/run/types';
 import { getRunDurationMs, getRunStatusLabel, getTriggerLabel } from 'domains/run/utils';
 import type { Skip } from 'domains/scheduler/types';
 import { getSkipReasonLabel } from 'domains/scheduler/utils';
@@ -346,16 +346,10 @@ interface Tab {
   label: string;
 }
 
-export interface LoadedRuns {
-  runs: RunRecord[];
-  nextCursor: RunsCursor | null;
-  total: number;
-}
-
 function getTabLabel(
   tab: RoutineTab,
   detail: RoutineDetail | undefined,
-  runs: LoadedRuns | undefined,
+  runs: RunsPage | undefined,
 ): string {
   const formatCount = (items: unknown[] | undefined) =>
     items === undefined ? '' : ` ${items.length}`;
@@ -379,7 +373,7 @@ function tabBar(tabs: Tab[], active: RoutineTab): Line {
 
 function runsTable(
   routine: RoutineName,
-  { runs, total }: LoadedRuns,
+  { runs, total }: RunsPage,
   width: number,
   now: number,
 ): ContentLine[] {
@@ -494,7 +488,7 @@ function buildQueueTable(queue: QueuedWebhook[], width: number, now: number): Co
 interface RoutinePageInput {
   summary: RoutineSummary;
   detail: RoutineDetail | undefined;
-  runs: LoadedRuns | undefined;
+  runs: RunsPage | undefined;
   tab: RoutineTab;
   width: number;
   now: number;

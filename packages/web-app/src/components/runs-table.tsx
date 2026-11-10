@@ -46,6 +46,7 @@ export function RunsTable({ runs, total, hasRoutineColumn, onEndReached }: RunsT
             <Table.Cell className="truncate">
               <Link
                 to={getRoutinePath(run.routine)}
+                title={run.routine}
                 className="text-body font-medium text-fg underline-offset-4 hover:underline"
               >
                 {run.routine}

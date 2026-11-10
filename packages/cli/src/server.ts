@@ -186,8 +186,8 @@ function getRunsPage(url: URL): ApiResponse {
       `limit must be 1 to ${MAX_RUNS_PAGE_SIZE} and cursor one that /api/runs returned`,
     );
   }
-  const runs = query.routine === null ? listAllRuns() : listRuns(query.routine);
-  return ok(paginateRuns(runs, query));
+  if (query.routine === null) return ok(paginateRuns(listAllRuns(), query));
+  return withRoutine(query.routine, routine => ok(paginateRuns(listRuns(routine.name), query)));
 }
 
 function routeApi(request: ApiRequest, context: ApiContext): ApiResponse | Promise<ApiResponse> {

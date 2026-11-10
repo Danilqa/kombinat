@@ -159,12 +159,9 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
         `limit must be 1 to ${MAX_RUNS_PAGE_SIZE} and cursor one that /api/runs returned`,
       );
     }
-    const runs = history.listRuns(now);
-    return ok(
-      paginateRuns(
-        query.routine === null ? runs : runs.filter(run => run.routine === query.routine),
-        query,
-      ),
+    if (query.routine === null) return ok(paginateRuns(history.listRuns(now), query));
+    return withRoutine(query.routine, routine =>
+      ok(paginateRuns(listRoutineRuns(routine, now), query)),
     );
   }
 

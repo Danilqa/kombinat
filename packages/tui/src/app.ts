@@ -2,7 +2,7 @@ import { isMatching, match, P } from 'ts-pattern';
 
 import type { RoutineName, RunId } from 'domains/id/types';
 import type { RoutineDetail } from 'domains/routine/types';
-import type { RunRecord, RunWithTranscript } from 'domains/run/types';
+import type { RunRecord, RunsPage, RunWithTranscript } from 'domains/run/types';
 import type { TranscriptItem } from 'domains/transcript/types';
 import { formatRelativeCompact } from 'utils/date-time';
 import { getErrorMessage } from 'utils/error';
@@ -25,7 +25,7 @@ import {
   statusLines,
   transcriptLines,
 } from './views';
-import type { Action, ContentLine, LoadedRuns, PageContent, RoutineTab } from './views';
+import type { Action, ContentLine, PageContent, RoutineTab } from './views';
 
 type ListFocus = 'routines' | 'runs';
 type Focus = ListFocus | 'detail';
@@ -206,7 +206,7 @@ export class TuiApp {
   private overviewError: string | null = null;
   private loadedAt: number | null = null;
   private routineDetails = new Map<RoutineName, RoutineDetail>();
-  private routineRuns = new Map<RoutineName, LoadedRuns>();
+  private routineRuns = new Map<RoutineName, RunsPage>();
   // Serialized, so a refresh and the next page never overwrite each other.
   private runsLoads = new Map<RoutineName, Promise<void>>();
   private loadingMoreRuns = new Set<RoutineName>();
@@ -304,7 +304,7 @@ export class TuiApp {
       page = await this.client.getRuns(name, page.nextCursor);
       runs.push(...page.runs);
     }
-    this.routineRuns.set(name, { runs, nextCursor: page.nextCursor, total: page.total });
+    this.routineRuns.set(name, { ...page, runs });
   }
 
   private loadMoreRuns(name: RoutineName): void {
@@ -314,11 +314,7 @@ export class TuiApp {
       const loaded = this.routineRuns.get(name);
       if (loaded === undefined || loaded.nextCursor === null) return;
       const page = await this.client.getRuns(name, loaded.nextCursor);
-      this.routineRuns.set(name, {
-        runs: [...loaded.runs, ...page.runs],
-        nextCursor: page.nextCursor,
-        total: page.total,
-      });
+      this.routineRuns.set(name, { ...page, runs: [...loaded.runs, ...page.runs] });
     })
       .catch((err: unknown) => {
         this.flash(getErrorMessage(err), 'error');
