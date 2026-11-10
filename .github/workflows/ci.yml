@@ -6,37 +6,99 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+# The ruleset of main requires every job by its name, so rename it there too.
 jobs:
-  check:
+  format:
+    name: 🎨 Format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
-      - run: pnpm --filter website build
-      - run: pnpm validate
-      - name: Pack, install and start the npm package
+      - name: Check out the repository
+        uses: actions/checkout@v7
+      - name: Set up the workspace
+        uses: ./.github/actions/setup
+      - name: Check the formatting with Prettier
+        run: pnpm format:check
+
+  lint:
+    name: 🧹 Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+      - name: Set up the workspace
+        uses: ./.github/actions/setup
+      - name: Lint with ESLint
+        run: pnpm lint
+
+  typecheck:
+    name: 🔷 Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+      - name: Set up the workspace
+        uses: ./.github/actions/setup
+      - name: Typecheck every package
+        run: pnpm typecheck
+
+  unit-tests:
+    name: 🧪 Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+      - name: Set up the workspace
+        uses: ./.github/actions/setup
+      - name: Run the unit tests of every package
+        run: pnpm test
+
+  website:
+    name: 🌐 Website build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+      - name: Set up the workspace
+        uses: ./.github/actions/setup
+      - name: Build the demo website
+        run: pnpm --filter website build
+
+  npm-package:
+    name: 📦 npm package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+      - name: Set up the workspace
+        uses: ./.github/actions/setup
+      - name: Build and pack the CLI
         run: |
           tarball="$RUNNER_TEMP/kombinat.tgz"
           pnpm --filter @danilqa/kombinat pack --out "$tarball"
-          contents="$(tar -tzf "$tarball")"
+          echo "TARBALL=$tarball" >> "$GITHUB_ENV"
+      - name: Check that the package ships bin, dist, README and LICENSE but not src
+        run: |
+          contents="$(tar -tzf "$TARBALL")"
           for file in bin/kombinat.js dist/cli.js dist/web-app/index.html README.md LICENSE; do
             grep -qxF "package/$file" <<< "$contents" || { echo "$file is not packed"; exit 1; }
           done
           if grep -q '^package/src/' <<< "$contents"; then echo 'src/ is packed'; exit 1; fi
-          tar -xzOf "$tarball" package/package.json | node -e '
+      - name: Check that package.json has no devDependencies or workspace specifiers
+        run: |
+          tar -xzOf "$TARBALL" package/package.json | node -e '
             const manifest = JSON.parse(require("node:fs").readFileSync(0, "utf8"));
             if ("devDependencies" in manifest) throw new Error("devDependencies are packed");
             if (/"(workspace|catalog):/.test(JSON.stringify(manifest))) {
               throw new Error("workspace: or catalog: specifiers are packed");
             }
           '
-          tar -xzOf "$tarball" package/dist/cli.js | node -e '
+      - name: Check that dist/cli.js imports only node, zod and ts-pattern
+        run: |
+          tar -xzOf "$TARBALL" package/dist/cli.js | node -e '
             const code = require("node:fs").readFileSync(0, "utf8");
             const specifiers = [
               ...code.matchAll(/^(?:import|export)\s[^"]*"([^"]+)";$/gm),
@@ -49,13 +111,20 @@ jobs:
               throw new Error(`dist/cli.js imports ${[...new Set(unexpected)].join(", ")}`);
             }
           '
+      - name: Install the package in an empty project with the repo routines
+        run: |
           project="$RUNNER_TEMP/project"
           mkdir -p "$project/routines"
           cp routines/*.md "$project/routines/"
           cd "$project"
           npm init -y > /dev/null
-          npm install --no-audit --no-fund --loglevel=error "$tarball"
-          npx kombinat validate
+          npm install --no-audit --no-fund --loglevel=error "$TARBALL"
+      - name: Validate the routines with the installed CLI
+        working-directory: ${{ runner.temp }}/project
+        run: npx kombinat validate
+      - name: Serve the API and the dashboard from the installed daemon
+        working-directory: ${{ runner.temp }}/project
+        run: |
           port="$(node -e 'const server = require("node:net").createServer().listen(0, () => { console.log(server.address().port); server.close(); })')"
           KOMBINAT_PORT="$port" KOMBINAT_STATE_DIR="$RUNNER_TEMP/state" \
             node node_modules/@danilqa/kombinat/bin/kombinat.js serve --no-scheduler --no-watch > serve.log 2>&1 &
@@ -67,10 +136,22 @@ jobs:
           kill "$daemon"
           grep -q '"pid":' <<< "$status"
           grep -qF '<div id="root"></div>' <<< "$page"
-      - run: pnpm --filter e2e exec playwright install --with-deps chromium
-      - run: pnpm test:e2e
-      - uses: actions/upload-artifact@v7
+
+  e2e:
+    name: 🎭 E2E tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+      - name: Set up the workspace
+        uses: ./.github/actions/setup
+      - name: Install Chromium for Playwright
+        run: pnpm --filter e2e exec playwright install --with-deps chromium
+      - name: Build the dashboard and run the Playwright tests against a real daemon
+        run: pnpm test:e2e
+      - name: Upload the Playwright traces
         if: failure()
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-traces
           path: packages/e2e/web-app/test-results/
