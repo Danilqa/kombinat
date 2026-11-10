@@ -37,7 +37,7 @@ pnpm --filter website dev          # the demo site at http://localhost:5174/komb
 
 The checkout scripts (`cli`, `serve`, `dev`, `tui` and their `:local` variants) stay in the root `package.json`. pnpm runs a script in its own package folder, and the CLI treats the nearest folder with a `package.json` as the routines folder, the launchd working directory and the folder it pulls.
 
-To release, bump `version` in `packages/cli/package.json` and run `pnpm --filter @danilqa/kombinat publish`.
+To release, bump `version` in `packages/cli/package.json` and run `npm publish` in `packages/cli`. npm copies `package.json` as it is, so the `dependencies` of `cli` keep exact versions instead of `catalog:`.
 
 `.github/workflows/ci.yml` runs each check of `pnpm validate`, the website build, the npm package check and the e2e tests as parallel jobs on every PR. The ruleset of `main` requires every job by its name, so a PR merges only once they all pass. When you add or rename a job, update the ruleset too.
 

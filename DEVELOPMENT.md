@@ -18,4 +18,4 @@ The code is a pnpm workspace in `packages/`: the CLI and daemon in `packages/cli
 
 A daemon installed from a checkout before the move to `packages/` still starts the temporary root `bin/kombinat.js`. Run `pnpm cli install` once, so that it starts `packages/cli/bin/kombinat.js`.
 
-To publish a release, bump `version` in `packages/cli/package.json` and run `pnpm --filter @danilqa/kombinat publish`. It builds the CLI and the dashboard first.
+To publish a release, bump `version` in `packages/cli/package.json` and run `npm publish` in `packages/cli`. It builds the CLI and the dashboard first.
