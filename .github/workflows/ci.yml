@@ -134,7 +134,9 @@ jobs:
           status="$(curl --fail --silent "http://127.0.0.1:$port/api/status")"
           page="$(curl --fail --silent "http://127.0.0.1:$port/")"
           kill "$daemon"
+          version="$(node -p 'require("./node_modules/@danilqa/kombinat/package.json").version')"
           grep -q '"pid":' <<< "$status"
+          grep -qF "\"version\":\"$version\"" <<< "$status"
           grep -qF '<div id="root"></div>' <<< "$page"
 
   e2e:

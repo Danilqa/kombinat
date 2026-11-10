@@ -5,6 +5,8 @@
   "type": "module",
   "exports": {
     "./app": "./src/app.tsx",
+    "./components/app-footer": "./src/components/app-footer.tsx",
+    "./constants/links": "./src/constants/links.ts",
     "./constants/path": "./src/constants/path.ts",
     "./hooks/use-stored-boolean": "./src/hooks/use-stored-boolean.ts",
     "./index.css": "./src/index.css"

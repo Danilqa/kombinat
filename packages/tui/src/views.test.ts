@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { lineWidth, plain, S } from './terminal/text';
-import { box, overlayOnto } from './views';
+import { box, formatCopyright, overlayOnto } from './views';
 
 test('box draws a filled panel with the title and footer on top and a gap below', () => {
   const lines = box({
@@ -43,4 +43,10 @@ test('overlayOnto centres a popup over the frame', () => {
     '..........',
     '..........',
   ]);
+});
+
+test('formatCopyright leaves the version out when the daemon does not report it', () => {
+  const now = Date.parse('2026-10-06T12:00:00Z');
+  assert.equal(formatCopyright('1.2.3', now), 'v1.2.3 · © 2026');
+  assert.equal(formatCopyright(undefined, now), '© 2026');
 });

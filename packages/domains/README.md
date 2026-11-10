@@ -127,7 +127,7 @@ The week view's read model, `GET /api/calendar?from&to` for a range of at most 3
 
 ### daemon
 
-The running kombinat service as its clients see it through `GET /api/status`: pid, start time, last scheduler tick, routines and state folders, agent binaries, concurrency limit, running count, time zone and now.
+The running kombinat service as its clients see it through `GET /api/status`: version, pid, start time, last scheduler tick, routines and state folders, agent binaries, concurrency limit, running count, time zone and now.
 
 Its health is `unreachable` when the request fails, `stale` when there has been no tick or the last tick is more than 5 minutes old, and `healthy` otherwise.
 

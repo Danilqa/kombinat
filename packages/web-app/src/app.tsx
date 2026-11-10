@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { AppProviders } from '@web-app/app-providers';
 import { AppRoutes } from '@web-app/app-routes';
+import { AppFooter } from '@web-app/components/app-footer';
 import { AppHeader } from '@web-app/components/app-header';
 import { useFocusMainOnNavigate } from '@web-app/hooks/use-focus-main-on-navigate';
 
@@ -42,7 +43,7 @@ interface AppProps {
   footer?: ReactNode;
 }
 
-export function App({ announcement, banner, footer }: AppProps) {
+export function App({ announcement, banner, footer = <AppFooter /> }: AppProps) {
   return (
     <AppProviders>
       <AppLayout announcement={announcement} banner={banner} footer={footer} />

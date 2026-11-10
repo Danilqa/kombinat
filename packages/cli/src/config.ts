@@ -2,8 +2,14 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import { z } from 'zod';
+
+import { readJsonFile } from './utils/json';
+
 export const PACKAGE_NAME = '@danilqa/kombinat';
 export const DEFAULT_PORT = 7433;
+
+const packageJsonSchema = z.object({ version: z.string() });
 
 export function findProjectRoot(from: string): string {
   for (let dir = from; ; dir = path.dirname(dir)) {
@@ -38,6 +44,7 @@ export const config = {
   packageRoot,
   workspaceRoot: fromSource ? path.resolve(fs.realpathSync(packageRoot), '..', '..') : null,
   cliBin: path.join(packageRoot, 'bin', 'kombinat.js'),
+  version: readJsonFile(path.join(packageRoot, 'package.json'), packageJsonSchema)?.version,
   fromSource,
   installedInProject: installedRoot !== null,
   projectHasCopy: packageLink !== null,
