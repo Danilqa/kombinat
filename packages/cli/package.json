@@ -1,6 +1,6 @@
 {
   "name": "@danilqa/kombinat",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "type": "module",
   "description": "Dead simple, lightweight engine for 24/7 background AI agents. Works with your Claude, Codex or any other subscription.",
   "keywords": [
@@ -38,7 +38,7 @@
     "build:cli": "esbuild src/cli.ts --bundle --platform=node --format=esm --target=node24 --external:zod --external:ts-pattern --outfile=dist/cli.js",
     "build:web-app": "pnpm --filter web-app run build",
     "prepack": "pnpm run build && cp ../../README.md README.md",
-    "prepublishOnly": "node -e \"if (!process.env.npm_config_user_agent?.startsWith('pnpm/')) throw new Error('Publish with pnpm: npm leaves catalog: versions in package.json')\""
+    "prepublishOnly": "node -e \"if (Number(/^pnpm\\/(\\d+)/.exec(process.env.npm_config_user_agent ?? '')?.[1] ?? 0) < 11) throw new Error('Publish with pnpm 11 or newer: npm and older pnpm leave catalog: versions in package.json')\""
   },
   "engines": {
     "node": ">=24"
