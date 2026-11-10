@@ -202,6 +202,7 @@ curl -X POST http://localhost:7433/api/routines/review-pr/webhook -d '{"pullRequ
 | `413`  | The body is over 256 KB                                       |
 
 Headers and the query string are not passed on.
+
 ## Updating
 
 The daemon runs `git pull` in the folder every 5 minutes, so merged changes go live on their own. It only pulls when the checkout is on `main` with no local changes.
