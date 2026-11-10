@@ -13,7 +13,7 @@ concurrency:
 # The ruleset of main requires every job by its name, so rename it there too.
 jobs:
   format:
-    name: Format
+    name: 🎨 Format
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repository
@@ -24,7 +24,7 @@ jobs:
         run: pnpm format:check
 
   lint:
-    name: Lint
+    name: 🧹 Lint
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repository
@@ -35,7 +35,7 @@ jobs:
         run: pnpm lint
 
   typecheck:
-    name: Typecheck
+    name: 🔷 Typecheck
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repository
@@ -46,7 +46,7 @@ jobs:
         run: pnpm typecheck
 
   unit-tests:
-    name: Unit tests
+    name: 🧪 Unit tests
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repository
@@ -57,7 +57,7 @@ jobs:
         run: pnpm test
 
   website:
-    name: Website build
+    name: 🌐 Website build
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repository
@@ -68,7 +68,7 @@ jobs:
         run: pnpm --filter website build
 
   npm-package:
-    name: npm package
+    name: 📦 npm package
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repository
@@ -138,7 +138,7 @@ jobs:
           grep -qF '<div id="root"></div>' <<< "$page"
 
   e2e:
-    name: E2E tests
+    name: 🎭 E2E tests
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repository
