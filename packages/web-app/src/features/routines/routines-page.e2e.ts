@@ -37,6 +37,24 @@ test('lists each routine with its schedule, agent and last run', async ({
   await expect(page.getByRole('button', { name: /daemon status/ })).toHaveText(/0 of 3 running/);
 });
 
+test('marks the schedule of routines that run on webhooks', async ({ page, kombinat }) => {
+  kombinat.addRoutine({ name: 'triage-sentry', schedule: '0 8 * * 1-5', webhook: true });
+  kombinat.addRoutine({ name: 'review-pr', webhook: true });
+  kombinat.addRoutine({ name: 'say-hello' });
+  await page.goto('/');
+
+  const triageMark = page
+    .getByRole('row', { name: /triage-sentry/ })
+    .getByRole('img', { name: 'Also runs on webhook' });
+  await expect(triageMark).toBeVisible();
+  await expect(
+    page.getByRole('row', { name: /review-pr/ }).getByRole('img', { name: 'Runs on webhook' }),
+  ).toBeVisible();
+  await expect(page.getByRole('row', { name: /say-hello/ }).getByRole('img')).toHaveCount(0);
+  await triageMark.hover();
+  await expect(page.getByRole('tooltip')).toHaveText('Also runs on webhook');
+});
+
 test('runs a routine on demand and shows its output', async ({ page, kombinat }) => {
   test.slow();
   kombinat.addRoutine({ name: 'say-hello', agent: 'command', command: 'echo Hello from Kombinat' });
