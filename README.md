@@ -160,6 +160,7 @@ timeoutMinutes: 55
 - `timeoutMinutes` stops the run after this time. Default 55.
 - `before` is an optional shell command that runs first. If it fails or takes more than 3 minutes, the run fails.
 - `enabled: false` keeps the file but stops the schedule.
+- `webhook: true` lets other apps start the routine with a request, see [Webhooks](#webhooks).
 
 Changes apply on the next check, no restart needed. Write the prompt so the agent never has to ask a question: nobody will answer.
 
@@ -184,6 +185,23 @@ A setting the agent does not support fails validation.
 - If the Mac was asleep, each routine runs once for its latest missed time, up to 7 days back.
 - A routine never runs twice at the same time. If it is still running at its next time, that run is skipped.
 - At most 3 routines run at once.
+
+## Webhooks
+
+With `webhook: true`, a POST request also starts the routine, and its body is added to the end of the prompt:
+
+```bash
+curl -X POST http://localhost:7433/api/routines/review-pr/webhook -d '{"pullRequest": 42}'
+```
+
+| Status | When                                                          |
+| ------ | ------------------------------------------------------------- |
+| `202`  | The run started: `{"ok":true,"runId":"…"}`                    |
+| `404`  | The routine has no `webhook: true`                            |
+| `409`  | The routine is disabled or running. The request is not queued |
+| `413`  | The body is over 256 KB                                       |
+
+Headers and the query string are not passed on.
 
 ## Updating
 

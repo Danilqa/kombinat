@@ -8,6 +8,7 @@ test("shows a routine's settings, runs, skipped runs and prompt", async ({ page,
     effort: 'medium',
     timeoutMinutes: 30,
     maxBudgetUsd: 2,
+    webhook: true,
     prompt: '## Steps\n\nFix the issue that affects the most users.',
   });
   const run = kombinat.addRun({ routine: 'triage-sentry', status: 'failed' });
@@ -28,6 +29,8 @@ test("shows a routine's settings, runs, skipped runs and prompt", async ({ page,
     - definition: $2.00
     - term: File
     - definition: routines/triage-sentry.md
+    - term: Webhook
+    - definition: POST /api/routines/triage-sentry/webhook
   `);
   await expect(page.getByRole('row', { name: new RegExp(`Failed ${run.id}`) })).toBeVisible();
   await expect(page.getByRole('row', { name: /concurrency limit/ })).toBeVisible();

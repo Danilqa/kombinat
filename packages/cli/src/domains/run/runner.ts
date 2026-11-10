@@ -15,11 +15,13 @@ import { getAgent } from '../agent/registry';
 import type { Agent, OutputEvent } from '../agent/types';
 import type { Routine } from '../routine/types';
 import type { BeforeHookEvent } from './event-log';
+import { appendPayload, takePayload } from './payload';
 import { getRunsDir, writeRunRecord } from './storage';
 
 export interface RunOptions {
   trigger: RunTrigger;
   scheduledFor?: string | null;
+  runId?: string | null;
 }
 
 const BEFORE_HOOK_TIMEOUT_MS = 3 * 60_000;
@@ -99,7 +101,7 @@ function toLogLine(agent: Agent, line: string, event: unknown): string {
 
 export async function runRoutine(routine: Routine, options: RunOptions): Promise<RunRecord> {
   const agent = getAgent(routine.agent);
-  const id = createRunId();
+  const id = options.runId ?? createRunId();
   const runsDir = getRunsDir(routine.name);
   const logFile = path.join(runsDir, `${id}.jsonl`);
   fs.mkdirSync(runsDir, { recursive: true });
@@ -125,7 +127,10 @@ export async function runRoutine(routine: Routine, options: RunOptions): Promise
     logFile,
   };
 
-  const invocation = agent.buildInvocation({ routine, runId: id, trigger: options.trigger });
+  const payload = takePayload(routine.name, id);
+  const task =
+    payload === null ? routine : { ...routine, prompt: appendPayload(routine.prompt, payload) };
+  const invocation = agent.buildInvocation({ routine: task, runId: id, trigger: options.trigger });
   if (!fs.existsSync(routine.cwd)) {
     return finishRecord(record, { status: 'failed', error: `cwd does not exist: ${routine.cwd}` });
   }
@@ -210,6 +215,7 @@ export async function runRoutine(routine: Routine, options: RunOptions): Promise
 export function startDetachedRun(routineName: string, options: RunOptions): void {
   const args = getCliArgs('run', routineName, '--trigger', options.trigger);
   if (options.scheduledFor) args.push('--scheduled-for', options.scheduledFor);
+  if (options.runId) args.push('--run-id', options.runId);
   spawn(process.execPath, args, {
     cwd: config.projectRoot,
     env: process.env,

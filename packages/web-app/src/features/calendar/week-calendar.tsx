@@ -504,6 +504,7 @@ function useSwipePanels(
   const headerTrackRef = useRef<HTMLDivElement>(null);
   const [preview, setPreview] = useState(0);
   const onStepRef = useRef(onStep);
+  const settleRef = useRef<() => void>(() => undefined);
   useLayoutEffect(() => {
     onStepRef.current = onStep;
   });
@@ -605,6 +606,7 @@ function useSwipePanels(
     scroller.addEventListener('touchend', handleTouchEnd, { passive: true });
     scroller.addEventListener('touchcancel', handleTouchEnd, { passive: true });
     resizeObserver.observe(scroller);
+    settleRef.current = settle;
     return () => {
       clearTimeout(timer);
       clearTimeout(wheelTimer);
@@ -618,14 +620,15 @@ function useSwipePanels(
     };
   }, [radius, recentre, syncHeader]);
 
+  // Commits a finished slide first, or its pending settle would undo this one.
   const slide = useCallback(
     (direction: StepDirection) => {
       const scroller = scrollerRef.current;
-      if (scroller === null) return;
-      scroller.scrollTo({
-        left: scroller.clientWidth * (radius + direction),
-        behavior: getScrollBehavior(),
-      });
+      if (scroller === null || scroller.clientWidth === 0) return;
+      settleRef.current();
+      const inView = Math.round(scroller.scrollLeft / scroller.clientWidth);
+      const target = Math.max(0, Math.min(radius * 2, inView + direction));
+      scroller.scrollTo({ left: scroller.clientWidth * target, behavior: getScrollBehavior() });
     },
     [radius],
   );

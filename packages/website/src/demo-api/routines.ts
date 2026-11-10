@@ -42,7 +42,7 @@ export interface DemoPin {
   skip?: SkipReason;
 }
 
-export interface DemoManualRun {
+export interface DemoStartedRun {
   minutesAgo: number;
   outcome: string;
 }
@@ -52,6 +52,7 @@ export interface DemoRoutine {
   description: string;
   schedule: string | null;
   enabled: boolean;
+  webhook?: boolean;
   agent: AgentName;
   model: string | null;
   effort: string | null;
@@ -65,7 +66,8 @@ export interface DemoRoutine {
   disabledDaysAgo?: number;
   outcomes: DemoOutcome[];
   pins?: DemoPin[];
-  manualRuns?: DemoManualRun[];
+  manualRuns?: DemoStartedRun[];
+  webhookRuns?: DemoStartedRun[];
 }
 
 const REPO = `${HOME}/Projects/acme-web`;
@@ -438,6 +440,7 @@ const onCallEngineer: DemoRoutine = {
   description: 'Checks for production incidents and proposes fixes',
   schedule: '0 9,13,17,21 * * *',
   enabled: true,
+  webhook: true,
   agent: 'claude',
   model: FABLE,
   effort: 'max',
@@ -446,9 +449,9 @@ const onCallEngineer: DemoRoutine = {
   cwd: REPO,
   timeoutMinutes: 60,
   maxBudgetUsd: 5,
-  prompt: `Check #incidents for an open incident. If there is none, say so and stop.
+  prompt: `When a 3rd-party alert starts this run through the webhook, it follows this prompt. Otherwise check #incidents for an open incident, and if there is none, say so and stop.
 
-Otherwise read the latest alert, then find the cause with Sentry, Grafana and the logs. Post what you know to the incident channel as you go.
+Then find the cause with Sentry, Grafana and the logs. Post what you know to the incident channel as you go.
 
 If the cause is in our code, open a pull request with the fix and ask the on-call engineer to review it. Never merge, deploy or roll back yourself.`,
   runModel: FABLE,
@@ -488,10 +491,8 @@ If the cause is in our code, open a pull request with the fix and ask the on-cal
         'Cause: the v2.8.2 migration added a NOT NULL column without a default, so inserts from the old invoice worker fail. Posted the timeline to #incidents and opened #495, which adds the default. It needs a human to merge and deploy.',
       steps: [
         fableInit,
-        mcp(
-          'mcp__slack__read_channel',
-          { channel: '#incidents', limit: 3 },
-          'PagerDuty: [P1] invoice-worker error rate is 34%',
+        text(
+          'A 3rd-party alert came in, P1: the invoice-worker error rate is 34%. Looking at its logs first.',
         ),
         mcp(
           'mcp__grafana__query_loki',
@@ -541,10 +542,8 @@ e9a4c70 Add archived_at to clients (#451)`,
         'Cause: Stripe returns 503 for 12% of charge requests, and status.stripe.com confirms an incident. Nothing to fix on our side, and retries are working. Posted to #incidents.',
       steps: [
         fableInit,
-        mcp(
-          'mcp__slack__read_channel',
-          { channel: '#incidents', limit: 3 },
-          'PagerDuty: [P2] payments error rate is 12%',
+        text(
+          'A 3rd-party alert came in, P2: the payments error rate is 12%. Looking at its logs first.',
         ),
         mcp(
           'mcp__grafana__query_loki',
@@ -567,9 +566,9 @@ e9a4c70 Add archived_at to clients (#451)`,
       ],
     },
   ],
-  pins: [
-    { slotsAgo: 3, outcome: 'fixed' },
-    { slotsAgo: 9, outcome: 'not-ours' },
+  webhookRuns: [
+    { minutesAgo: 19 * 60 + 47, outcome: 'fixed' },
+    { minutesAgo: 2 * 24 * 60 + 5 * 60 + 13, outcome: 'not-ours' },
   ],
 };
 

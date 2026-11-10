@@ -55,6 +55,13 @@ function readNumber(data: Frontmatter, key: string): number | null {
   return number;
 }
 
+function readBoolean(data: Frontmatter, key: string): boolean | null {
+  const value = data[key];
+  if (value === undefined || value === '') return null;
+  if (typeof value !== 'boolean') throw new Error(`${key} must be true or false`);
+  return value;
+}
+
 function readSchedule(data: Frontmatter): string | null {
   const schedule = readString(data, 'schedule');
   return schedule === 'manual' ? null : schedule;
@@ -102,6 +109,7 @@ export function buildRoutine(file: string, source: string): Routine {
     agent,
     ...withFile(file, () => readAgentSettings(data, agent)),
     enabled: data['enabled'] === undefined ? true : Boolean(data['enabled']),
+    webhook: withFile(file, () => readBoolean(data, 'webhook')) ?? false,
     timeoutMinutes:
       withFile(file, () => readNumber(data, 'timeoutMinutes')) ?? DEFAULT_TIMEOUT_MINUTES,
     before: readString(data, 'before'),

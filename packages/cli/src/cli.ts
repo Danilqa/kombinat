@@ -61,6 +61,7 @@ const USAGE = `kombinat, run from the folder that holds routines/ (connect and t
 interface CliOptions {
   trigger: RunTrigger;
   scheduledFor: string | null;
+  runId: string | null;
   watch: boolean;
   scheduler: boolean;
   url: string | null;
@@ -82,6 +83,11 @@ function parseTrigger(value: string): RunTrigger {
     throw new Error(`--trigger must be one of ${runTriggerSchema.options.join(', ')}`);
   }
   return parsed.data;
+}
+
+function parseRunId(value: string): string {
+  if (!/^[\w-]+$/.test(value)) throw new Error('--run-id must be letters, digits, _ and -');
+  return value;
 }
 
 function parseUrl(value: string): string {
@@ -142,6 +148,7 @@ async function runOne(name: string | undefined, options: CliOptions): Promise<vo
   const record = await runRoutine(getRoutine(name), {
     trigger: options.trigger,
     scheduledFor: options.scheduledFor,
+    runId: options.runId,
   });
   console.log(JSON.stringify(record, null, 2));
   process.exitCode = isMatching({ status: 'succeeded' }, record) ? 0 : 1;
@@ -243,6 +250,7 @@ async function main(): Promise<void> {
     options: {
       trigger: { type: 'string', default: 'manual' },
       'scheduled-for': { type: 'string' },
+      'run-id': { type: 'string' },
       'no-watch': { type: 'boolean', default: false },
       'no-scheduler': { type: 'boolean', default: false },
       url: { type: 'string' },
@@ -257,6 +265,7 @@ async function main(): Promise<void> {
   const options: CliOptions = {
     trigger: parseTrigger(values.trigger),
     scheduledFor: values['scheduled-for'] ?? null,
+    runId: values['run-id'] === undefined ? null : parseRunId(values['run-id']),
     watch: !values['no-watch'],
     scheduler: !values['no-scheduler'],
     url: values.url === undefined ? null : parseUrl(values.url),

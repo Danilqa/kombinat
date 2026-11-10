@@ -34,5 +34,6 @@ export function getTriggerLabel(trigger: RunTrigger): string {
     .with('schedule', () => 'Scheduled')
     .with('manual', () => 'Manual')
     .with('catch_up', () => 'Catch-up')
+    .with('webhook', () => 'Webhook')
     .exhaustive();
 }
