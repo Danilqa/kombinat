@@ -4,6 +4,7 @@ import type { AgentName } from 'domains/agent/types';
 import { runIdSchema, sessionIdSchema } from 'domains/id/schemas';
 import type { RoutineName, RunId, SessionId } from 'domains/id/types';
 import type { RunRecord, RunTrigger } from 'domains/run/types';
+import { compareRunsByNewest } from 'domains/run/utils';
 import type { Skip, SkipReason } from 'domains/scheduler/types';
 import type { Transcript, TranscriptItem } from 'domains/transcript/types';
 import { cronRunsBetween } from 'utils/cron';
@@ -303,7 +304,7 @@ export function createDemoHistory(routines: DemoRoutine[], loadedAt: Date): Demo
     return [
       ...routines.flatMap(routine => getScheduledEvents(routine, now).runs),
       ...startedRuns.filter(run => run.startedAt <= now),
-    ].sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
+    ];
   }
 
   function findDemoRun(routine: RoutineName, id: RunId, now: Date): DemoRun | undefined {
@@ -311,7 +312,10 @@ export function createDemoHistory(routines: DemoRoutine[], loadedAt: Date): Demo
   }
 
   return {
-    listRuns: now => listDemoRuns(now).map(run => toRunRecord(run, now)),
+    listRuns: now =>
+      listDemoRuns(now)
+        .map(run => toRunRecord(run, now))
+        .sort(compareRunsByNewest),
     listSkips: (routine, now) => getScheduledEvents(routine, now).skips.slice(-MAX_SKIPS),
     findRun(routine, id, now) {
       const run = findDemoRun(routine, id, now);

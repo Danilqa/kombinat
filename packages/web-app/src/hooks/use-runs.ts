@@ -15,7 +15,7 @@ interface LoadedRuns {
   total: number;
 }
 
-interface RunsQuery {
+export interface RunsQuery {
   data: LoadedRuns | undefined;
   error: Error | null;
   isPending: boolean;

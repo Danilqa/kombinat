@@ -3,9 +3,8 @@ import { test } from 'node:test';
 
 import { routineNameSchema, runIdSchema, sessionIdSchema } from 'domains/id/schemas';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
-import { RUNS_PAGE_SIZE } from 'domains/run/constants';
 import type { RunRecord } from 'domains/run/types';
-import { decodeRunsCursor, paginateRuns } from 'domains/run/utils';
+import { compareRunsByNewest, decodeRunsCursor, paginateRuns } from 'domains/run/utils';
 import type { Transcript } from 'domains/transcript/types';
 
 import { TuiApp } from './app';
@@ -172,12 +171,9 @@ function makeClient(overview: Overview, options: FakeOptions) {
     getRuns(routine, cursor) {
       return Promise.resolve(
         paginateRuns(
-          overview.runs.filter(r => r.routine === routine),
-          {
-            routine,
-            cursor: cursor === null ? null : decodeRunsCursor(cursor),
-            limit: options.runsPageSize ?? RUNS_PAGE_SIZE,
-          },
+          overview.runs.filter(r => r.routine === routine).toSorted(compareRunsByNewest),
+          cursor === null ? null : decodeRunsCursor(cursor),
+          options.runsPageSize,
         ),
       );
     },

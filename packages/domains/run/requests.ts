@@ -3,7 +3,6 @@ import type { HttpClient } from 'utils/http';
 import type { RoutineName, RunId } from '../id/types';
 import { transcriptSchema } from '../transcript/schemas';
 import type { Transcript } from '../transcript/types';
-import { RUNS_PAGE_SIZE } from './constants';
 import { runRecordSchema, runsPageSchema } from './schemas';
 import type { RunRecord, RunsCursor, RunsPage, RunWithTranscript } from './types';
 
@@ -16,7 +15,7 @@ export async function getRunsPage(
   routine: RoutineName | null,
   cursor: RunsCursor | null,
 ): Promise<RunsPage> {
-  const params = new URLSearchParams({ limit: String(RUNS_PAGE_SIZE) });
+  const params = new URLSearchParams();
   if (routine !== null) params.set('routine', routine);
   if (cursor !== null) params.set('cursor', cursor);
   return http.request(`/api/runs?${params.toString()}`, runsPageSchema);

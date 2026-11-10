@@ -16,7 +16,7 @@ import { SkipsTable } from 'domains/scheduler/components';
 import { sameOriginApi } from 'utils/http';
 import { getPollInterval } from 'utils/polling';
 import { Breadcrumbs } from '@web-app/components/breadcrumbs';
-import { RunsTable } from '@web-app/components/runs-table';
+import { RunsList } from '@web-app/components/runs-list';
 import { ROUTINES_PATH } from '@web-app/constants/path';
 import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 import { useRuns } from '@web-app/hooks/use-runs';
@@ -65,21 +65,7 @@ function RoutineView({ routine }: RoutineViewProps) {
           <Tabs.Trigger value="prompt">Prompt</Tabs.Trigger>
         </Tabs.List>
         <Tabs.Content value="runs" className="space-y-10">
-          <div>
-            {runs.error && <ErrorState message={runs.error.message} />}
-            {runs.isPending && <LoadingState />}
-            {runs.data && (
-              <Card.Root className="gap-0 overflow-visible py-0">
-                <RunsTable
-                  runs={runs.data.runs}
-                  total={runs.data.total}
-                  hasRoutineColumn={false}
-                  onEndReached={runs.loadNextPage}
-                />
-              </Card.Root>
-            )}
-            {runs.isFetchingNextPage && <LoadingState />}
-          </div>
+          <RunsList runs={runs} hasRoutineColumn={false} />
           {routine.skips.length > 0 && (
             <section>
               <SectionHeader.Root
