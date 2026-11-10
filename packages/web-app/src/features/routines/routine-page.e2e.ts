@@ -38,25 +38,29 @@ test("shows a routine's settings, runs, skipped runs and prompt", async ({ page,
   await expect(page.getByRole('heading', { name: 'Steps' })).toBeVisible();
 });
 
-test('renders only the runs in view of a long history and scrolls to the oldest', async ({
+test('loads older runs page by page as you scroll a long history', async ({
   page,
   kombinat,
   time,
 }) => {
   kombinat.addRoutine({ name: 'inbox-triage', schedule: '*/5 * * * *' });
   const newest = kombinat.addRun({ routine: 'inbox-triage', startedAt: time.minutesAgo(5) });
-  for (let index = 2; index < 500; index++) {
+  for (let index = 2; index < 120; index++) {
     kombinat.addRun({ routine: 'inbox-triage', startedAt: time.minutesAgo(index * 5) });
   }
-  const oldest = kombinat.addRun({ routine: 'inbox-triage', startedAt: time.minutesAgo(2500) });
+  const oldest = kombinat.addRun({ routine: 'inbox-triage', startedAt: time.minutesAgo(600) });
   await page.goto('/routines/inbox-triage');
 
   const table = page.getByRole('table');
   await expect(table.getByRole('row', { name: new RegExp(newest.id) })).toBeVisible();
-  await expect(table).toHaveAttribute('aria-rowcount', '501');
-  expect(await table.getByRole('row').count()).toBeLessThan(100);
-  await page.keyboard.press('End');
-  await expect(table.getByRole('row', { name: new RegExp(oldest.id) })).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Runs 120' })).toBeVisible();
+  await expect(table).toHaveAttribute('aria-rowcount', '121');
+  const oldestRow = table.getByRole('row', { name: new RegExp(oldest.id) });
+  await expect(async () => {
+    await page.keyboard.press('End');
+    await expect(oldestRow).toBeVisible({ timeout: 1000 });
+  }).toPass();
+  expect(await table.getByRole('row').count()).toBeLessThan(60);
 });
 
 test('explains that a routine does not exist', async ({ page }) => {

@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import { routineNameSchema, runIdSchema, sessionIdSchema } from 'domains/id/schemas';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import type { RunRecord } from 'domains/run/types';
+import { decodeRunsCursor, paginateRuns } from 'domains/run/utils';
 import type { Transcript } from 'domains/transcript/types';
 
 import { TuiApp } from './app';
@@ -137,6 +138,7 @@ const transcript: Transcript = {
 interface FakeOptions {
   isDown?: boolean;
   overview?: Overview;
+  runsPageSize?: number;
 }
 
 function makeClient(overview: Overview, options: FakeOptions) {
@@ -153,7 +155,6 @@ function makeClient(overview: Overview, options: FakeOptions) {
       const detail: RoutineDetail = {
         ...summary,
         prompt: '# Steps\n\n- look at the queue',
-        runs: overview.runs.filter(r => r.routine === name),
         skips: [],
         queue: Array.from({ length: summary.queuedWebhooks }, (_, index) => ({
           runId: runIdSchema.parse(`20261006T11${String(50 + index)}00Z-q${index}`),
@@ -166,6 +167,18 @@ function makeClient(overview: Overview, options: FakeOptions) {
         })),
       };
       return Promise.resolve(detail);
+    },
+    getRuns(routine, cursor) {
+      return Promise.resolve(
+        paginateRuns(
+          overview.runs.filter(r => r.routine === routine),
+          {
+            routine,
+            cursor: cursor === null ? null : decodeRunsCursor(cursor),
+            limit: options.runsPageSize ?? 50,
+          },
+        ),
+      );
     },
     getRun(routine, id) {
       const run = overview.runs.find(r => r.routine === routine && r.id === id);
@@ -229,6 +242,25 @@ test("enter opens a run from the routine's runs tab and esc goes back", async ()
   assert.match(runScreen, /▸ Bash\s+gh pr list/);
   assert.match(runScreen, /claude --resume session-1/);
   assert.match(await press('escape'), /0 {2}on-call-monitoring {2}/);
+});
+
+test('loads older runs of a routine as the cursor nears the end of the runs tab', async () => {
+  const overview = makeOverview();
+  overview.runs.push(
+    ...Array.from({ length: 24 }, (_, index) =>
+      makeRun('on-call-monitoring', `20261005T${String(index).padStart(2, '0')}0000Z-old${index}`),
+    ),
+  );
+  const { press } = await makeApp({ overview, runsPageSize: 10 });
+
+  const routineScreen = await press('enter');
+  assert.match(routineScreen, /Runs 25/);
+  assert.match(routineScreen, /15 more…/);
+  assert.doesNotMatch(routineScreen, /20261005T000000Z-old0/);
+
+  const endScreen = await press('G', 'G', 'G');
+  assert.match(endScreen, /20261005T000000Z-old0/);
+  assert.doesNotMatch(endScreen, /more…/);
 });
 
 test('the prompt tab renders the routine prompt as markdown', async () => {

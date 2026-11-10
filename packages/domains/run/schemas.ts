@@ -28,3 +28,17 @@ export const runRecordSchema = z.object({
   error: z.string().nullable(),
   logFile: z.string(),
 });
+
+export const runsCursorSchema = z.string().brand<'RunsCursor'>();
+
+export const runsCursorKeySchema = z.object({
+  startedAt: z.string(),
+  routine: routineNameSchema,
+  id: runIdSchema,
+});
+
+export const runsPageSchema = z.object({
+  runs: z.array(runRecordSchema),
+  nextCursor: runsCursorSchema.nullable(),
+  total: z.number(),
+});

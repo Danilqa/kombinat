@@ -10,16 +10,20 @@ import { useRowLink } from '@web-app/hooks/use-row-link';
 
 interface RunsTableProps {
   runs: RunRecord[];
+  total: number;
   hasRoutineColumn: boolean;
+  onEndReached: () => void;
 }
 
-export function RunsTable({ runs, hasRoutineColumn }: RunsTableProps) {
+export function RunsTable({ runs, total, hasRoutineColumn, onEndReached }: RunsTableProps) {
   const getRowClickHandler = useRowLink();
   if (runs.length === 0) return <EmptyState>No runs yet.</EmptyState>;
   return (
     <Table.VirtualRoot
       className="min-w-[760px]"
       data={runs}
+      totalCount={total}
+      onEndReached={onEndReached}
       header={
         <Table.Row>
           {hasRoutineColumn && <Table.Head>Routine</Table.Head>}

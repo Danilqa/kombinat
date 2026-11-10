@@ -25,7 +25,7 @@ import {
   statusLines,
   transcriptLines,
 } from './views';
-import type { Action, ContentLine, PageContent, RoutineTab } from './views';
+import type { Action, ContentLine, LoadedRuns, PageContent, RoutineTab } from './views';
 
 type ListFocus = 'routines' | 'runs';
 type Focus = ListFocus | 'detail';
@@ -103,6 +103,8 @@ const MIN_WIDTH = 60;
 const MIN_HEIGHT = 18;
 const MESSAGE_MS = 6000;
 const RUN_CACHE_SIZE = 4;
+// How close to the last loaded run the cursor gets before the next page loads.
+const LOAD_MORE_ROWS = 10;
 
 const runKey = (routine: RoutineName, id: RunId) => `${routine}/${id}`;
 const pageKey = (page: Page): string =>
@@ -205,6 +207,10 @@ export class TuiApp {
   private overviewError: string | null = null;
   private loadedAt: number | null = null;
   private routineDetails = new Map<RoutineName, RoutineDetail>();
+  private routineRuns = new Map<RoutineName, LoadedRuns>();
+  // One load of a routine's runs at a time, so a refresh and the next page never undo each other.
+  private runsLoads = new Map<RoutineName, Promise<void>>();
+  private loadingMoreRuns = new Set<RoutineName>();
   private runData = new Map<string, RunData>();
   private pageErrors = new Map<string, string>();
   private refreshing: Promise<void> | null = null;
@@ -267,7 +273,11 @@ export class TuiApp {
     try {
       await match(page)
         .with({ kind: 'routine' }, async ({ name }) => {
-          this.routineDetails.set(name, await this.client.getRoutine(name));
+          const [detail] = await Promise.all([
+            this.client.getRoutine(name),
+            this.queueRunsLoad(name, () => this.reloadRuns(name)),
+          ]);
+          this.routineDetails.set(name, detail);
         })
         .with({ kind: 'run' }, async run => this.loadRun(run))
         .exhaustive();
@@ -276,6 +286,49 @@ export class TuiApp {
       this.pageErrors.set(key, getErrorMessage(err));
     }
     this.onChange();
+  }
+
+  private queueRunsLoad(name: RoutineName, load: () => Promise<void>): Promise<void> {
+    const next = (this.runsLoads.get(name) ?? Promise.resolve()).then(load);
+    this.runsLoads.set(
+      name,
+      next.catch(() => {}),
+    );
+    return next;
+  }
+
+  // Reloads as many runs as are loaded, so the list does not shrink under the cursor.
+  private async reloadRuns(name: RoutineName): Promise<void> {
+    const loadedCount = this.routineRuns.get(name)?.runs.length ?? 0;
+    let page = await this.client.getRuns(name, null);
+    const runs = [...page.runs];
+    while (page.nextCursor !== null && runs.length < loadedCount) {
+      page = await this.client.getRuns(name, page.nextCursor);
+      runs.push(...page.runs);
+    }
+    this.routineRuns.set(name, { runs, nextCursor: page.nextCursor, total: page.total });
+  }
+
+  private loadMoreRuns(name: RoutineName): void {
+    if (this.loadingMoreRuns.has(name)) return;
+    this.loadingMoreRuns.add(name);
+    this.queueRunsLoad(name, async () => {
+      const loaded = this.routineRuns.get(name);
+      if (loaded === undefined || loaded.nextCursor === null) return;
+      const page = await this.client.getRuns(name, loaded.nextCursor);
+      this.routineRuns.set(name, {
+        runs: [...loaded.runs, ...page.runs],
+        nextCursor: page.nextCursor,
+        total: page.total,
+      });
+    })
+      .catch((err: unknown) => {
+        this.flash(getErrorMessage(err), 'error');
+      })
+      .finally(() => {
+        this.loadingMoreRuns.delete(name);
+        this.onChange();
+      });
   }
 
   private async loadRun(page: RunPage): Promise<void> {
@@ -511,6 +564,12 @@ export class TuiApp {
     const last = (getSelectTargets(content) ?? content.lines).length - 1;
     page.cursor = clamp(page.cursor + step, 0, Math.max(0, last));
     if (isMatching({ kind: 'run' }, page)) page.follow = step > 0 && page.cursor === last;
+    if (
+      isMatching({ kind: 'routine', tab: 'runs' }, page) &&
+      page.cursor >= last - LOAD_MORE_ROWS
+    ) {
+      this.loadMoreRuns(page.name);
+    }
   }
 
   private switchTab(page: RoutinePage, direction: 1 | -1): void {
@@ -770,6 +829,7 @@ export class TuiApp {
     return routinePage({
       summary,
       detail: this.routineDetails.get(page.name),
+      runs: this.routineRuns.get(page.name),
       tab: page.tab,
       width,
       now,

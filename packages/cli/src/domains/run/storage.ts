@@ -7,6 +7,7 @@ import { routineNameSchema } from 'domains/id/schemas';
 import type { RoutineName, RunId } from 'domains/id/types';
 import { runRecordSchema } from 'domains/run/schemas';
 import type { RunRecord } from 'domains/run/types';
+import { compareRunsByNewest } from 'domains/run/utils';
 
 import { config } from '../../config';
 import { readJsonFile, writeJsonFile } from '../../utils/json';
@@ -61,7 +62,7 @@ export function listRuns(routine: RoutineName): RunRecord[] {
       const record = readJsonFile(path.join(dir, entry), runRecordSchema);
       return record === null ? [] : [reconcileRecord(record)];
     })
-    .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+    .sort(compareRunsByNewest);
 }
 
 export function listAllRuns(): RunRecord[] {
@@ -70,7 +71,7 @@ export function listAllRuns(): RunRecord[] {
   return fs
     .readdirSync(root)
     .flatMap(routine => listRuns(routineNameSchema.parse(routine)))
-    .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+    .sort(compareRunsByNewest);
 }
 
 export function getRunningRuns(): RunRecord[] {
