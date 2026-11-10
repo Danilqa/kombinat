@@ -290,7 +290,9 @@ export function WelcomeBanner() {
           actions={
             <>
               <Button asChild size="small">
-                <ExternalLink href={`${REPO_URL}#webhooks`}>How webhooks work</ExternalLink>
+                <ExternalLink href={`${REPO_URL}/blob/main/docs/webhook.md`}>
+                  How webhooks work
+                </ExternalLink>
               </Button>
               <Button asChild variant="secondary" size="small">
                 <Link to={getRoutinePath('on-call-engineer')}>
