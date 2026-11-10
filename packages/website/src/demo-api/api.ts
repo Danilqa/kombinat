@@ -5,7 +5,7 @@ import type { DaemonStatus } from 'domains/daemon/types';
 import { routineNameSchema, runIdSchema } from 'domains/id/schemas';
 import type { RoutineName } from 'domains/id/types';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
-import { MAX_RUNS_PAGE_SIZE } from 'domains/run/constants';
+import { RUNS_CURSOR_ERROR } from 'domains/run/constants';
 import type { RunRecord } from 'domains/run/types';
 import { createRunId, paginateRuns, parseRunsPageQuery } from 'domains/run/utils';
 import type { QueuedWebhook } from 'domains/webhook/types';
@@ -153,18 +153,10 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
 
   function getRunsPage(url: URL, now: Date): ApiResponse {
     const query = parseRunsPageQuery(url.searchParams);
-    if (query === null) {
-      return fail(
-        400,
-        `limit must be 1 to ${MAX_RUNS_PAGE_SIZE} and cursor one that /api/runs returned`,
-      );
-    }
-    const runs = history.listRuns(now);
-    return ok(
-      paginateRuns(
-        query.routine === null ? runs : runs.filter(run => run.routine === query.routine),
-        query,
-      ),
+    if (query === null) return fail(400, RUNS_CURSOR_ERROR);
+    if (query.routine === null) return ok(paginateRuns(history.listRuns(now), query.cursor));
+    return withRoutine(query.routine, routine =>
+      ok(paginateRuns(listRoutineRuns(routine, now), query.cursor)),
     );
   }
 

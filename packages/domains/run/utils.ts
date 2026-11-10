@@ -2,7 +2,7 @@ import { match } from 'ts-pattern';
 
 import { routineNameSchema, runIdSchema } from '../id/schemas';
 import type { RunId } from '../id/types';
-import { MAX_RUNS_PAGE_SIZE, RUNS_PAGE_SIZE } from './constants';
+import { RUNS_PAGE_SIZE } from './constants';
 import { runsCursorKeySchema, runsCursorSchema } from './schemas';
 import type {
   RunRecord,
@@ -63,23 +63,13 @@ export function compareRunsByNewest(a: RunsCursorKey, b: RunsCursorKey): number 
   );
 }
 
-function encodeBase64Url(text: string): string {
-  const binary = String.fromCharCode(...new TextEncoder().encode(text));
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-function decodeBase64Url(encoded: string): string {
-  const binary = atob(encoded.replace(/-/g, '+').replace(/_/g, '/'));
-  return new TextDecoder().decode(Uint8Array.from(binary, char => char.charCodeAt(0)));
-}
-
 export function encodeRunsCursor({ startedAt, routine, id }: RunsCursorKey): RunsCursor {
-  return runsCursorSchema.parse(encodeBase64Url(JSON.stringify({ startedAt, routine, id })));
+  return runsCursorSchema.parse(JSON.stringify({ startedAt, routine, id }));
 }
 
 export function decodeRunsCursor(cursor: string): RunsCursorKey | null {
   try {
-    const key = runsCursorKeySchema.safeParse(JSON.parse(decodeBase64Url(cursor)));
+    const key = runsCursorKeySchema.safeParse(JSON.parse(cursor));
     return key.success ? key.data : null;
   } catch {
     return null;
@@ -87,32 +77,26 @@ export function decodeRunsCursor(cursor: string): RunsCursorKey | null {
 }
 
 export function parseRunsPageQuery(params: URLSearchParams): RunsPageQuery | null {
-  const limit = Number(params.get('limit') ?? RUNS_PAGE_SIZE);
   const routine = params.get('routine');
   const cursor = params.get('cursor');
   const cursorKey = cursor === null ? null : decodeRunsCursor(cursor);
-  const isValid =
-    Number.isInteger(limit) &&
-    limit >= 1 &&
-    limit <= MAX_RUNS_PAGE_SIZE &&
-    (cursor === null || cursorKey !== null);
-  if (!isValid) return null;
-  return {
-    routine: routine === null ? null : routineNameSchema.parse(routine),
-    cursor: cursorKey,
-    limit,
-  };
+  if (cursor !== null && cursorKey === null) return null;
+  return { routine: routine === null ? null : routineNameSchema.parse(routine), cursor: cursorKey };
 }
 
-export function paginateRuns(runs: RunRecord[], { cursor, limit }: RunsPageQuery): RunsPage {
-  const sorted = runs.toSorted(compareRunsByNewest);
-  const start = cursor === null ? 0 : sorted.findIndex(run => compareRunsByNewest(run, cursor) > 0);
-  const page = start === -1 ? [] : sorted.slice(start, start + limit);
+export function paginateRuns(
+  newestFirstRuns: RunRecord[],
+  cursor: RunsCursorKey | null,
+  pageSize = RUNS_PAGE_SIZE,
+): RunsPage {
+  const start =
+    cursor === null ? 0 : newestFirstRuns.findIndex(run => compareRunsByNewest(run, cursor) > 0);
+  const page = start === -1 ? [] : newestFirstRuns.slice(start, start + pageSize);
   const last = page.at(-1);
-  const hasMore = start !== -1 && start + limit < sorted.length;
+  const hasMore = start !== -1 && start + pageSize < newestFirstRuns.length;
   return {
     runs: page,
     nextCursor: hasMore && last !== undefined ? encodeRunsCursor(last) : null,
-    total: sorted.length,
+    total: newestFirstRuns.length,
   };
 }

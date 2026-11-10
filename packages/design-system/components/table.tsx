@@ -192,18 +192,18 @@ const VIRTUAL_TABLE_COMPONENTS = {
 interface VirtualTableProps<Item> {
   className?: string;
   data: Item[];
-  totalCount?: number;
+  totalCount: number;
   header: React.ReactNode;
   computeItemKey: (item: Item) => React.Key;
   renderCells: (item: Item) => React.ReactNode;
-  getRowProps?: (item: Item) => TableRowProps;
-  onEndReached?: () => void;
+  getRowProps: (item: Item) => TableRowProps;
+  onEndReached: () => void;
 }
 
 function VirtualTable<Item>({
   className,
   data,
-  totalCount = data.length,
+  totalCount,
   header,
   computeItemKey,
   renderCells,
@@ -212,13 +212,6 @@ function VirtualTable<Item>({
 }: VirtualTableProps<Item>) {
   // Lets the browser restore the scroll on back navigation.
   const [isMeasured, setIsMeasured] = React.useState(false);
-  // Keeps the rows in view still when rows are added above them.
-  const firstKey = data[0] === undefined ? undefined : computeItemKey(data[0]);
-  const [first, setFirst] = React.useState({ key: firstKey, index: VIRTUAL_TABLE_FIRST_INDEX });
-  if (first.key !== firstKey) {
-    const addedCount = data.findIndex(item => computeItemKey(item) === first.key);
-    setFirst({ key: firstKey, index: first.index - Math.max(addedCount, 0) });
-  }
   // Rows mount and unmount while scrolling, so widths come from the header.
   const tableClassName = cn(TABLE_CLASS_NAME, 'table-fixed', className);
   const context: VirtualTableContext = {
@@ -226,7 +219,7 @@ function VirtualTable<Item>({
     rowCount: totalCount,
     getRowProps: index => {
       const item = data[index];
-      return item === undefined ? undefined : getRowProps?.(item);
+      return item === undefined ? undefined : getRowProps(item);
     },
   };
   return (
@@ -234,7 +227,8 @@ function VirtualTable<Item>({
       <TableVirtuoso<Item, VirtualTableContext>
         useWindowScroll
         data={data}
-        firstItemIndex={first.index}
+        // Counted from the last row, so the rows in view stay still when new ones arrive above.
+        firstItemIndex={VIRTUAL_TABLE_FIRST_INDEX - totalCount}
         context={context}
         components={VIRTUAL_TABLE_COMPONENTS}
         increaseViewportBy={VIRTUAL_TABLE_OVERSCAN_PX}
@@ -243,7 +237,7 @@ function VirtualTable<Item>({
         totalListHeightChanged={height => {
           if (height > 0) setIsMeasured(true);
         }}
-        endReached={() => onEndReached?.()}
+        endReached={onEndReached}
         computeItemKey={(_, item) => computeItemKey(item)}
         fixedHeaderContent={() => header}
         itemContent={(_, item) => renderCells(item)}

@@ -63,9 +63,13 @@ test('loads older runs page by page as you scroll a long history', async ({
   expect(await table.getByRole('row').count()).toBeLessThan(60);
 });
 
-test('explains that a routine does not exist', async ({ page }) => {
+test('explains that a routine does not exist', async ({ page, kombinat }) => {
+  kombinat.addRoutine({ name: 'inbox-triage' });
+  kombinat.addRun({ routine: 'inbox-triage' });
   await page.goto('/routines/nightly-digest');
 
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('nightly-digest');
   await expect(page.getByRole('alert')).toHaveText('Unknown routine nightly-digest');
+  const runs = await page.request.get('/api/runs?routine=nightly-digest%2F..%2Finbox-triage');
+  expect(runs.status()).toBe(404);
 });

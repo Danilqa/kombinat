@@ -52,7 +52,7 @@ function reconcileRecord(record: RunRecord): RunRecord {
   return reconciled;
 }
 
-export function listRuns(routine: RoutineName): RunRecord[] {
+function readRuns(routine: RoutineName): RunRecord[] {
   const dir = getRunsDir(routine);
   if (!fs.existsSync(dir)) return [];
   return fs
@@ -61,8 +61,11 @@ export function listRuns(routine: RoutineName): RunRecord[] {
     .flatMap(entry => {
       const record = readJsonFile(path.join(dir, entry), runRecordSchema);
       return record === null ? [] : [reconcileRecord(record)];
-    })
-    .sort(compareRunsByNewest);
+    });
+}
+
+export function listRuns(routine: RoutineName): RunRecord[] {
+  return readRuns(routine).sort(compareRunsByNewest);
 }
 
 export function listAllRuns(): RunRecord[] {
@@ -70,7 +73,7 @@ export function listAllRuns(): RunRecord[] {
   if (!fs.existsSync(root)) return [];
   return fs
     .readdirSync(root)
-    .flatMap(routine => listRuns(routineNameSchema.parse(routine)))
+    .flatMap(routine => readRuns(routineNameSchema.parse(routine)))
     .sort(compareRunsByNewest);
 }
 

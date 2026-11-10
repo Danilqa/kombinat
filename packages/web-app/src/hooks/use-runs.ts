@@ -27,17 +27,16 @@ function checkHasRunningRun(data: InfiniteData<RunsPage> | undefined): boolean {
   return data?.pages.some(page => page.runs.some(isMatching({ status: 'running' }))) === true;
 }
 
-function checkIsBehind(newest: RunRecord | undefined, latest: RunRecord | null): boolean {
-  if (latest === null) return false;
-  if (newest === undefined) return true;
-  return compareRunsByNewest(latest, newest) < 0 || newest.status !== latest.status;
+function checkIsBehind(loadedRun: RunRecord | undefined, latestRun: RunRecord | null): boolean {
+  if (latestRun === null) return false;
+  if (loadedRun === undefined) return true;
+  return compareRunsByNewest(latestRun, loadedRun) < 0 || loadedRun.status !== latestRun.status;
 }
 
 function toLoadedRuns(data: InfiniteData<RunsPage>): LoadedRuns {
   return { runs: data.pages.flatMap(page => page.runs), total: data.pages[0]?.total ?? 0 };
 }
 
-// The routine query can see a new run before these pages do.
 export function useRuns(
   routine: RoutineName | null,
   latestRun: RunRecord | null = null,
@@ -51,6 +50,7 @@ export function useRuns(
       select: toLoadedRuns,
       refetchInterval: query => getPollInterval(checkHasRunningRun(query.state.data)),
     });
+  // The routine query can see a new run, or the end of one, before these pages do.
   const isBehind = data !== undefined && checkIsBehind(data.runs[0], latestRun);
   useEffect(() => {
     if (isBehind) void refetch();

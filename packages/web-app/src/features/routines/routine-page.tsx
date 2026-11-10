@@ -16,11 +16,10 @@ import { SkipsTable } from 'domains/scheduler/components';
 import { sameOriginApi } from 'utils/http';
 import { getPollInterval } from 'utils/polling';
 import { Breadcrumbs } from '@web-app/components/breadcrumbs';
-import { RunsTable } from '@web-app/components/runs-table';
+import { RunsList } from '@web-app/components/runs-list';
 import { ROUTINES_PATH } from '@web-app/constants/path';
 import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 import { useRuns } from '@web-app/hooks/use-runs';
-import type { RunsQuery } from '@web-app/hooks/use-runs';
 
 function checkIsRoutineRunning(routine: RoutineDetail | undefined): boolean {
   return routine?.running === true;
@@ -48,10 +47,10 @@ function RoutineHeader({ name, routine }: RoutineHeaderProps) {
 
 interface RoutineViewProps {
   routine: RoutineDetail;
-  runs: RunsQuery;
 }
 
-function RoutineView({ routine, runs }: RoutineViewProps) {
+function RoutineView({ routine }: RoutineViewProps) {
+  const runs = useRuns(routine.name, routine.lastRun);
   return (
     <div className="space-y-10">
       <Card.Root className="gap-0 py-0">
@@ -66,21 +65,7 @@ function RoutineView({ routine, runs }: RoutineViewProps) {
           <Tabs.Trigger value="prompt">Prompt</Tabs.Trigger>
         </Tabs.List>
         <Tabs.Content value="runs" className="space-y-10">
-          <div>
-            {runs.error && <ErrorState message={runs.error.message} />}
-            {runs.isPending && <LoadingState />}
-            {runs.data && (
-              <Card.Root className="gap-0 overflow-visible py-0">
-                <RunsTable
-                  runs={runs.data.runs}
-                  total={runs.data.total}
-                  hasRoutineColumn={false}
-                  onEndReached={runs.loadNextPage}
-                />
-              </Card.Root>
-            )}
-            {runs.isFetchingNextPage && <LoadingState />}
-          </div>
+          <RunsList runs={runs} hasRoutineColumn={false} />
           {routine.skips.length > 0 && (
             <section>
               <SectionHeader.Root
@@ -112,7 +97,6 @@ export function RoutinePage() {
     queryFn: () => getRoutine(sameOriginApi, name),
     refetchInterval: query => getPollInterval(checkIsRoutineRunning(query.state.data)),
   });
-  const runs = useRuns(name, data?.lastRun ?? null);
 
   return (
     <div>
@@ -130,7 +114,7 @@ export function RoutinePage() {
       <RoutineHeader name={name} routine={data} />
       {error && <ErrorState message={error.message} />}
       {isPending && <LoadingState />}
-      {data && <RoutineView routine={data} runs={runs} />}
+      {data && <RoutineView routine={data} />}
     </div>
   );
 }
