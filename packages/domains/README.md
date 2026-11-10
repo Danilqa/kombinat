@@ -12,17 +12,17 @@ Each domain has up to two halves with the same name:
 
 ## Map
 
-| Domain         | Shared half                                                                                                                                           | Daemon half                                                                     |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| **id**         | `RoutineName`, `RunId`, `CalendarEntryId` and `SessionId` with their branded schemas                                                                  | none                                                                            |
-| **agent**      | `AgentName`, agent label                                                                                                                              | claude, codex and command adapters, registry, settings validation, `AgentTask`  |
-| **transcript** | item schemas and types, preview rule, subagent check, empty and result labels, `TranscriptList`                                                       | none                                                                            |
-| **run**        | `RunRecord`, status and trigger, requests, labels, id, duration, `RECENT_RUNS_LIMIT`, `makeRunRecord`, `RunStatusBadge`, `RunDetailList`, `RunOutput` | runner, record storage with orphan reconciliation, event log and transcript     |
-| **scheduler**  | `Skip`, `SkipReason`, `SchedulerState`, skip label, `SkipsTable`                                                                                      | tick loop, `scheduler.json` storage                                             |
-| **routine**    | `RoutineSummary`, `RoutineDetail`, requests, `RunNowButton`, `RoutineBadges`, `RoutineDetailList`, `WebhookQueueButton`                               | frontmatter parsing, validation and defaults, loading, next run, schedule label |
-| **calendar**   | entry schemas and types, `getCalendar`, `buildCalendar`, planned lengths, entry title and overlap labels, overlap count                               | none, `cli/src/server.ts` serves `buildCalendar`                                |
-| **daemon**     | status schema, `getDaemonStatus`, health rules, `DaemonStatusIndicator`                                                                               | none, `cli/src/server.ts` builds the status                                     |
-| **webhook**    | `QueuedWebhook`, webhook path, size and queue position labels, `WebhookQueueList`                                                                     | gate, queue, and receiving: start, queue, ignore or reject                      |
+| Domain         | Shared half                                                                                                                                    | Daemon half                                                                     |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| **id**         | `RoutineName`, `RunId`, `CalendarEntryId` and `SessionId` with their branded schemas                                                           | none                                                                            |
+| **agent**      | `AgentName`, agent label                                                                                                                       | claude, codex and command adapters, registry, settings validation, `AgentTask`  |
+| **transcript** | item schemas and types, preview rule, subagent check, empty and result labels, `TranscriptList`                                                | none                                                                            |
+| **run**        | `RunRecord`, status and trigger, requests, labels, id, duration, cursor pages, `makeRunRecord`, `RunStatusBadge`, `RunDetailList`, `RunOutput` | runner, record storage with orphan reconciliation, event log and transcript     |
+| **scheduler**  | `Skip`, `SkipReason`, `SchedulerState`, skip label, `SkipsTable`                                                                               | tick loop, `scheduler.json` storage                                             |
+| **routine**    | `RoutineSummary`, `RoutineDetail`, requests, `RunNowButton`, `RoutineBadges`, `RoutineDetailList`, `WebhookQueueButton`                        | frontmatter parsing, validation and defaults, loading, next run, schedule label |
+| **calendar**   | entry schemas and types, `getCalendar`, `buildCalendar`, planned lengths, entry title and overlap labels, overlap count                        | none, `cli/src/server.ts` serves `buildCalendar`                                |
+| **daemon**     | status schema, `getDaemonStatus`, health rules, `DaemonStatusIndicator`                                                                        | none, `cli/src/server.ts` builds the status                                     |
+| **webhook**    | `QueuedWebhook`, webhook path, size and queue position labels, `WebhookQueueList`                                                              | gate, queue, and receiving: start, queue, ignore or reject                      |
 
 Not domains:
 
@@ -79,6 +79,7 @@ Invariants:
 - The record is `<state dir>/runs/<routine>/<id>.json` and the event log `<id>.jsonl` next to it. This layout is a compatibility contract.
 - A webhook run's request body waits in `<id>.payload` next to them until the run starts: the daemon writes it and starts the run with `--run-id <id>`, and the runner deletes it and adds the body to the end of the prompt in a code fence.
 - The transcript is built from the event log: the before hook's line becomes a `hook` item, and the agent turns the other lines into items.
+- `GET /api/runs` answers a page of runs, newest first by `startedAt`, then routine and id, with `nextCursor` and `total`. `routine` limits it to one routine, `limit` is 1 to 200 (50 by default), and `cursor` is an opaque token for the run a page ends with, so the next page starts right after that run even when new runs arrive above it.
 
 ### scheduler
 
@@ -101,7 +102,7 @@ A named, version-controlled unit of recurring agent work: one markdown file, `ro
 - `agent` defaults to `claude`, `enabled` to `true`, `webhook` to `false` and `timeoutMinutes` to 55. `webhook` must be `true` or `false`, and `webhookGate` needs `webhook: true`.
 - The schedule gives the routine its next run, `null` when it is manual or disabled, and its label: `Manual` or the cron in words.
 
-Clients see a routine as a summary (its definition plus next run, running, last run and last skip) or a detail (plus the prompt, runs and skips). They can start it with Run now, which answers 409 while the routine is running.
+Clients see a routine as a summary (its definition plus next run, running, last run and last skip) or a detail (plus the prompt, skips and queued webhooks). Its runs come page by page from `/api/runs`. They can start it with Run now, which answers 409 while the routine is running.
 
 A routine with `webhook: true` also starts from a [webhook](#webhook).
 
@@ -146,7 +147,7 @@ A domain folder in this package can have:
 - `types.ts`: the types inferred from the schemas and other domain types;
 - `schemas.ts`: zod schemas of what kombinat stores or serves. The JSON on disk and over HTTP is a contract;
 - `requests.ts`: API requests. Each takes an `HttpClient` from `utils/http` first: `sameOriginApi` in the browser, the TUI's client with its base URL and timeout;
-- `constants.ts`: fixed values, such as `RECENT_RUNS_LIMIT` and `STALE_TICK_MS`;
+- `constants.ts`: fixed values, such as `RUNS_PAGE_SIZE` and `STALE_TICK_MS`;
 - `utils.ts`: pure rules and labels;
 - `mocks.ts`: test data, imported only from `*.test.ts`, `*.e2e.ts` and `packages/e2e`;
 - `*.test.ts`: unit tests next to the rules they cover, run by `pnpm test`;

@@ -192,19 +192,24 @@ const VIRTUAL_TABLE_COMPONENTS = {
 interface VirtualTableProps<Item> {
   className?: string;
   data: Item[];
+  // All rows, when data holds only the pages loaded so far.
+  totalCount?: number;
   header: React.ReactNode;
   computeItemKey: (item: Item) => React.Key;
   renderCells: (item: Item) => React.ReactNode;
   getRowProps?: (item: Item) => TableRowProps;
+  onEndReached?: () => void;
 }
 
 function VirtualTable<Item>({
   className,
   data,
+  totalCount = data.length,
   header,
   computeItemKey,
   renderCells,
   getRowProps,
+  onEndReached,
 }: VirtualTableProps<Item>) {
   // Until Virtuoso measures the rows, the list holds their height, so going back restores the scroll.
   const [isMeasured, setIsMeasured] = React.useState(false);
@@ -219,7 +224,7 @@ function VirtualTable<Item>({
   const tableClassName = cn(TABLE_CLASS_NAME, 'table-fixed', className);
   const context: VirtualTableContext = {
     tableClassName,
-    rowCount: data.length,
+    rowCount: totalCount,
     getRowProps: index => {
       const item = data[index];
       return item === undefined ? undefined : getRowProps?.(item);
@@ -239,6 +244,7 @@ function VirtualTable<Item>({
         totalListHeightChanged={height => {
           if (height > 0) setIsMeasured(true);
         }}
+        endReached={() => onEndReached?.()}
         computeItemKey={(_, item) => computeItemKey(item)}
         fixedHeaderContent={() => header}
         itemContent={(_, item) => renderCells(item)}

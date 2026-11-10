@@ -32,7 +32,6 @@ export const routineSummarySchema = z.object({
 
 export const routineDetailSchema = routineSummarySchema.extend({
   prompt: z.string(),
-  runs: z.array(runRecordSchema),
   skips: z.array(skipSchema),
   queue: z.array(queuedWebhookSchema),
 });
