@@ -37,15 +37,14 @@
     "build": "pnpm run build:cli && pnpm run build:web-app",
     "build:cli": "esbuild src/cli.ts --bundle --platform=node --format=esm --target=node24 --external:zod --external:ts-pattern --outfile=dist/cli.js",
     "build:web-app": "pnpm --filter web-app run build",
-    "prepack": "pnpm run build && cp ../../README.md README.md",
-    "prepublishOnly": "node -e \"if (Number(/^pnpm\\/(\\d+)/.exec(process.env.npm_config_user_agent ?? '')?.[1] ?? 0) < 11) throw new Error('Publish with pnpm 11 or newer: npm and older pnpm leave catalog: versions in package.json')\""
+    "prepack": "pnpm run build && cp ../../README.md README.md"
   },
   "engines": {
     "node": ">=24"
   },
   "dependencies": {
-    "ts-pattern": "catalog:",
-    "zod": "catalog:"
+    "ts-pattern": "5.9.2",
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "domains": "workspace:*",
