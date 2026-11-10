@@ -1,12 +1,13 @@
 import { z } from 'zod';
 
 import { agentNameSchema } from '../agent/schemas';
+import { routineNameSchema } from '../id/schemas';
 import { runRecordSchema } from '../run/schemas';
 import { skipSchema } from '../scheduler/schemas';
 import { queuedWebhookSchema } from '../webhook/schemas';
 
 export const routineSummarySchema = z.object({
-  name: z.string(),
+  name: routineNameSchema,
   description: z.string(),
   schedule: z.string().nullable(),
   scheduleHuman: z.string(),

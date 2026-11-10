@@ -4,6 +4,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 
+import { routineNameSchema, runIdSchema } from 'domains/id/schemas';
+
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kombinat-test-'));
 process.env['KOMBINAT_STATE_DIR'] = path.join(tmp, 'state');
 
@@ -30,12 +32,10 @@ test('a webhook run gets its payload at the end of the prompt', async () => {
     path.join(tmp, 'echo-payload.md'),
     `---\ncwd: ${tmp}\nagent: command\ncommand: cat\n---\nTriage.`,
   );
-  writePayload('echo-payload', '20261109T120000Z-abcd', '{"number":42}');
-  const record = await runRoutine(routine, {
-    trigger: 'webhook',
-    runId: '20261109T120000Z-abcd',
-  });
-  assert.equal(record.id, '20261109T120000Z-abcd');
+  const runId = runIdSchema.parse('20261109T120000Z-abcd');
+  writePayload(routine.name, runId, '{"number":42}');
+  const record = await runRoutine(routine, { trigger: 'webhook', runId });
+  assert.equal(record.id, runId);
   assert.equal(record.status, 'succeeded');
   assert.equal(
     record.resultText,
@@ -50,11 +50,12 @@ test('a webhook run gets its payload at the end of the prompt', async () => {
 });
 
 test('a started run counts as starting until its record appears or time runs out', () => {
-  const runId = '20261109T120000Z-wxyz';
-  startDetachedRun('missing-routine', { trigger: 'manual', runId });
-  assert.equal(checkIsStarting('missing-routine'), true);
-  assert.equal(checkIsStarting('missing-routine', Date.now() + 5 * 60_000), false);
-  startDetachedRun('missing-routine', { trigger: 'manual', runId });
-  writeRunRecord(makeRunRecord({ id: runId, routine: 'missing-routine', status: 'running' }));
-  assert.equal(checkIsStarting('missing-routine'), false);
+  const routine = routineNameSchema.parse('missing-routine');
+  const runId = runIdSchema.parse('20261109T120000Z-wxyz');
+  startDetachedRun(routine, { trigger: 'manual', runId });
+  assert.equal(checkIsStarting(routine), true);
+  assert.equal(checkIsStarting(routine, Date.now() + 5 * 60_000), false);
+  startDetachedRun(routine, { trigger: 'manual', runId });
+  writeRunRecord(makeRunRecord({ id: runId, routine, status: 'running' }));
+  assert.equal(checkIsStarting(routine), false);
 });

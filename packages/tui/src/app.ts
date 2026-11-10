@@ -1,5 +1,6 @@
 import { isMatching, match, P } from 'ts-pattern';
 
+import type { RoutineName, RunId } from 'domains/id/types';
 import type { RoutineDetail } from 'domains/routine/types';
 import type { RunRecord, RunWithTranscript } from 'domains/run/types';
 import type { TranscriptItem } from 'domains/transcript/types';
@@ -38,7 +39,7 @@ interface Anchor {
 
 interface RoutinePage {
   kind: 'routine';
-  name: string;
+  name: RoutineName;
   tab: RoutineTab;
   cursor: number;
   scroll: number;
@@ -47,8 +48,8 @@ interface RoutinePage {
 
 interface RunPage {
   kind: 'run';
-  routine: string;
-  id: string;
+  routine: RoutineName;
+  id: RunId;
   cursor: number;
   scroll: number;
   anchor: Anchor | null;
@@ -64,7 +65,7 @@ interface HelpOverlay {
 
 interface ConfirmRunOverlay {
   kind: 'confirm-run';
-  routine: string;
+  routine: RoutineName;
 }
 
 type Overlay = HelpOverlay | ConfirmRunOverlay;
@@ -103,7 +104,7 @@ const MIN_HEIGHT = 18;
 const MESSAGE_MS = 6000;
 const RUN_CACHE_SIZE = 4;
 
-const runKey = (routine: string, id: string) => `${routine}/${id}`;
+const runKey = (routine: RoutineName, id: RunId) => `${routine}/${id}`;
 const pageKey = (page: Page): string =>
   match(page)
     .with({ kind: 'routine' }, ({ name }) => `routine:${name}`)
@@ -203,7 +204,7 @@ export class TuiApp {
   private overview: Overview | null = null;
   private overviewError: string | null = null;
   private loadedAt: number | null = null;
-  private routineDetails = new Map<string, RoutineDetail>();
+  private routineDetails = new Map<RoutineName, RoutineDetail>();
   private runData = new Map<string, RunData>();
   private pageErrors = new Map<string, string>();
   private refreshing: Promise<void> | null = null;
@@ -594,7 +595,7 @@ export class TuiApp {
     }
   }
 
-  private contextRoutine(): string | null {
+  private contextRoutine(): RoutineName | null {
     return match(this.focus)
       .with('routines', () => this.routines[this.cursors.routines]?.name ?? null)
       .with('runs', () => this.runs[this.cursors.runs]?.routine ?? null)
@@ -617,7 +618,7 @@ export class TuiApp {
     this.overlay = { kind: 'confirm-run', routine: name };
   }
 
-  private async startRun(name: string): Promise<void> {
+  private async startRun(name: RoutineName): Promise<void> {
     try {
       await this.client.startRun(name);
       this.flash(`started ${name}`, 'ok');

@@ -1,5 +1,6 @@
 import { isMatching, match, P } from 'ts-pattern';
 
+import type { RoutineName, RunId } from 'domains/id/types';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import type { RunRecord, RunStatus } from 'domains/run/types';
 import { getRunDurationMs, getRunStatusLabel, getTriggerLabel } from 'domains/run/utils';
@@ -27,8 +28,8 @@ import type { Line, Span } from './terminal/text';
 
 export interface OpenRunAction {
   kind: 'open-run';
-  routine: string;
-  id: string;
+  routine: RoutineName;
+  id: RunId;
 }
 
 export interface ToggleAction {
@@ -366,7 +367,12 @@ function tabBar(tabs: Tab[], active: RoutineTab): Line {
   ];
 }
 
-function runsTable(routine: string, runs: RunRecord[], width: number, now: number): ContentLine[] {
+function runsTable(
+  routine: RoutineName,
+  runs: RunRecord[],
+  width: number,
+  now: number,
+): ContentLine[] {
   if (runs.length === 0) return [{ line: [text('No runs yet.', S.dim)] }];
   const isWide = width >= 78;
   const header: Column[] = isWide
@@ -847,7 +853,7 @@ export function helpPopup(width: number, height: number): Line[] {
   });
 }
 
-export function confirmPopup(routine: string, width: number): Line[] {
+export function confirmPopup(routine: RoutineName, width: number): Line[] {
   const popupWidth = Math.min(Math.max(44, textWidth(routine) + 20), width - 4);
   const body: Line[] = [
     [],

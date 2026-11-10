@@ -1,6 +1,7 @@
 import type { z } from 'zod';
 
 import type { AgentName } from 'domains/agent/types';
+import type { RoutineName, RunId, SessionId } from 'domains/id/types';
 import type { RunRecord, RunTrigger } from 'domains/run/types';
 import type { TranscriptItem } from 'domains/transcript/types';
 
@@ -17,13 +18,13 @@ export interface AgentSettings {
 }
 
 export interface AgentTask extends AgentSettings {
-  name: string;
+  name: RoutineName;
   prompt: string;
 }
 
 export interface RunContext {
   routine: AgentTask;
-  runId: string;
+  runId: RunId;
   trigger: RunTrigger;
 }
 
@@ -52,5 +53,5 @@ export interface Agent {
   buildInvocation(context: RunContext): Invocation;
   readEvent(event: unknown, record: Readonly<RunRecord>): RunUpdate;
   buildTranscript(events: unknown[]): TranscriptItem[];
-  getResumeCommand(sessionId: string): string | null;
+  getResumeCommand(sessionId: SessionId): string | null;
 }

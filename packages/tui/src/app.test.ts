@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
+import { routineNameSchema, runIdSchema, sessionIdSchema } from 'domains/id/schemas';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import type { RunRecord } from 'domains/run/types';
 import type { Transcript } from 'domains/transcript/types';
@@ -15,8 +16,8 @@ const HEIGHT = 40;
 
 function makeRun(routine: string, id: string, overrides: Partial<RunRecord> = {}): RunRecord {
   return {
-    id,
-    routine,
+    id: runIdSchema.parse(id),
+    routine: routineNameSchema.parse(routine),
     agent: 'claude',
     trigger: 'schedule',
     scheduledFor: null,
@@ -25,7 +26,7 @@ function makeRun(routine: string, id: string, overrides: Partial<RunRecord> = {}
     status: 'succeeded',
     pid: 42,
     exitCode: 0,
-    sessionId: 'session-1',
+    sessionId: sessionIdSchema.parse('session-1'),
     resumeCommand: 'claude --resume session-1',
     model: 'claude-opus-5-5',
     costUsd: null,
@@ -40,7 +41,7 @@ function makeRun(routine: string, id: string, overrides: Partial<RunRecord> = {}
 
 function makeRoutine(name: string, overrides: Partial<RoutineSummary> = {}): RoutineSummary {
   return {
-    name,
+    name: routineNameSchema.parse(name),
     description: `${name} does things`,
     schedule: '10 7-22 * * *',
     scheduleHuman: 'Hourly at :10, 07:00-22:59',
@@ -155,7 +156,7 @@ function makeClient(overview: Overview, options: FakeOptions) {
         runs: overview.runs.filter(r => r.routine === name),
         skips: [],
         queue: Array.from({ length: summary.queuedWebhooks }, (_, index) => ({
-          runId: `20261006T11${String(50 + index)}00Z-q${index}`,
+          runId: runIdSchema.parse(`20261006T11${String(50 + index)}00Z-q${index}`),
           queuedAt: `2026-10-06T11:${String(50 + index)}:00Z`,
           bytes: 26,
           preview:

@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { routineNameSchema } from '../id/schemas';
+
 export const skipReasonSchema = z.enum(['already_running', 'concurrency_limit', 'disabled']);
 
 export const skipSchema = z.object({
@@ -12,7 +14,7 @@ export const schedulerStateSchema = z.object({
   startedAt: z.string(),
   lastTickAt: z.string(),
   routines: z.record(
-    z.string(),
+    routineNameSchema,
     z.object({ lastScheduledFor: z.string().nullable(), skips: z.array(skipSchema) }),
   ),
 });

@@ -77,12 +77,13 @@ const daemonDomains = (...domains) => ({
 const sharedDomains = (...domains) => ({
   regex: String.raw`^((\.\./)+|domains/)(${domains.join('|')})(/|$)`,
   message:
-    'Shared domains import only the levels before their own: agent, transcript, scheduler, daemon and webhook, then run, then routine and calendar.',
+    'Shared domains import only the levels before their own: id, then agent, transcript, scheduler, daemon and webhook, then run, then routine and calendar.',
 });
 
 const DAEMON_DOMAIN_LEVELS = [['agent'], ['routine'], ['run'], ['webhook'], ['scheduler']];
 
 const SHARED_DOMAIN_LEVELS = [
+  ['id'],
   ['agent', 'transcript', 'scheduler', 'daemon', 'webhook'],
   ['run'],
   ['routine', 'calendar'],

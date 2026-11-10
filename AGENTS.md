@@ -62,7 +62,7 @@ Each domain has up to two halves with the same name:
 
 Each half has an order of levels. A domain imports only the domains on the levels before its own, never one on its own level. Any daemon domain may import any shared domain.
 
-- Shared: `agent`, `transcript`, `scheduler`, `daemon` and `webhook`, then `run`, then `routine` and `calendar`.
+- Shared: `id`, then `agent`, `transcript`, `scheduler`, `daemon` and `webhook`, then `run`, then `routine` and `calendar`.
 - Daemon: `agent`, then `routine`, then `run`, then `webhook`, then `scheduler`.
 
 A shared domain can have `types.ts`, `schemas.ts` (zod), `requests.ts` (each request takes the `HttpClient` first), `constants.ts`, `utils.ts`, `mocks.ts` and `components/`. Inside `packages/domains`, files import each other by relative path. Other packages import them per file, such as `domains/run/utils`, and import components through the domain's barrel, `domains/run/components`. When a domain gets its first component, add `components/index.ts` and its key in `exports` in `packages/domains/package.json`.
@@ -98,5 +98,6 @@ The domain map, definitions and invariants are in [packages/domains/README.md](p
 - File names are kebab-case. Object types are interfaces. No enums, no switch (use ts-pattern `match`) and no inline type literals. A component's props interface is `<Component>Props`. ESLint enforces these.
 - A function or method that returns a boolean is named `check<…>`, not `get<…>` or `is<…>`: `checkIsTickStale`, `checkHasRunningRun`, `tunnel.checkIsOpen()`, type guards too. Its result goes into an `is…` or `has…` variable. A function that does work and returns whether it succeeded keeps its verb, such as `buildWebApp`.
 - A component made of parts is a namespace, as in Radix. Its file keeps full names, `TableRow` with `TableRowProps`, and ends with `export { Table as Root, TableRow as Row }`. The folder's `index.ts` re-exports it with `export * as Table from './table'`, and callers write `<Table.Root>` and `<Table.Row>`. A component of one part keeps its name: `export * from './badge'`. Domain components follow the same rule.
+- An id is a branded zod type from `domains/id`, such as `RoutineName` or `RunId`, never a plain `string`. A string becomes an id only through its schema's `parse`, where it comes in: a file, a URL, a CLI argument, an agent's output or a test.
 - Unit tests sit next to their code as `*.test.ts` and run on node:test through tsx. `pnpm test` runs the tests of every package.
 - Do not write comments by default. Write one short line only for a "why" the code cannot say.

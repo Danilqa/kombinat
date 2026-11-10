@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
+import { runIdSchema, sessionIdSchema } from 'domains/id/schemas';
 import { makeRunRecord } from 'domains/run/mocks';
 
 import { commandAgent } from './command';
@@ -9,7 +10,7 @@ import { makeAgentTask } from './testing';
 test('pipes the prompt into a shell command', () => {
   const { command, args, input, env } = commandAgent.buildInvocation({
     routine: makeAgentTask({ command: 'gemini --yolo' }),
-    runId: 'r1',
+    runId: runIdSchema.parse('r1'),
     trigger: 'manual',
   });
   assert.equal(command, '/bin/sh');
@@ -29,5 +30,5 @@ test('collects the output lines as the result and the transcript', () => {
   assert.deepEqual(commandAgent.buildTranscript([first, second]), [
     { kind: 'text', key: 'output', text: '# Report\nAll good', isSubagent: false },
   ]);
-  assert.equal(commandAgent.getResumeCommand('x'), null);
+  assert.equal(commandAgent.getResumeCommand(sessionIdSchema.parse('x')), null);
 });

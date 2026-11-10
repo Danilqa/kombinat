@@ -1,14 +1,16 @@
 import { match } from 'ts-pattern';
 
+import { runIdSchema } from '../id/schemas';
+import type { RunId } from '../id/types';
 import type { RunRecord, RunStatus, RunTrigger } from './types';
 
-export function createRunId(now = new Date()): string {
+export function createRunId(now = new Date()): RunId {
   const stamp = now
     .toISOString()
     .replace(/[-:]/g, '')
     .replace(/\.\d+Z$/, 'Z');
   const suffix = Math.random().toString(36).slice(2, 6);
-  return `${stamp}-${suffix}`;
+  return runIdSchema.parse(`${stamp}-${suffix}`);
 }
 
 export function getRunDurationMs(

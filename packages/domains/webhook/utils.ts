@@ -1,4 +1,6 @@
-export function getWebhookPath(routine: string): string {
+import type { RoutineName } from '../id/types';
+
+export function getWebhookPath(routine: RoutineName): string {
   return `/api/routines/${encodeURIComponent(routine)}/webhook`;
 }
 

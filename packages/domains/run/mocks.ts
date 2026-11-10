@@ -1,9 +1,10 @@
+import { routineNameSchema, runIdSchema } from '../id/schemas';
 import type { RunRecord } from './types';
 
 export function makeRunRecord(overrides: Partial<RunRecord> = {}): RunRecord {
   return {
-    id: 'run-1',
-    routine: 'demo',
+    id: runIdSchema.parse('run-1'),
+    routine: routineNameSchema.parse('demo'),
     agent: 'claude',
     trigger: 'manual',
     scheduledFor: null,

@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import type { AgentName } from 'domains/agent/types';
+import { routineNameSchema, sessionIdSchema } from 'domains/id/schemas';
 import { makeRunRecord } from 'domains/run/mocks';
 import type { RunRecord } from 'domains/run/types';
 import { createRunId } from 'domains/run/utils';
@@ -26,8 +27,9 @@ export interface RoutineFile {
   prompt?: string;
 }
 
-export interface RunFile extends Partial<Omit<RunRecord, 'routine' | 'logFile'>> {
+export interface RunFile extends Partial<Omit<RunRecord, 'routine' | 'sessionId' | 'logFile'>> {
   routine: string;
+  sessionId?: string;
   events?: unknown[];
 }
 
@@ -72,10 +74,10 @@ export function createKombinat(root: string): Kombinat {
         toRoutineSource(routine, root),
       );
     },
-    addRun: ({ events = [], ...run }) => {
+    addRun: ({ events = [], routine, sessionId, ...run }) => {
       const startedAt = run.startedAt ?? minutesAgo(60);
       const id = run.id ?? createRunId(new Date(startedAt));
-      const runsDir = path.join(stateDir, 'runs', run.routine);
+      const runsDir = path.join(stateDir, 'runs', routine);
       const record = makeRunRecord({
         status: 'succeeded',
         trigger: 'schedule',
@@ -83,6 +85,8 @@ export function createKombinat(root: string): Kombinat {
         exitCode: 0,
         ...run,
         id,
+        routine: routineNameSchema.parse(routine),
+        sessionId: sessionId === undefined ? null : sessionIdSchema.parse(sessionId),
         startedAt,
         logFile: path.join(runsDir, `${id}.jsonl`),
       });
@@ -92,7 +96,10 @@ export function createKombinat(root: string): Kombinat {
       return record;
     },
     addSkip: (routine, reason) => {
-      const entry = (scheduler.routines[routine] ??= { lastScheduledFor: null, skips: [] });
+      const entry = (scheduler.routines[routineNameSchema.parse(routine)] ??= {
+        lastScheduledFor: null,
+        skips: [],
+      });
       entry.skips.push({ at: minutesAgo(30), scheduledFor: minutesAgo(30), reason });
       saveScheduler();
     },

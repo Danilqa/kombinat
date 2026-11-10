@@ -1,5 +1,6 @@
 import path from 'node:path';
 
+import type { RoutineName } from 'domains/id/types';
 import { schedulerStateSchema } from 'domains/scheduler/schemas';
 import type { SchedulerState, Skip } from 'domains/scheduler/types';
 
@@ -18,6 +19,6 @@ export function writeSchedulerState(state: SchedulerState): void {
   writeJsonFile(schedulerFile(), state);
 }
 
-export function getSkips(routine: string): Skip[] {
+export function getSkips(routine: RoutineName): Skip[] {
   return readSchedulerState()?.routines[routine]?.skips ?? [];
 }

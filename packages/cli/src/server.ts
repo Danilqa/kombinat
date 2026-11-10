@@ -6,6 +6,8 @@ import { isMatching, match, P } from 'ts-pattern';
 
 import { buildCalendar } from 'domains/calendar/utils';
 import type { DaemonStatus } from 'domains/daemon/types';
+import { routineNameSchema, runIdSchema } from 'domains/id/schemas';
+import type { RoutineName, RunId } from 'domains/id/types';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import { RECENT_RUNS_LIMIT } from 'domains/run/constants';
 import type { RunRecord } from 'domains/run/types';
@@ -104,7 +106,7 @@ function getStatus(startedAt: Date): DaemonStatus {
 }
 
 function withRoutine<T extends ApiResponse | Promise<ApiResponse>>(
-  name: string,
+  name: RoutineName,
   respond: (routine: Routine) => T,
 ): T | ApiResponse {
   const routine = loadRoutines().find(candidate => candidate.name === name);
@@ -112,8 +114,8 @@ function withRoutine<T extends ApiResponse | Promise<ApiResponse>>(
 }
 
 function withRun(
-  routine: string,
-  id: string,
+  routine: RoutineName,
+  id: RunId,
   respond: (record: RunRecord) => ApiResponse,
 ): ApiResponse {
   const record = readRunRecord(routine, id);
@@ -184,18 +186,26 @@ function routeApi(request: ApiRequest, context: ApiContext): ApiResponse | Promi
     .with(['GET', ['routines']], () =>
       ok(loadRoutines().map(routine => toRoutineSummary(routine, listRuns(routine.name)))),
     )
-    .with(['GET', ['routines', P.string]], ([, [, name]]) => withRoutine(name, getRoutineDetail))
-    .with(['POST', ['routines', P.string, 'run']], ([, [, name]]) => withRoutine(name, startRun))
+    .with(['GET', ['routines', P.string]], ([, [, name]]) =>
+      withRoutine(routineNameSchema.parse(name), getRoutineDetail),
+    )
+    .with(['POST', ['routines', P.string, 'run']], ([, [, name]]) =>
+      withRoutine(routineNameSchema.parse(name), startRun),
+    )
     .with(['POST', ['routines', P.string, 'webhook']], ([, [, name]]) =>
-      withRoutine(name, routine => handleWebhook(routine, context)),
+      withRoutine(routineNameSchema.parse(name), routine => handleWebhook(routine, context)),
     )
     .with(['GET', ['calendar']], () => getCalendar(url))
     .with(['GET', ['runs']], () =>
       ok(listAllRuns().slice(0, Number(url.searchParams.get('limit') ?? RECENT_RUNS_LIMIT))),
     )
-    .with(['GET', ['runs', P.string, P.string]], ([, [, routine, id]]) => withRun(routine, id, ok))
+    .with(['GET', ['runs', P.string, P.string]], ([, [, routine, id]]) =>
+      withRun(routineNameSchema.parse(routine), runIdSchema.parse(id), ok),
+    )
     .with(['GET', ['runs', P.string, P.string, 'transcript']], ([, [, routine, id]]) =>
-      withRun(routine, id, record => ok(buildRunTranscript(record.agent, readRunEvents(record)))),
+      withRun(routineNameSchema.parse(routine), runIdSchema.parse(id), record =>
+        ok(buildRunTranscript(record.agent, readRunEvents(record))),
+      ),
     )
     .otherwise(() => fail(404, 'Not found'));
 }

@@ -1,5 +1,6 @@
 import { getDaemonStatus } from 'domains/daemon/requests';
 import type { DaemonStatus } from 'domains/daemon/types';
+import type { RoutineName, RunId } from 'domains/id/types';
 import { getRoutine, getRoutines, startRoutineRun } from 'domains/routine/requests';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import { RECENT_RUNS_LIMIT } from 'domains/run/constants';
@@ -16,9 +17,9 @@ export interface Overview {
 // Same API as the web dashboard, so "run now" starts in the launchd daemon (unlocked keychain), not over ssh.
 export interface DaemonClient {
   getOverview(): Promise<Overview>;
-  getRoutine(name: string): Promise<RoutineDetail>;
-  getRun(routine: string, id: string): Promise<RunWithTranscript>;
-  startRun(name: string): Promise<void>;
+  getRoutine(name: RoutineName): Promise<RoutineDetail>;
+  getRun(routine: RoutineName, id: RunId): Promise<RunWithTranscript>;
+  startRun(name: RoutineName): Promise<void>;
 }
 
 export function createDaemonClient(baseUrl: string): DaemonClient {

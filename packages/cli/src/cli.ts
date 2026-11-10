@@ -3,6 +3,8 @@ import { parseArgs } from 'node:util';
 
 import { isMatching, match } from 'ts-pattern';
 
+import { routineNameSchema, runIdSchema } from 'domains/id/schemas';
+import type { RunId } from 'domains/id/types';
 import { runTriggerSchema } from 'domains/run/schemas';
 import type { RunTrigger } from 'domains/run/types';
 import { runTui } from 'tui';
@@ -61,7 +63,7 @@ const USAGE = `kombinat, run from the folder that holds routines/ (connect and t
 interface CliOptions {
   trigger: RunTrigger;
   scheduledFor: string | null;
-  runId: string | null;
+  runId: RunId | null;
   watch: boolean;
   scheduler: boolean;
   url: string | null;
@@ -85,9 +87,9 @@ function parseTrigger(value: string): RunTrigger {
   return parsed.data;
 }
 
-function parseRunId(value: string): string {
+function parseRunId(value: string): RunId {
   if (!/^[\w-]+$/.test(value)) throw new Error('--run-id must be letters, digits, _ and -');
-  return value;
+  return runIdSchema.parse(value);
 }
 
 function parseUrl(value: string): string {
@@ -145,7 +147,7 @@ function listRoutines(): void {
 async function runOne(name: string | undefined, options: CliOptions): Promise<void> {
   if (name === undefined) throw new Error('run needs a routine name');
   ensureStateDirs();
-  const record = await runRoutine(getRoutine(name), {
+  const record = await runRoutine(getRoutine(routineNameSchema.parse(name)), {
     trigger: options.trigger,
     scheduledFor: options.scheduledFor,
     runId: options.runId,

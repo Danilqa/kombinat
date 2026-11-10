@@ -6,13 +6,14 @@ import { match } from 'ts-pattern';
 import { Badge, Button, Popover } from 'design-system/components';
 import { sameOriginApi } from 'utils/http';
 
+import type { RoutineName } from '../../id/types';
 import { WebhookQueueList } from '../../webhook/components/webhook-queue-list';
 import { getRoutine } from '../requests';
 
 type WebhookQueueButtonLook = 'button' | 'chip';
 
 interface WebhookQueueButtonProps {
-  routine: string;
+  routine: RoutineName;
   count: number;
   look?: WebhookQueueButtonLook;
 }

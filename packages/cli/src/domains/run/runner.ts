@@ -6,6 +6,7 @@ import readline from 'node:readline';
 
 import { isMatching, match } from 'ts-pattern';
 
+import type { RoutineName, RunId } from 'domains/id/types';
 import type { RunRecord, RunTrigger } from 'domains/run/types';
 import { createRunId } from 'domains/run/utils';
 
@@ -22,7 +23,7 @@ import { getRunsDir, listRuns, readRunRecord, writeRunRecord } from './storage';
 export interface RunOptions {
   trigger: RunTrigger;
   scheduledFor?: string | null;
-  runId?: string | null;
+  runId?: RunId | null;
 }
 
 const BEFORE_HOOK_TIMEOUT_MS = 3 * 60_000;
@@ -211,14 +212,14 @@ export async function runRoutine(routine: Routine, options: RunOptions): Promise
 }
 
 interface PendingStart {
-  runId: string;
+  runId: RunId;
   startedAt: number;
 }
 
 // Until a run writes its record, only this process knows it started.
-const pendingStarts = new Map<string, PendingStart>();
+const pendingStarts = new Map<RoutineName, PendingStart>();
 
-export function checkIsStarting(routineName: string, now = Date.now()): boolean {
+export function checkIsStarting(routineName: RoutineName, now = Date.now()): boolean {
   const pending = pendingStarts.get(routineName);
   if (pending === undefined) return false;
   const isWaiting =
@@ -228,13 +229,13 @@ export function checkIsStarting(routineName: string, now = Date.now()): boolean 
   return isWaiting;
 }
 
-export function checkIsRunning(routineName: string): boolean {
+export function checkIsRunning(routineName: RoutineName): boolean {
   return (
     checkIsStarting(routineName) || listRuns(routineName).some(isMatching({ status: 'running' }))
   );
 }
 
-export function startDetachedRun(routineName: string, options: RunOptions): void {
+export function startDetachedRun(routineName: RoutineName, options: RunOptions): void {
   const runId = options.runId ?? createRunId();
   const args = getCliArgs('run', routineName, '--trigger', options.trigger, '--run-id', runId);
   if (options.scheduledFor) args.push('--scheduled-for', options.scheduledFor);

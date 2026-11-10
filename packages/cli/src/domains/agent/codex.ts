@@ -1,6 +1,7 @@
 import { match, P } from 'ts-pattern';
 import { z } from 'zod';
 
+import { sessionIdSchema } from 'domains/id/schemas';
 import type { ToolResult, TranscriptItem } from 'domains/transcript/types';
 import { toPreview } from 'domains/transcript/utils';
 
@@ -43,7 +44,7 @@ type TodoEntry = NonNullable<CodexItem['items']>[number];
 
 const codexEventSchema = z.object({
   type: z.string().optional(),
-  thread_id: z.string().optional(),
+  thread_id: sessionIdSchema.optional(),
   item: codexItemSchema.optional(),
   error: codexErrorSchema.optional(),
   message: z.string().optional(),
