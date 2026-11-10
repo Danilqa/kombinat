@@ -21,10 +21,15 @@ function CrumbLabel({ crumb, hasBackArrow }: CrumbLabelProps) {
         to={crumb.to}
         className={cn(
           className,
-          'flex items-center gap-1.5 py-1 text-fg-muted transition-colors hover:text-fg',
+          'group flex items-center gap-1.5 py-1 text-fg-muted transition-colors hover:text-fg',
         )}
       >
-        {hasBackArrow && <ArrowLeft aria-hidden="true" className="size-3.5 shrink-0" />}
+        {hasBackArrow && (
+          <ArrowLeft
+            aria-hidden="true"
+            className="size-3.5 shrink-0 transition-transform duration-200 ease-out-quint group-hover:-translate-x-0.5"
+          />
+        )}
         <span className="truncate">{crumb.label}</span>
       </Link>
     );

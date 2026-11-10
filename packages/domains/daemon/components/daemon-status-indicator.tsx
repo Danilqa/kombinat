@@ -99,16 +99,25 @@ export function DaemonStatusIndicator() {
         <Popover.Trigger
           className={cn(
             triggerClassName,
-            'transition-colors hover:bg-hover hover:text-fg data-[state=open]:bg-overlay',
+            'animate-in transition-colors animation-duration-300 fade-in hover:bg-hover hover:text-fg data-[state=open]:bg-overlay',
           )}
         >
-          <span
-            aria-hidden="true"
-            className={cn(
-              'size-1.5 shrink-0 rounded-full forced-colors:bg-[CanvasText]',
-              appearance.dotClassName,
+          <span aria-hidden="true" className="relative flex size-1.5 shrink-0">
+            {checkHasRunning(data) && (
+              <span
+                className={cn(
+                  'absolute inline-flex size-full animate-ping rounded-full opacity-75',
+                  appearance.dotClassName,
+                )}
+              />
             )}
-          />
+            <span
+              className={cn(
+                'relative inline-flex size-1.5 rounded-full transition-colors duration-300 forced-colors:bg-[CanvasText]',
+                appearance.dotClassName,
+              )}
+            />
+          </span>
           <DaemonStatusSummary health={health} status={data} />
           <span className="sr-only">, daemon status</span>
         </Popover.Trigger>

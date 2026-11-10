@@ -115,7 +115,10 @@ function ExternalLink({ href, children, ...props }: ExternalLinkProps) {
   return (
     <a href={href} target="_blank" rel="noreferrer" {...props}>
       {children}
-      <ArrowUpRight aria-hidden="true" />
+      <ArrowUpRight
+        aria-hidden="true"
+        className="transition-transform duration-200 ease-out-quint group-hover/button:translate-x-0.5 group-hover/button:-translate-y-0.5"
+      />
     </a>
   );
 }
@@ -191,9 +194,12 @@ function ExploreLinks() {
         <li key={to}>
           <Link
             to={to}
-            className="flex h-full flex-col gap-2 rounded-xl border border-line bg-page/60 p-3 transition-colors hover:border-line-strong hover:bg-raised"
+            className="group flex h-full flex-col gap-2 rounded-xl border border-line bg-page/60 p-3 transition-[translate,border-color,background-color] duration-200 ease-out-quint hover:-translate-y-0.5 hover:border-line-strong hover:bg-raised active:translate-y-0"
           >
-            <Icon aria-hidden="true" className="size-4 text-fg-muted" />
+            <Icon
+              aria-hidden="true"
+              className="size-4 text-fg-muted transition-[color,scale] duration-200 ease-out-quint group-hover:scale-110 group-hover:text-fg"
+            />
             <span className="flex flex-col">
               <span className="text-body font-medium text-fg">{title}</span>
               <span className="text-body-sm text-fg-muted">{caption}</span>
@@ -238,6 +244,7 @@ export function WelcomeBanner() {
         <WelcomeCard
           label="Welcome"
           icon={WavingHand}
+          iconClassName="origin-[70%_80%] animate-hand-wave"
           glow="lavender"
           title="Background agents, on a schedule or webhook"
           aside={<RoutineFile />}
@@ -248,7 +255,10 @@ export function WelcomeBanner() {
               </Button>
               <Button variant="secondary" size="small" onClick={() => showSlide(3)}>
                 How to install
-                <ArrowRight aria-hidden="true" />
+                <ArrowRight
+                  aria-hidden="true"
+                  className="transition-transform duration-200 ease-out-quint group-hover/button:translate-x-0.5"
+                />
               </Button>
             </>
           }
@@ -298,7 +308,10 @@ export function WelcomeBanner() {
               <Button asChild variant="secondary" size="small">
                 <Link to={getRoutinePath(routineNameSchema.parse('on-call-engineer'))}>
                   See its runs
-                  <ArrowRight aria-hidden="true" />
+                  <ArrowRight
+                    aria-hidden="true"
+                    className="transition-transform duration-200 ease-out-quint group-hover/button:translate-x-0.5"
+                  />
                 </Link>
               </Button>
             </>
@@ -402,7 +415,7 @@ export function WelcomeBanner() {
             >
               <span
                 className={cn(
-                  'block h-1.5 rounded-full transition-all',
+                  'block h-1.5 rounded-full transition-all duration-300 ease-out-quint',
                   index === activeIndex ? 'w-5 bg-fg' : 'w-1.5 bg-fg-faint group-hover:bg-fg-muted',
                 )}
               />
@@ -416,7 +429,10 @@ export function WelcomeBanner() {
             aria-label="Previous card"
             onClick={() => showSlide(activeIndex - 1)}
           >
-            <ChevronLeft aria-hidden="true" />
+            <ChevronLeft
+              aria-hidden="true"
+              className="transition-transform duration-200 ease-out-quint group-hover/button:-translate-x-0.5"
+            />
           </Button>
           <span className="min-w-9 text-center text-body-sm text-fg-muted tabular-nums">
             {activeIndex + 1} / {slides.length}
@@ -427,7 +443,10 @@ export function WelcomeBanner() {
             aria-label="Next card"
             onClick={() => showSlide(activeIndex + 1)}
           >
-            <ChevronRight aria-hidden="true" />
+            <ChevronRight
+              aria-hidden="true"
+              className="transition-transform duration-200 ease-out-quint group-hover/button:translate-x-0.5"
+            />
           </Button>
         </div>
       </div>

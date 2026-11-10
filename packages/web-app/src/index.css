@@ -17,6 +17,7 @@
     line-height: var(--line-height-body);
     font-weight: 500;
     transform: translateY(-200%);
+    transition: transform 0.2s var(--ease-out-quint-value);
   }
   .skip-link:focus-visible {
     transform: none;

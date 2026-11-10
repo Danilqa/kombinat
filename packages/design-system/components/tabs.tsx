@@ -71,7 +71,10 @@ function TabsContent({ className, ...props }: TabsContentProps) {
   return (
     <TabsPrimitive.Content
       data-slot="tabs-content"
-      className={cn('flex-1', className)}
+      className={cn(
+        'flex-1 duration-200 data-[state=active]:animate-in data-[state=active]:fade-in',
+        className,
+      )}
       {...props}
     />
   );

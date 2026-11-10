@@ -1,8 +1,8 @@
 import { Check, ChevronRight, CircleAlert, Loader, X } from 'lucide-react';
-import { memo, useId, useState } from 'react';
+import { memo } from 'react';
 import { match } from 'ts-pattern';
 
-import { CodeBlock, EmptyState, Markdown } from 'design-system/components';
+import { CodeBlock, Collapsible, EmptyState, Markdown } from 'design-system/components';
 import { cn } from 'design-system/utils';
 import { formatDuration } from 'utils/date-time';
 
@@ -66,24 +66,13 @@ interface ToolRowProps {
 }
 
 const ToolRow = memo(function ToolRow({ item, isPending }: ToolRowProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const panelId = useId();
   const hasError = item.result?.isError === true;
   return (
-    <div>
-      <button
-        type="button"
-        aria-expanded={isOpen}
-        aria-controls={panelId}
-        onClick={() => setIsOpen(open => !open)}
-        className="group flex min-h-7 w-full items-center gap-2 rounded-sm text-left font-mono text-body-sm text-fg-muted"
-      >
+    <Collapsible.Root>
+      <Collapsible.Trigger className="group flex min-h-7 w-full items-center gap-2 rounded-sm text-left font-mono text-body-sm text-fg-muted">
         <ChevronRight
           aria-hidden="true"
-          className={cn(
-            'size-3.5 shrink-0 text-fg-faint transition-transform group-hover:text-fg-muted',
-            isOpen && 'rotate-90 text-fg-muted',
-          )}
+          className="size-3.5 shrink-0 text-fg-faint transition-[rotate,color] duration-200 ease-out-quint group-hover:text-fg-muted group-data-[state=open]:rotate-90 group-data-[state=open]:text-fg-muted"
         />
         <span className="shrink-0 font-medium text-fg-secondary transition-colors group-hover:text-fg">
           {item.name}
@@ -103,30 +92,32 @@ const ToolRow = memo(function ToolRow({ item, isPending }: ToolRowProps) {
             <span className="sr-only">In progress</span>
           </>
         )}
-      </button>
-      {isOpen && (
-        <div id={panelId} className="mt-1 mb-3 ml-[7px] space-y-3 border-l border-line-strong pl-4">
-          <div>
-            <div className="eyebrow mb-1.5">Input</div>
-            <CodeBlock label="Tool input" className="max-h-80">
-              {JSON.stringify(item.input, null, 2)}
-            </CodeBlock>
-          </div>
-          <div>
-            <div className="eyebrow mb-1.5">{hasError ? 'Error' : 'Result'}</div>
-            <CodeBlock
-              label={hasError ? 'Tool error' : 'Tool result'}
-              className={cn(
-                'max-h-96',
-                hasError && 'border-transparent bg-negative-soft text-negative',
-              )}
-            >
-              {item.result ? item.result.content || '(empty)' : 'No result yet'}
-            </CodeBlock>
+      </Collapsible.Trigger>
+      <Collapsible.Content>
+        <div className="pt-1 pb-3">
+          <div className="ml-[7px] space-y-3 border-l border-line-strong pl-4">
+            <div>
+              <div className="eyebrow mb-1.5">Input</div>
+              <CodeBlock label="Tool input" className="max-h-80">
+                {JSON.stringify(item.input, null, 2)}
+              </CodeBlock>
+            </div>
+            <div>
+              <div className="eyebrow mb-1.5">{hasError ? 'Error' : 'Result'}</div>
+              <CodeBlock
+                label={hasError ? 'Tool error' : 'Tool result'}
+                className={cn(
+                  'max-h-96',
+                  hasError && 'border-transparent bg-negative-soft text-negative',
+                )}
+              >
+                {item.result ? item.result.content || '(empty)' : 'No result yet'}
+              </CodeBlock>
+            </div>
           </div>
         </div>
-      )}
-    </div>
+      </Collapsible.Content>
+    </Collapsible.Root>
   );
 });
 
@@ -171,7 +162,7 @@ function ResultRow({ item }: ResultRowProps) {
       <span className={cn('flex items-center gap-2 font-medium', appearance.labelClassName)}>
         <span
           className={cn(
-            'grid size-4 place-items-center rounded-full text-page',
+            'grid size-4 animate-in place-items-center rounded-full text-page duration-300 ease-out-quint zoom-in-50 fade-in',
             appearance.iconClassName,
           )}
         >
@@ -209,7 +200,10 @@ export function TranscriptList({ items, isRunning }: TranscriptListProps) {
       {items.map(item => (
         <div
           key={item.key}
-          className={cn(checkIsSubagent(item) && 'ml-5 border-l border-line-strong pl-3')}
+          className={cn(
+            'animate-in duration-300 ease-out-quint fade-in slide-in-from-bottom-1',
+            checkIsSubagent(item) && 'ml-5 border-l border-line-strong pl-3',
+          )}
         >
           {renderItem(item, isRunning)}
         </div>

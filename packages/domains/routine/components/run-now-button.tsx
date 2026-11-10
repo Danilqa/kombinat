@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Play } from 'lucide-react';
+import { Loader, Play } from 'lucide-react';
 
 import { Button } from 'design-system/components';
 import { sameOriginApi } from 'utils/http';
@@ -41,7 +41,7 @@ export function RunNowButton({ routine, isRunning, variant = 'primary' }: RunNow
       {error && (
         <span
           role="alert"
-          className="max-w-56 truncate text-body-sm text-negative"
+          className="max-w-56 animate-in truncate text-body-sm text-negative duration-200 fade-in slide-in-from-right-1"
           title={error.message}
         >
           {error.message}
@@ -53,7 +53,14 @@ export function RunNowButton({ routine, isRunning, variant = 'primary' }: RunNow
         aria-disabled={isUnavailable || undefined}
         onClick={startRun}
       >
-        <Play aria-hidden="true" className="size-3.5 fill-current" />
+        {isUnavailable ? (
+          <Loader aria-hidden="true" className="size-3.5 animate-spin" />
+        ) : (
+          <Play
+            aria-hidden="true"
+            className="size-3.5 fill-current transition-transform duration-200 ease-out-quint group-hover/button:translate-x-0.5"
+          />
+        )}
         {isRunning ? 'Running' : 'Run now'}
         <span className="sr-only"> {routine}</span>
       </Button>

@@ -85,7 +85,7 @@ export function SlidingPill({ activeSelector, className }: SlidingPillProps) {
       className={cn(
         'pointer-events-none absolute top-0 left-0 rounded-full bg-overlay',
         isAfterFirstPaint &&
-          'transition-[translate,width,height,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
+          'transition-[translate,width,height,opacity] duration-300 ease-out-quint',
         !box.isVisible && 'opacity-0',
         className,
       )}

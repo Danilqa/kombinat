@@ -1,2 +1,22 @@
 @import 'web-app/index.css';
 @source '../../web-app/src';
+
+@theme inline {
+  --animate-hand-wave: hand-wave 1.6s ease-in-out 0.5s 1;
+
+  @keyframes hand-wave {
+    0%,
+    100% {
+      rotate: 0deg;
+    }
+    15%,
+    45%,
+    75% {
+      rotate: 16deg;
+    }
+    30%,
+    60% {
+      rotate: -10deg;
+    }
+  }
+}

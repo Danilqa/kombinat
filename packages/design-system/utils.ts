@@ -3,6 +3,9 @@ import { extendTailwindMerge } from 'tailwind-merge';
 
 const twMerge = extendTailwindMerge({
   extend: {
+    theme: {
+      ease: ['out-quint'],
+    },
     classGroups: {
       'font-size': [
         {

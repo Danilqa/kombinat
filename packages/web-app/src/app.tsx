@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useLocation } from 'react-router';
 import { AppProviders } from '@web-app/app-providers';
 import { AppRoutes } from '@web-app/app-routes';
 import { AppFooter } from '@web-app/components/app-footer';
@@ -15,6 +16,7 @@ interface AppLayoutProps {
 
 function AppLayout({ announcement, banner, footer }: AppLayoutProps) {
   useFocusMainOnNavigate(MAIN_ID);
+  const { pathname } = useLocation();
   return (
     <>
       <div className="pb-20">
@@ -29,7 +31,12 @@ function AppLayout({ announcement, banner, footer }: AppLayoutProps) {
           tabIndex={-1}
           className="mx-auto max-w-[1180px] px-4 outline-none focus-visible:shadow-none sm:px-6"
         >
-          <AppRoutes />
+          <div
+            key={pathname}
+            className="animate-in duration-300 ease-out-quint fade-in slide-in-from-bottom-2"
+          >
+            <AppRoutes />
+          </div>
         </main>
       </div>
       {footer}

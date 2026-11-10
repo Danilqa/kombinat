@@ -6,7 +6,7 @@ import { Slot } from 'radix-ui';
 // aria-disabled buttons keep focus, so they dim their colours instead of the whole element: element
 // opacity would dim the focus ring too.
 const buttonVariants = cva(
-  "inline-flex shrink-0 cursor-pointer items-center justify-center rounded-full font-sans font-medium whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-40 aria-disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
+  "group/button inline-flex shrink-0 cursor-pointer items-center justify-center rounded-full font-sans font-medium whitespace-nowrap transition-[color,background-color,border-color,scale] duration-150 interactive:active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 aria-disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
   {
     variants: {
       variant: {
