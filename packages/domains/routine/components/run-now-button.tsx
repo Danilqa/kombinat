@@ -54,7 +54,7 @@ export function RunNowButton({ routine, isRunning, variant = 'primary' }: RunNow
         onClick={startRun}
       >
         {isUnavailable ? (
-          <Loader aria-hidden="true" className="size-3.5 animate-spin" />
+          <Loader aria-hidden="true" className="spin-in-place size-3.5" />
         ) : (
           <Play
             aria-hidden="true"

@@ -124,7 +124,7 @@ const blockStyles: Record<BlockVariant, BlockStyle> = {
   running: {
     className: cn(blockSurfaceClassNames.running, tintedBlockClassName, 'animate-soft-pulse'),
     icon: blockIcons.running,
-    iconMotionClassName: 'animate-spin [animation-duration:2s]',
+    iconMotionClassName: 'spin-in-place [--spin-duration:2s]',
   },
 };
 

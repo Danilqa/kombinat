@@ -88,7 +88,7 @@ const ToolRow = memo(function ToolRow({ item, isPending }: ToolRowProps) {
         )}
         {isPending && !item.result && (
           <>
-            <Loader className="size-3.5 shrink-0 animate-spin text-fg-muted" />
+            <Loader className="spin-in-place size-3.5 shrink-0 text-fg-muted" />
             <span className="sr-only">In progress</span>
           </>
         )}

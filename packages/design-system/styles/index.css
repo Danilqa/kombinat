@@ -350,6 +350,22 @@
   }
 }
 
+/* Turns the drawing inside the icon instead of the icon's box: a turning box that sits between
+   pixels wobbles in Safari. */
+@utility spin-in-place {
+  & > * {
+    transform-box: view-box;
+    transform-origin: center;
+    animation: spin-in-place var(--spin-duration, 1s) linear infinite;
+  }
+}
+
+@keyframes spin-in-place {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @layer utilities {
   .markdown.prose {
     --tw-prose-body: var(--fg-prose);
