@@ -185,6 +185,7 @@
   --text-nav-sm--line-height: 16px;
 
   --animate-soft-pulse: soft-pulse 2s ease-in-out infinite;
+  --animate-smoke-drift: smoke-drift 3.6s linear infinite;
 
   @keyframes soft-pulse {
     0%,
@@ -193,6 +194,24 @@
     }
     50% {
       opacity: 0.72;
+    }
+  }
+
+  @keyframes smoke-drift {
+    0% {
+      transform: translate(-1px, 2px) scale(0.2);
+      opacity: 0;
+    }
+    20% {
+      transform: none;
+      opacity: 1;
+    }
+    55% {
+      opacity: 0.8;
+    }
+    100% {
+      transform: translate(12px, -14px) scale(1.08);
+      opacity: 0;
     }
   }
 }
