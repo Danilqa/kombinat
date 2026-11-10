@@ -239,7 +239,7 @@ export function WelcomeBanner() {
           label="Welcome"
           icon={WavingHand}
           glow="lavender"
-          title="Background agents, on a schedule"
+          title="Background agents, on a schedule or webhook"
           aside={<RoutineFile />}
           actions={
             <>
@@ -263,13 +263,13 @@ export function WelcomeBanner() {
       ),
     },
     {
-      label: 'Why not X?',
+      label: 'Why another tool?',
       content: (
         <WelcomeCard
           label="Why Kombinat"
           icon={Scale}
           glow="sky"
-          title="Why not X?"
+          title="Why another tool?"
           details={<ReasonList />}
         >
           <p>
