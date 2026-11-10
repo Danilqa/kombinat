@@ -103,7 +103,6 @@ const MIN_WIDTH = 60;
 const MIN_HEIGHT = 18;
 const MESSAGE_MS = 6000;
 const RUN_CACHE_SIZE = 4;
-// How close to the last loaded run the cursor gets before the next page loads.
 const LOAD_MORE_ROWS = 10;
 
 const runKey = (routine: RoutineName, id: RunId) => `${routine}/${id}`;
@@ -208,7 +207,7 @@ export class TuiApp {
   private loadedAt: number | null = null;
   private routineDetails = new Map<RoutineName, RoutineDetail>();
   private routineRuns = new Map<RoutineName, LoadedRuns>();
-  // One load of a routine's runs at a time, so a refresh and the next page never undo each other.
+  // Serialized, so a refresh and the next page never overwrite each other.
   private runsLoads = new Map<RoutineName, Promise<void>>();
   private loadingMoreRuns = new Set<RoutineName>();
   private runData = new Map<string, RunData>();
@@ -297,7 +296,6 @@ export class TuiApp {
     return next;
   }
 
-  // Reloads as many runs as are loaded, so the list does not shrink under the cursor.
   private async reloadRuns(name: RoutineName): Promise<void> {
     const loadedCount = this.routineRuns.get(name)?.runs.length ?? 0;
     let page = await this.client.getRuns(name, null);

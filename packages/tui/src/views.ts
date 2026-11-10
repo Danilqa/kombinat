@@ -346,7 +346,6 @@ interface Tab {
   label: string;
 }
 
-// The pages of a routine's runs loaded so far, newest first.
 export interface LoadedRuns {
   runs: RunRecord[];
   nextCursor: RunsCursor | null;

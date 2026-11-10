@@ -55,7 +55,6 @@ function compareText(a: string, b: string): number {
   return a < b ? -1 : 1;
 }
 
-// Routine and id break ties of startedAt, so every run has one place in the order a cursor points into.
 export function compareRunsByNewest(a: RunsCursorKey, b: RunsCursorKey): number {
   return (
     compareText(b.startedAt, a.startedAt) ||
@@ -105,7 +104,6 @@ export function parseRunsPageQuery(params: URLSearchParams): RunsPageQuery | nul
   };
 }
 
-// A cursor is the last run of a page, so new runs above it never shift the pages after it.
 export function paginateRuns(runs: RunRecord[], { cursor, limit }: RunsPageQuery): RunsPage {
   const sorted = runs.toSorted(compareRunsByNewest);
   const start = cursor === null ? 0 : sorted.findIndex(run => compareRunsByNewest(run, cursor) > 0);

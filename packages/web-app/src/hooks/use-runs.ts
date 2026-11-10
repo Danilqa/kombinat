@@ -37,7 +37,7 @@ function toLoadedRuns(data: InfiniteData<RunsPage>): LoadedRuns {
   return { runs: data.pages.flatMap(page => page.runs), total: data.pages[0]?.total ?? 0 };
 }
 
-// latestRun comes from another query, such as the routine's, which can see a new run before these pages do.
+// The routine query can see a new run before these pages do.
 export function useRuns(
   routine: RoutineName | null,
   latestRun: RunRecord | null = null,

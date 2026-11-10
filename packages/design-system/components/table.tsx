@@ -148,7 +148,7 @@ function VirtualTableBody({ ref, style, children }: VirtualTableBodyProps) {
 interface VirtualTableRowProps
   extends Omit<ItemProps<unknown>, 'item'>, ContextProp<VirtualTableContext> {}
 
-// Picks the props it passes on, because Virtuoso also hands rows their item and context.
+// Virtuoso also passes item and context, which must not reach the DOM.
 function VirtualTableRow({
   context,
   style,
@@ -192,7 +192,6 @@ const VIRTUAL_TABLE_COMPONENTS = {
 interface VirtualTableProps<Item> {
   className?: string;
   data: Item[];
-  // All rows, when data holds only the pages loaded so far.
   totalCount?: number;
   header: React.ReactNode;
   computeItemKey: (item: Item) => React.Key;
@@ -211,16 +210,16 @@ function VirtualTable<Item>({
   getRowProps,
   onEndReached,
 }: VirtualTableProps<Item>) {
-  // Until Virtuoso measures the rows, the list holds their height, so going back restores the scroll.
+  // Lets the browser restore the scroll on back navigation.
   const [isMeasured, setIsMeasured] = React.useState(false);
-  // Rows added above the first one lower the first index, so Virtuoso keeps the rows in view still.
+  // Keeps the rows in view still when rows are added above them.
   const firstKey = data[0] === undefined ? undefined : computeItemKey(data[0]);
   const [first, setFirst] = React.useState({ key: firstKey, index: VIRTUAL_TABLE_FIRST_INDEX });
   if (first.key !== firstKey) {
     const addedCount = data.findIndex(item => computeItemKey(item) === first.key);
     setFirst({ key: firstKey, index: first.index - Math.max(addedCount, 0) });
   }
-  // Only some rows are rendered, so columns take their widths from the header, not the content.
+  // Rows mount and unmount while scrolling, so widths come from the header.
   const tableClassName = cn(TABLE_CLASS_NAME, 'table-fixed', className);
   const context: VirtualTableContext = {
     tableClassName,
