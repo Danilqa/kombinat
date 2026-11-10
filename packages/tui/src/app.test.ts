@@ -76,6 +76,7 @@ function makeOverview(): Overview {
   });
   return {
     status: {
+      version: '1.2.3',
       pid: 4242,
       startedAt: '2026-10-06T09:00:00Z',
       lastTickAt: '2026-10-06T11:59:50Z',
@@ -216,6 +217,7 @@ test('fills the terminal exactly, with the status, routines, runs and detail pan
   assert.equal(frame.length, HEIGHT);
   for (const line of frame) assert.equal(lineWidth(line), WIDTH);
   const text = frame.map(plain).join('\n');
+  assert.match(text, /▟ Kombinat +v1\.2\.3 · © 2026/);
   assert.match(text, /daemon pid 4242/);
   assert.match(text, /1 {2}Routines/);
   assert.match(text, /2 {2}Recent runs/);

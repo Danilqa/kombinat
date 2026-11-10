@@ -13,6 +13,7 @@ import type { Line } from './terminal/text';
 import {
   box,
   confirmPopup,
+  formatCopyright,
   helpPopup,
   hintsBar,
   checkIsExpandable,
@@ -703,6 +704,7 @@ export class TuiApp {
         height: statusHeight,
         body: statusLines(this.overview, this.overviewError, this.loadedAt, now),
         isFocused: false,
+        footer: formatCopyright(this.overview?.status.version, now),
       }),
       ...this.renderList(
         'routines',

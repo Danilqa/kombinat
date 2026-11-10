@@ -90,6 +90,7 @@ function toRoutineSummary(routine: Routine, runs: RunRecord[]): RoutineSummary {
 
 function getStatus(startedAt: Date): DaemonStatus {
   return {
+    version: config.version,
     pid: process.pid,
     startedAt: startedAt.toISOString(),
     lastTickAt: readSchedulerState()?.lastTickAt ?? null,

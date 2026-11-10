@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
 export const daemonStatusSchema = z.object({
+  // Older daemons do not send it, and tui --url may talk to one.
+  version: z.string().optional(),
   pid: z.number(),
   startedAt: z.string(),
   lastTickAt: z.string().nullable(),
