@@ -49,7 +49,6 @@ interface RunStatusBadgeProps {
 
 export function RunStatusBadge({ status }: RunStatusBadgeProps) {
   const appearance = getStatusAppearance(status);
-  // Only a status that changes on screen pops, not every badge that scrolls into view.
   const [initialStatus] = useState(status);
   return (
     <Badge
