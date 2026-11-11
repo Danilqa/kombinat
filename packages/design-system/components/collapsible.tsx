@@ -20,7 +20,6 @@ interface CollapsibleContentProps extends React.ComponentProps<
   typeof CollapsiblePrimitive.Content
 > {}
 
-// The height animates, so spacing around the content goes inside it, not on this element.
 function CollapsibleContent({ className, ...props }: CollapsibleContentProps) {
   return (
     <CollapsiblePrimitive.Content
