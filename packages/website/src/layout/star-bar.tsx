@@ -12,7 +12,6 @@ export function StarBar() {
   const [isClosing, setIsClosing] = useState(false);
   if (isClosed) return null;
 
-  // The bar folds away first, so the page below slides up instead of jumping.
   function finishClosing(event: TransitionEvent<HTMLDivElement>) {
     if (event.target === event.currentTarget && isClosing) setIsClosed(true);
   }
