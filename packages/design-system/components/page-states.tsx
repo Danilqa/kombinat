@@ -1,7 +1,6 @@
 import { Loader } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-// Fades in after a short delay, so a fast response never flashes it.
 export function LoadingState() {
   return (
     <p
