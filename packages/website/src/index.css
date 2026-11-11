@@ -1,7 +1,6 @@
 @import 'web-app/index.css';
 @source '../../web-app/src';
 
-/* Each plays once when its welcome card comes into view, after the cards have stopped sliding. */
 @theme inline {
   --animate-hand-wave: hand-wave 1.6s ease-in-out 0.4s 1;
   --animate-scale-tip: scale-tip 1.4s ease-in-out 0.4s 1;
