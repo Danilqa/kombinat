@@ -1,4 +1,5 @@
 export * as Card from './card';
+export * as Collapsible from './collapsible';
 export * as DropdownMenu from './dropdown-menu';
 export * as Popover from './popover';
 export * as Table from './table';

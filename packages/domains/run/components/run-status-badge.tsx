@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { match } from 'ts-pattern';
 
 import { Badge, type BadgeVariant } from 'design-system/components';
@@ -48,8 +49,14 @@ interface RunStatusBadgeProps {
 
 export function RunStatusBadge({ status }: RunStatusBadgeProps) {
   const appearance = getStatusAppearance(status);
+  const [initialStatus] = useState(status);
   return (
-    <Badge variant={appearance.variant} size="medium">
+    <Badge
+      key={status}
+      variant={appearance.variant}
+      size="medium"
+      className={cn(status !== initialStatus && 'animate-status-pop')}
+    >
       <span className="relative flex size-1.5 shrink-0">
         {appearance.isPulsing && (
           <span

@@ -18,10 +18,13 @@ function KombinatCopyright() {
         href={REPO_URL}
         target="_blank"
         rel="noreferrer"
-        className="inline-flex items-center gap-0.5 transition-colors hover:text-fg"
+        className="group inline-flex items-center gap-0.5 transition-colors hover:text-fg"
       >
         GitHub
-        <ArrowUpRight aria-hidden="true" className="size-3" />
+        <ArrowUpRight
+          aria-hidden="true"
+          className="size-3 transition-transform duration-200 ease-out-quint group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+        />
       </a>
     </>
   );

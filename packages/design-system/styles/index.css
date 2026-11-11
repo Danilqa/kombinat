@@ -59,6 +59,7 @@
 
   --popover-shadow-value: 0 12px 32px -8px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--line);
   --focus-ring-value: 0 0 0 1px var(--page), 0 0 0 3px rgba(255, 255, 255, 0.5);
+  --ease-out-quint-value: cubic-bezier(0.22, 1, 0.36, 1);
 
   --background: var(--page);
   --foreground: var(--fg);
@@ -184,8 +185,25 @@
   --text-nav-sm: 12px;
   --text-nav-sm--line-height: 16px;
 
+  --ease-out-quint: var(--ease-out-quint-value);
+
   --animate-soft-pulse: soft-pulse 2s ease-in-out infinite;
   --animate-smoke-drift: smoke-drift 3.6s linear infinite;
+  --animate-status-pop: status-pop 0.45s var(--ease-out-quint-value);
+
+  @keyframes status-pop {
+    0% {
+      scale: 0.9;
+      opacity: 0.4;
+    }
+    55% {
+      scale: 1.06;
+      opacity: 1;
+    }
+    100% {
+      scale: 1;
+    }
+  }
 
   @keyframes soft-pulse {
     0%,
@@ -329,6 +347,22 @@
     line-height: var(--line-height-body-sm);
     font-weight: 500;
     color: var(--fg-muted);
+  }
+}
+
+/* Turns the drawing inside the icon instead of the icon's box: a turning box that sits between
+   pixels wobbles in Safari. */
+@utility spin-in-place {
+  & > * {
+    transform-box: view-box;
+    transform-origin: center;
+    animation: spin-in-place var(--spin-duration, 1s) linear infinite;
+  }
+}
+
+@keyframes spin-in-place {
+  to {
+    transform: rotate(360deg);
   }
 }
 

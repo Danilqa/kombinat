@@ -57,11 +57,14 @@ function NavLinkItem({ item, pathname }: NavLinkItemProps) {
       aria-current={getNavCurrent(item, pathname)}
       data-active={isActive || undefined}
       className={cn(
-        'relative flex h-8 items-center gap-1.5 rounded-full px-3 text-nav font-medium transition-colors forced-colors:underline-offset-4',
+        'group relative flex h-8 items-center gap-1.5 rounded-full px-3 text-nav font-medium transition-colors forced-colors:underline-offset-4',
         isActive ? 'text-fg forced-colors:underline' : 'text-fg-muted hover:bg-hover hover:text-fg',
       )}
     >
-      <Icon aria-hidden="true" className="size-3.5 shrink-0" />
+      <Icon
+        aria-hidden="true"
+        className="size-3.5 shrink-0 transition-transform duration-300 ease-out-quint group-hover:scale-115 group-active:scale-95"
+      />
       {item.label}
     </Link>
   );

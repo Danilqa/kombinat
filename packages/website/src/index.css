@@ -1,2 +1,98 @@
 @import 'web-app/index.css';
 @source '../../web-app/src';
+
+@theme inline {
+  --animate-hand-wave: hand-wave 1.6s ease-in-out 0.4s 1;
+  --animate-scale-tip: scale-tip 1.4s ease-in-out 0.4s 1;
+  --animate-webhook-spin: webhook-spin 1.2s var(--ease-out-quint-value) 0.4s 1;
+  --animate-icon-pop: icon-pop 0.5s var(--ease-out-quint-value) 0.4s 1;
+  --animate-cursor-blink: cursor-blink 1.6s steps(1, end) 0.4s 1;
+  --animate-bucket-hop: bucket-hop 1.1s ease-in-out 0.4s 1;
+
+  @keyframes hand-wave {
+    0%,
+    100% {
+      rotate: 0deg;
+    }
+    15%,
+    45%,
+    75% {
+      rotate: 16deg;
+    }
+    30%,
+    60% {
+      rotate: -10deg;
+    }
+  }
+
+  @keyframes scale-tip {
+    0%,
+    100% {
+      rotate: 0deg;
+    }
+    20% {
+      rotate: -18deg;
+    }
+    45% {
+      rotate: 13deg;
+    }
+    65% {
+      rotate: -7deg;
+    }
+    82% {
+      rotate: 3deg;
+    }
+  }
+
+  @keyframes webhook-spin {
+    0% {
+      rotate: 0deg;
+    }
+    100% {
+      rotate: 360deg;
+    }
+  }
+
+  @keyframes icon-pop {
+    0%,
+    100% {
+      scale: 1;
+    }
+    40% {
+      scale: 1.2;
+    }
+  }
+
+  @keyframes cursor-blink {
+    0%,
+    25%,
+    50%,
+    75% {
+      opacity: 0;
+    }
+    12.5%,
+    37.5%,
+    62.5%,
+    87.5%,
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes bucket-hop {
+    0%,
+    45%,
+    100% {
+      translate: 0 0;
+      rotate: 0deg;
+    }
+    22% {
+      translate: 0 -2.5px;
+      rotate: -10deg;
+    }
+    68% {
+      translate: 0 -1.5px;
+      rotate: 7deg;
+    }
+  }
+}

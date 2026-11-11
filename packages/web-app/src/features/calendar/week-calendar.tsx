@@ -59,6 +59,7 @@ type BlockVariant = 'planned' | 'plannedDefault' | RunStatus;
 interface BlockStyle {
   className: string;
   icon: BlockIcon | null;
+  iconMotionClassName?: string;
 }
 
 interface BlockIcon {
@@ -88,35 +89,42 @@ const blockIcons: Record<RunStatus, BlockIcon> = {
 
 const outlinedBlockClassName = 'hover:border-fg-faint';
 const tintedBlockClassName = 'pl-[7px] hover:brightness-125 focus-visible:shadow-focus';
+// Not for the running block: its pulse is an animation too, and an element runs only one.
+const blockEnterClassName = 'animate-in animation-duration-300 fade-in';
 
 const blockStyles: Record<BlockVariant, BlockStyle> = {
   planned: {
-    className: cn(blockSurfaceClassNames.planned, outlinedBlockClassName),
+    className: cn(blockSurfaceClassNames.planned, outlinedBlockClassName, blockEnterClassName),
     icon: null,
   },
   plannedDefault: {
-    className: cn(blockSurfaceClassNames.plannedDefault, outlinedBlockClassName),
+    className: cn(
+      blockSurfaceClassNames.plannedDefault,
+      outlinedBlockClassName,
+      blockEnterClassName,
+    ),
     icon: null,
   },
   succeeded: {
-    className: cn(blockSurfaceClassNames.succeeded, tintedBlockClassName),
+    className: cn(blockSurfaceClassNames.succeeded, tintedBlockClassName, blockEnterClassName),
     icon: blockIcons.succeeded,
   },
   failed: {
-    className: cn(blockSurfaceClassNames.failed, tintedBlockClassName),
+    className: cn(blockSurfaceClassNames.failed, tintedBlockClassName, blockEnterClassName),
     icon: blockIcons.failed,
   },
   timed_out: {
-    className: cn(blockSurfaceClassNames.timed_out, tintedBlockClassName),
+    className: cn(blockSurfaceClassNames.timed_out, tintedBlockClassName, blockEnterClassName),
     icon: blockIcons.timed_out,
   },
   aborted: {
-    className: cn(blockSurfaceClassNames.aborted, tintedBlockClassName),
+    className: cn(blockSurfaceClassNames.aborted, tintedBlockClassName, blockEnterClassName),
     icon: blockIcons.aborted,
   },
   running: {
     className: cn(blockSurfaceClassNames.running, tintedBlockClassName, 'animate-soft-pulse'),
     icon: blockIcons.running,
+    iconMotionClassName: 'spin-in-place [--spin-duration:2s]',
   },
 };
 
@@ -234,7 +242,7 @@ function CalendarBlock({ positioned, overlapLabel }: CalendarBlockProps) {
           <Icon
             aria-hidden="true"
             strokeWidth={3}
-            className={cn('size-2.5 shrink-0', style.icon?.className)}
+            className={cn('size-2.5 shrink-0', style.icon?.className, style.iconMotionClassName)}
           />
         )}
         <span className={cn('truncate', Icon ? '@max-[32px]:hidden' : '@max-[18px]:hidden')}>
@@ -243,7 +251,7 @@ function CalendarBlock({ positioned, overlapLabel }: CalendarBlockProps) {
         {overlapLabel && (
           <span
             aria-hidden="true"
-            className="absolute top-1/2 -right-[3px] size-1.5 -translate-y-1/2 rounded-full bg-surface shadow-[0_0_0_1.5px_var(--negative)]"
+            className="absolute top-1/2 -right-[3px] size-1.5 -translate-y-1/2 animate-in rounded-full bg-surface shadow-[0_0_0_1.5px_var(--negative)] duration-300 ease-out-quint zoom-in-0 fade-in"
           />
         )}
       </span>
@@ -395,7 +403,7 @@ function CalendarOptions({
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
         <Button variant="tertiary" size="icon-small" aria-label="Calendar options">
-          <Ellipsis />
+          <Ellipsis className="transition-transform duration-200 ease-out-quint group-data-[state=open]/button:rotate-90" />
         </Button>
       </DropdownMenu.Trigger>
       <DropdownMenu.Content>
@@ -429,7 +437,7 @@ function CalendarLegend({ isHighlightingOverlaps }: CalendarLegendProps) {
         </span>
       ))}
       {isHighlightingOverlaps && (
-        <span className="flex items-center gap-1.5">
+        <span className="flex animate-in items-center gap-1.5 duration-200 fade-in slide-in-from-left-1">
           <span className="size-1.5 rounded-full bg-surface shadow-[0_0_0_1.5px_var(--negative)]" />
           Overlaps another routine
         </span>
@@ -754,7 +762,12 @@ export function WeekCalendar() {
           <div className="rounded-t-xl border-x border-t border-line bg-surface">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
               <h2 aria-live="polite" className="text-title-md text-fg tabular-nums">
-                {formatWeekRange(visibleWeekStart)}
+                <span
+                  key={visibleWeekStart.toISOString()}
+                  className="inline-block animate-in duration-200 fade-in"
+                >
+                  {formatWeekRange(visibleWeekStart)}
+                </span>
               </h2>
               <div className="flex items-center gap-1">
                 <Button
@@ -764,7 +777,7 @@ export function WeekCalendar() {
                   aria-keyshortcuts="K"
                   onClick={() => showWeek(-1)}
                 >
-                  <ChevronLeft />
+                  <ChevronLeft className="transition-transform duration-200 ease-out-quint group-hover/button:-translate-x-0.5" />
                 </Button>
                 <Button
                   variant="tertiary"
@@ -783,7 +796,7 @@ export function WeekCalendar() {
                   aria-keyshortcuts="J"
                   onClick={() => showWeek(1)}
                 >
-                  <ChevronRight />
+                  <ChevronRight className="transition-transform duration-200 ease-out-quint group-hover/button:translate-x-0.5" />
                 </Button>
                 <CalendarOptions
                   isHighlightingOverlaps={isHighlightingOverlaps}

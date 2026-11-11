@@ -38,7 +38,10 @@ export function WebhookQueueButton({ routine, count, look = 'button' }: WebhookQ
     ))
     .with('chip', () => (
       <Badge asChild size="medium">
-        <button type="button" className="cursor-pointer hover:text-fg hover:brightness-125">
+        <button
+          type="button"
+          className="cursor-pointer transition-[color,filter] hover:text-fg hover:brightness-125"
+        >
           {count} queued
           {routineLabel}
         </button>

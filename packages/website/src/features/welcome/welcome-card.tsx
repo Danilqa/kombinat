@@ -14,6 +14,7 @@ const GLOW_CLASSES: Record<WelcomeGlow, string> = {
 interface WelcomeCardProps {
   label: string;
   icon: LucideIcon;
+  iconClassName: string;
   glow: WelcomeGlow;
   title: string;
   children: ReactNode;
@@ -25,6 +26,7 @@ interface WelcomeCardProps {
 export function WelcomeCard({
   label,
   icon: Icon,
+  iconClassName,
   glow,
   title,
   children,
@@ -50,7 +52,7 @@ export function WelcomeCard({
         <div className="flex flex-col items-start gap-4">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-raised py-0.5 pr-2.5 pl-1 text-caption text-fg-secondary">
             <span className="flex size-[18px] items-center justify-center rounded-full bg-fg text-page">
-              <Icon aria-hidden="true" className="size-3" strokeWidth={2.25} />
+              <Icon aria-hidden="true" className={cn('size-3', iconClassName)} strokeWidth={2.25} />
             </span>
             {label}
           </span>
