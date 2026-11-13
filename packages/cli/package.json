@@ -12,7 +12,8 @@
     "cron",
     "launchd",
     "routines",
-    "scheduler"
+    "scheduler",
+    "systemd"
   ],
   "license": "MIT",
   "homepage": "https://github.com/Danilqa/kombinat#readme",

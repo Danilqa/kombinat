@@ -18,15 +18,6 @@ import { ensureStateDirs, listRuns } from './domains/run/storage';
 import { readSchedulerState } from './domains/scheduler/storage';
 import { startSchedulerLoop } from './domains/scheduler/tick';
 import { connect } from './features/connect/connect';
-import {
-  getDaemonFolder,
-  getLaunchdStatus,
-  install,
-  checkIsLaunchdLoaded,
-  startLaunchd,
-  stopLaunchd,
-  uninstall,
-} from './features/launchd/install';
 import { updateReadme } from './features/readme/readme';
 import {
   buildWebAppIfStale,
@@ -35,6 +26,7 @@ import {
   startAutoPull,
   startReloadWatchers,
 } from './features/self-update/reload';
+import { getDaemonService } from './features/service/service';
 import { startServer } from './server';
 
 const USAGE = `kombinat, run from the folder that holds routines/ (connect and tui --url work anywhere)
@@ -48,17 +40,20 @@ const USAGE = `kombinat, run from the folder that holds routines/ (connect and t
   validate                  parse every routine file and report errors
   readme                    regenerate the routines table in README.md
   run <name>                run one routine now in the foreground (what the scheduler spawns)
-  serve                     run scheduler + web UI (what launchd runs); pulls the main branch
-                            every 5 min, installs deps and restarts when the lockfile changes;
-                            in a checkout of kombinat also builds the UI and restarts when
-                            packages/ change
+  serve                     run scheduler + web UI (what launchd or systemd runs); pulls the
+                            main branch every 5 min, installs deps and restarts when the
+                            lockfile changes; in a checkout of kombinat also builds the UI and
+                            restarts when packages/ change
   pull                      git pull once, the way serve does it (ff-only, clean tree)
-  dev                       take over from launchd: scheduler + API from this checkout with no
-                            auto-restart, plus the Vite dev server; Ctrl-C hands back to launchd
-  install                   write the LaunchAgent plist and start the daemon
-  uninstall                 stop the daemon and remove the plist
+  dev                       take over from the daemon: scheduler + API from this checkout with no
+                            auto-restart, plus the Vite dev server; Ctrl-C hands back to the daemon
+  install                   start the daemon as a launchd agent on macOS or a systemd user service
+                            on Linux
+  uninstall                 stop the daemon and remove its launchd or systemd file
   status                    daemon and scheduler state
 `;
+
+const daemonService = getDaemonService();
 
 interface CliOptions {
   trigger: RunTrigger;
@@ -158,7 +153,7 @@ async function runOne(name: string | undefined, options: CliOptions): Promise<vo
 
 function serve(options: CliOptions): void {
   ensureStateDirs();
-  const managed = config.managed ? ', managed by launchd' : '';
+  const managed = config.managed ? ', managed' : '';
   log(
     `kombinat serve pid ${process.pid}, routines ${config.routinesDir}, state ${config.stateDir}${managed}`,
   );
@@ -180,7 +175,7 @@ function serve(options: CliOptions): void {
       log(`${reason}, restart serve to pick it up`);
       return;
     }
-    log(`${reason}, exiting so launchd restarts with the new code`);
+    log(`${reason}, exiting so the daemon restarts with the new code`);
     shutdown();
   });
 }
@@ -196,13 +191,13 @@ function dev(options: CliOptions): void {
   if (workspaceRoot === null)
     throw new Error('dev only works in a checkout of the kombinat repository');
   ensureStateDirs();
-  const hadLaunchd = checkIsLaunchdLoaded();
-  if (hadLaunchd) {
-    stopLaunchd();
-    log('stopped the launchd daemon, this process takes over until Ctrl-C');
+  const hadDaemon = daemonService.checkIsLoaded();
+  if (hadDaemon) {
+    daemonService.stop();
+    log('stopped the installed daemon, this process takes over until Ctrl-C');
   }
   // Ticking here would make the daemon skip the missed runs of its own routines.
-  const daemonFolder = hadLaunchd ? getDaemonFolder() : null;
+  const daemonFolder = hadDaemon ? daemonService.getDaemonFolder() : null;
   const isOtherFolder = daemonFolder !== null && daemonFolder !== config.projectRoot;
   if (isOtherFolder) log(`the daemon runs ${daemonFolder}, so the scheduler stays off here`);
   const stopScheduler = startScheduler({
@@ -221,9 +216,9 @@ function dev(options: CliOptions): void {
     vite.kill('SIGTERM');
     stopScheduler();
     server.close();
-    if (hadLaunchd) {
-      startLaunchd();
-      log('launchd daemon started again');
+    if (hadDaemon) {
+      daemonService.start();
+      log('the installed daemon started again');
     }
     process.exit(0);
   };
@@ -232,12 +227,14 @@ function dev(options: CliOptions): void {
   vite.on('exit', handBack);
 }
 
+function installDaemon(): void {
+  const { file, hint } = daemonService.install();
+  console.log(`installed ${file}\nui: http://localhost:${config.port}`);
+  if (hint !== null) console.log(hint);
+}
+
 function showStatus(): void {
-  const launchd = getLaunchdStatus()
-    .split('\n')
-    .filter(line => /state|pid|last exit|runs/.test(line))
-    .join('\n');
-  console.log(launchd || 'not loaded');
+  console.log(daemonService.getStatus());
   console.log(JSON.stringify(readSchedulerState(), null, 2));
 }
 
@@ -287,10 +284,8 @@ async function main(): Promise<void> {
     .with('serve', () => serve(options))
     .with('pull', pull)
     .with('dev', () => dev(options))
-    .with('install', () =>
-      console.log(`installed ${install()}\nui: http://localhost:${config.port}`),
-    )
-    .with('uninstall', () => console.log(`removed ${uninstall()}`))
+    .with('install', installDaemon)
+    .with('uninstall', () => console.log(`removed ${daemonService.uninstall()}`))
     .with('status', showStatus)
     .otherwise(showUsage);
 }

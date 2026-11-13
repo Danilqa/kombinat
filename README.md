@@ -110,7 +110,7 @@ The example routines of this repository, one row per file in [`routines/`](routi
 
 - Each routine is a markdown file. The frontmatter sets the schedule and settings, the body is the prompt.
 - A small daemon checks every 30 seconds which routines are due and starts their agent. It also serves a dashboard at http://localhost:7433.
-- launchd keeps the daemon running and starts it again after a reboot. Runs only happen while the Mac is awake and you are logged in.
+- launchd on macOS or systemd on Linux keeps the daemon running and starts it again after a reboot. Runs only happen while the computer is awake and you are logged in. On Linux, [lingering](docs/linux.md#lingering) lets them run while you are logged out.
 - Logs and run history are stored in `~/.kombinat/`.
 - Claude and Codex use your subscription login. API key variables are removed from their environment.
 
@@ -123,7 +123,7 @@ pnpm add kombinat
 pnpm kombinat install
 ```
 
-This starts the daemon under launchd, in that folder. Open http://localhost:7433. There is one daemon per macOS user, so running `install` in another folder moves it there.
+This starts the daemon in that folder, under launchd on macOS or as a systemd user service on Linux, see [docs/linux.md](docs/linux.md). Open http://localhost:7433. There is one daemon per user, so running `install` in another folder moves it there.
 
 ## Commands
 
@@ -218,4 +218,4 @@ Up to 0.2.2, Kombinat was published as `@danilqa/kombinat`. To move to `kombinat
 | `CLAUDE_BIN`              | `~/.local/bin/claude` | Claude Code binary                     |
 | `CODEX_BIN`               | `codex`               | Codex binary                           |
 
-Set them before `pnpm kombinat install`. They are saved in the launchd config.
+Set them before `pnpm kombinat install`. They are saved in the launchd or systemd config.
