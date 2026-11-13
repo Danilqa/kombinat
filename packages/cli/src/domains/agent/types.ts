@@ -11,6 +11,7 @@ export type OutputEvent = z.infer<typeof outputEventSchema>;
 
 export interface AgentSettings {
   model: string | null;
+  fallbackModel: string | null;
   effort: string | null;
   permissionMode: string | null;
   command: string | null;

@@ -68,6 +68,7 @@ function toRoutineSummary(
     queuedWebhooks: queue.length,
     agent: routine.agent,
     model: routine.model,
+    fallbackModel: routine.fallbackModel ?? null,
     effort: routine.effort,
     permissionMode: routine.permissionMode,
     command: routine.command,
@@ -119,6 +120,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
   }
 
   function getStatus(now: Date): DaemonStatus {
+    const running = history.listRuns(now).filter(isMatching({ status: 'running' })).length;
     return {
       pid: 48213,
       startedAt: daemonStartedAt.toISOString(),
@@ -128,9 +130,11 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
       claudeBin: `${HOME}/.local/bin/claude`,
       codexBin: '/opt/homebrew/bin/codex',
       maxConcurrentRuns: 2,
-      running: history.listRuns(now).filter(isMatching({ status: 'running' })).length,
+      running,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       now: now.toISOString(),
+      disk: { freeBytes: 182_400_000_000, totalBytes: 494_380_000_000 },
+      cpuLoad: running > 0 ? 0.46 : 0.07,
     };
   }
 

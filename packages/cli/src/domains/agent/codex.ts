@@ -181,7 +181,7 @@ export const codexAgent: Agent = {
   binaryEnv: 'CODEX_BIN',
 
   resolveSettings(raw) {
-    rejectUnsupported(raw, ['command', 'maxBudgetUsd'], 'codex');
+    rejectUnsupported(raw, ['command', 'fallbackModel', 'maxBudgetUsd'], 'codex');
     return {
       ...raw,
       effort: pickOne(raw.effort, EFFORTS, 'effort', 'codex'),

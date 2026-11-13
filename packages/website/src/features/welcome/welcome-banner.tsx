@@ -160,7 +160,7 @@ function WebhookRoutineFile() {
 function InstallCommands() {
   return (
     <CodePanel title="Terminal">
-      <span className="text-fg-faint">$ </span>pnpm add @danilqa/kombinat{'\n'}
+      <span className="text-fg-faint">$ </span>pnpm add kombinat{'\n'}
       <span className="text-fg-faint">$ </span>mkdir routines{'\n'}
       <span className="text-fg-faint">$ </span>vim routines/night-agent-tasks.md{'\n'}
       <span className="text-fg-faint">$ </span>pnpm kombinat serve{'\n'}
