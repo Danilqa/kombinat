@@ -126,6 +126,18 @@ test('keeps the agent settings that the frontmatter sets', () => {
   assert.equal(codex.effort, 'high');
 });
 
+test('a claude model can list fallback models after it', () => {
+  const claude = buildRoutine(
+    '/tmp/demo.md',
+    routineFile('model: claude-opus-5-5,claude-sonnet-5-5 ,'),
+  );
+  assert.equal(claude.model, 'claude-opus-5-5, claude-sonnet-5-5');
+  assert.throws(
+    () => buildRoutine('/tmp/demo.md', routineFile('agent: codex\nmodel: gpt-5.5, gpt-5.4')),
+    /agent codex takes one model/,
+  );
+});
+
 test('rejects settings the agent does not support', () => {
   assert.throws(() => buildRoutine('/tmp/demo.md', routineFile('agent: gemini')), /agent must be/);
   assert.throws(

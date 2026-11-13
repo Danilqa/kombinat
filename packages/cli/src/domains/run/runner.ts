@@ -13,6 +13,7 @@ import { createRunId } from 'domains/run/utils';
 import { config, getCliArgs } from '../../config';
 import { parseJson } from '../../utils/json';
 import { getAgent } from '../agent/registry';
+import { splitModels } from '../agent/settings';
 import type { Agent, OutputEvent } from '../agent/types';
 import type { Routine } from '../routine/types';
 import type { BeforeHookEvent } from './event-log';
@@ -117,7 +118,7 @@ export async function runRoutine(routine: Routine, options: RunOptions): Promise
     exitCode: null,
     sessionId: null,
     resumeCommand: null,
-    model: routine.model,
+    model: splitModels(routine.model)[0] ?? null,
     costUsd: null,
     numTurns: null,
     durationMs: null,

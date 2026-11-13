@@ -1,3 +1,5 @@
+import { match } from 'ts-pattern';
+
 import type { TranscriptItem } from './types';
 
 const PREVIEW_LENGTH = 160;
@@ -19,4 +21,17 @@ export function getTranscriptEmptyLabel(isRunning: boolean): string {
 
 export function getTranscriptResultLabel(isError: boolean): string {
   return isError ? 'Finished with error' : 'Finished';
+}
+
+// The reasons are the triggers Claude Code reports; a newer one shows as it is.
+export function getModelFallbackReasonLabel(reason: string | null): string | null {
+  if (reason === null) return null;
+  return match(reason)
+    .with('model_not_found', () => 'the model is not available')
+    .with('permission_denied', () => 'no access to the model')
+    .with('overloaded', () => 'the model is overloaded')
+    .with('server_error', () => 'server errors')
+    .with('model_blocked', () => 'the model is turned off')
+    .with('last_resort', () => 'the model failed')
+    .otherwise(() => reason);
 }

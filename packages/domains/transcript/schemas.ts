@@ -19,6 +19,14 @@ export const initItemSchema = z.object({
   permissionMode: z.string().nullable(),
 });
 
+export const modelFallbackItemSchema = z.object({
+  kind: z.literal('model-fallback'),
+  key: z.string(),
+  from: z.string(),
+  to: z.string(),
+  reason: z.string().nullable(),
+});
+
 export const textItemSchema = z.object({
   kind: z.literal('text'),
   key: z.string(),
@@ -50,6 +58,7 @@ export const resultItemSchema = z.object({
 export const transcriptItemSchema = z.discriminatedUnion('kind', [
   hookItemSchema,
   initItemSchema,
+  modelFallbackItemSchema,
   textItemSchema,
   toolItemSchema,
   resultItemSchema,

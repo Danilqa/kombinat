@@ -1,4 +1,4 @@
-import { match } from 'ts-pattern';
+import { match, P } from 'ts-pattern';
 import { z } from 'zod';
 
 import { sessionIdSchema } from 'domains/id/schemas';
@@ -7,7 +7,7 @@ import { toPreview } from 'domains/transcript/utils';
 
 import { config } from '../../config';
 import { checkIsRecord } from '../../utils/json';
-import { getUnattendedNote, pickOne, rejectUnsupported, withoutEnv } from './settings';
+import { getUnattendedNote, pickOne, rejectUnsupported, splitModels, withoutEnv } from './settings';
 import type { Agent, RunUpdate } from './types';
 
 const DEFAULT_MODEL = 'claude-opus-5-5';
@@ -68,6 +68,9 @@ const claudeEventSchema = z.object({
   parent_tool_use_id: z.string().nullable().optional(),
   message: z.object({ content: z.unknown().optional() }).optional(),
   model: z.string().optional(),
+  trigger: z.string().optional(),
+  original_model: z.string().optional(),
+  fallback_model: z.string().optional(),
   cwd: z.string().optional(),
   tools: z.array(z.unknown()).optional(),
   permissionMode: z.string().optional(),
@@ -171,6 +174,18 @@ function toItems(
         permissionMode: init.permissionMode ?? null,
       },
     ])
+    .with(
+      { type: 'system', subtype: 'model_fallback', fallback_model: P.string },
+      (fallback): TranscriptItem[] => [
+        {
+          kind: 'model-fallback',
+          key: `fallback-${index}`,
+          from: fallback.original_model ?? '?',
+          to: fallback.fallback_model,
+          reason: fallback.trigger ?? null,
+        },
+      ],
+    )
     .with({ type: 'assistant' }, assistant =>
       getContentBlocks(assistant).flatMap((block, blockIndex) =>
         toBlockItems(
@@ -213,9 +228,10 @@ export const claudeAgent: Agent = {
 
   resolveSettings(raw) {
     rejectUnsupported(raw, ['command'], 'claude');
+    const models = splitModels(raw.model);
     return {
       ...raw,
-      model: raw.model ?? DEFAULT_MODEL,
+      model: models.length === 0 ? DEFAULT_MODEL : models.join(', '),
       effort: pickOne(raw.effort, EFFORTS, 'effort', 'claude') ?? DEFAULT_EFFORT,
       permissionMode:
         pickOne(raw.permissionMode, PERMISSION_MODES, 'permissionMode', 'claude') ??
@@ -225,6 +241,7 @@ export const claudeAgent: Agent = {
 
   buildInvocation(context) {
     const { routine } = context;
+    const [model = DEFAULT_MODEL, ...fallbackModels] = splitModels(routine.model);
     const args = [
       '-p',
       '--output-format',
@@ -235,7 +252,7 @@ export const claudeAgent: Agent = {
       '--permission-prompts',
       'none',
       '--model',
-      routine.model ?? DEFAULT_MODEL,
+      model,
       '--effort',
       routine.effort ?? DEFAULT_EFFORT,
       '--name',
@@ -243,6 +260,7 @@ export const claudeAgent: Agent = {
       '--append-system-prompt',
       getUnattendedNote(context),
     ];
+    if (fallbackModels.length > 0) args.push('--fallback-model', fallbackModels.join(','));
     if (routine.maxBudgetUsd !== null) {
       args.push('--max-budget-usd', String(routine.maxBudgetUsd));
     }
@@ -259,6 +277,10 @@ export const claudeAgent: Agent = {
         if (init.model !== undefined) update.model = init.model;
         return update;
       })
+      .with(
+        { type: 'system', subtype: 'model_fallback', fallback_model: P.string },
+        ({ fallback_model }): RunUpdate => ({ model: fallback_model }),
+      )
       .with({ type: 'result' }, readResult)
       .otherwise(() => ({}));
   },

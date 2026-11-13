@@ -68,3 +68,23 @@ test('shows why a run failed', async ({ page, kombinat, claude }) => {
   await expect(page.getByRole('region', { name: 'Tool error' })).toHaveText('Command timed out');
   await expect(page.getByText('Finished with error')).toBeVisible();
 });
+
+test('shows when a run switched to a fallback model', async ({ page, kombinat, claude }) => {
+  kombinat.addRoutine({ name: 'fix-e2e-tests', model: 'claude-opus-5-5, claude-sonnet-5-5' });
+  const run = kombinat.addRun({
+    routine: 'fix-e2e-tests',
+    model: 'claude-sonnet-5-5',
+    events: [
+      claude.init(),
+      claude.modelFallback('claude-opus-5-5', 'claude-sonnet-5-5'),
+      claude.text('The checkout test fails, running it alone.'),
+      claude.result(),
+    ],
+  });
+
+  await page.goto(`/runs/fix-e2e-tests/${run.id}`);
+
+  await expect(page.getByText('Switched model')).toBeVisible();
+  await expect(page.getByText('claude-opus-5-5 → claude-sonnet-5-5')).toBeVisible();
+  await expect(page.getByText('because the model is overloaded')).toBeVisible();
+});

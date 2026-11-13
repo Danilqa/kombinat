@@ -160,6 +160,7 @@ timeoutMinutes: 55
 - `schedule` is a 5-field cron in local time, or `manual` to run only on demand.
 - `cwd` is where the agent starts.
 - `agent` is `claude` (default), `codex` or `command`.
+- `model` can list fallbacks after a comma, as in CSS: `claude-opus-5-5, claude-sonnet-5-5`. Claude switches to the next one when the model is not available, overloaded or fails, and the run's transcript says so. Only `claude` takes fallbacks.
 - `timeoutMinutes` stops the run after this time. Default 55.
 - `before` is an optional shell command that runs first. If it fails or takes more than 3 minutes, the run fails.
 - `enabled: false` keeps the file but stops the schedule.

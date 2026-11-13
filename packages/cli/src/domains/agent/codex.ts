@@ -6,7 +6,7 @@ import type { ToolResult, TranscriptItem } from 'domains/transcript/types';
 import { toPreview } from 'domains/transcript/utils';
 
 import { config } from '../../config';
-import { getUnattendedNote, pickOne, rejectUnsupported, withoutEnv } from './settings';
+import { getUnattendedNote, pickOne, rejectUnsupported, splitModels, withoutEnv } from './settings';
 import type { Agent, RunUpdate } from './types';
 
 const DEFAULT_SANDBOX = 'workspace-write';
@@ -182,8 +182,11 @@ export const codexAgent: Agent = {
 
   resolveSettings(raw) {
     rejectUnsupported(raw, ['command', 'maxBudgetUsd'], 'codex');
+    const models = splitModels(raw.model);
+    if (models.length > 1) throw new Error('agent codex takes one model, without fallbacks');
     return {
       ...raw,
+      model: models[0] ?? null,
       effort: pickOne(raw.effort, EFFORTS, 'effort', 'codex'),
       permissionMode:
         pickOne(raw.permissionMode, SANDBOX_MODES, 'permissionMode', 'codex') ?? DEFAULT_SANDBOX,

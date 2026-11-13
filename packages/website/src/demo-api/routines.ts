@@ -12,6 +12,7 @@ import {
   hook,
   init,
   mcp,
+  modelFallback,
   read,
   shell,
   text,
@@ -33,6 +34,8 @@ export interface DemoOutcome {
   resultText?: string;
   error?: string;
   exitCode?: number | null;
+  // The model the run ended on, when a fallback took over from the routine's runModel.
+  model?: string;
   steps: TranscriptStep[];
 }
 
@@ -98,7 +101,7 @@ const nightAgentTasks: DemoRoutine = {
   schedule: '0 2 * * *',
   enabled: true,
   agent: 'claude',
-  model: OPUS,
+  model: `${OPUS}, ${SONNET}`,
   effort: 'xhigh',
   permissionMode: 'bypassPermissions',
   command: null,
@@ -219,8 +222,42 @@ Never merge, and keep one issue per branch.`,
         text('Starting #474: the PDF export has to keep table headers on every page.'),
       ],
     },
+    {
+      id: 'fallback',
+      weight: 0,
+      status: 'succeeded',
+      minutes: 38,
+      costUsd: 1.94,
+      numTurns: 44,
+      model: SONNET,
+      resultText:
+        'Opened 2 draft pull requests: #486 Keep the table headers on every page of the PDF export and #487 Show the client name in the invoice reminder email.',
+      steps: [
+        hook('git switch main && git pull --ff-only', 0, 'Updating 9f2c1ab..c41e7d2\nFast-forward'),
+        init({ model: OPUS, cwd: REPO, toolCount: 32, permissionMode: 'bypassPermissions' }),
+        modelFallback(OPUS, SONNET, 'overloaded'),
+        bash(
+          AGENT_QUEUE_COMMAND,
+          '[{"number":474,"title":"PDF export: table headers on every page"},{"number":479,"title":"Client name in the reminder email"}]',
+        ),
+        bash(
+          'gh pr create --draft --title "Keep the table headers on every page of the PDF export" --body-file /tmp/pr-474.md',
+          'https://github.com/acme/web/pull/486',
+        ),
+        bash(
+          'gh pr create --draft --title "Show the client name in the invoice reminder email" --body-file /tmp/pr-479.md',
+          'https://github.com/acme/web/pull/487',
+        ),
+        text(
+          'Opened 2 draft pull requests: #486 Keep the table headers on every page of the PDF export and #487 Show the client name in the invoice reminder email.',
+        ),
+      ],
+    },
   ],
-  pins: [{ slotsAgo: 3, outcome: 'budget' }],
+  pins: [
+    { slotsAgo: 1, outcome: 'fallback' },
+    { slotsAgo: 3, outcome: 'budget' },
+  ],
 };
 
 const DESIGN_ISSUES_COMMAND = 'gh issue list --label design --state open --json number,title';
