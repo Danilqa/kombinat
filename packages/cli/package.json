@@ -1,6 +1,6 @@
 {
   "name": "kombinat",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "type": "module",
   "description": "Dead simple, lightweight engine for 24/7 background AI agents. Works with your Claude, Codex or any other subscription.",
   "keywords": [
@@ -37,7 +37,7 @@
     "build": "pnpm run build:cli && pnpm run build:web-app",
     "build:cli": "esbuild src/cli.ts --bundle --platform=node --format=esm --target=node24 --external:zod --external:ts-pattern --outfile=dist/cli.js",
     "build:web-app": "pnpm --filter web-app run build",
-    "prepack": "pnpm run build && cp ../../README.md README.md"
+    "prepack": "pnpm run build && cp ../../README.md ../../LICENSE ."
   },
   "engines": {
     "node": ">=24"
