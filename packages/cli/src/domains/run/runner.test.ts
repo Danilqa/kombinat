@@ -354,3 +354,75 @@ test('an after hook that never reads a large record on stdin does not hang or fa
     ]);
   }
 });
+
+async function checkIsGoneSoon(pid: number): Promise<boolean> {
+  for (let attempt = 0; attempt < 40; attempt++) {
+    if (!checkIsProcessAlive(pid)) return true;
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+  return false;
+}
+
+test('a hook past its limit is killed with the children it started', async () => {
+  const pidFile = path.join(tmp, 'hook-child.pid');
+  const record = await runRoutine(
+    makeRoutine('after-hook-child', `after: sleep 30 & echo $! > ${pidFile}; wait; echo never`),
+    { trigger: 'manual' },
+    300,
+  );
+  assert.equal(record.status, 'succeeded');
+  const childPid = Number(fs.readFileSync(pidFile, 'utf8'));
+  assert.ok(childPid > 0);
+  assert.equal(await checkIsGoneSoon(childPid), true);
+  const [line] = findAfterHookLines(record);
+  assert.match(hookLineSchema.parse(line).output, /^Killed after 0\.005 minutes$/);
+});
+
+test('a before hook past its limit fails the run as killed, and the after hook still runs', async () => {
+  const record = await runRoutine(
+    makeRoutine(
+      'before-hook-slow',
+      `before: echo waiting; sleep 5\n${makeRecordingHook('before-slow')}`,
+    ),
+    { trigger: 'manual' },
+    300,
+  );
+  assert.equal(record.status, 'failed');
+  assert.equal(record.error, 'before hook was killed after 0.005 minutes');
+  assert.equal(readHookCapture('before-slow').env[3], 'failed');
+  const [before] = readLog(record);
+  assert.deepEqual(before, {
+    type: 'before_hook',
+    command: 'echo waiting; sleep 5',
+    exitCode: null,
+    output: 'waiting\nKilled after 0.005 minutes',
+  });
+  assert.deepEqual(readLogTypes(record), ['before_hook', 'after_hook']);
+});
+
+test('a before hook that exits non-zero fails the run with its output', async () => {
+  const record = await runRoutine(makeRoutine('before-hook-exits', 'before: echo no >&2; exit 5'), {
+    trigger: 'manual',
+  });
+  assert.equal(record.status, 'failed');
+  assert.equal(record.error, 'before hook exited with 5: no');
+});
+
+test('the finished record is written even when the after hook step throws', async () => {
+  const runsDir = path.join(tmp, 'state', 'runs', 'after-hook-throws');
+  await assert.rejects(
+    runRoutine(makeRoutine('after-hook-throws', `command: exit 2\nafter: rm -rf ${runsDir}`), {
+      trigger: 'manual',
+      runId: runIdSchema.parse('20261110T090000Z-thrw'),
+    }),
+    /ENOENT/,
+  );
+  const stored = readRunRecord(
+    routineNameSchema.parse('after-hook-throws'),
+    runIdSchema.parse('20261110T090000Z-thrw'),
+  );
+  assert.ok(stored);
+  assert.equal(stored.status, 'failed');
+  assert.equal(stored.exitCode, 2);
+  assert.notEqual(stored.endedAt, null);
+});

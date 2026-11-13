@@ -7,7 +7,7 @@ before: git pull --ff-only
 after: notify-slack.mjs
 ```
 
-Both run with `/bin/sh -c` and have 3 minutes. They get `KOMBINAT_REPO`, the folder with `routines/`, and its `scripts/` folder comes first on `PATH`, so a script there runs by its name.
+Both run with `/bin/sh -c` and have 3 minutes, after which they are killed together with the processes they started. They get `KOMBINAT_REPO`, the folder with `routines/`, and its `scripts/` folder comes first on `PATH`, so a script there runs by its name.
 
 ## Before
 
