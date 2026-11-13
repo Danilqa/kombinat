@@ -1,16 +1,16 @@
 import { routineNameSchema } from 'domains/id/schemas';
 import type { RoutineName } from 'domains/id/types';
 
-export interface RoutineTemplate {
+export interface ExampleRoutine {
   name: RoutineName;
   source: string;
 }
 
-export const HELLO_ROUTINE = routineNameSchema.parse('hello-example-routine');
+export const HELLO_EXAMPLE_ROUTINE = routineNameSchema.parse('hello-example-routine');
 
-export const ROUTINE_TEMPLATES: RoutineTemplate[] = [
+export const EXAMPLE_ROUTINES: ExampleRoutine[] = [
   {
-    name: HELLO_ROUTINE,
+    name: HELLO_EXAMPLE_ROUTINE,
     source: `---
 name: hello-example-routine
 description: Says hello, to check that your setup works

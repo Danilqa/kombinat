@@ -5,21 +5,20 @@ import { isMatching, match, P } from 'ts-pattern';
 import { z } from 'zod';
 
 import { config, DEFAULT_PORT, PACKAGE_NAME } from '../../config';
-import { loadRoutines } from '../../domains/routine/storage';
+import { EXAMPLE_ROUTINES, HELLO_EXAMPLE_ROUTINE } from '../../domains/routine/examples';
+import { listRoutineFiles, loadRoutines } from '../../domains/routine/storage';
 import { readJsonFile } from '../../utils/json';
+import { detectPackageManager, findDependencies } from '../../utils/package-manager';
+import type { PackageManager } from '../../utils/package-manager';
 import { renderRoutinesSection } from '../readme/readme';
-import { findDependencies } from '../self-update/reload';
 import {
-  detectPackageManager,
-  findPackageManager,
   formatCommand,
   getInstallCommand,
   getKombinatCommand,
   quoteShellArg,
   runInstall,
-} from './package-manager';
-import type { Installer, PackageManager, ShellCommand } from './package-manager';
-import { HELLO_ROUTINE, ROUTINE_TEMPLATES } from './templates';
+} from './commands';
+import type { Installer, ShellCommand } from './commands';
 
 export interface InitOptions {
   install: boolean;
@@ -74,14 +73,6 @@ function checkListsKombinat(file: string): boolean {
   );
 }
 
-function checkHasRoutines(routinesDir: string): boolean {
-  return (
-    fs.existsSync(routinesDir) &&
-    fs.statSync(routinesDir).isDirectory() &&
-    fs.readdirSync(routinesDir).some(entry => entry.endsWith('.md'))
-  );
-}
-
 const getVersionRange = (version: string | undefined): string =>
   version === undefined ? 'latest' : `^${version}`;
 
@@ -115,9 +106,7 @@ function chooseManager(
   options: InitOptions,
 ): PackageManager {
   const dependencies = hadPackageJson ? findDependencies(folder) : null;
-  const fromLockfile =
-    dependencies === null ? null : findPackageManager(dependencies.manager.command);
-  return fromLockfile ?? options.userAgentManager;
+  return dependencies?.manager ?? options.userAgentManager;
 }
 
 function planInstall(
@@ -154,7 +143,7 @@ export function initFolder(folder: string, options: InitOptions): InitResult {
     throw new Error(`${folder} is not a folder`);
   }
   const routinesDir = path.join(folder, 'routines');
-  const hasRoutines = checkHasRoutines(routinesDir);
+  const hasRoutines = listRoutineFiles(routinesDir).length > 0;
   const readme = path.join(folder, 'README.md');
   // The README lists the routines, so a broken one fails here, before anything is written.
   if (hasRoutines && !fs.existsSync(readme)) loadRoutines(routinesDir);
@@ -179,8 +168,8 @@ export function initFolder(folder: string, options: InitOptions): InitResult {
     kept.push('routines/');
   } else {
     fs.mkdirSync(routinesDir, { recursive: true });
-    for (const template of ROUTINE_TEMPLATES) {
-      writeIfMissing(`routines/${template.name}.md`, () => template.source);
+    for (const example of EXAMPLE_ROUTINES) {
+      writeIfMissing(`routines/${example.name}.md`, () => example.source);
     }
   }
   writeIfMissing('README.md', () => renderReadme(folder, manager));
@@ -191,7 +180,7 @@ export function initFolder(folder: string, options: InitOptions): InitResult {
     manager,
     created,
     kept,
-    hasHelloRoutine: fs.existsSync(path.join(routinesDir, `${HELLO_ROUTINE}.md`)),
+    hasHelloRoutine: fs.existsSync(path.join(routinesDir, `${HELLO_EXAMPLE_ROUTINE}.md`)),
     install: install(folder, hadPackageJson, manager, options),
   };
 }
@@ -219,7 +208,10 @@ function getNextSteps(result: InitResult, folderArg: string | null): NextStep[] 
   }
   steps.push(
     result.hasHelloRoutine
-      ? { command: `${kombinat} run ${HELLO_ROUTINE}`, note: 'try a routine now, in this terminal' }
+      ? {
+          command: `${kombinat} run ${HELLO_EXAMPLE_ROUTINE}`,
+          note: 'try a routine now, in this terminal',
+        }
       : { command: `${kombinat} list`, note: 'see your routines' },
     {
       command: `${kombinat} serve`,
@@ -281,7 +273,6 @@ export function runInit(folderArg: string | undefined, shouldInstall: boolean): 
   const result = initFolder(path.resolve(folderArg ?? '.'), {
     install: shouldInstall,
     version: config.version,
-    // Package managers set it for the commands they start, such as "pnpm/11.0.9 node/v24.1.0".
     userAgentManager: detectPackageManager(process.env['npm_config_user_agent']),
     runInstall,
     log: line => console.log(line),

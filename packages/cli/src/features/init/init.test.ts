@@ -8,9 +8,10 @@ import { loadRoutines } from '../../domains/routine/storage';
 import { renderRoutinesTable, updateReadme } from '../readme/readme';
 import { formatInitSummary, initFolder } from './init';
 import type { InitOptions } from './init';
-import { detectPackageManager } from './package-manager';
-import type { PackageManager, ShellCommand } from './package-manager';
-import { ROUTINE_TEMPLATES } from './templates';
+import { EXAMPLE_ROUTINES } from '../../domains/routine/examples';
+import { detectPackageManager } from '../../utils/package-manager';
+import type { PackageManager } from '../../utils/package-manager';
+import type { ShellCommand } from './commands';
 
 const ROUTINE_FILES = [
   'hello-example-routine.md',
@@ -86,10 +87,10 @@ test('fills an empty folder with package.json, example routines, a README and .g
     '{\n  "private": true,\n  "dependencies": {\n    "@danilqa/kombinat": "^1.2.3"\n  }\n}\n',
   );
   assert.deepEqual(fs.readdirSync(path.join(folder, 'routines')).sort(), ROUTINE_FILES);
-  for (const template of ROUTINE_TEMPLATES) {
+  for (const example of EXAMPLE_ROUTINES) {
     assert.equal(
-      fs.readFileSync(path.join(folder, 'routines', `${template.name}.md`), 'utf8'),
-      template.source,
+      fs.readFileSync(path.join(folder, 'routines', `${example.name}.md`), 'utf8'),
+      example.source,
     );
   }
   assert.equal(fs.readFileSync(path.join(folder, '.gitignore'), 'utf8'), 'node_modules\n');
@@ -288,7 +289,7 @@ test('an existing project with pnpm-lock.yaml uses pnpm, whatever the user agent
   assert.deepEqual(calls, [
     { command: { command: 'pnpm', args: ['add', '@danilqa/kombinat@^1.2.3'] }, cwd: folder },
   ]);
-  assert.equal(result.manager.name, 'pnpm');
+  assert.equal(result.manager.command, 'pnpm');
   const readme = fs.readFileSync(path.join(folder, 'README.md'), 'utf8');
   assert.equal(readme.includes('`pnpm kombinat serve`'), true);
   const summary = formatInitSummary(result, folder);
@@ -338,7 +339,7 @@ test('a fresh folder follows the user agent, even under a checkout with a lockfi
   const { calls, options } = record();
   const result = initFolder(folder, options);
   assert.deepEqual(calls, [{ command: { command: 'npm', args: ['install'] }, cwd: folder }]);
-  assert.equal(result.manager.name, 'npm');
+  assert.equal(result.manager.command, 'npm');
 });
 
 test('an existing project without a lockfile follows the user agent', () => {
@@ -348,5 +349,5 @@ test('an existing project without a lockfile follows the user agent', () => {
   assert.deepEqual(calls, [
     { command: { command: 'pnpm', args: ['add', '@danilqa/kombinat@^1.2.3'] }, cwd: folder },
   ]);
-  assert.equal(result.manager.name, 'pnpm');
+  assert.equal(result.manager.command, 'pnpm');
 });

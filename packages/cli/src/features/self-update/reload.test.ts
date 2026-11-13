@@ -4,12 +4,9 @@ import { test } from 'node:test';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {
-  checkAreDepsStale,
-  findDependencies,
-  installDepsBeforeRestart,
-  checkIsWebAppStale,
-} from './reload';
+
+import { findDependencies } from '../../utils/package-manager';
+import { checkAreDepsStale, installDepsBeforeRestart, checkIsWebAppStale } from './reload';
 
 function makeRepo(): string {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ba-reload-'));
@@ -122,23 +119,6 @@ test('an install by kombinat counts even when pnpm left its own marker alone', (
   assert.equal(checkAreDepsStale(root), true);
   touch(path.join(root, 'node_modules', '.kombinat-install'), 3_000_000);
   assert.equal(checkAreDepsStale(root), false);
-});
-
-test('a workspace member uses the lockfile at the root of its git checkout', () => {
-  const root = makeRepo();
-  fs.mkdirSync(path.join(root, '.git'));
-  touch(path.join(root, 'pnpm-lock.yaml'), 1_000_000);
-  const member = path.join(root, 'packages', 'agents');
-  fs.mkdirSync(member, { recursive: true });
-  assert.deepEqual(findDependencies(member)?.root, root);
-});
-
-test('a lockfile outside the git checkout of the project is ignored', () => {
-  const root = makeRepo();
-  touch(path.join(root, 'package-lock.json'), 1_000_000);
-  const project = path.join(root, 'project');
-  fs.mkdirSync(project);
-  assert.equal(findDependencies(project), null);
 });
 
 test('yarn projects are checked against the yarn install marker', () => {

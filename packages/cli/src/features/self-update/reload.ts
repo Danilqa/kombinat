@@ -8,6 +8,8 @@ import { z } from 'zod';
 import { getErrorMessage } from 'utils/error';
 
 import { config } from '../../config';
+import { findDependencies } from '../../utils/package-manager';
+import type { Dependencies } from '../../utils/package-manager';
 
 type Log = (line: string) => void;
 
@@ -61,63 +63,8 @@ export function checkIsWebAppStale(workspaceRoot = config.workspaceRoot): boolea
   return webAppSources(workspaceRoot).some(source => getNewestMtime(source) > builtAt);
 }
 
-interface PackageManager {
-  command: string;
-  install: string[];
-  lockfile: string;
-  marker: string;
-}
-
-interface Dependencies {
-  manager: PackageManager;
-  root: string;
-}
-
-const PACKAGE_MANAGERS: PackageManager[] = [
-  {
-    command: 'pnpm',
-    install: ['-s', 'install', '--frozen-lockfile'],
-    lockfile: 'pnpm-lock.yaml',
-    marker: '.modules.yaml',
-  },
-  // Not npm ci: when it fails, node_modules is left empty, kombinat included.
-  {
-    command: 'npm',
-    install: ['install', '--no-audit', '--no-fund', '--loglevel=error'],
-    lockfile: 'package-lock.json',
-    marker: '.package-lock.json',
-  },
-  // Yarn 2+ reads --frozen-lockfile as --immutable.
-  {
-    command: 'yarn',
-    install: ['install', '--frozen-lockfile'],
-    lockfile: 'yarn.lock',
-    marker: '.yarn-integrity',
-  },
-];
-
 // pnpm does not touch its marker when there is nothing to install.
 const INSTALL_MARKER = '.kombinat-install';
-
-// Up to the git root, for workspaces with the lockfile at the top.
-function getLockfileDirs(projectRoot: string): string[] {
-  const dirs: string[] = [];
-  for (let dir = projectRoot; ; dir = path.dirname(dir)) {
-    dirs.push(dir);
-    if (fs.existsSync(path.join(dir, '.git'))) return dirs;
-    if (path.dirname(dir) === dir) return [projectRoot];
-  }
-}
-
-export function findDependencies(projectRoot = config.projectRoot): Dependencies | null {
-  for (const root of getLockfileDirs(projectRoot)) {
-    const manager = PACKAGE_MANAGERS.find(candidate =>
-      fs.existsSync(path.join(root, candidate.lockfile)),
-    );
-    if (manager !== undefined) return { manager, root };
-  }
-  return null;
-}
 
 function getMtime(file: string): number {
   return fs.existsSync(file) ? fs.statSync(file).mtimeMs : 0;
@@ -264,7 +211,7 @@ export function startAutoPull(log: Log): () => void {
 }
 
 export function startReloadWatchers(log: Log, restart: (reason: string) => void): () => void {
-  const dependencies = findDependencies();
+  const dependencies = findDependencies(config.projectRoot);
   const installAndRestart = (reason: string): void => {
     if (!installDepsBeforeRestart(log)) {
       log(`${reason}, but the dependency install failed, keeping this version running`);
