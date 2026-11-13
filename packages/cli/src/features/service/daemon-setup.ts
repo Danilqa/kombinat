@@ -4,6 +4,11 @@ import path from 'node:path';
 
 import { config, PACKAGE_NAME } from '../../config';
 
+export interface InstallResult {
+  file: string;
+  hint: string | null;
+}
+
 const PASSED_ENV = [/^KOMBINAT_/, /^CLAUDE_BIN$/, /^CODEX_BIN$/];
 
 export function buildDaemonPath(current = process.env['PATH'] ?? ''): string {

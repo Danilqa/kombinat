@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import os from 'node:os';
 import { test } from 'node:test';
 
-import { buildDaemonEnv, buildDaemonPath } from './daemon';
+import { buildDaemonEnv, buildDaemonPath } from './daemon-setup';
 
 test('daemon PATH drops plugin dirs and duplicates but keeps user entries', () => {
   const result = buildDaemonPath(

@@ -13,7 +13,7 @@ import {
   quoteExecArg,
   readWorkingDirectory,
   renderUnit,
-} from './install';
+} from './systemd';
 
 const TRICKY = String.raw`a b"c\d%e$f'g`;
 

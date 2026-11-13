@@ -4,7 +4,8 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { config, getCliArgs } from '../../config';
-import { buildDaemonEnv, ensureInstallable } from '../service/daemon';
+import type { InstallResult } from './daemon-setup';
+import { buildDaemonEnv, ensureInstallable } from './daemon-setup';
 
 const plistPath = () =>
   path.join(os.homedir(), 'Library', 'LaunchAgents', `${config.launchdLabel}.plist`);
@@ -75,7 +76,7 @@ function sleep(ms: number): void {
 
 function waitUntilUnloaded(timeoutMs = 10_000): void {
   const deadline = Date.now() + timeoutMs;
-  while (checkIsLaunchdLoaded() && Date.now() < deadline) sleep(250);
+  while (checkIsLoaded() && Date.now() < deadline) sleep(250);
 }
 
 function bootstrapWithRetry(attempts = 5): void {
@@ -90,7 +91,7 @@ function bootstrapWithRetry(attempts = 5): void {
   }
 }
 
-export function checkIsLaunchdLoaded(): boolean {
+export function checkIsLoaded(): boolean {
   try {
     execFileSync('launchctl', ['print', `${domain()}/${config.launchdLabel}`], { stdio: 'pipe' });
     return true;
@@ -99,24 +100,24 @@ export function checkIsLaunchdLoaded(): boolean {
   }
 }
 
-export function stopLaunchd(): void {
+export function stop(): void {
   runLaunchctl(['bootout', `${domain()}/${config.launchdLabel}`], true);
   waitUntilUnloaded();
 }
 
-export function startLaunchd(): void {
+export function start(): void {
   if (!fs.existsSync(plistPath())) throw new Error(`${plistPath()} is missing, run install first`);
   bootstrapWithRetry();
 }
 
-export function install(): string {
+export function install(): InstallResult {
   ensureInstallable();
   fs.mkdirSync(config.stateDir, { recursive: true });
   fs.mkdirSync(path.dirname(plistPath()), { recursive: true });
   fs.writeFileSync(plistPath(), renderPlist());
-  stopLaunchd();
-  startLaunchd();
-  return plistPath();
+  stop();
+  start();
+  return { file: plistPath(), hint: null };
 }
 
 export function getDaemonFolder(): string | null {
@@ -129,17 +130,25 @@ export function getDaemonFolder(): string | null {
 }
 
 export function uninstall(): string {
-  stopLaunchd();
+  stop();
   if (fs.existsSync(plistPath())) fs.unlinkSync(plistPath());
   return plistPath();
 }
 
-export function getLaunchdStatus(): string {
+function printService(): string {
   try {
     return execFileSync('launchctl', ['print', `${domain()}/${config.launchdLabel}`], {
       stdio: 'pipe',
     }).toString();
   } catch {
-    return 'not loaded';
+    return '';
   }
+}
+
+export function getStatus(): string {
+  const lines = printService()
+    .split('\n')
+    .filter(line => /state|pid|last exit|runs/.test(line))
+    .join('\n');
+  return lines || 'not loaded';
 }

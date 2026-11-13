@@ -8,7 +8,8 @@ import { isMatching } from 'ts-pattern';
 import { getErrorMessage } from 'utils/error';
 
 import { config, getCliArgs } from '../../config';
-import { buildDaemonEnv, ensureInstallable } from '../service/daemon';
+import type { InstallResult } from './daemon-setup';
+import { buildDaemonEnv, ensureInstallable } from './daemon-setup';
 
 const UNIT_NAME = 'kombinat.service';
 const RUNNING_STATES = ['active', 'activating', 'reloading', 'deactivating'];
@@ -132,24 +133,24 @@ function findSystemdProblem(): string | null {
   }
 }
 
-export function checkIsSystemdLoaded(): boolean {
+export function checkIsLoaded(): boolean {
   const properties = parseProperties(showUnit());
   return (
     properties['LoadState'] === 'loaded' && RUNNING_STATES.includes(properties['ActiveState'] ?? '')
   );
 }
 
-export function stopSystemd(): void {
+export function stop(): void {
   runSystemctlQuietly(['stop', UNIT_NAME]);
 }
 
-export function startSystemd(): void {
+export function start(): void {
   if (!fs.existsSync(getUnitPath()))
     throw new Error(`${getUnitPath()} is missing, run install first`);
   runSystemctl(['start', UNIT_NAME]);
 }
 
-export function install(): string {
+export function install(): InstallResult {
   ensureInstallable();
   const problem = findSystemdProblem();
   if (problem !== null) {
@@ -163,10 +164,10 @@ export function install(): string {
   runSystemctl(['daemon-reload']);
   runSystemctl(['enable', UNIT_NAME]);
   runSystemctl(['restart', UNIT_NAME]);
-  return getUnitPath();
+  return { file: getUnitPath(), hint: getLingerHint() };
 }
 
-export function getLingerHint(): string | null {
+function getLingerHint(): string | null {
   const user = os.userInfo().username;
   let showUser = '';
   try {
@@ -193,6 +194,6 @@ export function uninstall(): string {
   return getUnitPath();
 }
 
-export function getSystemdStatus(): string {
+export function getStatus(): string {
   return formatSystemdStatus(showUnit());
 }

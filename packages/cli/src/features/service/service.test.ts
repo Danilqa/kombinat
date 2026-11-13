@@ -1,14 +1,16 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
+import * as launchd from './launchd';
 import { getDaemonService } from './service';
+import * as systemd from './systemd';
 
 test('macOS runs the daemon under launchd', () => {
-  assert.equal(getDaemonService('darwin').manager, 'launchd');
+  assert.equal(getDaemonService('darwin'), launchd);
 });
 
 test('Linux runs the daemon under systemd', () => {
-  assert.equal(getDaemonService('linux').manager, 'systemd');
+  assert.equal(getDaemonService('linux'), systemd);
 });
 
 test('other platforms cannot install the daemon', () => {

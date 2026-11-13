@@ -1,15 +1,10 @@
 import { match } from 'ts-pattern';
 
-import * as launchd from '../launchd/install';
-import * as systemd from '../systemd/install';
-
-export interface InstallResult {
-  file: string;
-  hint: string | null;
-}
+import type { InstallResult } from './daemon-setup';
+import * as launchd from './launchd';
+import * as systemd from './systemd';
 
 export interface DaemonService {
-  manager: string;
   install: () => InstallResult;
   uninstall: () => string;
   getStatus: () => string;
@@ -19,33 +14,6 @@ export interface DaemonService {
   getDaemonFolder: () => string | null;
 }
 
-const launchdService: DaemonService = {
-  manager: 'launchd',
-  install: () => ({ file: launchd.install(), hint: null }),
-  uninstall: launchd.uninstall,
-  getStatus: () =>
-    launchd
-      .getLaunchdStatus()
-      .split('\n')
-      .filter(line => /state|pid|last exit|runs/.test(line))
-      .join('\n') || 'not loaded',
-  checkIsLoaded: launchd.checkIsLaunchdLoaded,
-  stop: launchd.stopLaunchd,
-  start: launchd.startLaunchd,
-  getDaemonFolder: launchd.getDaemonFolder,
-};
-
-const systemdService: DaemonService = {
-  manager: 'systemd',
-  install: () => ({ file: systemd.install(), hint: systemd.getLingerHint() }),
-  uninstall: systemd.uninstall,
-  getStatus: systemd.getSystemdStatus,
-  checkIsLoaded: systemd.checkIsSystemdLoaded,
-  stop: systemd.stopSystemd,
-  start: systemd.startSystemd,
-  getDaemonFolder: systemd.getDaemonFolder,
-};
-
 function buildUnsupportedService(platform: string): DaemonService {
   const fail = (): never => {
     throw new Error(
@@ -53,7 +21,6 @@ function buildUnsupportedService(platform: string): DaemonService {
     );
   };
   return {
-    manager: 'its supervisor',
     install: fail,
     uninstall: fail,
     getStatus: () => 'not loaded',
@@ -65,8 +32,8 @@ function buildUnsupportedService(platform: string): DaemonService {
 }
 
 export function getDaemonService(platform: NodeJS.Platform = process.platform): DaemonService {
-  return match(platform)
-    .with('darwin', () => launchdService)
-    .with('linux', () => systemdService)
+  return match<NodeJS.Platform, DaemonService>(platform)
+    .with('darwin', () => launchd)
+    .with('linux', () => systemd)
     .otherwise(buildUnsupportedService);
 }
