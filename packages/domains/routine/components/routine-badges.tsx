@@ -50,6 +50,11 @@ export function RoutineBadges({ routine }: RoutineBadgesProps) {
           {routine.model}
         </Badge>
       )}
+      {routine.fallbackModel && (
+        <Badge size="small">
+          Fallback <span className="font-mono">{routine.fallbackModel}</span>
+        </Badge>
+      )}
       {routine.effort !== null && <Badge size="small">Effort {routine.effort}</Badge>}
       {routine.permissionMode !== null && (
         <Badge size="small">Permission {routine.permissionMode}</Badge>

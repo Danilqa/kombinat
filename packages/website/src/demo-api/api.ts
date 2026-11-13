@@ -68,6 +68,7 @@ function toRoutineSummary(
     queuedWebhooks: queue.length,
     agent: routine.agent,
     model: routine.model,
+    fallbackModel: routine.fallbackModel ?? null,
     effort: routine.effort,
     permissionMode: routine.permissionMode,
     command: routine.command,
