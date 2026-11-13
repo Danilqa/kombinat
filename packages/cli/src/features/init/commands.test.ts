@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
+import { PACKAGE_NAME } from '../../config';
 import { detectPackageManager } from '../../utils/package-manager';
 import { formatCommand, getInstallCommand, getKombinatCommand } from './commands';
 
-const SPEC = '@danilqa/kombinat@^1.2.3';
+const SPEC = `${PACKAGE_NAME}@^1.2.3`;
 
 test('gives each package manager its install, add and run commands', () => {
   const commands = ['npm/11', 'pnpm/11', 'yarn/4', 'unknown/1'].map(userAgent => {
@@ -16,10 +17,10 @@ test('gives each package manager its install, add and run commands', () => {
     ];
   });
   assert.deepEqual(commands, [
-    ['npm install', "npm install '@danilqa/kombinat@^1.2.3'", 'npx kombinat'],
-    ['pnpm install', "pnpm add '@danilqa/kombinat@^1.2.3'", 'pnpm kombinat'],
-    ['yarn install', "yarn add '@danilqa/kombinat@^1.2.3'", 'yarn kombinat'],
-    ['npm install', "npm install '@danilqa/kombinat@^1.2.3'", 'npx kombinat'],
+    ['npm install', `npm install '${SPEC}'`, 'npx kombinat'],
+    ['pnpm install', `pnpm add '${SPEC}'`, 'pnpm kombinat'],
+    ['yarn install', `yarn add '${SPEC}'`, 'yarn kombinat'],
+    ['npm install', `npm install '${SPEC}'`, 'npx kombinat'],
   ]);
 });
 
