@@ -153,7 +153,7 @@ async function runOne(name: string | undefined, options: CliOptions): Promise<vo
 
 function serve(options: CliOptions): void {
   ensureStateDirs();
-  const managed = config.managed ? `, managed by ${daemonService.manager}` : '';
+  const managed = config.managed ? ', managed' : '';
   log(
     `kombinat serve pid ${process.pid}, routines ${config.routinesDir}, state ${config.stateDir}${managed}`,
   );
@@ -175,7 +175,7 @@ function serve(options: CliOptions): void {
       log(`${reason}, restart serve to pick it up`);
       return;
     }
-    log(`${reason}, exiting so ${daemonService.manager} restarts with the new code`);
+    log(`${reason}, exiting so the daemon restarts with the new code`);
     shutdown();
   });
 }
@@ -194,7 +194,7 @@ function dev(options: CliOptions): void {
   const hadDaemon = daemonService.checkIsLoaded();
   if (hadDaemon) {
     daemonService.stop();
-    log(`stopped the ${daemonService.manager} daemon, this process takes over until Ctrl-C`);
+    log('stopped the installed daemon, this process takes over until Ctrl-C');
   }
   // Ticking here would make the daemon skip the missed runs of its own routines.
   const daemonFolder = hadDaemon ? daemonService.getDaemonFolder() : null;
@@ -218,7 +218,7 @@ function dev(options: CliOptions): void {
     server.close();
     if (hadDaemon) {
       daemonService.start();
-      log(`${daemonService.manager} daemon started again`);
+      log('the installed daemon started again');
     }
     process.exit(0);
   };
