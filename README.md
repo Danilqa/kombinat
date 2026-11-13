@@ -49,7 +49,7 @@ Routines from the [live demo](https://danilqa.github.io/kombinat/). Open one to 
 1. Add Kombinat to the repository that will hold your routines.
 
    ```bash
-   pnpm add @danilqa/kombinat        # with npm: npm install @danilqa/kombinat
+   pnpm add kombinat   # with npm: npm install kombinat
    ```
 
 2. Add your routines as `.md` files in a `routines/` folder next to `package.json`, see [Writing a routine](#writing-a-routine). Changes are picked up on the next check, no restart needed. Agents run with your usual setup, so your global skills, MCP servers and `CLAUDE.md` are picked up.
@@ -95,8 +95,8 @@ The daemon serves a dashboard at http://localhost:7433.
 Turn on Remote Login on the Mac that runs Kombinat, in System Settings → General → Sharing. Then, on your laptop:
 
 ```bash
-npx @danilqa/kombinat connect admin@mac-mini         # dashboard in the browser
-npx @danilqa/kombinat connect admin@mac-mini --tui   # dashboard in the terminal
+npx kombinat connect admin@mac-mini         # dashboard in the browser
+npx kombinat connect admin@mac-mini --tui   # dashboard in the terminal
 ```
 
 It opens an SSH tunnel to the daemon, then the dashboard. SSH asks for the password if you have no key set up. Ctrl-C disconnects. Instead of `admin@mac-mini`, use anything `ssh` accepts: a host from `~/.ssh/config`, an IP address or a Tailscale machine name. If the daemon there uses another `KOMBINAT_PORT`, add `--port`.
@@ -111,7 +111,7 @@ To open the dashboard from any device in your tailnet, your phone included, run 
 tailscale serve --bg 7433
 ```
 
-The dashboard is then at `https://mac-mini.<your-tailnet>.ts.net`, and `npx @danilqa/kombinat tui --url https://mac-mini.<your-tailnet>.ts.net` shows it in the terminal. Serve needs HTTPS certificates in your tailnet, the command asks to turn them on. They put the machine name in public certificate logs. It stays on after a reboot, `tailscale serve --https=443 off` turns it off. If the Mac has no `tailscale` command, see [Using the Tailscale CLI](https://tailscale.com/kb/1080/cli).
+The dashboard is then at `https://mac-mini.<your-tailnet>.ts.net`, and `npx kombinat tui --url https://mac-mini.<your-tailnet>.ts.net` shows it in the terminal. Serve needs HTTPS certificates in your tailnet, the command asks to turn them on. They put the machine name in public certificate logs. It stays on after a reboot, `tailscale serve --https=443 off` turns it off. If the Mac has no `tailscale` command, see [Using the Tailscale CLI](https://tailscale.com/kb/1080/cli).
 
 Everyone who can reach the Mac in your tailnet can then read transcripts and start routines. To limit that, allow only some people to reach port 443 of the Mac in your [Tailscale access rules](https://tailscale.com/kb/1018/acls).
 
@@ -132,7 +132,7 @@ The example routines of this repository, one row per file in [`routines/`](routi
 
 - Each routine is a markdown file. The frontmatter sets the schedule and settings, the body is the prompt.
 - A small daemon checks every 30 seconds which routines are due and starts their agent. It also serves a dashboard at http://localhost:7433.
-- launchd keeps the daemon running and starts it again after a reboot. Runs only happen while the Mac is awake and you are logged in.
+- launchd on macOS or systemd on Linux keeps the daemon running and starts it again after a reboot. Runs only happen while the computer is awake and you are logged in. On Linux, [lingering](docs/linux.md#lingering) lets them run while you are logged out.
 - Logs and run history are stored in `~/.kombinat/`.
 - Claude and Codex use your subscription login. API key variables are removed from their environment.
 
@@ -152,11 +152,11 @@ The example routines of this repository, one row per file in [`routines/`](routi
 You need Node 24 and the agents your routines use, logged in: Claude Code (`claude auth status`) and Codex (`codex login`). From the folder with `routines/` and `package.json`:
 
 ```bash
-pnpm add @danilqa/kombinat
+pnpm add kombinat
 pnpm kombinat install
 ```
 
-This starts the daemon under launchd, in that folder. Open http://localhost:7433. There is one daemon per macOS user, so running `install` in another folder moves it there.
+This starts the daemon in that folder, under launchd on macOS or as a systemd user service on Linux, see [docs/linux.md](docs/linux.md). Open http://localhost:7433. There is one daemon per user, so running `install` in another folder moves it there.
 
 ## Commands
 
@@ -182,6 +182,7 @@ schedule: '30 11 * * *'
 cwd: ~/projects/app
 agent: claude
 model: claude-opus-5-5
+fallbackModel: claude-sonnet-5-5
 effort: high
 timeoutMinutes: 55
 ---
@@ -205,12 +206,14 @@ Changes apply on the next check, no restart needed. Write the prompt so the agen
 | Setting          | `claude`                                                                          | `codex`                                                        | `command` |
 | ---------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------- | --------- |
 | `model`          | default `claude-opus-5-5`                                                         | default from your Codex config                                 | -         |
+| `fallbackModel`  | optional, see below                                                               | -                                                              | -         |
 | `effort`         | `low`, `medium`, `high` (default), `xhigh`, `max`                                 | `minimal`, `low`, `medium`, `high`, `xhigh`                    | -         |
 | `permissionMode` | `auto` (default), `acceptEdits`, `dontAsk`, `bypassPermissions`, `plan`, `manual` | `read-only`, `workspace-write` (default), `danger-full-access` | -         |
 | `maxBudgetUsd`   | optional                                                                          | -                                                              | -         |
 | `command`        | -                                                                                 | -                                                              | required  |
 
 - `claude` runs `claude -p`. Anything that needs approval is denied.
+- `fallbackModel` is the model Claude switches to when `model` is not available, overloaded or fails, such as `claude-sonnet-5-5`. A comma-separated list is tried in order. The run's transcript says when it switched.
 - `codex` runs `codex exec`. `permissionMode` sets its sandbox.
 - `command` runs any other CLI, for example `command: gemini --yolo`. It gets the prompt on stdin, and its output is the result.
 
@@ -230,7 +233,9 @@ A routine with `webhook: true` also runs when another app, such as Linear or Git
 
 The daemon runs `git pull` in the folder every 5 minutes, so merged changes go live on their own. It only pulls when the checkout is on `main` with no local changes.
 
-To update Kombinat, bump `@danilqa/kombinat` in `package.json`, for example with a Renovate or Dependabot PR. When the lockfile changes, the daemon installs dependencies with pnpm, npm or Yarn and restarts. Running routines are not interrupted.
+To update Kombinat, bump `kombinat` in `package.json`, for example with a Renovate or Dependabot PR. When the lockfile changes, the daemon installs dependencies with pnpm, npm or Yarn and restarts. Running routines are not interrupted.
+
+Up to 0.2.2, Kombinat was published as `@danilqa/kombinat`. To move to `kombinat`, replace the dependency in `package.json`, install it and run `pnpm kombinat install` again. Until then the launchd job of the daemon points into the old package folder, which the install removes, so the daemon does not pick up the new version or start again after a reboot.
 
 ## Configuration
 
@@ -246,4 +251,4 @@ To update Kombinat, bump `@danilqa/kombinat` in `package.json`, for example with
 | `CLAUDE_BIN`              | `~/.local/bin/claude` | Claude Code binary                     |
 | `CODEX_BIN`               | `codex`               | Codex binary                           |
 
-Set them before `pnpm kombinat install`. They are saved in the launchd config.
+Set them before `pnpm kombinat install`. They are saved in the launchd or systemd config.

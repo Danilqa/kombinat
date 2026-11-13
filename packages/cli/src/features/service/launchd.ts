@@ -3,13 +3,13 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { config, getCliArgs, PACKAGE_NAME } from '../../config';
+import { config, getCliArgs } from '../../config';
+import type { InstallResult } from './daemon-setup';
+import { buildDaemonEnv, ensureInstallable } from './daemon-setup';
 
 const plistPath = () =>
   path.join(os.homedir(), 'Library', 'LaunchAgents', `${config.launchdLabel}.plist`);
 const domain = () => `gui/${os.userInfo().uid}`;
-
-const PASSED_ENV = [/^KOMBINAT_/, /^CLAUDE_BIN$/, /^CODEX_BIN$/];
 
 function escapeXml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -19,36 +19,8 @@ function unescapeXml(value: string): string {
   return value.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
 }
 
-export function buildDaemonPath(current = process.env['PATH'] ?? ''): string {
-  const base = [
-    path.dirname(process.execPath),
-    path.join(os.homedir(), '.local', 'bin'),
-    '/opt/homebrew/bin',
-    '/usr/local/bin',
-    '/usr/bin',
-    '/bin',
-    '/usr/sbin',
-    '/sbin',
-  ];
-  const inherited = current
-    .split(':')
-    .filter(entry => entry && !entry.includes('/.claude/plugins/') && !entry.includes('cryptexd'));
-  return [...new Set([...base, ...inherited])].join(':');
-}
-
 export function renderPlist(): string {
-  const passed = Object.entries(process.env).filter(
-    (entry): entry is [string, string] =>
-      PASSED_ENV.some(pattern => pattern.test(entry[0])) && entry[1] !== undefined,
-  );
-  const env: Record<string, string> = {
-    PATH: buildDaemonPath(),
-    HOME: os.homedir(),
-    LANG: process.env['LANG'] ?? 'en_US.UTF-8',
-    ...Object.fromEntries(passed),
-    KOMBINAT_MANAGED: '1',
-  };
-  const envXml = Object.entries(env)
+  const envXml = Object.entries(buildDaemonEnv())
     .map(
       ([key, value]) =>
         `      <key>${escapeXml(key)}</key>\n      <string>${escapeXml(value)}</string>`,
@@ -104,7 +76,7 @@ function sleep(ms: number): void {
 
 function waitUntilUnloaded(timeoutMs = 10_000): void {
   const deadline = Date.now() + timeoutMs;
-  while (checkIsLaunchdLoaded() && Date.now() < deadline) sleep(250);
+  while (checkIsLoaded() && Date.now() < deadline) sleep(250);
 }
 
 function bootstrapWithRetry(attempts = 5): void {
@@ -119,7 +91,7 @@ function bootstrapWithRetry(attempts = 5): void {
   }
 }
 
-export function checkIsLaunchdLoaded(): boolean {
+export function checkIsLoaded(): boolean {
   try {
     execFileSync('launchctl', ['print', `${domain()}/${config.launchdLabel}`], { stdio: 'pipe' });
     return true;
@@ -128,35 +100,24 @@ export function checkIsLaunchdLoaded(): boolean {
   }
 }
 
-export function stopLaunchd(): void {
+export function stop(): void {
   runLaunchctl(['bootout', `${domain()}/${config.launchdLabel}`], true);
   waitUntilUnloaded();
 }
 
-export function startLaunchd(): void {
+export function start(): void {
   if (!fs.existsSync(plistPath())) throw new Error(`${plistPath()} is missing, run install first`);
   bootstrapWithRetry();
 }
 
-export function install(): string {
-  if (!config.fromSource && !config.installedInProject) {
-    throw new Error(
-      config.projectHasCopy
-        ? `this project has its own ${PACKAGE_NAME}, install with it: pnpm kombinat install or npx kombinat install`
-        : `add ${PACKAGE_NAME} to this project first: pnpm add ${PACKAGE_NAME} or npm install ${PACKAGE_NAME}`,
-    );
-  }
-  if (!fs.existsSync(config.routinesDir)) {
-    throw new Error(
-      `${config.routinesDir} is missing, run install from the folder that holds routines/`,
-    );
-  }
+export function install(): InstallResult {
+  ensureInstallable();
   fs.mkdirSync(config.stateDir, { recursive: true });
   fs.mkdirSync(path.dirname(plistPath()), { recursive: true });
   fs.writeFileSync(plistPath(), renderPlist());
-  stopLaunchd();
-  startLaunchd();
-  return plistPath();
+  stop();
+  start();
+  return { file: plistPath(), hint: null };
 }
 
 export function getDaemonFolder(): string | null {
@@ -169,17 +130,25 @@ export function getDaemonFolder(): string | null {
 }
 
 export function uninstall(): string {
-  stopLaunchd();
+  stop();
   if (fs.existsSync(plistPath())) fs.unlinkSync(plistPath());
   return plistPath();
 }
 
-export function getLaunchdStatus(): string {
+function printService(): string {
   try {
     return execFileSync('launchctl', ['print', `${domain()}/${config.launchdLabel}`], {
       stdio: 'pipe',
     }).toString();
   } catch {
-    return 'not loaded';
+    return '';
   }
+}
+
+export function getStatus(): string {
+  const lines = printService()
+    .split('\n')
+    .filter(line => /state|pid|last exit|runs/.test(line))
+    .join('\n');
+  return lines || 'not loaded';
 }

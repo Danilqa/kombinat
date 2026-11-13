@@ -78,7 +78,7 @@ jobs:
       - name: Build and pack the CLI
         run: |
           tarball="$RUNNER_TEMP/kombinat.tgz"
-          pnpm --filter @danilqa/kombinat pack --out "$tarball"
+          pnpm --filter kombinat pack --out "$tarball"
           echo "TARBALL=$tarball" >> "$GITHUB_ENV"
       - name: Check that the package ships bin, dist, README and LICENSE but not src
         run: |
@@ -127,14 +127,14 @@ jobs:
         run: |
           port="$(node -e 'const server = require("node:net").createServer().listen(0, () => { console.log(server.address().port); server.close(); })')"
           KOMBINAT_PORT="$port" KOMBINAT_STATE_DIR="$RUNNER_TEMP/state" \
-            node node_modules/@danilqa/kombinat/bin/kombinat.js serve --no-scheduler --no-watch > serve.log 2>&1 &
+            node node_modules/kombinat/bin/kombinat.js serve --no-scheduler --no-watch > serve.log 2>&1 &
           daemon=$!
           for _ in $(seq 50); do grep -q 'ui at ' serve.log && break; sleep 0.2; done
           cat serve.log
           status="$(curl --fail --silent "http://127.0.0.1:$port/api/status")"
           page="$(curl --fail --silent "http://127.0.0.1:$port/")"
           kill "$daemon"
-          version="$(node -p 'require("./node_modules/@danilqa/kombinat/package.json").version')"
+          version="$(node -p 'require("./node_modules/kombinat/package.json").version')"
           grep -q '"pid":' <<< "$status"
           grep -qF "\"version\":\"$version\"" <<< "$status"
           grep -qF '<div id="root"></div>' <<< "$page"

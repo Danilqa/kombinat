@@ -16,6 +16,7 @@ export interface RoutineFile {
   schedule?: string;
   agent?: AgentName;
   model?: string;
+  fallbackModel?: string;
   effort?: string;
   permissionMode?: string;
   command?: string;
