@@ -126,15 +126,17 @@ test('keeps the agent settings that the frontmatter sets', () => {
   assert.equal(codex.effort, 'high');
 });
 
-test('a claude model can list fallback models after it', () => {
+test('a claude routine can name fallback models', () => {
   const claude = buildRoutine(
     '/tmp/demo.md',
-    routineFile('model: claude-opus-5-5,claude-sonnet-5-5 ,'),
+    routineFile('fallbackModel: claude-sonnet-5-5,claude-haiku-4-5 ,'),
   );
-  assert.equal(claude.model, 'claude-opus-5-5, claude-sonnet-5-5');
+  assert.equal(claude.model, 'claude-opus-5-5');
+  assert.equal(claude.fallbackModel, 'claude-sonnet-5-5, claude-haiku-4-5');
+  assert.equal(buildRoutine('/tmp/demo.md', routineFile('')).fallbackModel, null);
   assert.throws(
-    () => buildRoutine('/tmp/demo.md', routineFile('agent: codex\nmodel: gpt-5.5, gpt-5.4')),
-    /agent codex takes one model/,
+    () => buildRoutine('/tmp/demo.md', routineFile('agent: codex\nfallbackModel: gpt-5.4')),
+    /does not support fallbackModel/,
   );
 });
 

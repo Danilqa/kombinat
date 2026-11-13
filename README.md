@@ -149,6 +149,7 @@ schedule: '30 11 * * *'
 cwd: ~/projects/app
 agent: claude
 model: claude-opus-5-5
+fallbackModel: claude-sonnet-5-5
 effort: high
 timeoutMinutes: 55
 ---
@@ -160,7 +161,6 @@ timeoutMinutes: 55
 - `schedule` is a 5-field cron in local time, or `manual` to run only on demand.
 - `cwd` is where the agent starts.
 - `agent` is `claude` (default), `codex` or `command`.
-- `model` can list fallbacks after a comma, as in CSS: `claude-opus-5-5, claude-sonnet-5-5`. Claude switches to the next one when the model is not available, overloaded or fails, and the run's transcript says so. Only `claude` takes fallbacks.
 - `timeoutMinutes` stops the run after this time. Default 55.
 - `before` is an optional shell command that runs first. If it fails or takes more than 3 minutes, the run fails.
 - `enabled: false` keeps the file but stops the schedule.
@@ -173,12 +173,14 @@ Changes apply on the next check, no restart needed. Write the prompt so the agen
 | Setting          | `claude`                                                                          | `codex`                                                        | `command` |
 | ---------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------- | --------- |
 | `model`          | default `claude-opus-5-5`                                                         | default from your Codex config                                 | -         |
+| `fallbackModel`  | optional, see below                                                               | -                                                              | -         |
 | `effort`         | `low`, `medium`, `high` (default), `xhigh`, `max`                                 | `minimal`, `low`, `medium`, `high`, `xhigh`                    | -         |
 | `permissionMode` | `auto` (default), `acceptEdits`, `dontAsk`, `bypassPermissions`, `plan`, `manual` | `read-only`, `workspace-write` (default), `danger-full-access` | -         |
 | `maxBudgetUsd`   | optional                                                                          | -                                                              | -         |
 | `command`        | -                                                                                 | -                                                              | required  |
 
 - `claude` runs `claude -p`. Anything that needs approval is denied.
+- `fallbackModel` is the model Claude switches to when `model` is not available, overloaded or fails, such as `claude-sonnet-5-5`. A comma-separated list is tried in order. The run's transcript says when it switched.
 - `codex` runs `codex exec`. `permissionMode` sets its sandbox.
 - `command` runs any other CLI, for example `command: gemini --yolo`. It gets the prompt on stdin, and its output is the result.
 

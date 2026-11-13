@@ -75,6 +75,7 @@ function toRoutineSummary(routine: Routine, runs: RunRecord[]): RoutineSummary {
     queuedWebhooks: countQueuedWebhooks(routine.name),
     agent: routine.agent,
     model: routine.model,
+    fallbackModel: routine.fallbackModel,
     effort: routine.effort,
     permissionMode: routine.permissionMode,
     command: routine.command,

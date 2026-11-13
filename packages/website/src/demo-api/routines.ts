@@ -66,6 +66,7 @@ export interface DemoRoutine {
   webhookGate?: string;
   agent: AgentName;
   model: string | null;
+  fallbackModel?: string;
   effort: string | null;
   permissionMode: string | null;
   command: string | null;
@@ -101,7 +102,8 @@ const nightAgentTasks: DemoRoutine = {
   schedule: '0 2 * * *',
   enabled: true,
   agent: 'claude',
-  model: `${OPUS}, ${SONNET}`,
+  model: OPUS,
+  fallbackModel: SONNET,
   effort: 'xhigh',
   permissionMode: 'bypassPermissions',
   command: null,

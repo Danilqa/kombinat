@@ -228,10 +228,11 @@ export const claudeAgent: Agent = {
 
   resolveSettings(raw) {
     rejectUnsupported(raw, ['command'], 'claude');
-    const models = splitModels(raw.model);
+    const fallbackModels = splitModels(raw.fallbackModel);
     return {
       ...raw,
-      model: models.length === 0 ? DEFAULT_MODEL : models.join(', '),
+      model: raw.model ?? DEFAULT_MODEL,
+      fallbackModel: fallbackModels.length === 0 ? null : fallbackModels.join(', '),
       effort: pickOne(raw.effort, EFFORTS, 'effort', 'claude') ?? DEFAULT_EFFORT,
       permissionMode:
         pickOne(raw.permissionMode, PERMISSION_MODES, 'permissionMode', 'claude') ??
@@ -241,7 +242,7 @@ export const claudeAgent: Agent = {
 
   buildInvocation(context) {
     const { routine } = context;
-    const [model = DEFAULT_MODEL, ...fallbackModels] = splitModels(routine.model);
+    const fallbackModels = splitModels(routine.fallbackModel);
     const args = [
       '-p',
       '--output-format',
@@ -252,7 +253,7 @@ export const claudeAgent: Agent = {
       '--permission-prompts',
       'none',
       '--model',
-      model,
+      routine.model ?? DEFAULT_MODEL,
       '--effort',
       routine.effort ?? DEFAULT_EFFORT,
       '--name',

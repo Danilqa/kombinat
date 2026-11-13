@@ -70,7 +70,11 @@ test('shows why a run failed', async ({ page, kombinat, claude }) => {
 });
 
 test('shows when a run switched to a fallback model', async ({ page, kombinat, claude }) => {
-  kombinat.addRoutine({ name: 'fix-e2e-tests', model: 'claude-opus-5-5, claude-sonnet-5-5' });
+  kombinat.addRoutine({
+    name: 'fix-e2e-tests',
+    model: 'claude-opus-5-5',
+    fallbackModel: 'claude-sonnet-5-5',
+  });
   const run = kombinat.addRun({
     routine: 'fix-e2e-tests',
     model: 'claude-sonnet-5-5',

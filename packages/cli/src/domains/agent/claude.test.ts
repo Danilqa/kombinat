@@ -108,18 +108,17 @@ test('passes the routine settings to claude -p', () => {
   assert.equal(args[args.indexOf('--max-budget-usd') + 1], '2');
 });
 
-test('models after the first one become the fallbacks of claude -p', () => {
-  const buildArgs = (model: string | null): string[] =>
+test('passes the fallback models to claude -p', () => {
+  const buildArgs = (fallbackModel: string | null): string[] =>
     claudeAgent.buildInvocation({
-      routine: makeAgentTask({ model }),
+      routine: makeAgentTask({ model: 'claude-opus-5-5', fallbackModel }),
       runId: runIdSchema.parse('r1'),
       trigger: 'schedule',
     }).args;
-  const args = buildArgs('claude-opus-5-5, claude-sonnet-5-5, claude-haiku-4-5');
+  const args = buildArgs('claude-sonnet-5-5, claude-haiku-4-5');
   assert.equal(args[args.indexOf('--model') + 1], 'claude-opus-5-5');
   assert.equal(args[args.indexOf('--fallback-model') + 1], 'claude-sonnet-5-5,claude-haiku-4-5');
-  assert.equal(buildArgs('claude-opus-5-5').includes('--fallback-model'), false);
-  assert.equal(buildArgs(null)[buildArgs(null).indexOf('--model') + 1], 'claude-opus-5-5');
+  assert.equal(buildArgs(null).includes('--fallback-model'), false);
 });
 
 test('a model fallback switches the model of the run and shows in the transcript', () => {

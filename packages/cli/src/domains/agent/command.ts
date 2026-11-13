@@ -10,7 +10,11 @@ export const commandAgent: Agent = {
   binaryEnv: null,
 
   resolveSettings(raw) {
-    rejectUnsupported(raw, ['model', 'effort', 'permissionMode', 'maxBudgetUsd'], 'command');
+    rejectUnsupported(
+      raw,
+      ['model', 'fallbackModel', 'effort', 'permissionMode', 'maxBudgetUsd'],
+      'command',
+    );
     if (raw.command === null) throw new Error('agent command needs a command');
     return raw;
   },

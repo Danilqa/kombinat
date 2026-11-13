@@ -16,7 +16,6 @@ export function pickOne<T extends string>(
   return found;
 }
 
-// A model can list fallbacks after it, comma-separated as in a CSS font-family.
 export function splitModels(model: string | null): string[] {
   return (model ?? '')
     .split(',')
