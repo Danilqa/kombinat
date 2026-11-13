@@ -19,3 +19,12 @@ test('shows when the daemon is offline', async ({ page }) => {
   await status.click();
   await expect(page.getByRole('dialog')).toContainText('Daemon is unreachable');
 });
+
+test('shows the free disk space and the cpu load of the machine', async ({ page }) => {
+  await page.goto('/');
+
+  await page.getByRole('button', { name: /daemon status/ }).click();
+  const details = page.getByRole('dialog');
+  await expect(details).toContainText(/Disk[\d.,]+ [kMGT]B free of [\d.,]+ [kMGT]B/);
+  await expect(details).toContainText(/CPU load(\d+%|-)/);
+});
