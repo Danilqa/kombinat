@@ -23,7 +23,6 @@ export function getTranscriptResultLabel(isError: boolean): string {
   return isError ? 'Finished with error' : 'Finished';
 }
 
-// The reasons are the triggers Claude Code reports; a newer one shows as it is.
 export function getModelFallbackReasonLabel(reason: string | null): string | null {
   if (reason === null) return null;
   return match(reason)
