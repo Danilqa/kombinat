@@ -74,7 +74,7 @@ The domain map, definitions and invariants are in [packages/domains/README.md](p
 ### cli
 
 - `src/cli.ts` holds the commands and `src/server.ts` the HTTP API and read models. `src/config.ts` stays one folder below the package root, which it finds from its own location.
-- `src/domains/` holds the daemon halves, `src/features/` connect, launchd, readme and self-update, and `src/utils/` json.
+- `src/domains/` holds the daemon halves, `src/features/` connect, launchd, systemd, service (which picks launchd or systemd), readme and self-update, and `src/utils/` json.
 - `bin/kombinat.js` runs `src/cli.ts` through tsx in a checkout and `dist/cli.js` when installed from npm. esbuild bundles the workspace packages and keeps only zod and ts-pattern external. An npm package that bundled code imports at runtime must be a `cli` dependency, on the esbuild external list and in the CI check of `dist/cli.js` imports.
 
 ### web-app
