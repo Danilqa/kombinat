@@ -6,10 +6,19 @@ import { CodeBlock, Collapsible, EmptyState, Markdown } from 'design-system/comp
 import { cn } from 'design-system/utils';
 import { formatDuration } from 'utils/date-time';
 
-import type { HookItem, InitItem, ResultItem, TextItem, ToolItem, TranscriptItem } from '../types';
+import type {
+  HookItem,
+  InitItem,
+  ModelFallbackItem,
+  ResultItem,
+  TextItem,
+  ToolItem,
+  TranscriptItem,
+} from '../types';
 import {
   checkIsSubagent,
   getHookLabel,
+  getModelFallbackReasonLabel,
   getTranscriptEmptyLabel,
   getTranscriptResultLabel,
 } from '../utils';
@@ -53,6 +62,23 @@ function InitRow({ item }: InitRowProps) {
           permission mode <span className="font-mono">{item.permissionMode}</span>
         </span>
       )}
+    </div>
+  );
+}
+
+interface ModelFallbackRowProps {
+  item: ModelFallbackItem;
+}
+
+function ModelFallbackRow({ item }: ModelFallbackRowProps) {
+  const reason = getModelFallbackReasonLabel(item.reason);
+  return (
+    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-body-sm text-fg-muted">
+      <span className="text-body font-medium text-warning">Switched model</span>
+      <span className="min-w-0 font-mono wrap-anywhere">
+        {item.from} → <span className="text-fg">{item.to}</span>
+      </span>
+      {reason !== null && <span>because {reason}</span>}
     </div>
   );
 }
@@ -187,6 +213,7 @@ function renderItem(item: TranscriptItem, isRunning: boolean) {
   return match(item)
     .with({ kind: 'hook' }, hook => <HookRow item={hook} />)
     .with({ kind: 'init' }, init => <InitRow item={init} />)
+    .with({ kind: 'model-fallback' }, fallback => <ModelFallbackRow item={fallback} />)
     .with({ kind: 'text' }, text => <TextRow item={text} />)
     .with({ kind: 'tool' }, tool => <ToolRow item={tool} isPending={isRunning} />)
     .with({ kind: 'result' }, result => <ResultRow item={result} />)

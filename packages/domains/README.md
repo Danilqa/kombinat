@@ -27,7 +27,7 @@ Each domain has up to two halves with the same name:
 Not domains:
 
 - **cron** is a generic engine in `utils/cron.ts`. A schedule is a value of a routine.
-- **launchd, self-update, connect and readme** are features of the cli, in `cli/src/features/`.
+- **connect, machine-usage, readme, self-update and service** are features of the cli, in `cli/src/features/`. service picks launchd on macOS and systemd on Linux.
 - **HTTP routing and read models** belong to the cli's `server.ts`.
 
 ## Definitions
@@ -56,6 +56,7 @@ An agent-independent view of a run's event log, ready to display: `{ eventCount,
 
 - `hook`: the before or the after hook, with its phase, command, exit code and output. A transcript from an older daemon has no phase, which reads as `before`;
 - `init`: the session start;
+- `model-fallback`: the agent switched from one model to another, with the reason when it gave one;
 - `text`: assistant text;
 - `tool`: a tool call with its input, a preview, and a result that is `null` while the call is pending;
 - `result`: the outcome.

@@ -9,7 +9,7 @@ import { getPollInterval } from 'utils/polling';
 
 import { getDaemonStatus } from '../requests';
 import type { DaemonHealth, DaemonStatus } from '../types';
-import { getDaemonHealth } from '../utils';
+import { checkIsDiskLow, formatCpuLoad, formatDiskSpace, getDaemonHealth } from '../utils';
 
 interface DaemonHealthAppearance {
   label: string;
@@ -70,6 +70,20 @@ function DaemonStatusDetails({ status }: DaemonStatusDetailsProps) {
       </dd>
       <dt className="text-fg-muted">Time zone</dt>
       <dd className="font-mono">{status.timezone}</dd>
+      {status.disk && (
+        <>
+          <dt className="text-fg-muted">Disk</dt>
+          <dd className={cn('tabular-nums', checkIsDiskLow(status.disk) && 'text-warning')}>
+            {formatDiskSpace(status.disk)}
+          </dd>
+        </>
+      )}
+      {status.cpuLoad !== undefined && (
+        <>
+          <dt className="text-fg-muted">CPU load</dt>
+          <dd className="tabular-nums">{formatCpuLoad(status.cpuLoad)}</dd>
+        </>
+      )}
     </dl>
   );
 }

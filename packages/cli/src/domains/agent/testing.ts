@@ -18,6 +18,7 @@ export function makeAgentTask(overrides: Partial<AgentTask> = {}): AgentTask {
     name: routineNameSchema.parse('demo'),
     prompt: 'Hello',
     model: null,
+    fallbackModel: null,
     effort: null,
     permissionMode: null,
     command: null,

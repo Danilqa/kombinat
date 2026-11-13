@@ -23,6 +23,18 @@ export function getTranscriptResultLabel(isError: boolean): string {
   return isError ? 'Finished with error' : 'Finished';
 }
 
+export function getModelFallbackReasonLabel(reason: string | null): string | null {
+  if (reason === null) return null;
+  return match(reason)
+    .with('model_not_found', () => 'the model is not available')
+    .with('permission_denied', () => 'no access to the model')
+    .with('overloaded', () => 'the model is overloaded')
+    .with('server_error', () => 'server errors')
+    .with('model_blocked', () => 'the model is turned off')
+    .with('last_resort', () => 'the model failed')
+    .otherwise(() => reason);
+}
+
 export function getHookLabel(phase: HookPhase): string {
   return match(phase)
     .with('before', () => 'Before hook')
