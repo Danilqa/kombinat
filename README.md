@@ -188,7 +188,7 @@ A setting the agent does not support fails validation.
 
 ## Scheduling
 
-- The installed daemon keeps the Mac awake while it is on power. On battery the Mac sleeps as usual, and a laptop with a closed lid can still sleep. macOS has a system-wide switch that turns sleep off, `sudo pmset -a disablesleep 1`, which Kombinat does not touch.
+- On macOS, the installed daemon keeps the Mac awake while it is on power. On battery the Mac sleeps as usual, and a laptop with a closed lid can still sleep. macOS has a system-wide switch that turns sleep off, `sudo pmset -a disablesleep 1`, which Kombinat does not touch.
 - If the Mac was asleep, each routine runs once for its latest missed time, up to 7 days back.
 - A routine never runs twice at the same time. If it is still running at its next time, that run is skipped.
 - At most 3 routines run at once.
