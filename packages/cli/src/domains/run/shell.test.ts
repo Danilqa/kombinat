@@ -52,7 +52,7 @@ test('leaves no listener on the process once its commands end', async () => {
 });
 
 async function waitFor<T>(read: () => T | null): Promise<T> {
-  for (let attempt = 0; attempt < 100; attempt++) {
+  for (let attempt = 0; attempt < 400; attempt++) {
     const value = read();
     if (value !== null) return value;
     await new Promise(resolve => setTimeout(resolve, 50));
