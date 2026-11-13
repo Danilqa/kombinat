@@ -52,7 +52,7 @@ const PACKAGE_NAMES = {
   domains: 'domains',
   'web-app': 'web-app',
   tui: 'tui',
-  cli: '@danilqa/kombinat',
+  cli: 'kombinat',
   website: 'website',
 };
 

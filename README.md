@@ -27,7 +27,7 @@ Ready to use in your organisation or at home.
 1. Add Kombinat to the repository that will hold your routines.
 
    ```bash
-   pnpm add @danilqa/kombinat        # with npm: npm install @danilqa/kombinat
+   pnpm add kombinat   # with npm: npm install kombinat
    ```
 
 2. Add your routines as `.md` files in a `routines/` folder next to `package.json`, see [Writing a routine](#writing-a-routine). Changes are picked up on the next check, no restart needed. Agents run with your usual setup, so your global skills, MCP servers and `CLAUDE.md` are picked up.
@@ -73,8 +73,8 @@ The daemon serves a dashboard at http://localhost:7433.
 Turn on Remote Login on the Mac that runs Kombinat, in System Settings → General → Sharing. Then, on your laptop:
 
 ```bash
-npx @danilqa/kombinat connect admin@mac-mini         # dashboard in the browser
-npx @danilqa/kombinat connect admin@mac-mini --tui   # dashboard in the terminal
+npx kombinat connect admin@mac-mini         # dashboard in the browser
+npx kombinat connect admin@mac-mini --tui   # dashboard in the terminal
 ```
 
 It opens an SSH tunnel to the daemon, then the dashboard. SSH asks for the password if you have no key set up. Ctrl-C disconnects. Instead of `admin@mac-mini`, use anything `ssh` accepts: a host from `~/.ssh/config`, an IP address or a Tailscale machine name. If the daemon there uses another `KOMBINAT_PORT`, add `--port`.
@@ -89,7 +89,7 @@ To open the dashboard from any device in your tailnet, your phone included, run 
 tailscale serve --bg 7433
 ```
 
-The dashboard is then at `https://mac-mini.<your-tailnet>.ts.net`, and `npx @danilqa/kombinat tui --url https://mac-mini.<your-tailnet>.ts.net` shows it in the terminal. Serve needs HTTPS certificates in your tailnet, the command asks to turn them on. They put the machine name in public certificate logs. It stays on after a reboot, `tailscale serve --https=443 off` turns it off. If the Mac has no `tailscale` command, see [Using the Tailscale CLI](https://tailscale.com/kb/1080/cli).
+The dashboard is then at `https://mac-mini.<your-tailnet>.ts.net`, and `npx kombinat tui --url https://mac-mini.<your-tailnet>.ts.net` shows it in the terminal. Serve needs HTTPS certificates in your tailnet, the command asks to turn them on. They put the machine name in public certificate logs. It stays on after a reboot, `tailscale serve --https=443 off` turns it off. If the Mac has no `tailscale` command, see [Using the Tailscale CLI](https://tailscale.com/kb/1080/cli).
 
 Everyone who can reach the Mac in your tailnet can then read transcripts and start routines. To limit that, allow only some people to reach port 443 of the Mac in your [Tailscale access rules](https://tailscale.com/kb/1018/acls).
 
@@ -119,7 +119,7 @@ The example routines of this repository, one row per file in [`routines/`](routi
 You need Node 24 and the agents your routines use, logged in: Claude Code (`claude auth status`) and Codex (`codex login`). From the folder with `routines/` and `package.json`:
 
 ```bash
-pnpm add @danilqa/kombinat
+pnpm add kombinat
 pnpm kombinat install
 ```
 
@@ -197,7 +197,9 @@ A routine with `webhook: true` also runs when another app, such as Linear or Git
 
 The daemon runs `git pull` in the folder every 5 minutes, so merged changes go live on their own. It only pulls when the checkout is on `main` with no local changes.
 
-To update Kombinat, bump `@danilqa/kombinat` in `package.json`, for example with a Renovate or Dependabot PR. When the lockfile changes, the daemon installs dependencies with pnpm, npm or Yarn and restarts. Running routines are not interrupted.
+To update Kombinat, bump `kombinat` in `package.json`, for example with a Renovate or Dependabot PR. When the lockfile changes, the daemon installs dependencies with pnpm, npm or Yarn and restarts. Running routines are not interrupted.
+
+Up to 0.2.2, Kombinat was published as `@danilqa/kombinat`. To move to `kombinat`, replace the dependency in `package.json`, install it and run `pnpm kombinat install` again. Until then the launchd job of the daemon points into the old package folder, which the install removes, so the daemon does not pick up the new version or start again after a reboot.
 
 ## Configuration
 
