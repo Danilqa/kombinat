@@ -9,6 +9,7 @@ import { getSkipReasonLabel } from 'domains/scheduler/utils';
 import type { ToolItem, TranscriptItem } from 'domains/transcript/types';
 import {
   checkIsSubagent,
+  getHookLabel,
   getTranscriptEmptyLabel,
   getTranscriptResultLabel,
 } from 'domains/transcript/utils';
@@ -745,7 +746,7 @@ function itemLines(
       const header = fitLine(
         [
           hook.output ? toggle : text('  '),
-          text('before hook', S.bold),
+          text(getHookLabel(hook.phase).toLowerCase(), S.bold),
           text('  '),
           text(hook.command, S.cyan),
           text('  '),

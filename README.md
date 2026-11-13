@@ -162,6 +162,7 @@ timeoutMinutes: 55
 - `agent` is `claude` (default), `codex` or `command`.
 - `timeoutMinutes` stops the run after this time. Default 55.
 - `before` is an optional shell command that runs first. If it fails or takes more than 3 minutes, the run fails.
+- `after` is an optional shell command that runs last, whatever the outcome, for example to post failures to Slack. It gets the finished run on stdin and cannot change it, see [docs/hooks.md](docs/hooks.md).
 - `enabled: false` keeps the file but stops the schedule.
 - `webhook: true` lets other apps start the routine with a request, see [docs/webhook.md](docs/webhook.md).
 

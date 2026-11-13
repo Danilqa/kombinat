@@ -16,7 +16,7 @@ Each domain has up to two halves with the same name:
 | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | **id**         | `RoutineName`, `RunId`, `CalendarEntryId` and `SessionId` with their branded schemas                                                           | none                                                                            |
 | **agent**      | `AgentName`, agent label                                                                                                                       | claude, codex and command adapters, registry, settings validation, `AgentTask`  |
-| **transcript** | item schemas and types, preview rule, subagent check, empty and result labels, `TranscriptList`                                                | none                                                                            |
+| **transcript** | item schemas and types, preview rule, subagent check, empty, result and hook labels, `TranscriptList`                                          | none                                                                            |
 | **run**        | `RunRecord`, status and trigger, requests, labels, id, duration, cursor pages, `makeRunRecord`, `RunStatusBadge`, `RunDetailList`, `RunOutput` | runner, record storage with orphan reconciliation, event log and transcript     |
 | **scheduler**  | `Skip`, `SkipReason`, `SchedulerState`, skip label, `SkipsTable`                                                                               | tick loop, `scheduler.json` storage                                             |
 | **routine**    | `RoutineSummary`, `RoutineDetail`, requests, `RunNowButton`, `RoutineBadges`, `RoutineDetailList`, `WebhookQueueButton`                        | frontmatter parsing, validation and defaults, loading, next run, schedule label |
@@ -54,7 +54,7 @@ Every agent gets the prompt on stdin. An agent decides which routine settings it
 
 An agent-independent view of a run's event log, ready to display: `{ eventCount, items }`. An item is one of:
 
-- `hook`: the before hook, with its command, exit code and output;
+- `hook`: the before or the after hook, with its phase, command, exit code and output. A transcript from an older daemon has no phase, which reads as `before`;
 - `init`: the session start;
 - `text`: assistant text;
 - `tool`: a tool call with its input, a preview, and a result that is `null` while the call is pending;
@@ -70,15 +70,17 @@ One execution of a routine by its agent. The scheduler, Run now and webhooks sta
 2. The optional before hook runs with `/bin/sh -c` in `cwd`, with a 3-minute limit, `KOMBINAT_REPO` set to the project folder (the one with the `package.json`), and its `scripts/` first on `PATH`. A failure or a non-zero exit fails the run.
 3. The agent is spawned. Only now is the record first written, as `running` with the agent's pid. Each stdout line is appended to the event log and can update the record.
 4. A run that outlives `timeoutMinutes` gets SIGINT, then SIGTERM 60 s later, and ends as `timed_out`. Otherwise it ends as `succeeded` when the agent exits with 0 and reported no error, and as `failed` when it did not.
+5. The optional after hook runs once the outcome is known, whatever it is, a failed preflight or before hook included. It runs with `/bin/sh -c` in `cwd`, or in the project folder when `cwd` does not exist, with the before hook's 3-minute limit, `KOMBINAT_REPO` and `PATH`, plus `KOMBINAT_ROUTINE`, `KOMBINAT_RUN_ID`, `KOMBINAT_TRIGGER` and `KOMBINAT_RUN_STATUS`. It gets the finished record on stdin as one line of JSON. Its outcome is appended to the event log as an `after_hook` line and never changes the run.
 
 Invariants:
 
-- A failed preflight or before hook writes a finished `failed` record at once. Until the agent is spawned there is no record, so the daemon remembers each run it starts and counts it as running until its record appears, for at most 4 minutes.
-- A record still marked `running` whose process is gone becomes `aborted` the next time runs are listed.
+- A failed preflight or before hook writes a finished `failed` record at once, or, with an after hook, a `running` record until the hook ends. Until the agent is spawned there is no record, so the daemon remembers each run it starts and counts it as running until its record appears, for at most 4 minutes.
+- A record still marked `running` whose process is gone becomes `aborted` the next time runs are listed. An aborted run gets no after hook, because its runner is gone.
+- With an after hook, the run stays `running` until the hook ends: the runner writes the record as `running` with its own pid, waits until the event log is written, runs the hook, appends its line and only then writes the finished record, the one the hook got. So the routine does not start again while its after hook runs, and the hook's line is in the log when a client sees the run end.
 - The id is a UTC timestamp plus 4 base-36 characters, such as `20261006T110000Z-k3x9`.
 - The record is `<state dir>/runs/<routine>/<id>.json` and the event log `<id>.jsonl` next to it. This layout is a compatibility contract.
 - A webhook run's request body waits in `<id>.payload` next to them until the run starts: the daemon writes it and starts the run with `--run-id <id>`, and the runner deletes it and adds the body to the end of the prompt in a code fence.
-- The transcript is built from the event log: the before hook's line becomes a `hook` item, and the agent turns the other lines into items.
+- The transcript is built from the event log: the hook lines become `hook` items, the before hook first and the after hook last, and the agent turns the other lines into items.
 - `GET /api/runs` answers a page of runs, newest first by `startedAt`, then routine and id, with `nextCursor` and `total`. `routine` limits it to one routine and answers 404 when there is no such routine, a page holds 50 runs, and `cursor` is an opaque token for the run a page ends with, so the next page starts right after that run even when new runs arrive above it.
 
 ### scheduler
@@ -93,7 +95,7 @@ The daemon's decision of when routines start. Every `KOMBINAT_TICK_SECONDS` (def
 
 ### routine
 
-A named, version-controlled unit of recurring agent work: one markdown file, `routines/<name>.md`. Its frontmatter holds scalar values only and sets `name`, `description`, `schedule`, `cwd`, `agent` and its settings, `enabled`, `webhook` with an optional `webhookGate`, `timeoutMinutes` and an optional `before` hook. The body is the prompt.
+A named, version-controlled unit of recurring agent work: one markdown file, `routines/<name>.md`. Its frontmatter holds scalar values only and sets `name`, `description`, `schedule`, `cwd`, `agent` and its settings, `enabled`, `webhook` with an optional `webhookGate`, `timeoutMinutes` and optional `before` and `after` hooks. The body is the prompt.
 
 - `name` equals the file name and is lowercase kebab-case.
 - `schedule` is a 5-field cron in local time, or `manual`, which is stored as `null`.

@@ -44,6 +44,14 @@ test('before hook is optional', () => {
   assert.equal(without.before, null);
 });
 
+test('after hook is optional', () => {
+  assert.equal(
+    buildRoutine('/tmp/demo.md', routineFile('after: scripts/notify.sh')).after,
+    'scripts/notify.sh',
+  );
+  assert.equal(buildRoutine('/tmp/demo.md', routineFile('schedule: manual')).after, null);
+});
+
 test('webhooks are off unless the frontmatter turns them on', () => {
   assert.equal(buildRoutine('/tmp/demo.md', routineFile('schedule: manual')).webhook, false);
   assert.equal(buildRoutine('/tmp/demo.md', routineFile('webhook: true')).webhook, true);

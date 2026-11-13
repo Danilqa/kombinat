@@ -2,6 +2,7 @@ import type { z } from 'zod';
 
 import type {
   hookItemSchema,
+  hookPhaseSchema,
   initItemSchema,
   resultItemSchema,
   textItemSchema,
@@ -14,6 +15,7 @@ import type {
 export type ToolResult = z.infer<typeof toolResultSchema>;
 export type TranscriptItem = z.infer<typeof transcriptItemSchema>;
 export type HookItem = z.infer<typeof hookItemSchema>;
+export type HookPhase = z.infer<typeof hookPhaseSchema>;
 export type InitItem = z.infer<typeof initItemSchema>;
 export type TextItem = z.infer<typeof textItemSchema>;
 export type ToolItem = z.infer<typeof toolItemSchema>;

@@ -1,4 +1,6 @@
-import type { TranscriptItem } from './types';
+import { match } from 'ts-pattern';
+
+import type { HookPhase, TranscriptItem } from './types';
 
 const PREVIEW_LENGTH = 160;
 
@@ -19,4 +21,11 @@ export function getTranscriptEmptyLabel(isRunning: boolean): string {
 
 export function getTranscriptResultLabel(isError: boolean): string {
   return isError ? 'Finished with error' : 'Finished';
+}
+
+export function getHookLabel(phase: HookPhase): string {
+  return match(phase)
+    .with('before', () => 'Before hook')
+    .with('after', () => 'After hook')
+    .exhaustive();
 }

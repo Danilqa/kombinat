@@ -15,7 +15,7 @@ import { parseJson } from '../../utils/json';
 import { getAgent } from '../agent/registry';
 import type { Agent, OutputEvent } from '../agent/types';
 import type { Routine } from '../routine/types';
-import type { BeforeHookEvent } from './event-log';
+import type { HookEvent } from './event-log';
 import { withHookEnv } from './hook-env';
 import { appendPayload, takePayload } from './payload';
 import { getRunsDir, listRuns, readRunRecord, writeRunRecord } from './storage';
@@ -26,8 +26,8 @@ export interface RunOptions {
   runId?: RunId | null;
 }
 
-const BEFORE_HOOK_TIMEOUT_MS = 3 * 60_000;
-const PENDING_START_MS = BEFORE_HOOK_TIMEOUT_MS + 60_000;
+const HOOK_TIMEOUT_MS = 3 * 60_000;
+const PENDING_START_MS = HOOK_TIMEOUT_MS + 60_000;
 const KILL_GRACE_MS = 60_000;
 const STDERR_CHUNKS = 200;
 
@@ -55,17 +55,97 @@ function runBeforeHook({ command, cwd, env, logFile }: BeforeHook): string | nul
   const result = spawnSync('/bin/sh', ['-c', command], {
     cwd,
     env: withHookEnv(env),
-    timeout: BEFORE_HOOK_TIMEOUT_MS,
+    timeout: HOOK_TIMEOUT_MS,
     encoding: 'utf8',
   });
   const output = `${result.stdout}${result.stderr}`.trim();
-  const event: BeforeHookEvent = { type: 'before_hook', command, exitCode: result.status, output };
+  const event: HookEvent = { type: 'before_hook', command, exitCode: result.status, output };
   fs.appendFileSync(logFile, `${JSON.stringify(event)}\n`);
   if (result.error) return `before hook failed to start: ${result.error.message}`;
   if (result.status !== 0) {
     return `before hook exited with ${result.status}: ${output.slice(-1500)}`;
   }
   return null;
+}
+
+interface AfterHook {
+  command: string;
+  cwd: string;
+  env: NodeJS.ProcessEnv;
+  input: string;
+  timeoutMs: number;
+}
+
+function runAfterHook({ command, cwd, env, input, timeoutMs }: AfterHook): Promise<HookEvent> {
+  return new Promise(resolve => {
+    const child = spawn('/bin/sh', ['-c', command], {
+      cwd,
+      env,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    const stdout: Buffer[] = [];
+    const stderr: Buffer[] = [];
+    child.stdout.on('data', (chunk: Buffer) => stdout.push(chunk));
+    child.stderr.on('data', (chunk: Buffer) => stderr.push(chunk));
+    let isDone = false;
+    const done = (exitCode: number | null, note: string | null) => {
+      if (isDone) return;
+      isDone = true;
+      clearTimeout(timer);
+      const printed = Buffer.concat([...stdout, ...stderr])
+        .toString('utf8')
+        .trim();
+      const output = [printed, note].filter(Boolean).join('\n');
+      resolve({ type: 'after_hook', command, exitCode, output });
+    };
+    // Ends without waiting for close: a process the hook left behind can keep its output open.
+    const timer = setTimeout(() => {
+      const isRunning = child.exitCode === null && child.signalCode === null;
+      child.kill('SIGKILL');
+      for (const stream of [child.stdin, child.stdout, child.stderr]) stream.destroy();
+      done(child.exitCode, isRunning ? `Killed after ${timeoutMs / 60_000} minutes` : null);
+    }, timeoutMs);
+    child.on('error', error => done(null, `after hook failed to start: ${error.message}`));
+    child.on('close', exitCode => done(exitCode, null));
+    // The hook may exit before it reads the record.
+    child.stdin.on('error', () => undefined);
+    child.stdin.end(input);
+  });
+}
+
+interface AfterHookRun {
+  command: string;
+  routine: Routine;
+  env: NodeJS.ProcessEnv;
+  logEnded: Promise<void>;
+  timeoutMs: number;
+}
+
+async function finishWithAfterHook(
+  record: RunRecord,
+  patch: Partial<RunRecord>,
+  { command, routine, env, logEnded, timeoutMs }: AfterHookRun,
+): Promise<RunRecord> {
+  const finished: RunRecord = { ...record, ...patch, endedAt: new Date().toISOString() };
+  // The agent has exited, so the runner's own pid keeps the run from being reconciled as aborted.
+  writeRunRecord({ ...record, status: 'running', pid: process.pid });
+  await logEnded;
+  const event = await runAfterHook({
+    command,
+    cwd: fs.existsSync(routine.cwd) ? routine.cwd : config.projectRoot,
+    env: withHookEnv({
+      ...env,
+      KOMBINAT_ROUTINE: finished.routine,
+      KOMBINAT_RUN_ID: finished.id,
+      KOMBINAT_TRIGGER: finished.trigger,
+      KOMBINAT_RUN_STATUS: finished.status,
+    }),
+    input: `${JSON.stringify(finished)}\n`,
+    timeoutMs,
+  });
+  fs.appendFileSync(finished.logFile, `${JSON.stringify(event)}\n`);
+  writeRunRecord(finished);
+  return finished;
 }
 
 interface KillTimer {
@@ -98,7 +178,11 @@ function toLogLine(agent: Agent, line: string, event: unknown): string {
     .exhaustive();
 }
 
-export async function runRoutine(routine: Routine, options: RunOptions): Promise<RunRecord> {
+export async function runRoutine(
+  routine: Routine,
+  options: RunOptions,
+  afterHookTimeoutMs = HOOK_TIMEOUT_MS,
+): Promise<RunRecord> {
   const agent = getAgent(routine.agent);
   const id = options.runId ?? createRunId();
   const runsDir = getRunsDir(routine.name);
@@ -130,12 +214,25 @@ export async function runRoutine(routine: Routine, options: RunOptions): Promise
   const task =
     payload === null ? routine : { ...routine, prompt: appendPayload(routine.prompt, payload) };
   const invocation = agent.buildInvocation({ routine: task, runId: id, trigger: options.trigger });
+  const finish = async (
+    patch: Partial<RunRecord>,
+    logEnded = Promise.resolve(),
+  ): Promise<RunRecord> =>
+    routine.after === null
+      ? finishRecord(record, patch)
+      : finishWithAfterHook(record, patch, {
+          command: routine.after,
+          routine,
+          env: invocation.env,
+          logEnded,
+          timeoutMs: afterHookTimeoutMs,
+        });
   if (!fs.existsSync(routine.cwd)) {
-    return finishRecord(record, { status: 'failed', error: `cwd does not exist: ${routine.cwd}` });
+    return finish({ status: 'failed', error: `cwd does not exist: ${routine.cwd}` });
   }
   if (!checkIsBinaryFound(invocation.command)) {
     const hint = agent.binaryEnv === null ? '' : ` (set ${agent.binaryEnv})`;
-    return finishRecord(record, {
+    return finish({
       status: 'failed',
       error: `${agent.name} binary not found at ${invocation.command}${hint}`,
     });
@@ -147,7 +244,7 @@ export async function runRoutine(routine: Routine, options: RunOptions): Promise
       env: invocation.env,
       logFile,
     });
-    if (beforeError !== null) return finishRecord(record, { status: 'failed', error: beforeError });
+    if (beforeError !== null) return finish({ status: 'failed', error: beforeError });
   }
 
   const child = spawn(invocation.command, invocation.args, {
@@ -191,24 +288,30 @@ export async function runRoutine(routine: Routine, options: RunOptions): Promise
     });
   });
   killTimer.clear();
-  log.end();
+  const logEnded = new Promise<void>(resolve => log.end(resolve));
 
   if (killTimer.checkHasFired()) {
-    return finishRecord(record, {
-      status: 'timed_out',
-      exitCode,
-      error: `Killed after ${routine.timeoutMinutes} minutes`,
-    });
+    return finish(
+      {
+        status: 'timed_out',
+        exitCode,
+        error: `Killed after ${routine.timeoutMinutes} minutes`,
+      },
+      logEnded,
+    );
   }
   if (exitCode !== 0) {
     const stderr = stderrChunks.join('').trim().slice(-2000);
-    return finishRecord(record, {
-      status: 'failed',
-      exitCode,
-      error: record.error ?? (stderr || `exit code ${exitCode}`),
-    });
+    return finish(
+      {
+        status: 'failed',
+        exitCode,
+        error: record.error ?? (stderr || `exit code ${exitCode}`),
+      },
+      logEnded,
+    );
   }
-  return finishRecord(record, { status: record.error === null ? 'succeeded' : 'failed', exitCode });
+  return finish({ status: record.error === null ? 'succeeded' : 'failed', exitCode }, logEnded);
 }
 
 interface PendingStart {

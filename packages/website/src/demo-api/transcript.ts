@@ -15,7 +15,7 @@ export function init({ model, cwd, toolCount, permissionMode }: InitOptions): Tr
 }
 
 export function hook(command: string, exitCode: number, output: string): TranscriptStep {
-  return key => ({ kind: 'hook', key, command, exitCode, output });
+  return key => ({ kind: 'hook', key, command, exitCode, output, phase: 'before' });
 }
 
 export function text(value: string): TranscriptStep {
