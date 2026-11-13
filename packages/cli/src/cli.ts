@@ -18,6 +18,7 @@ import { ensureStateDirs, listRuns } from './domains/run/storage';
 import { readSchedulerState } from './domains/scheduler/storage';
 import { startSchedulerLoop } from './domains/scheduler/tick';
 import { connect } from './features/connect/connect';
+import { startKeepAwake } from './features/keep-awake/keep-awake';
 import {
   getDaemonFolder,
   getLaunchdStatus,
@@ -162,6 +163,7 @@ function serve(options: CliOptions): void {
   log(
     `kombinat serve pid ${process.pid}, routines ${config.routinesDir}, state ${config.stateDir}${managed}`,
   );
+  startKeepAwake(log);
   installDepsIfStale(log);
   buildWebAppIfStale(log);
   const stopScheduler = startScheduler(options);
