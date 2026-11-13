@@ -24,30 +24,34 @@ Ready to use in your organisation or at home.
 
 **Quickstart:**
 
-1. Add Kombinat to the repository that will hold your routines.
+1. Create a folder with example routines.
 
    ```bash
-   pnpm add @danilqa/kombinat        # with npm: npm install @danilqa/kombinat
+   npx @danilqa/kombinat init my-routines   # or: pnpm dlx @danilqa/kombinat init my-routines
    ```
 
-2. Add your routines as `.md` files in a `routines/` folder next to `package.json`, see [Writing a routine](#writing-a-routine). Changes are picked up on the next check, no restart needed. Agents run with your usual setup, so your global skills, MCP servers and `CLAUDE.md` are picked up.
+   It creates `package.json`, three example routines in `routines/`, `README.md` and `.gitignore`, then installs the dependencies. It ends with the next commands for your package manager. In an existing repository, run the same command in its root without a folder name, and start it with the repository's own package manager: npm can refuse to run in a pnpm project. It never overwrites a file and creates only what is missing. When the repository has a lockfile, it adds the package with that lockfile's package manager, otherwise with the one that started it.
 
+2. Try the hello routine.
+
+   ```bash
+   cd my-routines
+   npx kombinat run hello-example-routine
    ```
-   my-routines-or-project/
-   ├── routines/
-   │   └── fix-e2e-tests.md
-   └── package.json
-   ```
+
+   It runs Claude Code once and prints the run record as JSON. The answer is in `resultText`. Agents run with your usual setup, so your global skills, MCP servers and `CLAUDE.md` are picked up.
 
 3. Start from that folder.
 
    ```bash
-   pnpm kombinat serve   # or: npx kombinat serve
+   npx kombinat serve   # or: pnpm kombinat serve
    ```
 
-   It runs in this terminal. To keep it running in the background and after reboots, stop it and run `pnpm kombinat install` instead, see [Setup](#setup).
+   It runs in this terminal. To keep it running in the background and after reboots, stop it and run `npx kombinat install` instead, see [Setup](#setup).
 
-4. Monitor and debug runs in the dashboard at http://localhost:7433, or in the terminal with `pnpm kombinat tui`, which also works over ssh. See [Monitoring](#monitoring). To open them from another machine, see [Remote access](#remote-access).
+4. Write your own routines as `.md` files in `routines/`, see [Writing a routine](#writing-a-routine). Changes are picked up on the next check, no restart needed.
+
+5. Monitor and debug runs in the dashboard at http://localhost:7433, or in the terminal with `npx kombinat tui`, which also works over ssh. See [Monitoring](#monitoring). To open them from another machine, see [Remote access](#remote-access).
 
 ## Monitoring
 
@@ -102,6 +106,7 @@ The example routines of this repository, one row per file in [`routines/`](routi
 | Routine | When | What it does |
 | - | - | - |
 | [weather-example-routine](routines/weather-example-routine.md) | Weekdays at 08:00 | Says if you need an umbrella today |
+| [hello-example-routine](routines/hello-example-routine.md) | Manual | Says hello, to check that your setup works |
 | [weather-webhook-example-routine](routines/weather-webhook-example-routine.md) | On webhook | Says if you need an umbrella in the city from the request |
 <!-- routines:end -->
 <!-- prettier-ignore-end -->
@@ -130,6 +135,7 @@ This starts the daemon under launchd, in that folder. Open http://localhost:7433
 Run them from the same folder. With npm, use `npx kombinat` instead of `pnpm kombinat`, with Yarn `yarn kombinat`.
 
 ```bash
+pnpm kombinat init [folder]  # add the missing package.json, example routines, README and .gitignore
 pnpm kombinat list           # routines, next run, last status
 pnpm kombinat run <name>     # run a routine now, in the foreground
 pnpm kombinat validate       # check all routine files
