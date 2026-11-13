@@ -28,7 +28,6 @@ export function getCpuLoad(previous: CpuTimes, next: CpuTimes): number | null {
   return Math.min(1, Math.max(0, 1 - (next.idle - previous.idle) / total));
 }
 
-// CPU times only count up, so the load is the busy share between two readings.
 export function startCpuSampling(): () => void {
   let previous = readCpuTimes();
   const timer = setInterval(() => {
