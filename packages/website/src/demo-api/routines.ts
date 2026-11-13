@@ -34,7 +34,6 @@ export interface DemoOutcome {
   resultText?: string;
   error?: string;
   exitCode?: number | null;
-  // The model the run ended on, when a fallback took over from the routine's runModel.
   model?: string;
   steps: TranscriptStep[];
 }
