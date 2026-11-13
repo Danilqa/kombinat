@@ -18,6 +18,8 @@ export const routineSummarySchema = z.object({
   queuedWebhooks: z.number(),
   agent: agentNameSchema,
   model: z.string().nullable(),
+  // Older daemons do not send it, and tui --url may talk to one.
+  fallbackModel: z.string().nullable().optional(),
   effort: z.string().nullable(),
   permissionMode: z.string().nullable(),
   command: z.string().nullable(),

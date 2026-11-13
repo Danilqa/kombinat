@@ -16,6 +16,13 @@ export function pickOne<T extends string>(
   return found;
 }
 
+export function splitModels(model: string | null): string[] {
+  return (model ?? '')
+    .split(',')
+    .map(name => name.trim())
+    .filter(name => name !== '');
+}
+
 export function rejectUnsupported(
   raw: AgentSettings,
   fields: ReadonlyArray<keyof AgentSettings>,

@@ -107,3 +107,39 @@ test('passes the routine settings to claude -p', () => {
   assert.equal(args[args.indexOf('--permission-mode') + 1], 'auto');
   assert.equal(args[args.indexOf('--max-budget-usd') + 1], '2');
 });
+
+test('passes the fallback models to claude -p', () => {
+  const buildArgs = (fallbackModel: string | null): string[] =>
+    claudeAgent.buildInvocation({
+      routine: makeAgentTask({ model: 'claude-opus-5-5', fallbackModel }),
+      runId: runIdSchema.parse('r1'),
+      trigger: 'schedule',
+    }).args;
+  const args = buildArgs('claude-sonnet-5-5, claude-haiku-4-5');
+  assert.equal(args[args.indexOf('--model') + 1], 'claude-opus-5-5');
+  assert.equal(args[args.indexOf('--fallback-model') + 1], 'claude-sonnet-5-5,claude-haiku-4-5');
+  assert.equal(buildArgs(null).includes('--fallback-model'), false);
+});
+
+test('a model fallback switches the model of the run and shows in the transcript', () => {
+  const fallback = {
+    type: 'system',
+    subtype: 'model_fallback',
+    trigger: 'overloaded',
+    original_model: 'claude-opus-5-5',
+    fallback_model: 'claude-sonnet-5-5',
+    content: 'Switched to Sonnet 5.5 because claude-opus-5-5 is overloaded',
+  };
+  assert.deepEqual(claudeAgent.readEvent(fallback, makeRunRecord()), {
+    model: 'claude-sonnet-5-5',
+  });
+  const [init, switched] = claudeAgent.buildTranscript([events[0], fallback]);
+  assert.equal(expectInit(init).model, 'claude-opus-5-5');
+  assert.deepEqual(switched, {
+    kind: 'model-fallback',
+    key: 'fallback-1',
+    from: 'claude-opus-5-5',
+    to: 'claude-sonnet-5-5',
+    reason: 'overloaded',
+  });
+});

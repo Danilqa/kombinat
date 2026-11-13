@@ -30,6 +30,11 @@ import {
   WEBHOOK_QUEUE_LIMIT,
 } from './domains/webhook/queue';
 import { receiveWebhook } from './domains/webhook/receive';
+import {
+  readCpuLoad,
+  readDiskSpace,
+  startCpuSampling,
+} from './features/machine-usage/machine-usage';
 
 interface ApiResponse {
   status: number;
@@ -75,6 +80,7 @@ function toRoutineSummary(routine: Routine, runs: RunRecord[]): RoutineSummary {
     queuedWebhooks: countQueuedWebhooks(routine.name),
     agent: routine.agent,
     model: routine.model,
+    fallbackModel: routine.fallbackModel,
     effort: routine.effort,
     permissionMode: routine.permissionMode,
     command: routine.command,
@@ -104,6 +110,8 @@ function getStatus(startedAt: Date): DaemonStatus {
       loadRoutines().filter(routine => checkIsStarting(routine.name)).length,
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     now: new Date().toISOString(),
+    disk: readDiskSpace(config.stateDir),
+    cpuLoad: readCpuLoad(),
   };
 }
 
@@ -301,6 +309,7 @@ export function startServer(log: (line: string) => void): http.Server {
       sendJson(res, fail(500, message));
     });
   });
+  server.on('close', startCpuSampling());
   server.listen(config.port, '127.0.0.1', () => {
     log(`ui at http://localhost:${config.port}`);
   });

@@ -79,6 +79,7 @@ function withFile<T>(file: string, read: () => T): T {
 function readAgentSettings(data: Frontmatter, agent: AgentName): AgentSettings {
   return getAgent(agent).resolveSettings({
     model: readString(data, 'model'),
+    fallbackModel: readString(data, 'fallbackModel'),
     effort: readString(data, 'effort'),
     permissionMode: readString(data, 'permissionMode'),
     command: readString(data, 'command'),

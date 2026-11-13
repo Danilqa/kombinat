@@ -7,6 +7,13 @@ export const claude = {
     tools: ['Bash', 'Read', 'Edit'],
     permissionMode: 'auto',
   }),
+  modelFallback: (from: string, to: string) => ({
+    type: 'system',
+    subtype: 'model_fallback',
+    trigger: 'overloaded',
+    original_model: from,
+    fallback_model: to,
+  }),
   text: (text: string) => ({ type: 'assistant', message: { content: [{ type: 'text', text }] } }),
   toolUse: (id: string, name: string, input: unknown) => ({
     type: 'assistant',

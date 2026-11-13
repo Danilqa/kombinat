@@ -6,7 +6,7 @@ import { z } from 'zod';
 
 import { readJsonFile } from './utils/json';
 
-export const PACKAGE_NAME = '@danilqa/kombinat';
+export const PACKAGE_NAME = 'kombinat';
 export const DEFAULT_PORT = 7433;
 
 const packageJsonSchema = z.object({ version: z.string() });
