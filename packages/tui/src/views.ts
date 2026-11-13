@@ -9,6 +9,7 @@ import { getSkipReasonLabel } from 'domains/scheduler/utils';
 import type { ToolItem, TranscriptItem } from 'domains/transcript/types';
 import {
   checkIsSubagent,
+  getModelFallbackReasonLabel,
   getTranscriptEmptyLabel,
   getTranscriptResultLabel,
 } from 'domains/transcript/utils';
@@ -773,6 +774,20 @@ function itemLines(
         2,
       ),
     )
+    .with({ kind: 'model-fallback' }, fallback => {
+      const reason = getModelFallbackReasonLabel(fallback.reason);
+      return wrapLine(
+        [
+          text('↷ ', S.yellow),
+          text('Switched model', S.bold),
+          text(`  ${fallback.from} → `, S.dim),
+          text(fallback.to, S.blue),
+          ...(reason === null ? [] : [text(`  because ${reason}`, S.dim)]),
+        ],
+        width,
+        2,
+      );
+    })
     .with({ kind: 'text' }, ({ text: source }) => renderMarkdown(source, width))
     .with({ kind: 'tool' }, tool => toolLines(tool, toggle, isExpanded, width, isRunning))
     .with({ kind: 'result' }, result => {

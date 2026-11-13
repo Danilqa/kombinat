@@ -14,6 +14,10 @@ export function init({ model, cwd, toolCount, permissionMode }: InitOptions): Tr
   return key => ({ kind: 'init', key, model, cwd, toolCount, permissionMode });
 }
 
+export function modelFallback(from: string, to: string, reason: string): TranscriptStep {
+  return key => ({ kind: 'model-fallback', key, from, to, reason });
+}
+
 export function hook(command: string, exitCode: number, output: string): TranscriptStep {
   return key => ({ kind: 'hook', key, command, exitCode, output });
 }

@@ -19,7 +19,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "validate": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
-    "build": "pnpm --filter @danilqa/kombinat run build"
+    "build": "pnpm --filter kombinat run build"
   },
   "engines": {
     "node": ">=24"

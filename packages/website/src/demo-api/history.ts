@@ -143,7 +143,7 @@ function toRunRecord(run: DemoRun, now: Date): RunRecord {
     exitCode: isRunning ? null : getExitCode(outcome),
     sessionId,
     resumeCommand: sessionId === null ? null : getResumeCommand(routine.agent, sessionId),
-    model: hasSession ? routine.runModel : null,
+    model: hasSession ? (outcome.model ?? routine.runModel) : null,
     costUsd: isRunning ? null : (outcome.costUsd ?? null),
     numTurns: isRunning ? null : (outcome.numTurns ?? null),
     durationMs: hasResult ? durationMs : null,

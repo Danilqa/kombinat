@@ -6,7 +6,7 @@ Kombinat runs routines, markdown files in `routines/`, with AI agents on a sched
 
 | Package         | Description                                                                                                                           |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `cli`           | `@danilqa/kombinat`, the only published package: CLI commands and the daemon                                                          |
+| `cli`           | `kombinat`, the only published package: CLI commands and the daemon                                                                   |
 | `web-app`       | Browser dashboard (React, Vite, Tailwind), built into `packages/cli/dist/web-app`                                                     |
 | `tui`           | Terminal dashboard, an HTTP client of the daemon. Bundled into `cli`                                                                  |
 | `website`       | Demo of the browser dashboard with sample data, deployed to GitHub Pages at https://danilqa.github.io/kombinat/                       |
