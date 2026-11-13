@@ -13,7 +13,7 @@ On Linux, `kombinat install` runs the daemon as a systemd user service. Routines
 From the folder with `routines/` and `package.json`:
 
 ```bash
-pnpm add @danilqa/kombinat
+pnpm add kombinat
 pnpm kombinat install
 ```
 
@@ -75,6 +75,7 @@ The install was tested in Docker on Debian 12 with systemd 252, Node 24 and arm6
 - with lingering, the daemon starts at boot without a login;
 - the lingering message;
 - a port set at install time, and moving the daemon to another folder;
+- the free disk space and the CPU load in the daemon status;
 - folders and variables with spaces, quotes, `%` and `$`;
 - in containers without systemd, `install` fails with a message and `serve` works.
 
