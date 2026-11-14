@@ -16,7 +16,6 @@ export function StarBar() {
     if (event.target === event.currentTarget && isClosing) setIsClosed(true);
   }
 
-  // Under reduced motion the bar does not fold, so no transitionend would close it.
   function close() {
     if (checkPrefersReducedMotion()) setIsClosed(true);
     else setIsClosing(true);
