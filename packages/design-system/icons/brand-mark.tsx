@@ -1,7 +1,7 @@
 import { cn } from '../utils';
 
 const SMOKE_PATH = 'M46.4 23.21A9 9 0 0 1 46.4 10.48L52.88 4L55.71 6.83A5 5 0 0 1 55.71 13.9Z';
-const SMOKE_CLASS_NAME = 'origin-[47px_23px] animate-smoke-drift';
+const SMOKE_CLASS_NAME = 'origin-[47px_23px] motion-safe:animate-smoke-drift';
 
 interface BrandMarkProps {
   className?: string;

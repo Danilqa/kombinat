@@ -279,13 +279,22 @@
       outline-offset: 2px;
     }
   }
+  /* Reduced motion keeps fades, colours and spinners; movement jumps and fires no transitionend. */
   @media (prefers-reduced-motion: reduce) {
     *,
     ::before,
     ::after {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
+      --tw-enter-translate-x: 0 !important;
+      --tw-enter-translate-y: 0 !important;
+      --tw-enter-scale: 1 !important;
+      --tw-enter-rotate: 0 !important;
+      --tw-exit-translate-x: 0 !important;
+      --tw-exit-translate-y: 0 !important;
+      --tw-exit-scale: 1 !important;
+      --tw-exit-rotate: 0 !important;
+      transition-property:
+        color, background-color, border-color, outline-color, text-decoration-color, fill, stroke,
+        opacity, filter !important;
       scroll-behavior: auto !important;
     }
   }

@@ -1,6 +1,6 @@
 import { Star, X } from 'lucide-react';
 import { useState, type TransitionEvent } from 'react';
-import { cn } from 'design-system/utils';
+import { checkPrefersReducedMotion, cn } from 'design-system/utils';
 import { useStoredBoolean } from 'web-app/hooks/use-stored-boolean';
 import { REPO_URL } from '../constants';
 
@@ -14,6 +14,12 @@ export function StarBar() {
 
   function finishClosing(event: TransitionEvent<HTMLDivElement>) {
     if (event.target === event.currentTarget && isClosing) setIsClosed(true);
+  }
+
+  // Under reduced motion the bar does not fold, so no transitionend would close it.
+  function close() {
+    if (checkPrefersReducedMotion()) setIsClosed(true);
+    else setIsClosing(true);
   }
 
   return (
@@ -46,7 +52,7 @@ export function StarBar() {
           <button
             type="button"
             aria-label="Close"
-            onClick={() => setIsClosing(true)}
+            onClick={close}
             className="group absolute top-1/2 right-2 flex size-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full transition-colors hover:bg-page/10"
           >
             <X

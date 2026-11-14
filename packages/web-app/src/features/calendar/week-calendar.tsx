@@ -14,7 +14,7 @@ import { Ban, Check, ChevronLeft, ChevronRight, Clock, Ellipsis, Loader, X } fro
 import { Link } from 'react-router';
 import { match } from 'ts-pattern';
 import { Button, DropdownMenu, ErrorState } from 'design-system/components';
-import { cn } from 'design-system/utils';
+import { checkPrefersReducedMotion, cn } from 'design-system/utils';
 import { getCalendar } from 'domains/calendar/requests';
 import type { CalendarEntry } from 'domains/calendar/types';
 import type { CalendarEntryId, RoutineName } from 'domains/id/types';
@@ -470,7 +470,7 @@ function getWeekDays(weekStart: Date): Date[] {
 }
 
 function getScrollBehavior(): ScrollBehavior {
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth';
+  return checkPrefersReducedMotion() ? 'instant' : 'smooth';
 }
 
 function getWheelDeltaX(event: WheelEvent, pageWidth: number): number {
