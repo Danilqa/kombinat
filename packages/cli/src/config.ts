@@ -60,6 +60,7 @@ export const config = {
   pullMinutes: Number(env('KOMBINAT_PULL_MINUTES') ?? 5),
   pullBranch: env('KOMBINAT_PULL_BRANCH') ?? 'main',
   managed: env('KOMBINAT_MANAGED') === '1',
+  keepAwake: env('KOMBINAT_KEEP_AWAKE'),
   launchdLabel: 'com.kombinat.daemon',
 };
 

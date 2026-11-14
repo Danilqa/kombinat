@@ -27,7 +27,7 @@ Each domain has up to two halves with the same name:
 Not domains:
 
 - **cron** is a generic engine in `utils/cron.ts`. A schedule is a value of a routine.
-- **connect, machine-usage, readme, self-update and service** are features of the cli, in `cli/src/features/`. service picks launchd on macOS and systemd on Linux.
+- **connect, keep-awake, machine-usage, readme, self-update and service** are features of the cli, in `cli/src/features/`. service picks launchd on macOS and systemd on Linux.
 - **HTTP routing and read models** belong to the cli's `server.ts`.
 
 ## Definitions

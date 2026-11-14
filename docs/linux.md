@@ -1,6 +1,6 @@
 # Linux
 
-On Linux, `kombinat install` runs the daemon as a systemd user service. Routines, the dashboard and the other commands work the same as on macOS.
+On Linux, `kombinat install` runs the daemon as a systemd user service. Routines, the dashboard and the other commands work the same as on macOS. Unlike on macOS, the daemon does not stop the machine from sleeping.
 
 ## What you need
 

@@ -188,6 +188,7 @@ A setting the agent does not support fails validation.
 
 ## Scheduling
 
+- On macOS, the installed daemon keeps the Mac awake while it is on power. On battery the Mac sleeps as usual, and a laptop with a closed lid can still sleep. macOS has a system-wide switch that turns sleep off, `sudo pmset -a disablesleep 1`, which Kombinat does not touch.
 - If the Mac was asleep, each routine runs once for its latest missed time, up to 7 days back.
 - A routine never runs twice at the same time. If it is still running at its next time, that run is skipped.
 - At most 3 routines run at once.
@@ -215,6 +216,7 @@ Up to 0.2.2, Kombinat was published as `@danilqa/kombinat`. To move to `kombinat
 | `KOMBINAT_TICK_SECONDS`   | `30`                  | how often the daemon checks routines   |
 | `KOMBINAT_PULL_MINUTES`   | `5`                   | auto `git pull` interval, 0 to disable |
 | `KOMBINAT_PULL_BRANCH`    | `main`                | branch the daemon pulls                |
+| `KOMBINAT_KEEP_AWAKE`     | on when installed     | Mac stays awake on power, 0 to disable |
 | `CLAUDE_BIN`              | `~/.local/bin/claude` | Claude Code binary                     |
 | `CODEX_BIN`               | `codex`               | Codex binary                           |
 
