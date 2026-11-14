@@ -10,8 +10,7 @@ export const hookItemSchema = z.object({
   command: z.string(),
   exitCode: z.number().nullable(),
   output: z.string(),
-  // Older daemons do not send it, and tui --url may talk to one.
-  phase: hookPhaseSchema.default('before'),
+  phase: hookPhaseSchema,
 });
 
 export const initItemSchema = z.object({

@@ -54,7 +54,7 @@ Every agent gets the prompt on stdin. An agent decides which routine settings it
 
 An agent-independent view of a run's event log, ready to display: `{ eventCount, items }`. An item is one of:
 
-- `hook`: the before or the after hook, with its phase, command, exit code and output. A transcript from an older daemon has no phase, which reads as `before`;
+- `hook`: the before or the after hook, with its phase, command, exit code and output;
 - `init`: the session start;
 - `model-fallback`: the agent switched from one model to another, with the reason when it gave one;
 - `text`: assistant text;
