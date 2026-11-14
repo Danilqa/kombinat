@@ -500,7 +500,7 @@ interface SwipePanels {
   scrollerRef: RefObject<HTMLDivElement | null>;
   headerTrackRef: RefObject<HTMLDivElement | null>;
   preview: number;
-  slide: (direction: StepDirection) => void;
+  slide: (direction: StepDirection, behavior?: ScrollBehavior) => void;
 }
 
 // Once scrolling stops, the period moves to the panel in view and the scroller recentres in one frame.
@@ -631,13 +631,13 @@ function useSwipePanels(
 
   // Commits a finished slide first, or its pending settle would undo this one.
   const slide = useCallback(
-    (direction: StepDirection) => {
+    (direction: StepDirection, behavior: ScrollBehavior = getScrollBehavior()) => {
       const scroller = scrollerRef.current;
       if (scroller === null || scroller.clientWidth === 0) return;
       settleRef.current();
       const inView = Math.round(scroller.scrollLeft / scroller.clientWidth);
       const target = Math.max(0, Math.min(radius * 2, inView + direction));
-      scroller.scrollTo({ left: scroller.clientWidth * target, behavior: getScrollBehavior() });
+      scroller.scrollTo({ left: scroller.clientWidth * target, behavior });
     },
     [radius],
   );
@@ -730,12 +730,12 @@ export function WeekCalendar() {
     else slide(direction);
   };
 
-  const showToday = () => {
+  const showToday = (behavior?: ScrollBehavior) => {
     const today = getDayStart(new Date());
     const steps = isPhone
       ? countWholeDays(selectedDay, today)
       : countWholeDays(weekStart, getWeekStart(today)) / 7;
-    if (steps === 1 || steps === -1) slide(steps);
+    if (steps === 1 || steps === -1) slide(steps, behavior);
     else setSelectedDay(today);
   };
 
@@ -744,10 +744,11 @@ export function WeekCalendar() {
       if (event.metaKey || event.ctrlKey || event.altKey || checkIsTypingTarget(event.target)) {
         return;
       }
+      // Shortcuts jump at once, so pressing them again and again never waits for a slide.
       match(event.key.toLowerCase())
-        .with('j', 'n', () => slide(1))
-        .with('k', 'p', () => slide(-1))
-        .with('t', showToday)
+        .with('j', 'n', () => slide(1, 'instant'))
+        .with('k', 'p', () => slide(-1, 'instant'))
+        .with('t', () => showToday('instant'))
         .otherwise(() => undefined);
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -785,7 +786,7 @@ export function WeekCalendar() {
                   isActive={isCurrentWeek}
                   aria-keyshortcuts="T"
                   className="text-nav-sm"
-                  onClick={showToday}
+                  onClick={() => showToday()}
                 >
                   Today
                 </Button>
