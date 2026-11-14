@@ -419,7 +419,7 @@ export function WelcomeBanner() {
             >
               <span
                 className={cn(
-                  'block h-1.5 rounded-full transition-all duration-300 ease-out-quint',
+                  'block h-1.5 rounded-full transition-[width,background-color] duration-300 ease-out-quint',
                   index === activeIndex ? 'w-5 bg-fg' : 'w-1.5 bg-fg-faint group-hover:bg-fg-muted',
                 )}
               />

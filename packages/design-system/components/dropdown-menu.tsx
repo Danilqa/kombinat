@@ -34,7 +34,7 @@ function DropdownMenuContent({
         align={align}
         sideOffset={sideOffset}
         className={cn(
-          'z-50 min-w-48 origin-(--radix-dropdown-menu-content-transform-origin) rounded-lg border border-line bg-raised p-1 text-body-sm text-fg shadow-popover data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
+          'z-50 min-w-48 origin-(--radix-dropdown-menu-content-transform-origin) rounded-lg border border-line bg-raised p-1 text-body-sm text-fg shadow-popover ease-out-quint data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
           className,
         )}
         {...props}
@@ -65,7 +65,7 @@ function DropdownMenuCheckboxItem({
         <DropdownMenuPrimitive.ItemIndicator>
           <Check
             aria-hidden="true"
-            className="size-3.5 animate-in duration-200 zoom-in-50 fade-in"
+            className="size-3.5 animate-in duration-200 ease-out-quint zoom-in-50 fade-in"
           />
         </DropdownMenuPrimitive.ItemIndicator>
       </span>
