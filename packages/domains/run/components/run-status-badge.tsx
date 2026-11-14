@@ -55,13 +55,13 @@ export function RunStatusBadge({ status }: RunStatusBadgeProps) {
       key={status}
       variant={appearance.variant}
       size="medium"
-      className={cn(status !== initialStatus && 'animate-status-pop')}
+      className={cn(status !== initialStatus && 'motion-safe:animate-status-pop')}
     >
       <span className="relative flex size-1.5 shrink-0">
         {appearance.isPulsing && (
           <span
             className={cn(
-              'absolute inline-flex size-full animate-ping rounded-full opacity-75',
+              'absolute inline-flex size-full rounded-full opacity-75 motion-safe:animate-ping',
               appearance.dotClassName,
             )}
           />

@@ -21,7 +21,7 @@ import {
 import { useRef, useState, type ComponentProps, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
 import { Button } from 'design-system/components';
-import { cn } from 'design-system/utils';
+import { checkPrefersReducedMotion, cn } from 'design-system/utils';
 import { routineNameSchema } from 'domains/id/schemas';
 import { CALENDAR_PATH, ROUTINES_PATH, RUNS_PATH, getRoutinePath } from 'web-app/constants/path';
 import { NPM_URL, REPO_URL } from '../../constants';
@@ -97,10 +97,6 @@ const REASONS: Reason[] = [
     text: 'One command, two dependencies, no cloud and no database.',
   },
 ];
-
-function checkPrefersReducedMotion(): boolean {
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
 
 function getSlideElements(track: HTMLElement): HTMLElement[] {
   return [...track.children].filter(child => child instanceof HTMLElement);
@@ -244,7 +240,7 @@ export function WelcomeBanner() {
         <WelcomeCard
           label="Welcome"
           icon={WavingHand}
-          iconClassName="origin-[70%_80%] group-data-active/slide:animate-hand-wave"
+          iconClassName="origin-[70%_80%] group-data-active/slide:motion-safe:animate-hand-wave"
           glow="lavender"
           title="Run agents on a schedule"
           aside={<RoutineFile />}
@@ -277,7 +273,7 @@ export function WelcomeBanner() {
         <WelcomeCard
           label="Why Kombinat"
           icon={Scale}
-          iconClassName="group-data-active/slide:animate-scale-tip"
+          iconClassName="group-data-active/slide:motion-safe:animate-scale-tip"
           glow="sky"
           title="Why another tool?"
           details={<ReasonList />}
@@ -295,7 +291,7 @@ export function WelcomeBanner() {
         <WelcomeCard
           label="Webhooks"
           icon={Webhook}
-          iconClassName="group-data-active/slide:animate-webhook-spin"
+          iconClassName="group-data-active/slide:motion-safe:animate-webhook-spin"
           glow="mint"
           title="Runs when something happens"
           aside={<WebhookRoutineFile />}
@@ -333,7 +329,7 @@ export function WelcomeBanner() {
         <WelcomeCard
           label="Install"
           icon={SquareTerminal}
-          iconClassName="group-data-active/slide:animate-icon-pop group-data-active/slide:[&>path:nth-of-type(2)]:animate-cursor-blink"
+          iconClassName="group-data-active/slide:motion-safe:animate-icon-pop group-data-active/slide:[&>path:nth-of-type(2)]:animate-cursor-blink"
           glow="peach"
           title="Running in a minute"
           aside={<InstallCommands />}
@@ -363,7 +359,7 @@ export function WelcomeBanner() {
         <WelcomeCard
           label="Playground"
           icon={SandBucket}
-          iconClassName="group-data-active/slide:animate-bucket-hop"
+          iconClassName="group-data-active/slide:motion-safe:animate-bucket-hop"
           glow="mint"
           title="Make yourself at home"
           aside={<ExploreLinks />}

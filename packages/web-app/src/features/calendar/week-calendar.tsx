@@ -14,7 +14,7 @@ import { Ban, Check, ChevronLeft, ChevronRight, Clock, Ellipsis, Loader, X } fro
 import { Link } from 'react-router';
 import { match } from 'ts-pattern';
 import { Button, DropdownMenu, ErrorState } from 'design-system/components';
-import { cn } from 'design-system/utils';
+import { checkPrefersReducedMotion, cn } from 'design-system/utils';
 import { getCalendar } from 'domains/calendar/requests';
 import type { CalendarEntry } from 'domains/calendar/types';
 import type { CalendarEntryId, RoutineName } from 'domains/id/types';
@@ -89,36 +89,29 @@ const blockIcons: Record<RunStatus, BlockIcon> = {
 
 const outlinedBlockClassName = 'hover:border-fg-faint';
 const tintedBlockClassName = 'pl-[7px] hover:brightness-125 focus-visible:shadow-focus';
-// Not for the running block: its pulse is an animation too, and an element runs only one.
-const blockEnterClassName = 'animate-in animation-duration-300 fade-in';
-
 const blockStyles: Record<BlockVariant, BlockStyle> = {
   planned: {
-    className: cn(blockSurfaceClassNames.planned, outlinedBlockClassName, blockEnterClassName),
+    className: cn(blockSurfaceClassNames.planned, outlinedBlockClassName),
     icon: null,
   },
   plannedDefault: {
-    className: cn(
-      blockSurfaceClassNames.plannedDefault,
-      outlinedBlockClassName,
-      blockEnterClassName,
-    ),
+    className: cn(blockSurfaceClassNames.plannedDefault, outlinedBlockClassName),
     icon: null,
   },
   succeeded: {
-    className: cn(blockSurfaceClassNames.succeeded, tintedBlockClassName, blockEnterClassName),
+    className: cn(blockSurfaceClassNames.succeeded, tintedBlockClassName),
     icon: blockIcons.succeeded,
   },
   failed: {
-    className: cn(blockSurfaceClassNames.failed, tintedBlockClassName, blockEnterClassName),
+    className: cn(blockSurfaceClassNames.failed, tintedBlockClassName),
     icon: blockIcons.failed,
   },
   timed_out: {
-    className: cn(blockSurfaceClassNames.timed_out, tintedBlockClassName, blockEnterClassName),
+    className: cn(blockSurfaceClassNames.timed_out, tintedBlockClassName),
     icon: blockIcons.timed_out,
   },
   aborted: {
-    className: cn(blockSurfaceClassNames.aborted, tintedBlockClassName, blockEnterClassName),
+    className: cn(blockSurfaceClassNames.aborted, tintedBlockClassName),
     icon: blockIcons.aborted,
   },
   running: {
@@ -356,13 +349,18 @@ function DayColumn({ day, entries, now, isToday, routinesById }: DayColumnProps)
         backgroundSize: '100% var(--hour-height)',
       }}
     >
-      {positioned.map(item => (
-        <CalendarBlock
-          key={item.entry.id}
-          positioned={item}
-          overlapLabel={routinesById && getCalendarEntryOverlapLabel(item.entry, routinesById)}
-        />
-      ))}
+      {/* One fade per day when its runs arrive, not hundreds of block fades at once. */}
+      {positioned.length > 0 && (
+        <div className="absolute inset-0 z-10 animate-in duration-150 ease-out-quint fade-in">
+          {positioned.map(item => (
+            <CalendarBlock
+              key={item.entry.id}
+              positioned={item}
+              overlapLabel={routinesById && getCalendarEntryOverlapLabel(item.entry, routinesById)}
+            />
+          ))}
+        </div>
+      )}
       {isToday && <CurrentTimeLine now={now} dayStart={day} />}
     </div>
   );
@@ -470,7 +468,7 @@ function getWeekDays(weekStart: Date): Date[] {
 }
 
 function getScrollBehavior(): ScrollBehavior {
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth';
+  return checkPrefersReducedMotion() ? 'instant' : 'smooth';
 }
 
 function getWheelDeltaX(event: WheelEvent, pageWidth: number): number {

@@ -120,7 +120,7 @@ export function DaemonStatusIndicator() {
             {checkHasRunning(data) && (
               <span
                 className={cn(
-                  'absolute inline-flex size-full animate-ping rounded-full opacity-75',
+                  'absolute inline-flex size-full rounded-full opacity-75 motion-safe:animate-ping',
                   appearance.dotClassName,
                 )}
               />
