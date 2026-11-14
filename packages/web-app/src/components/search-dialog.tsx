@@ -98,7 +98,7 @@ function RunItem({ run, excerpt, onSelect }: RunItemProps) {
           <span className="block truncate text-body-sm text-fg-muted">{excerpt}</span>
         )}
       </span>
-      <span className="shrink-0 text-body-sm text-fg-muted tabular-nums">
+      <span className="shrink-0 text-body-sm text-fg-muted tabular-nums max-sm:hidden">
         {formatRelativeCompact(run.startedAt)}
       </span>
       <RunStatusBadge status={run.status} />
