@@ -21,6 +21,7 @@ export type RunsPage = z.infer<typeof runsPageSchema>;
 export interface RunsPageQuery {
   routine: RoutineName | null;
   cursor: RunsCursorKey | null;
+  search: string | null;
 }
 
 export interface RunWithTranscript {

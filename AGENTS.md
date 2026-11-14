@@ -12,7 +12,7 @@ Kombinat runs routines, markdown files in `routines/`, with AI agents on a sched
 | `website`       | Demo of the browser dashboard with sample data, deployed to GitHub Pages at https://danilqa.github.io/kombinat/                       |
 | `domains`       | Shared domain layer: schemas, types, requests, labels, mocks and router-free components, see [its README](packages/domains/README.md) |
 | `design-system` | Tailwind tokens and styles, shadcn/radix components and generic layout pieces                                                         |
-| `utils`         | Business-agnostic helpers that more than one package uses: http, error, date-time, polling and cron                                   |
+| `utils`         | Business-agnostic helpers that more than one package uses: http, error, date-time, polling, cron and search                           |
 | `e2e`           | Playwright config and fixtures. The specs live next to the pages as `*.e2e.ts`                                                        |
 
 ## Package manager
