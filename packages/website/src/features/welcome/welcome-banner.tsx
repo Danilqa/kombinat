@@ -246,7 +246,7 @@ export function WelcomeBanner() {
           icon={WavingHand}
           iconClassName="origin-[70%_80%] group-data-active/slide:animate-hand-wave"
           glow="lavender"
-          title="Run Claude Code and Codex on a schedule"
+          title="Run agents on a schedule"
           aside={<RoutineFile />}
           actions={
             <>
@@ -264,11 +264,9 @@ export function WelcomeBanner() {
           }
         >
           <p>
-            A <strong>Kombinat</strong> routine is a markdown file: the frontmatter says when, the
-            body is the prompt. Merge it and it is live within five minutes. Your own Mac or Linux
-            machine then runs it with <strong>Claude Code</strong>, <strong>Codex</strong> or any
-            shell command, on the subscription you already pay for. This is a live demo of its
-            dashboard.
+            One routine – one markdown file. Just merge it and it is live. Your own computer then
+            runs it with <strong>Claude Code</strong>, <strong>Codex</strong> or any shell command,
+            on the subscription you already pay for. This is a live demo of its dashboard.
           </p>
         </WelcomeCard>
       ),
