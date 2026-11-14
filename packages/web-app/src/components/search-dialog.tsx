@@ -3,6 +3,7 @@ import { History, Loader, Play, Search, Workflow } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Badge, Command, Kbd } from 'design-system/components';
+import { useDebouncedValue } from 'design-system/utils';
 import type { RoutineName } from 'domains/id/types';
 import { QUERY_KEYS_CHANGED_BY_RUN } from 'domains/routine/constants';
 import { getRoutines, startRoutineRun } from 'domains/routine/requests';
@@ -15,7 +16,6 @@ import { sameOriginApi } from 'utils/http';
 import { checkMatchesSearch, getSearchExcerpt } from 'utils/search';
 import { navItems, type NavItem } from '@web-app/constants/nav-items';
 import { getRoutinePath, getRunPath } from '@web-app/constants/path';
-import { useDebouncedValue } from '@web-app/hooks/use-debounced-value';
 
 const RUNS_SEARCH_DELAY_MS = 150;
 const RECENT_RUNS_COUNT = 5;
@@ -288,7 +288,6 @@ interface SearchDialogProps {
 }
 
 export function SearchDialog({ open, onOpenChange }: SearchDialogProps) {
-  // The panel unmounts once the dialog closes, so every open starts with an empty search.
   return (
     <Command.Dialog open={open} onOpenChange={onOpenChange} title="Search">
       <SearchPanel onClose={() => onOpenChange(false)} />
