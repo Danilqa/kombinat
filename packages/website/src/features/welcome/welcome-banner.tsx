@@ -246,7 +246,7 @@ export function WelcomeBanner() {
           icon={WavingHand}
           iconClassName="origin-[70%_80%] group-data-active/slide:animate-hand-wave"
           glow="lavender"
-          title="Cron for Claude Code and Codex, as markdown files in your repo"
+          title="Run Claude Code and Codex on a schedule"
           aside={<RoutineFile />}
           actions={
             <>
