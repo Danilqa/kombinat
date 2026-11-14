@@ -1,6 +1,6 @@
 <img src=".github/assets/banner.png" alt="Kombinat: routines in your repo, run by AI agents 24/7" width="100%" />
 
-> Cron for Claude Code and Codex, as markdown files in your repo.
+> Run Claude Code and Codex on a schedule.
 
 <a href="https://danilqa.github.io/kombinat/"><img src=".github/assets/demo.gif" alt="The Kombinat dashboard: the routines, one routine's prompt, a run's transcript and the week calendar" width="100%" /></a>
 
