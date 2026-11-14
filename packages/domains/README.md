@@ -19,7 +19,7 @@ Each domain has up to two halves with the same name:
 | **transcript** | item schemas and types, preview rule, subagent check, empty, result and hook labels, `TranscriptList`                                          | none                                                                            |
 | **run**        | `RunRecord`, status and trigger, requests, labels, id, duration, cursor pages, `makeRunRecord`, `RunStatusBadge`, `RunDetailList`, `RunOutput` | runner, hooks, record storage with orphan reconciliation, event log, transcript |
 | **scheduler**  | `Skip`, `SkipReason`, `SchedulerState`, skip label, `SkipsTable`                                                                               | tick loop, `scheduler.json` storage                                             |
-| **routine**    | `RoutineSummary`, `RoutineDetail`, requests, `RunNowButton`, `RoutineBadges`, `RoutineDetailList`, `WebhookQueueButton`                        | frontmatter parsing, validation and defaults, loading, next run, schedule label |
+| **routine**    | `RoutineSummary`, `RoutineDetail`, requests, `RunNowButton`, `RoutineBadges`, `RoutineDetailList`, `WebhookQueueButton`                        | file parsing, validation, defaults, loading, next run, schedule label, examples |
 | **calendar**   | entry schemas and types, `getCalendar`, `buildCalendar`, planned lengths, entry title and overlap labels, overlap count                        | none, `cli/src/server.ts` serves `buildCalendar`                                |
 | **daemon**     | status schema, `getDaemonStatus`, health rules, `DaemonStatusIndicator`                                                                        | none, `cli/src/server.ts` builds the status                                     |
 | **webhook**    | `QueuedWebhook`, webhook path, size and queue position labels, `WebhookQueueList`                                                              | gate, queue, and receiving: start, queue, ignore or reject                      |
@@ -27,7 +27,7 @@ Each domain has up to two halves with the same name:
 Not domains:
 
 - **cron** is a generic engine in `utils/cron.ts`. A schedule is a value of a routine.
-- **connect, keep-awake, machine-usage, readme, self-update and service** are features of the cli, in `cli/src/features/`. service picks launchd on macOS and systemd on Linux.
+- **connect, init, keep-awake, machine-usage, readme, self-update and service** are features of the cli, in `cli/src/features/`. service picks launchd on macOS and systemd on Linux.
 - **HTTP routing and read models** belong to the cli's `server.ts`.
 
 ## Definitions

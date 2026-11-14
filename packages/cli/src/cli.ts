@@ -18,6 +18,7 @@ import { ensureStateDirs, listRuns } from './domains/run/storage';
 import { readSchedulerState } from './domains/scheduler/storage';
 import { startSchedulerLoop } from './domains/scheduler/tick';
 import { connect } from './features/connect/connect';
+import { runInit } from './features/init/init';
 import { startKeepAwake } from './features/keep-awake/keep-awake';
 import { updateReadme } from './features/readme/readme';
 import {
@@ -30,8 +31,10 @@ import {
 import { getDaemonService } from './features/service/service';
 import { startServer } from './server';
 
-const USAGE = `kombinat, run from the folder that holds routines/ (connect and tui --url work anywhere)
+const USAGE = `kombinat, run from the folder that holds routines/ (init, connect and tui --url work anywhere)
 
+  init [folder]             create package.json, example routines, README.md and .gitignore here
+                            or in [folder] when they are missing, then install; --no-install skips it
   tui [--url <url>]         keyboard dashboard in the terminal (works over ssh), talks to the
                             running daemon, or to the one at --url
   connect <destination>     dashboard of a daemon on another machine through an ssh tunnel, in the
@@ -65,6 +68,7 @@ interface CliOptions {
   url: string | null;
   remotePort: number;
   tui: boolean;
+  install: boolean;
 }
 
 function log(line: string): void {
@@ -257,12 +261,14 @@ async function main(): Promise<void> {
       url: { type: 'string' },
       port: { type: 'string' },
       tui: { type: 'boolean', default: false },
+      'no-install': { type: 'boolean', default: false },
     },
   });
   const [command, name] = positionals;
   checkFlag(values.url !== undefined, 'url', command, 'tui');
   checkFlag(values.port !== undefined, 'port', command, 'connect');
   checkFlag(values.tui, 'tui', command, 'connect');
+  checkFlag(values['no-install'], 'no-install', command, 'init');
   const options: CliOptions = {
     trigger: parseTrigger(values.trigger),
     scheduledFor: values['scheduled-for'] ?? null,
@@ -272,9 +278,13 @@ async function main(): Promise<void> {
     url: values.url === undefined ? null : parseUrl(values.url),
     remotePort: parsePort(values.port ?? String(DEFAULT_PORT)),
     tui: values.tui,
+    install: !values['no-install'],
   };
 
   await match(command)
+    .with('init', () => {
+      process.exitCode = runInit(name, options.install) ? 0 : 1;
+    })
     .with('tui', () => showTui(options))
     .with('connect', () => connectTo(name, options))
     .with('list', listRoutines)
