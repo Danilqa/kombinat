@@ -140,6 +140,7 @@ interface FakeOptions {
   isDown?: boolean;
   overview?: Overview;
   runsPageSize?: number;
+  transcript?: Transcript;
 }
 
 function makeClient(overview: Overview, options: FakeOptions) {
@@ -181,7 +182,7 @@ function makeClient(overview: Overview, options: FakeOptions) {
     getRun(routine, id) {
       const run = overview.runs.find(r => r.routine === routine && r.id === id);
       if (!run) return Promise.reject(new Error('Run not found'));
-      return Promise.resolve({ run, transcript });
+      return Promise.resolve({ run, transcript: options.transcript ?? transcript });
     },
     startRun(name) {
       started.push(name);
@@ -278,6 +279,27 @@ test('enter on a tool call expands it and e collapses everything again', async (
   assert.match(screen, /│ command: gh pr list/);
   assert.match(screen, /│ no open PRs/);
   assert.doesNotMatch(await press('e'), /│ command: gh pr list/);
+});
+
+test('the transcript labels the before hook and the after hook', async () => {
+  const hook = { kind: 'hook', exitCode: 0, output: '' } as const;
+  const { press } = await makeApp({
+    transcript: {
+      eventCount: 6,
+      items: [
+        { ...hook, key: 'hook-0', command: 'git pull --ff-only', phase: 'before' },
+        ...transcript.items,
+        { ...hook, key: 'hook-1', command: 'notify-slack', exitCode: 1, phase: 'after' },
+      ],
+    },
+  });
+  await press('enter');
+  const lines = (await press('enter')).split('\n');
+  const before = lines.findIndex(line => /before hook {2}git pull --ff-only {2}exit 0/.test(line));
+  const result = lines.findIndex(line => /✓ Finished/.test(line));
+  const after = lines.findIndex(line => /after hook {2}notify-slack {2}exit 1/.test(line));
+  assert.ok(before !== -1 && result !== -1 && after !== -1, lines.join('\n'));
+  assert.ok(before < result && result < after);
 });
 
 test('r asks before starting a routine and only y starts it through the daemon', async () => {

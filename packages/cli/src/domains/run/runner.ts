@@ -1,4 +1,4 @@
-import { spawn, spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -13,10 +13,9 @@ import { createRunId } from 'domains/run/utils';
 import { config, getCliArgs } from '../../config';
 import { parseJson } from '../../utils/json';
 import { getAgent } from '../agent/registry';
-import type { Agent, OutputEvent } from '../agent/types';
+import type { Agent, Invocation, OutputEvent } from '../agent/types';
 import type { Routine } from '../routine/types';
-import type { BeforeHookEvent } from './event-log';
-import { withHookEnv } from './hook-env';
+import { getBeforeHookError, HOOK_TIMEOUT_MS, runHook } from './hooks';
 import { appendPayload, takePayload } from './payload';
 import { getRunsDir, listRuns, readRunRecord, writeRunRecord } from './storage';
 
@@ -26,8 +25,7 @@ export interface RunOptions {
   runId?: RunId | null;
 }
 
-const BEFORE_HOOK_TIMEOUT_MS = 3 * 60_000;
-const PENDING_START_MS = BEFORE_HOOK_TIMEOUT_MS + 60_000;
+const PENDING_START_MS = HOOK_TIMEOUT_MS + 60_000;
 const KILL_GRACE_MS = 60_000;
 const STDERR_CHUNKS = 200;
 
@@ -36,36 +34,6 @@ function checkIsBinaryFound(command: string): boolean {
   return (process.env['PATH'] ?? '')
     .split(':')
     .some(dir => dir !== '' && fs.existsSync(path.join(dir, command)));
-}
-
-function finishRecord(record: RunRecord, patch: Partial<RunRecord>): RunRecord {
-  const finished: RunRecord = { ...record, ...patch, endedAt: new Date().toISOString() };
-  writeRunRecord(finished);
-  return finished;
-}
-
-interface BeforeHook {
-  command: string;
-  cwd: string;
-  env: NodeJS.ProcessEnv;
-  logFile: string;
-}
-
-function runBeforeHook({ command, cwd, env, logFile }: BeforeHook): string | null {
-  const result = spawnSync('/bin/sh', ['-c', command], {
-    cwd,
-    env: withHookEnv(env),
-    timeout: BEFORE_HOOK_TIMEOUT_MS,
-    encoding: 'utf8',
-  });
-  const output = `${result.stdout}${result.stderr}`.trim();
-  const event: BeforeHookEvent = { type: 'before_hook', command, exitCode: result.status, output };
-  fs.appendFileSync(logFile, `${JSON.stringify(event)}\n`);
-  if (result.error) return `before hook failed to start: ${result.error.message}`;
-  if (result.status !== 0) {
-    return `before hook exited with ${result.status}: ${output.slice(-1500)}`;
-  }
-  return null;
 }
 
 interface KillTimer {
@@ -98,56 +66,44 @@ function toLogLine(agent: Agent, line: string, event: unknown): string {
     .exhaustive();
 }
 
-export async function runRoutine(routine: Routine, options: RunOptions): Promise<RunRecord> {
-  const agent = getAgent(routine.agent);
-  const id = options.runId ?? createRunId();
-  const runsDir = getRunsDir(routine.name);
-  const logFile = path.join(runsDir, `${id}.jsonl`);
-  fs.mkdirSync(runsDir, { recursive: true });
-  const record: RunRecord = {
-    id,
-    routine: routine.name,
-    agent: routine.agent,
-    trigger: options.trigger,
-    scheduledFor: options.scheduledFor ?? null,
-    startedAt: new Date().toISOString(),
-    endedAt: null,
-    status: 'running',
-    pid: null,
-    exitCode: null,
-    sessionId: null,
-    resumeCommand: null,
-    model: routine.model,
-    costUsd: null,
-    numTurns: null,
-    durationMs: null,
-    resultText: null,
-    error: null,
-    logFile,
-  };
+interface AgentRun {
+  routine: Routine;
+  agent: Agent;
+  invocation: Invocation;
+  record: RunRecord;
+  hookTimeoutMs: number;
+}
 
-  const payload = takePayload(routine.name, id);
-  const task =
-    payload === null ? routine : { ...routine, prompt: appendPayload(routine.prompt, payload) };
-  const invocation = agent.buildInvocation({ routine: task, runId: id, trigger: options.trigger });
+// Runs the preflight, the before hook and the agent, and returns how the run ended.
+async function runAgent({
+  routine,
+  agent,
+  invocation,
+  record,
+  hookTimeoutMs,
+}: AgentRun): Promise<Partial<RunRecord>> {
   if (!fs.existsSync(routine.cwd)) {
-    return finishRecord(record, { status: 'failed', error: `cwd does not exist: ${routine.cwd}` });
+    return { status: 'failed', error: `cwd does not exist: ${routine.cwd}` };
   }
   if (!checkIsBinaryFound(invocation.command)) {
     const hint = agent.binaryEnv === null ? '' : ` (set ${agent.binaryEnv})`;
-    return finishRecord(record, {
+    return {
       status: 'failed',
       error: `${agent.name} binary not found at ${invocation.command}${hint}`,
-    });
+    };
   }
   if (routine.before !== null) {
-    const beforeError = runBeforeHook({
+    const result = await runHook({
+      type: 'before_hook',
       command: routine.before,
       cwd: routine.cwd,
       env: invocation.env,
-      logFile,
+      input: '',
+      timeoutMs: hookTimeoutMs,
+      logFile: record.logFile,
     });
-    if (beforeError !== null) return finishRecord(record, { status: 'failed', error: beforeError });
+    const beforeError = getBeforeHookError(result, hookTimeoutMs);
+    if (beforeError !== null) return { status: 'failed', error: beforeError };
   }
 
   const child = spawn(invocation.command, invocation.args, {
@@ -158,7 +114,7 @@ export async function runRoutine(routine: Routine, options: RunOptions): Promise
   record.pid = child.pid ?? null;
   writeRunRecord(record);
 
-  const log = fs.createWriteStream(logFile, { flags: 'a' });
+  const log = fs.createWriteStream(record.logFile, { flags: 'a' });
   const stderrChunks: string[] = [];
   child.stderr.on('data', (chunk: Buffer) => {
     stderrChunks.push(String(chunk));
@@ -191,24 +147,87 @@ export async function runRoutine(routine: Routine, options: RunOptions): Promise
     });
   });
   killTimer.clear();
-  log.end();
+  await new Promise<void>(resolve => log.end(resolve));
 
   if (killTimer.checkHasFired()) {
-    return finishRecord(record, {
+    return {
       status: 'timed_out',
       exitCode,
       error: `Killed after ${routine.timeoutMinutes} minutes`,
-    });
+    };
   }
   if (exitCode !== 0) {
     const stderr = stderrChunks.join('').trim().slice(-2000);
-    return finishRecord(record, {
+    return {
       status: 'failed',
       exitCode,
       error: record.error ?? (stderr || `exit code ${exitCode}`),
-    });
+    };
   }
-  return finishRecord(record, { status: record.error === null ? 'succeeded' : 'failed', exitCode });
+  return { status: record.error === null ? 'succeeded' : 'failed', exitCode };
+}
+
+export async function runRoutine(
+  routine: Routine,
+  options: RunOptions,
+  hookTimeoutMs = HOOK_TIMEOUT_MS,
+): Promise<RunRecord> {
+  const agent = getAgent(routine.agent);
+  const id = options.runId ?? createRunId();
+  const runsDir = getRunsDir(routine.name);
+  fs.mkdirSync(runsDir, { recursive: true });
+  const record: RunRecord = {
+    id,
+    routine: routine.name,
+    agent: routine.agent,
+    trigger: options.trigger,
+    scheduledFor: options.scheduledFor ?? null,
+    startedAt: new Date().toISOString(),
+    endedAt: null,
+    status: 'running',
+    pid: null,
+    exitCode: null,
+    sessionId: null,
+    resumeCommand: null,
+    model: routine.model,
+    costUsd: null,
+    numTurns: null,
+    durationMs: null,
+    resultText: null,
+    error: null,
+    logFile: path.join(runsDir, `${id}.jsonl`),
+  };
+
+  const payload = takePayload(routine.name, id);
+  const task =
+    payload === null ? routine : { ...routine, prompt: appendPayload(routine.prompt, payload) };
+  const invocation = agent.buildInvocation({ routine: task, runId: id, trigger: options.trigger });
+  const outcome = await runAgent({ routine, agent, invocation, record, hookTimeoutMs });
+  const finished: RunRecord = { ...record, ...outcome, endedAt: new Date().toISOString() };
+  try {
+    if (routine.after !== null) {
+      // The agent has exited, so the runner's own pid keeps the run from being reconciled as aborted.
+      writeRunRecord({ ...record, status: 'running', pid: process.pid });
+      await runHook({
+        type: 'after_hook',
+        command: routine.after,
+        cwd: fs.existsSync(routine.cwd) ? routine.cwd : config.projectRoot,
+        env: {
+          ...invocation.env,
+          KOMBINAT_ROUTINE: finished.routine,
+          KOMBINAT_RUN_ID: finished.id,
+          KOMBINAT_TRIGGER: finished.trigger,
+          KOMBINAT_RUN_STATUS: finished.status,
+        },
+        input: `${JSON.stringify(finished)}\n`,
+        timeoutMs: hookTimeoutMs,
+        logFile: record.logFile,
+      });
+    }
+  } finally {
+    writeRunRecord(finished);
+  }
+  return finished;
 }
 
 interface PendingStart {

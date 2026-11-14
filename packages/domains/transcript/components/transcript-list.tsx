@@ -17,6 +17,7 @@ import type {
 } from '../types';
 import {
   checkIsSubagent,
+  getHookLabel,
   getModelFallbackReasonLabel,
   getTranscriptEmptyLabel,
   getTranscriptResultLabel,
@@ -30,7 +31,7 @@ function HookRow({ item }: HookRowProps) {
   return (
     <div className="space-y-2 text-body-sm text-fg-muted">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="text-body font-medium text-fg">Before hook</span>
+        <span className="text-body font-medium text-fg">{getHookLabel(item.phase)}</span>
         <span className="min-w-0 font-mono wrap-anywhere">{item.command}</span>
         <span className={cn('font-mono tabular-nums', item.exitCode !== 0 && 'text-negative')}>
           exit {item.exitCode ?? '?'}

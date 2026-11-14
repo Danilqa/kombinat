@@ -1,4 +1,3 @@
-import { spawn } from 'node:child_process';
 import type { IncomingHttpHeaders } from 'node:http';
 
 import { match } from 'ts-pattern';
@@ -7,6 +6,7 @@ import { config } from '../../config';
 import { parseJson } from '../../utils/json';
 import type { Routine } from '../routine/types';
 import { withHookEnv } from '../run/hook-env';
+import { runShell } from '../run/shell';
 
 export const WEBHOOK_GATE_TIMEOUT_MS = 3_000;
 // EX_CONFIG: crashes exit with 1 or 2, never with this.
@@ -59,54 +59,28 @@ function toDecision(
     }));
 }
 
-export function decideWebhook(
+export async function decideWebhook(
   routine: Routine,
   request: WebhookRequest,
   timeoutMs = WEBHOOK_GATE_TIMEOUT_MS,
 ): Promise<WebhookGateDecision> {
   const body = request.body.toString('utf8');
   const gate = routine.webhookGate;
-  if (gate === null) return Promise.resolve({ outcome: 'run', payload: body });
-  return new Promise(resolve => {
-    const child = spawn('/bin/sh', ['-c', gate], {
-      cwd: config.projectRoot,
-      env: withHookEnv({
-        ...process.env,
-        KOMBINAT_ROUTINE: routine.name,
-        KOMBINAT_WEBHOOK_HEADERS: JSON.stringify(request.headers),
-      }),
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
-    const stdout: Buffer[] = [];
-    const stderr: Buffer[] = [];
-    child.stdout.on('data', (chunk: Buffer) => stdout.push(chunk));
-    child.stderr.on('data', (chunk: Buffer) => stderr.push(chunk));
-    let isTimedOut = false;
-    const timer = setTimeout(() => {
-      isTimedOut = true;
-      child.kill('SIGKILL');
-    }, timeoutMs);
-    child.on('error', error => {
-      clearTimeout(timer);
-      resolve({ outcome: 'reject', reason: `failed to start: ${error.message}` });
-    });
-    child.on('close', exitCode => {
-      clearTimeout(timer);
-      if (isTimedOut) {
-        resolve({ outcome: 'timeout' });
-        return;
-      }
-      resolve(
-        toDecision(
-          exitCode,
-          Buffer.concat(stdout).toString('utf8'),
-          Buffer.concat(stderr).toString('utf8'),
-          body,
-        ),
-      );
-    });
-    // The gate may exit before it reads the body.
-    child.stdin.on('error', () => undefined);
-    child.stdin.end(request.body);
+  if (gate === null) return { outcome: 'run', payload: body };
+  const result = await runShell({
+    command: gate,
+    cwd: config.projectRoot,
+    env: withHookEnv({
+      ...process.env,
+      KOMBINAT_ROUTINE: routine.name,
+      KOMBINAT_WEBHOOK_HEADERS: JSON.stringify(request.headers),
+    }),
+    input: request.body,
+    timeoutMs,
   });
+  if (result.startError !== null) {
+    return { outcome: 'reject', reason: `failed to start: ${result.startError}` };
+  }
+  if (result.isTimedOut) return { outcome: 'timeout' };
+  return toDecision(result.exitCode, result.stdout, result.stderr, body);
 }
