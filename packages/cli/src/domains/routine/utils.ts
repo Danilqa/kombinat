@@ -119,6 +119,7 @@ export function buildRoutine(file: string, source: string): Routine {
     timeoutMinutes:
       withFile(file, () => readNumber(data, 'timeoutMinutes')) ?? DEFAULT_TIMEOUT_MINUTES,
     before: readString(data, 'before'),
+    after: readString(data, 'after'),
     prompt: body,
     file,
   };

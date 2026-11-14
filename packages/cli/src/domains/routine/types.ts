@@ -14,6 +14,7 @@ export interface Routine extends AgentSettings {
   webhookGate: string | null;
   timeoutMinutes: number;
   before: string | null;
+  after: string | null;
   prompt: string;
   file: string;
 }

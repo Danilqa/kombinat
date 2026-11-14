@@ -1,6 +1,6 @@
 import { match } from 'ts-pattern';
 
-import type { TranscriptItem } from './types';
+import type { HookPhase, TranscriptItem } from './types';
 
 const PREVIEW_LENGTH = 160;
 
@@ -33,4 +33,11 @@ export function getModelFallbackReasonLabel(reason: string | null): string | nul
     .with('model_blocked', () => 'the model is turned off')
     .with('last_resort', () => 'the model failed')
     .otherwise(() => reason);
+}
+
+export function getHookLabel(phase: HookPhase): string {
+  return match(phase)
+    .with('before', () => 'Before hook')
+    .with('after', () => 'After hook')
+    .exhaustive();
 }
