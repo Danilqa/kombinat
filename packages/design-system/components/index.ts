@@ -1,5 +1,6 @@
 export * as Card from './card';
 export * as Collapsible from './collapsible';
+export * as Command from './command';
 export * as DropdownMenu from './dropdown-menu';
 export * as Popover from './popover';
 export * as Table from './table';
@@ -9,6 +10,7 @@ export * from './badge';
 export * from './button';
 export * from './code-block';
 export * from './detail-list';
+export * from './kbd';
 export * from './markdown';
 export * from './page-states';
 export * from './relative-time';

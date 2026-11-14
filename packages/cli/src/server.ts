@@ -11,7 +11,7 @@ import type { RoutineName, RunId } from 'domains/id/types';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import { RUNS_CURSOR_ERROR } from 'domains/run/constants';
 import type { RunRecord } from 'domains/run/types';
-import { paginateRuns, parseRunsPageQuery } from 'domains/run/utils';
+import { filterRuns, paginateRuns, parseRunsPageQuery } from 'domains/run/utils';
 import { getErrorMessage } from 'utils/error';
 
 import { config } from './config';
@@ -190,10 +190,10 @@ function getCalendar(url: URL): ApiResponse {
 function getRunsPage(url: URL): ApiResponse {
   const query = parseRunsPageQuery(url.searchParams);
   if (query === null) return fail(400, RUNS_CURSOR_ERROR);
-  if (query.routine === null) return ok(paginateRuns(listAllRuns(), query.cursor));
-  return withRoutine(query.routine, routine =>
-    ok(paginateRuns(listRuns(routine.name), query.cursor)),
-  );
+  const toPage = (runs: RunRecord[]) =>
+    ok(paginateRuns(filterRuns(runs, query.search), query.cursor));
+  if (query.routine === null) return toPage(listAllRuns());
+  return withRoutine(query.routine, routine => toPage(listRuns(routine.name)));
 }
 
 function routeApi(request: ApiRequest, context: ApiContext): ApiResponse | Promise<ApiResponse> {
