@@ -31,10 +31,7 @@ function AppLayout({ announcement, banner, footer }: AppLayoutProps) {
           tabIndex={-1}
           className="mx-auto max-w-[1180px] px-4 outline-none focus-visible:shadow-none sm:px-6"
         >
-          <div
-            key={pathname}
-            className="animate-in duration-300 ease-out-quint fade-in slide-in-from-bottom-2"
-          >
+          <div key={pathname} className="animate-in duration-150 ease-out-quint fade-in">
             <AppRoutes />
           </div>
         </main>
