@@ -1,6 +1,6 @@
 <img src=".github/assets/banner.png" alt="Kombinat: routines in your repo, run by AI agents 24/7" width="100%" />
 
-> Run Claude Code and Codex on a schedule.
+> Run agents on a schedule.
 
 <a href="https://danilqa.github.io/kombinat/"><img src=".github/assets/demo.gif" alt="The Kombinat dashboard: the routines, one routine's prompt, a run's transcript and the week calendar" width="100%" /></a>
 
@@ -34,12 +34,12 @@ Six of the routines in the [live demo](https://danilqa.github.io/kombinat/). Ope
 
 ## How it compares
 
-| Instead of                        | Kombinat gives you                                                                                                                        |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| Running Claude Code by hand       | The work happens on schedule, and nobody has to remember it.                                                                              |
-| Claude Code's own Routines        | Routines that live in git and go through review, run on your own machine with your local setup, and can use Codex or any other CLI agent. |
-| A cron job that calls `claude -p` | Run history, transcripts, timeouts, no overlapping runs, a dashboard and webhooks, without building them.                                 |
-| A scheduled CI workflow           | Agents that run where your logins, skills and MCP servers already are, on your subscription login.                                        |
+| Instead of                        | Kombinat gives you                                                                                                                             |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Running Claude Code by hand       | The work happens on schedule, and nobody has to remember it.                                                                                   |
+| Claude Code's own Routines        | Routines that live in git and go through review, run on a machine you control with your local setup, and can use Codex or any other CLI agent. |
+| A cron job that calls `claude -p` | Run history, transcripts, timeouts, no overlapping runs, a dashboard and webhooks, without building them.                                      |
+| A scheduled CI workflow           | Agents that run where your logins, skills and MCP servers already are, on your subscription login.                                             |
 
 ## Quickstart
 
