@@ -84,6 +84,12 @@ The domain map, definitions and invariants are in [packages/domains/README.md](p
 - Pages live in `src/features/<feature>/` next to their `.e2e.ts` specs. Files in a feature folder import each other by relative path; other imports inside `web-app` use the `@web-app/*` alias.
 - `src/index.css` imports the design-system stylesheet and adds `@source` for `domains`, so Tailwind sees the classes of domain components.
 
+### tui
+
+- `src/index.ts` starts the terminal with `runTui`, and `src/app.ts` is the shell: `TuiApp` holds the state, handles the keys and lays out the panels. `src/daemon-client.ts` reads the daemon through the domain requests, and `src/page-content.ts` holds the lines of the detail panel with their actions.
+- The routine and run pages and their list rows live in `src/features/routines/` and `src/features/runs/`, and the pieces that more than one of them uses, such as the box, the columns, the run status and the popups, in `src/components/`. Every import inside `tui` is a relative path.
+- `src/terminal/` is the terminal layer under them all: key parsing, spans and lines with their widths, the theme and markdown.
+
 ### website
 
 - `src/main.tsx` renders the web-app's `App`, exported as `web-app/app`, with this `customization`: the star bar of `src/layout/` as the `announcement` above the header, the swipeable cards of `src/features/welcome/` as the `banner` under the header of the routines page, the copyright as the `footer`, and "Demo routines" as the `routinesTitle` heading of that page. Vite builds it with the base `/kombinat/`, which the router takes as its basename, and the build copies `index.html` to `404.html` so that GitHub Pages opens deep links.
