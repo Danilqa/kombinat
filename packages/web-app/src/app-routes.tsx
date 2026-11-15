@@ -13,10 +13,14 @@ import { RoutinesPage } from '@web-app/features/routines/routines-page';
 import { RunPage } from '@web-app/features/runs/run-page';
 import { RunsPage } from '@web-app/features/runs/runs-page';
 
-export function AppRoutes() {
+interface AppRoutesProps {
+  routinesTitle: string;
+}
+
+export function AppRoutes({ routinesTitle }: AppRoutesProps) {
   return (
     <Routes>
-      <Route path={ROUTINES_PATH} element={<RoutinesPage />} />
+      <Route path={ROUTINES_PATH} element={<RoutinesPage title={routinesTitle} />} />
       <Route path={CALENDAR_PATH} element={<CalendarPage />} />
       <Route path={RUNS_PATH} element={<RunsPage />} />
       <Route path={ROUTINE_PATH} element={<RoutinePage />} />

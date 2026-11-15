@@ -12,7 +12,11 @@ function checkHasRunningRoutine(routines: RoutineSummary[] = []): boolean {
   return routines.some(routine => routine.running);
 }
 
-export function RoutinesPage() {
+interface RoutinesPageProps {
+  title: string;
+}
+
+export function RoutinesPage({ title }: RoutinesPageProps) {
   useDocumentTitle('Routines');
   const { data, error, isPending } = useQuery({
     queryKey: ['routines'],
@@ -23,7 +27,7 @@ export function RoutinesPage() {
   return (
     <div>
       <PageHeader.Root
-        title="Routines"
+        title={title}
         aside={data && <PageHeader.Aside>{data.length} routines</PageHeader.Aside>}
       />
       {error && <ErrorState message={error.message} />}

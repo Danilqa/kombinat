@@ -12,9 +12,10 @@ interface AppLayoutProps {
   announcement: ReactNode;
   banner: ReactNode;
   footer: ReactNode;
+  routinesTitle: string;
 }
 
-function AppLayout({ announcement, banner, footer }: AppLayoutProps) {
+function AppLayout({ announcement, banner, footer, routinesTitle }: AppLayoutProps) {
   useFocusMainOnNavigate(MAIN_ID);
   const { pathname } = useLocation();
   return (
@@ -32,7 +33,7 @@ function AppLayout({ announcement, banner, footer }: AppLayoutProps) {
           className="mx-auto max-w-[1180px] px-4 outline-none focus-visible:shadow-none sm:px-6"
         >
           <div key={pathname} className="animate-in duration-150 ease-out-quint fade-in">
-            <AppRoutes />
+            <AppRoutes routinesTitle={routinesTitle} />
           </div>
         </main>
       </div>
@@ -45,12 +46,23 @@ interface AppProps {
   announcement?: ReactNode;
   banner?: ReactNode;
   footer?: ReactNode;
+  routinesTitle?: string;
 }
 
-export function App({ announcement, banner, footer = <AppFooter /> }: AppProps) {
+export function App({
+  announcement,
+  banner,
+  footer = <AppFooter />,
+  routinesTitle = 'Routines',
+}: AppProps) {
   return (
     <AppProviders>
-      <AppLayout announcement={announcement} banner={banner} footer={footer} />
+      <AppLayout
+        announcement={announcement}
+        banner={banner}
+        footer={footer}
+        routinesTitle={routinesTitle}
+      />
     </AppProviders>
   );
 }
