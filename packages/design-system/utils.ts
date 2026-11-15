@@ -30,3 +30,7 @@ export function useDebouncedValue<Value>(value: Value, delayMs: number): Value {
   }, [value, delayMs]);
   return debounced;
 }
+
+export function checkPrefersReducedMotion(): boolean {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}

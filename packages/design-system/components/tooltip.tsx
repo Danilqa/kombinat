@@ -35,7 +35,7 @@ function TooltipContent({ className, sideOffset = 0, children, ...props }: Toolt
         data-slot="tooltip-content"
         sideOffset={sideOffset}
         className={cn(
-          'z-50 w-fit origin-(--radix-tooltip-content-transform-origin) animate-in rounded-lg border border-line bg-raised px-2.5 py-1.5 text-body-sm text-balance text-fg shadow-popover ease-out-quint fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=instant-open]:animate-none',
+          'z-50 w-fit origin-(--radix-tooltip-content-transform-origin) animate-in rounded-lg border border-line bg-raised px-2.5 py-1.5 text-body-sm text-balance text-fg shadow-popover ease-out-quint fade-in-0 zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:duration-100 data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=instant-open]:animate-none',
           className,
         )}
         {...props}

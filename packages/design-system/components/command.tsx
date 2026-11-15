@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Command as CommandPrimitive } from 'cmdk';
 import { cn } from '../utils';
+import { Spinner } from './spinner';
 import { Dialog as DialogPrimitive } from 'radix-ui';
 
 interface CommandDialogProps extends React.ComponentProps<typeof DialogPrimitive.Root> {
@@ -92,13 +93,18 @@ function CommandEmpty({ className, ...props }: CommandEmptyProps) {
 
 interface CommandLoadingProps extends React.ComponentProps<typeof CommandPrimitive.Loading> {}
 
-function CommandLoading({ className, ...props }: CommandLoadingProps) {
+function CommandLoading({ className, children, ...props }: CommandLoadingProps) {
   return (
     <CommandPrimitive.Loading
       data-slot="command-loading"
       className={cn('px-2.5 py-2 text-body text-fg-muted', className)}
       {...props}
-    />
+    >
+      <span className="flex items-center gap-2">
+        <Spinner />
+        {children}
+      </span>
+    </CommandPrimitive.Loading>
   );
 }
 
