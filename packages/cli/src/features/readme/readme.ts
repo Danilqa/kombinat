@@ -9,13 +9,17 @@ import { describeSchedule } from '../../domains/routine/utils';
 const START = '<!-- routines:start -->';
 const END = '<!-- routines:end -->';
 
-export function renderRoutinesTable(): string {
-  const rows = loadRoutines()
+export function renderRoutinesTable(
+  routinesDir = config.routinesDir,
+  readmeDir = path.dirname(routinesDir),
+): string {
+  const linkDir = path.relative(readmeDir, routinesDir);
+  const rows = loadRoutines(routinesDir)
     .sort(
       (a, b) =>
         Number(Boolean(b.schedule)) - Number(Boolean(a.schedule)) || a.name.localeCompare(b.name),
     )
-    .map(r => `| [${r.name}](routines/${r.name}.md) | ${describeWhen(r)} | ${r.description} |`);
+    .map(r => `| [${r.name}](${linkDir}/${r.name}.md) | ${describeWhen(r)} | ${r.description} |`);
   return ['| Routine | When | What it does |', '| - | - | - |', ...rows].join('\n');
 }
 
@@ -24,12 +28,18 @@ function describeWhen(routine: Routine): string {
   return routine.schedule === null ? 'On webhook' : `${describeSchedule(routine)} and on webhook`;
 }
 
-export function updateReadme(file = path.join(config.projectRoot, 'README.md')): boolean {
+export const renderRoutinesSection = (routinesDir = config.routinesDir): string =>
+  `${START}\n${renderRoutinesTable(routinesDir)}\n${END}`;
+
+export function updateReadme(
+  file = path.join(config.projectRoot, 'README.md'),
+  routinesDir = config.routinesDir,
+): boolean {
   const source = fs.readFileSync(file, 'utf8');
   const start = source.indexOf(START);
   const end = source.indexOf(END);
   if (start === -1 || end === -1) throw new Error(`README.md needs ${START} and ${END} markers`);
-  const next = `${source.slice(0, start + START.length)}\n${renderRoutinesTable()}\n${source.slice(end)}`;
+  const next = `${source.slice(0, start + START.length)}\n${renderRoutinesTable(routinesDir, path.dirname(file))}\n${source.slice(end)}`;
   if (next === source) return false;
   fs.writeFileSync(file, next);
   return true;

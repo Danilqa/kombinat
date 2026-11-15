@@ -111,11 +111,11 @@ jobs:
               throw new Error(`dist/cli.js imports ${[...new Set(unexpected)].join(", ")}`);
             }
           '
-      - name: Install the package in an empty project with the repo routines
+      - name: Install the package in an empty project with the example routines
         run: |
           project="$RUNNER_TEMP/project"
           mkdir -p "$project/routines"
-          cp routines/*.md "$project/routines/"
+          cp example/routines/*.md "$project/routines/"
           cd "$project"
           npm init -y > /dev/null
           npm install --no-audit --no-fund --loglevel=error "$TARBALL"

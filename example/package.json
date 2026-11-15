@@ -1,0 +1,6 @@
+{
+  "private": true,
+  "dependencies": {
+    "kombinat": "0.4.0"
+  }
+}

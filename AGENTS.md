@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Kombinat runs routines, markdown files in `routines/`, with AI agents on a schedule under launchd. This repo is a pnpm workspace: the published CLI and daemon, the browser and terminal dashboards, and the packages they share. The repo root is also a routines folder of its own.
+Kombinat runs routines, markdown files in `routines/`, with AI agents on a schedule under launchd. This repo is a pnpm workspace: the published CLI and daemon, the browser and terminal dashboards, and the packages they share. `example/` is a routines folder with the example routines, as `kombinat init` creates it.
 
 ## Packages
 
@@ -29,15 +29,15 @@ pnpm build                         # packages/cli/dist/cli.js and the dashboard 
 pnpm validate                      # format check, lint, typecheck and unit tests
 pnpm test:e2e                      # Playwright against a real daemon from this checkout
 pnpm --filter e2e run web-app:ui   # the same in Playwright's UI mode
-pnpm cli <command>                 # the CLI from source, with this checkout as the routines folder
+pnpm cli <command>                 # the CLI from source, with example/routines as the routines folder
 pnpm --filter website dev          # the demo site at http://localhost:5174/kombinat/
 ```
 
 `pnpm dev`, `pnpm cli install` and `pnpm cli uninstall` take over, rewrite or remove the launchd daemon of this Mac. Run them only when asked.
 
-The checkout scripts (`cli`, `serve`, `dev`, `tui` and their `:local` variants) stay in the root `package.json`. pnpm runs a script in its own package folder, and the CLI treats the nearest folder with a `package.json` as the routines folder, the launchd working directory and the folder it pulls.
+The checkout scripts (`cli`, `serve`, `dev`, `tui` and their `:local` variants) stay in the root `package.json`. pnpm runs a script in its own package folder, and the CLI treats the nearest folder with a `package.json` as the project: the launchd working directory and the folder it pulls. The scripts point `KOMBINAT_ROUTINES_DIR` at `example/routines`, whose files `packages/cli/src/domains/routine/examples.ts` repeats for `init`.
 
-To release, bump `version` in `packages/cli/package.json` and run `npm publish` in `packages/cli`. npm copies `package.json` as it is, so the `dependencies` of `cli` keep exact versions instead of `catalog:`.
+To release, bump `version` in `packages/cli/package.json` and the `kombinat` version in `example/package.json`, and run `npm publish` in `packages/cli`. npm copies `package.json` as it is, so the `dependencies` of `cli` keep exact versions instead of `catalog:`.
 
 `.github/workflows/ci.yml` runs each check of `pnpm validate`, the website build, the npm package check and the e2e tests as parallel jobs on every PR. The ruleset of `main` requires every job by its name, so a PR merges only once they all pass. When you add or rename a job, update the ruleset too.
 
@@ -74,7 +74,7 @@ The domain map, definitions and invariants are in [packages/domains/README.md](p
 ### cli
 
 - `src/cli.ts` holds the commands and `src/server.ts` the HTTP API and read models. `src/config.ts` stays one folder below the package root, which it finds from its own location.
-- `src/domains/` holds the daemon halves, `src/features/` connect, keep-awake, machine-usage, readme, self-update and service, and `src/utils/` json.
+- `src/domains/` holds the daemon halves, `src/features/` connect, init, keep-awake, machine-usage, readme, self-update and service, and `src/utils/` json and package-manager.
 - `bin/kombinat.js` runs `src/cli.ts` through tsx in a checkout and `dist/cli.js` when installed from npm. esbuild bundles the workspace packages and keeps only zod and ts-pattern external. An npm package that bundled code imports at runtime must be a `cli` dependency, on the esbuild external list and in the CI check of `dist/cli.js` imports.
 
 ### web-app

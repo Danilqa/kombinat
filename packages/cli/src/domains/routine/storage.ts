@@ -7,16 +7,17 @@ import { config } from '../../config';
 import type { Routine } from './types';
 import { buildRoutine } from './utils';
 
-export function loadRoutines(dir = config.routinesDir): Routine[] {
+export function listRoutineFiles(dir: string): string[] {
   if (!fs.existsSync(dir)) return [];
   return fs
     .readdirSync(dir)
     .filter(entry => entry.endsWith('.md'))
     .sort()
-    .map(entry => {
-      const file = path.join(dir, entry);
-      return buildRoutine(file, fs.readFileSync(file, 'utf8'));
-    });
+    .map(entry => path.join(dir, entry));
+}
+
+export function loadRoutines(dir = config.routinesDir): Routine[] {
+  return listRoutineFiles(dir).map(file => buildRoutine(file, fs.readFileSync(file, 'utf8')));
 }
 
 export function getRoutine(name: RoutineName, dir = config.routinesDir): Routine {
