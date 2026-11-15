@@ -8,13 +8,13 @@ One routine is one markdown file, so anyone on the team can write one. Merge it 
 
 ## Why
 
-- **Merging is the deploy.** A routine goes through review like code and is live within 5 minutes.
-- **Your setup, as is.** Agents run with your logins, skills, MCP servers, browser control and `CLAUDE.md`.
-- **No API bill.** Claude Code and Codex use the subscription you already pay for.
-- **Every run on record.** Full transcripts in the browser, in the terminal and on your phone.
-- **It stops when it should.** Timeouts, an optional budget cap and no overlapping runs.
-- **It starts on events too.** Linear, GitHub or any other app starts a routine with a webhook.
-- **Small.** One command, two dependencies, no cloud and no database.
+- 🔀 **Merging is the deploy.** A routine goes through review like code and is live within 5 minutes.
+- 🧰 **Your setup, as is.** Agents run with your logins, skills, MCP servers, browser control and `CLAUDE.md`.
+- 💸 **No API bill.** Claude Code and Codex use the subscription you already pay for.
+- 🧾 **Every run on record.** Full transcripts in the browser, in the terminal and on your phone.
+- ⏱️ **It stops when it should.** Timeouts, an optional budget cap and no overlapping runs.
+- 🪝 **It starts on events too.** Linear, GitHub or any other app starts a routine with a webhook.
+- 🪶 **Small.** One command, two dependencies, no cloud and no database.
 
 ## What to run
 
@@ -68,11 +68,11 @@ Example routines from the [live demo](https://danilqa.github.io/kombinat/).
 
 The daemon serves a dashboard at http://localhost:7433.
 
-- **Routines.**
-- **Calendar.**
-- **Runs.**
-- **Daemon status.**
-- **Search.**
+- 📋 **Routines.**
+- 📅 **Calendar.**
+- 📜 **Runs.**
+- 🩺 **Daemon status.**
+- 🔍 **Search.**
 
 ### In the terminal
 
