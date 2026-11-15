@@ -14,7 +14,7 @@ import type { ShellCommand } from './commands';
 import { formatInitSummary, initFolder } from './init';
 import type { InitOptions } from './init';
 
-const SPEC = `${PACKAGE_NAME}@^1.2.3`;
+const SPEC = `${PACKAGE_NAME}@1.2.3`;
 
 const ROUTINE_FILES = [
   'hello-example-routine.md',
@@ -87,7 +87,7 @@ test('fills an empty folder with package.json, example routines, a README and .g
   assert.deepEqual(result.kept, []);
   assert.equal(
     fs.readFileSync(path.join(folder, 'package.json'), 'utf8'),
-    `{\n  "private": true,\n  "dependencies": {\n    "${PACKAGE_NAME}": "^1.2.3"\n  }\n}\n`,
+    `{\n  "private": true,\n  "dependencies": {\n    "${PACKAGE_NAME}": "1.2.3"\n  }\n}\n`,
   );
   assert.deepEqual(fs.readdirSync(path.join(folder, 'routines')).sort(), ROUTINE_FILES);
   for (const example of EXAMPLE_ROUTINES) {
@@ -176,10 +176,12 @@ test('an existing package.json stays byte-identical and gets the add command', (
   const result = initFolder(folder, options);
   assert.equal(fs.readFileSync(path.join(folder, 'package.json'), 'utf8'), packageJson);
   assert.deepEqual(result.kept, ['package.json']);
-  assert.deepEqual(calls, [{ command: { command: 'npm', args: ['install', SPEC] }, cwd: folder }]);
+  assert.deepEqual(calls, [
+    { command: { command: 'npm', args: ['install', '--save-exact', SPEC] }, cwd: folder },
+  ]);
   const summary = formatInitSummary(result, folder);
   assert.match(summary, /Left as they are:\n {2}package\.json\n/);
-  assert.equal(summary.includes(`Ran npm install '${SPEC}'.`), true);
+  assert.equal(summary.includes(`Ran npm install --save-exact ${SPEC}.`), true);
 });
 
 test('a package.json that lists kombinat gets a plain install until it is installed', () => {
@@ -287,7 +289,9 @@ test('an existing project with pnpm-lock.yaml uses pnpm, whatever the user agent
   const folder = makeProject('pnpm-lock.yaml');
   const { calls, options } = record();
   const result = initFolder(folder, options);
-  assert.deepEqual(calls, [{ command: { command: 'pnpm', args: ['add', SPEC] }, cwd: folder }]);
+  assert.deepEqual(calls, [
+    { command: { command: 'pnpm', args: ['add', '--save-exact', SPEC] }, cwd: folder },
+  ]);
   assert.equal(result.manager.command, 'pnpm');
   const readme = fs.readFileSync(path.join(folder, 'README.md'), 'utf8');
   assert.equal(readme.includes('`pnpm kombinat serve`'), true);
@@ -300,7 +304,9 @@ test('an existing project with yarn.lock uses yarn, whatever the user agent says
   const folder = makeProject('yarn.lock');
   const { calls, options } = record();
   const result = initFolder(folder, options);
-  assert.deepEqual(calls, [{ command: { command: 'yarn', args: ['add', SPEC] }, cwd: folder }]);
+  assert.deepEqual(calls, [
+    { command: { command: 'yarn', args: ['add', '--exact', SPEC] }, cwd: folder },
+  ]);
   assert.equal(formatInitSummary(result, folder).includes('  yarn kombinat serve'), true);
 });
 
@@ -308,7 +314,9 @@ test('an existing project with package-lock.json uses npm, even when pnpm starte
   const folder = makeProject('package-lock.json');
   const { calls, options } = record({ userAgentManager: pnpmUserAgent() });
   const result = initFolder(folder, options);
-  assert.deepEqual(calls, [{ command: { command: 'npm', args: ['install', SPEC] }, cwd: folder }]);
+  assert.deepEqual(calls, [
+    { command: { command: 'npm', args: ['install', '--save-exact', SPEC] }, cwd: folder },
+  ]);
   assert.equal(formatInitSummary(result, folder).includes('  npx kombinat serve'), true);
 });
 
@@ -321,7 +329,9 @@ test('an existing package in a workspace uses the lockfile at the root of its gi
   fs.writeFileSync(path.join(folder, 'package.json'), '{"name":"routines"}');
   const { calls, options } = record();
   initFolder(folder, options);
-  assert.deepEqual(calls, [{ command: { command: 'pnpm', args: ['add', SPEC] }, cwd: folder }]);
+  assert.deepEqual(calls, [
+    { command: { command: 'pnpm', args: ['add', '--save-exact', SPEC] }, cwd: folder },
+  ]);
 });
 
 test('a fresh folder follows the user agent, even under a checkout with a lockfile', () => {
@@ -339,6 +349,8 @@ test('an existing project without a lockfile follows the user agent', () => {
   const folder = makeProject(null);
   const { calls, options } = record({ userAgentManager: pnpmUserAgent() });
   const result = initFolder(folder, options);
-  assert.deepEqual(calls, [{ command: { command: 'pnpm', args: ['add', SPEC] }, cwd: folder }]);
+  assert.deepEqual(calls, [
+    { command: { command: 'pnpm', args: ['add', '--save-exact', SPEC] }, cwd: folder },
+  ]);
   assert.equal(result.manager.command, 'pnpm');
 });

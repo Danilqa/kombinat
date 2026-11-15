@@ -15,7 +15,7 @@ export function getInstallCommand(
 ): ShellCommand {
   return {
     command: manager.command,
-    args: packageSpec === null ? ['install'] : [manager.add, packageSpec],
+    args: packageSpec === null ? ['install'] : [manager.add, manager.exact, packageSpec],
   };
 }
 

@@ -5,6 +5,7 @@ export interface PackageManager {
   command: string;
   install: string[];
   add: string;
+  exact: string;
   runner: string;
   lockfile: string;
   marker: string;
@@ -19,6 +20,7 @@ const PNPM: PackageManager = {
   command: 'pnpm',
   install: ['-s', 'install', '--frozen-lockfile'],
   add: 'add',
+  exact: '--save-exact',
   runner: 'pnpm',
   lockfile: 'pnpm-lock.yaml',
   marker: '.modules.yaml',
@@ -29,6 +31,7 @@ const NPM: PackageManager = {
   command: 'npm',
   install: ['install', '--no-audit', '--no-fund', '--loglevel=error'],
   add: 'install',
+  exact: '--save-exact',
   runner: 'npx',
   lockfile: 'package-lock.json',
   marker: '.package-lock.json',
@@ -39,6 +42,7 @@ const YARN: PackageManager = {
   command: 'yarn',
   install: ['install', '--frozen-lockfile'],
   add: 'add',
+  exact: '--exact',
   runner: 'yarn',
   lockfile: 'yarn.lock',
   marker: '.yarn-integrity',

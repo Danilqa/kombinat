@@ -30,7 +30,7 @@ Ready to use in your organisation or at home.
    npx kombinat init my-routines   # or: pnpm dlx kombinat init my-routines
    ```
 
-   It creates `package.json`, three example routines in `routines/`, `README.md` and `.gitignore`, then installs the dependencies and prints the next commands. It never overwrites a file, only adds what is missing. In an existing repository, run it in the root without a folder name and with the repository's own package manager, since npm can refuse to run in a pnpm project. It adds the package with the package manager of the lockfile it finds, otherwise with the one that started it.
+   It creates `package.json`, three example routines in `routines/`, `README.md` and `.gitignore`, then installs the dependencies and prints the next commands. It never overwrites a file, only adds what is missing. In an existing repository, run it in the root without a folder name and with the repository's own package manager, since npm can refuse to run in a pnpm project. It pins the exact version of the package and adds it with the package manager of the lockfile it finds, otherwise with the one that started it.
 
 2. Try the hello routine.
 

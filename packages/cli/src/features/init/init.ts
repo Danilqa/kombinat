@@ -73,12 +73,11 @@ function checkListsKombinat(file: string): boolean {
   );
 }
 
-const getVersionRange = (version: string | undefined): string =>
-  version === undefined ? 'latest' : `^${version}`;
+const getVersionSpec = (version: string | undefined): string => version ?? 'latest';
 
 const renderPackageJson = (version: string | undefined): string =>
   `${JSON.stringify(
-    { private: true, dependencies: { [PACKAGE_NAME]: getVersionRange(version) } },
+    { private: true, dependencies: { [PACKAGE_NAME]: getVersionSpec(version) } },
     null,
     2,
   )}\n`;
@@ -117,7 +116,7 @@ function planInstall(
 ): ShellCommand | null {
   if (!hadPackageJson) return getInstallCommand(manager, null);
   if (!checkListsKombinat(path.join(folder, 'package.json'))) {
-    return getInstallCommand(manager, `${PACKAGE_NAME}@${getVersionRange(version)}`);
+    return getInstallCommand(manager, `${PACKAGE_NAME}@${getVersionSpec(version)}`);
   }
   if (fs.existsSync(path.join(folder, 'node_modules', PACKAGE_NAME))) return null;
   return getInstallCommand(manager, null);

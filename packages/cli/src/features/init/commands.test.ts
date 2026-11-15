@@ -5,7 +5,7 @@ import { PACKAGE_NAME } from '../../config';
 import { detectPackageManager } from '../../utils/package-manager';
 import { formatCommand, getInstallCommand, getKombinatCommand } from './commands';
 
-const SPEC = `${PACKAGE_NAME}@^1.2.3`;
+const SPEC = `${PACKAGE_NAME}@1.2.3`;
 
 test('gives each package manager its install, add and run commands', () => {
   const commands = ['npm/11', 'pnpm/11', 'yarn/4', 'unknown/1'].map(userAgent => {
@@ -17,17 +17,17 @@ test('gives each package manager its install, add and run commands', () => {
     ];
   });
   assert.deepEqual(commands, [
-    ['npm install', `npm install '${SPEC}'`, 'npx kombinat'],
-    ['pnpm install', `pnpm add '${SPEC}'`, 'pnpm kombinat'],
-    ['yarn install', `yarn add '${SPEC}'`, 'yarn kombinat'],
-    ['npm install', `npm install '${SPEC}'`, 'npx kombinat'],
+    ['npm install', `npm install --save-exact ${SPEC}`, 'npx kombinat'],
+    ['pnpm install', `pnpm add --save-exact ${SPEC}`, 'pnpm kombinat'],
+    ['yarn install', `yarn add --exact ${SPEC}`, 'yarn kombinat'],
+    ['npm install', `npm install --save-exact ${SPEC}`, 'npx kombinat'],
   ]);
 });
 
-test('passes the package spec to the package manager unquoted', () => {
+test('adds the package with the exact flag of the package manager', () => {
   assert.deepEqual(getInstallCommand(detectPackageManager('pnpm/11'), SPEC), {
     command: 'pnpm',
-    args: ['add', SPEC],
+    args: ['add', '--save-exact', SPEC],
   });
 });
 
