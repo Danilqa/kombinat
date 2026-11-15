@@ -272,7 +272,7 @@ export function WelcomeBanner() {
           <p>
             One routine – one markdown file. Just merge it and it is live. Any Mac or Linux machine
             then runs it with <strong>Claude Code</strong>, <strong>Codex</strong> or any shell
-            command, on the subscription you already pay for. This is a live demo of its dashboard.
+            command, on the subscription you already pay for.
           </p>
         </WelcomeCard>
       ),

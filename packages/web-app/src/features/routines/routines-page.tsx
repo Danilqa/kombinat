@@ -5,6 +5,7 @@ import { getRoutines } from 'domains/routine/requests';
 import type { RoutineSummary } from 'domains/routine/types';
 import { sameOriginApi } from 'utils/http';
 import { getPollInterval } from 'utils/polling';
+import { useCustomization } from '@web-app/contexts';
 import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 import { RoutinesTable } from './routines-table';
 
@@ -14,6 +15,7 @@ function checkHasRunningRoutine(routines: RoutineSummary[] = []): boolean {
 
 export function RoutinesPage() {
   useDocumentTitle('Routines');
+  const { routinesTitle = 'Routines' } = useCustomization();
   const { data, error, isPending } = useQuery({
     queryKey: ['routines'],
     queryFn: () => getRoutines(sameOriginApi),
@@ -23,7 +25,7 @@ export function RoutinesPage() {
   return (
     <div>
       <PageHeader.Root
-        title="Routines"
+        title={routinesTitle}
         aside={data && <PageHeader.Aside>{data.length} routines</PageHeader.Aside>}
       />
       {error && <ErrorState message={error.message} />}
