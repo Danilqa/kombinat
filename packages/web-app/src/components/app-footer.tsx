@@ -36,7 +36,7 @@ interface AppFooterProps {
 
 export function AppFooter({ children }: AppFooterProps) {
   return (
-    <footer className="mx-auto flex max-w-[1180px] flex-col items-center gap-5 px-4 pb-10 sm:px-6">
+    <footer className="mx-auto flex w-full max-w-[1180px] flex-col items-center gap-5 px-4 pb-10 sm:px-6">
       <span
         aria-hidden="true"
         className="h-px w-full max-w-md bg-linear-to-r from-transparent via-line-strong to-transparent"

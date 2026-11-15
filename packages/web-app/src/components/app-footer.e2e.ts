@@ -12,3 +12,15 @@ test('the footer shows the version of the daemon, the copyright and a link to Gi
     'https://github.com/Danilqa/kombinat',
   );
 });
+
+test('the footer stays at the bottom of the window when the page is short', async ({
+  kombinat,
+  page,
+}) => {
+  kombinat.addRoutine({ name: 'triage-sentry' });
+  await page.goto('/');
+
+  await expect(page.getByRole('row', { name: /triage-sentry/ })).toBeVisible();
+  const footer = await page.getByRole('contentinfo').boundingBox();
+  expect(footer && footer.y + footer.height).toBe(page.viewportSize()?.height);
+});
