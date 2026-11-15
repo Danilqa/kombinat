@@ -1,0 +1,53 @@
+import { formatRelativeCompact, formatSpan } from 'utils/date-time';
+
+import type { Overview } from '../daemon-client';
+import { S, text } from '../terminal/text';
+import type { Line } from '../terminal/text';
+
+export function statusLines(
+  overview: Overview | null,
+  error: string | null,
+  loadedAt: number | null,
+  now: number,
+): Line[] {
+  if (error) {
+    return [
+      [text('✗ ', S.red), text('daemon not reachable', S.boldRed)],
+      [
+        text(
+          loadedAt
+            ? `showing data from ${formatRelativeCompact(new Date(loadedAt).toISOString(), now)}`
+            : 'is it running? check with the status command',
+          S.dim,
+        ),
+      ],
+    ];
+  }
+  if (!overview) return [[text('connecting…', S.dim)]];
+  const { status } = overview;
+  return [
+    [
+      text('● ', S.green),
+      text('daemon', S.bold),
+      text(` pid ${status.pid}`, S.dim),
+      text(' · ', S.dim),
+      text(`up ${formatSpan(now - new Date(status.startedAt).getTime())}`, S.dim),
+    ],
+    [
+      text('tick '),
+      text(formatRelativeCompact(status.lastTickAt, now), S.cyan),
+      text(' · ', S.dim),
+      text(
+        `${status.running}/${status.maxConcurrentRuns} running`,
+        status.running > 0 ? S.boldYellow : undefined,
+      ),
+      text(' · ', S.dim),
+      text(status.timezone, S.magenta),
+    ],
+  ];
+}
+
+export function formatCopyright(version: string | undefined, now: number): string {
+  const copyright = `© ${new Date(now).getFullYear()}`;
+  return version === undefined ? copyright : `v${version} · ${copyright}`;
+}
