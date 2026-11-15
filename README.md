@@ -1,12 +1,12 @@
 <img src=".github/assets/banner.png" alt="Kombinat: routines in your repo, run by AI agents 24/7" width="100%" />
 
-> Run agents on a schedule or webhook, from markdown files in your repo. On any machine and the plan you already pay for.
+> ✨ Run agents on a schedule or webhook, from markdown files in your repo. On any machine and the plan you already pay for.
 
 One routine is one markdown file, so anyone on the team can write one. Merge it and it is live: a Mac or Linux machine that stays on runs it with Claude Code, Codex or any other CLI agent. Open source (MIT).
 
-[Live demo](https://danilqa.github.io/kombinat/) · [50-second video](https://www.youtube.com/watch?v=18VfIsc5RDE) · [Quickstart](#quickstart) · [What to run](#what-to-run)
+[Live demo](https://danilqa.github.io/kombinat/) · [50-second video](https://www.youtube.com/watch?v=18VfIsc5RDE) · [Quickstart](#-quickstart) · [What to run](#-what-to-run)
 
-## Why
+## 💡 Why
 
 - **Merging is the deploy.** A routine goes through review like code and is live within 5 minutes.
 - **Your setup, as is.** Agents run with your logins, skills, MCP servers, browser control and `CLAUDE.md`.
@@ -16,7 +16,7 @@ One routine is one markdown file, so anyone on the team can write one. Merge it 
 - **It starts on events too.** Linear, GitHub or any other app starts a routine with a webhook.
 - **Small.** One command, two dependencies, no cloud and no database.
 
-## What to run
+## 🤖 What to run
 
 Example routines from the [live demo](https://danilqa.github.io/kombinat/).
 
@@ -32,7 +32,7 @@ Example routines from the [live demo](https://danilqa.github.io/kombinat/).
 | [support-signals](https://danilqa.github.io/kombinat/routines/support-signals)                 | Daily at 18:00                                        | Turns the day's support chats into product signals             |
 | [write-release-notes](https://danilqa.github.io/kombinat/routines/write-release-notes)         | Manual                                                | Drafts release notes from what was merged since the last tag   |
 
-## How it compares
+## 🆚 How it compares
 
 | Instead of                        | Kombinat gives you                                                                                                                             |
 | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -41,7 +41,7 @@ Example routines from the [live demo](https://danilqa.github.io/kombinat/).
 | A cron job that calls `claude -p` | Run history, transcripts, timeouts, no overlapping runs, catch-up after sleep, a dashboard and webhooks, without building them.                |
 | A scheduled CI workflow           | Agents that run where your logins, skills and MCP servers already are, on your subscription login.                                             |
 
-## Quickstart
+## 🚀 Quickstart
 
 1. Create a folder with example routines.
 
@@ -60,9 +60,9 @@ Example routines from the [live demo](https://danilqa.github.io/kombinat/).
 
    Open http://localhost:7433. To keep it running in the background and after reboots, stop it and run `npx kombinat install`.
 
-3. Add your own routines to `routines/`, see [Writing a routine](#writing-a-routine). No restart needed.
+3. Add your own routines to `routines/`, see [Writing a routine](#-writing-a-routine). No restart needed.
 
-## Monitoring
+## 📊 Monitoring
 
 <img src=".github/assets/dashboard.png" alt="Kombinat dashboard: routines list, week calendar and a run transcript" width="100%" />
 
@@ -80,7 +80,7 @@ The daemon serves a dashboard at http://localhost:7433.
 
 `pnpm kombinat tui` shows the same in the terminal. It works over ssh. Press `?` for keys.
 
-## Remote access
+## 🌐 Remote access
 
 ### Over SSH
 
@@ -107,7 +107,7 @@ The dashboard is then at `https://mac-mini.<your-tailnet>.ts.net`, and `npx komb
 
 Everyone who can reach the Mac in your tailnet can then read transcripts and start routines. To limit that, allow only some people to reach port 443 of the Mac in your [Tailscale access rules](https://tailscale.com/kb/1018/acls).
 
-## Example routines
+## 📚 Example routines
 
 One row per file in [`example/routines/`](example/routines/). Put the same `routines:start` and `routines:end` comments in your own README, and `pnpm kombinat readme` keeps a table like this one up to date.
 
@@ -121,7 +121,7 @@ One row per file in [`example/routines/`](example/routines/). Put the same `rout
 <!-- routines:end -->
 <!-- prettier-ignore-end -->
 
-## How it works
+## 🧩 How it works
 
 - Each routine is a markdown file. The frontmatter sets the schedule and settings, the body is the prompt.
 - A small daemon checks every 30 seconds which routines are due and starts their agent. It also serves a dashboard at http://localhost:7433.
@@ -129,16 +129,16 @@ One row per file in [`example/routines/`](example/routines/). Put the same `rout
 - Logs and run history are stored in `~/.kombinat/`.
 - Claude and Codex use your subscription login. API key variables are removed from their environment.
 
-## Security
+## 🔒 Security
 
-- The dashboard listens on localhost only and has no login, so other users of the machine can reach it. Web pages from other sites cannot start runs through it. To open it from another machine, use SSH or Tailscale Serve and limit who can reach it, see [Remote access](#remote-access).
+- The dashboard listens on localhost only and has no login, so other users of the machine can reach it. Web pages from other sites cannot start runs through it. To open it from another machine, use SSH or Tailscale Serve and limit who can reach it, see [Remote access](#-remote-access).
 - Each routine sets its own permission mode, see [Agents](#agents). By default Claude Code is denied anything that needs approval, and Codex writes only in its workspace. `bypassPermissions` and `danger-full-access` let the agent do anything your user can.
 - A routine that reads outside text, such as issues, support chats or a webhook body, can be steered by that text. Give it the narrowest permissions, let it open pull requests but not merge them, and check webhook requests with a [`webhookGate`](docs/webhook.md#gate).
 - The daemon runs `git pull` every 5 minutes and installs dependencies when the lockfile changes, so protect `main` with review.
 - No telemetry. The daemon makes no network calls of its own, only what it starts does: git, your package manager, the agents and your routines' commands. The dashboard loads its fonts from Google Fonts.
 - Check the terms of your plan before a team shares one subscription login.
 
-## Setup
+## 📦 Setup
 
 You need Node 24 and the agents your routines use, logged in: Claude Code (`claude auth status`) and Codex (`codex login`). From the folder with `routines/` and `package.json`:
 
@@ -149,7 +149,7 @@ pnpm kombinat install
 
 This starts the daemon in that folder, under launchd on macOS or as a systemd user service on Linux, see [docs/linux.md](docs/linux.md). Open http://localhost:7433. There is one daemon per user, so running `install` in another folder moves it there.
 
-## Commands
+## 💻 Commands
 
 Run them from the same folder. With npm, use `npx kombinat` instead of `pnpm kombinat`, with Yarn `yarn kombinat`.
 
@@ -164,7 +164,7 @@ pnpm kombinat readme         # update the routines table in README.md
 pnpm kombinat uninstall      # stop and remove the daemon
 ```
 
-## Writing a routine
+## 📝 Writing a routine
 
 ```markdown
 ---
@@ -212,18 +212,18 @@ Changes apply on the next check, no restart needed. Write the prompt so the agen
 
 A setting the agent does not support fails validation.
 
-## Scheduling
+## ⏰ Scheduling
 
 - On macOS, the installed daemon keeps the Mac awake while it is on power. On battery the Mac sleeps as usual, and a laptop with a closed lid can still sleep. macOS has a system-wide switch that turns sleep off, `sudo pmset -a disablesleep 1`, which Kombinat does not touch.
 - If the Mac was asleep, each routine runs once for its latest missed time, up to 7 days back.
 - A routine never runs twice at the same time. If it is still running at its next time, that run is skipped.
 - At most 3 routines run at once.
 
-## Webhooks
+## 🪝 Webhooks
 
 A routine with `webhook: true` also runs when another app, such as Linear or GitHub, sends it a request. The request body goes into the prompt, an optional `webhookGate` command checks and filters requests, and requests that arrive while the routine runs wait in a queue. See [docs/webhook.md](docs/webhook.md).
 
-## Updating
+## 🔄 Updating
 
 The daemon runs `git pull` in the folder every 5 minutes, so merged changes go live on their own. It only pulls when the checkout is on `main` with no local changes.
 
@@ -231,7 +231,7 @@ To update Kombinat, bump `kombinat` in `package.json`, for example with a Renova
 
 Up to 0.2.2, Kombinat was published as `@danilqa/kombinat`. To move to `kombinat`, replace the dependency in `package.json`, install it and run `pnpm kombinat install` again. Until then the launchd job of the daemon points into the old package folder, which the install removes, so the daemon does not pick up the new version or start again after a reboot.
 
-## Configuration
+## 🔧 Configuration
 
 | Variable                  | Default               | What                                   |
 | ------------------------- | --------------------- | -------------------------------------- |
