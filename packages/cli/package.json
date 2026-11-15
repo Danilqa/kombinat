@@ -2,7 +2,7 @@
   "name": "kombinat",
   "version": "0.4.0",
   "type": "module",
-  "description": "Run Claude Code and Codex on a schedule, from markdown files in your repo. Open source, on any Mac or Linux machine and the plan you already pay for.",
+  "description": "Run agents on a schedule or webhook, from markdown files in your repo. On any machine and the plan you already pay for.",
   "keywords": [
     "ai",
     "agents",
