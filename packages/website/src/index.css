@@ -8,9 +8,9 @@
   --animate-icon-pop: icon-pop 0.5s var(--ease-out-quint-value) 0.4s 1;
   --animate-cursor-blink: cursor-blink 1.6s steps(1, end) 0.4s 1;
   --animate-bucket-hop: bucket-hop 1.1s ease-in-out 0.4s 1;
-  --animate-title-flow: title-flow 12s linear infinite;
-  --animate-glow-drift: glow-drift 16s ease-in-out infinite;
-  --animate-glow-drift-offset: glow-drift 16s ease-in-out -8s infinite;
+  --animate-title-flow: title-flow 6s linear infinite;
+  --animate-glow-drift: glow-drift 9s ease-in-out infinite;
+  --animate-glow-drift-offset: glow-drift 9s ease-in-out -4.5s infinite;
 
   @keyframes hand-wave {
     0%,
