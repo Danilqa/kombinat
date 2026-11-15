@@ -18,7 +18,7 @@ One routine is one markdown file, so anyone on the team can write one. Merge it 
 
 ## What to run
 
-Routines from the [live demo](https://danilqa.github.io/kombinat/). Open one to read its full prompt and see sample runs.
+Example routines from the [live demo](https://danilqa.github.io/kombinat/). Open one to read its full prompt and see sample runs.
 
 | Routine                                                                                        | When                                                  | What it does                                                   |
 | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------- |
