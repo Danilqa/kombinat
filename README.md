@@ -107,9 +107,9 @@ The dashboard is then at `https://mac-mini.<your-tailnet>.ts.net`, and `npx komb
 
 Everyone who can reach the Mac in your tailnet can then read transcripts and start routines. To limit that, allow only some people to reach port 443 of the Mac in your [Tailscale access rules](https://tailscale.com/kb/1018/acls).
 
-## Routines
+## Example routines
 
-The example routines of this repository, one row per file in [`example/routines/`](example/routines/). Put the same `routines:start` and `routines:end` comments in your own README, and `pnpm kombinat readme` keeps a table like this one up to date.
+One row per file in [`example/routines/`](example/routines/). Put the same `routines:start` and `routines:end` comments in your own README, and `pnpm kombinat readme` keeps a table like this one up to date.
 
 <!-- prettier-ignore-start -->
 <!-- routines:start -->
