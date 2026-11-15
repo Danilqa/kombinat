@@ -18,8 +18,8 @@ function AppLayout({ announcement, banner, footer }: AppLayoutProps) {
   useFocusMainOnNavigate(MAIN_ID);
   const { pathname } = useLocation();
   return (
-    <>
-      <div className="pb-20">
+    <div className="flex min-h-dvh flex-col">
+      <div className="flex-1 pb-20">
         <a href={`#${MAIN_ID}`} className="skip-link">
           Skip to content
         </a>
@@ -37,7 +37,7 @@ function AppLayout({ announcement, banner, footer }: AppLayoutProps) {
         </main>
       </div>
       {footer}
-    </>
+    </div>
   );
 }
 
