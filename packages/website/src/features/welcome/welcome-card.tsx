@@ -11,6 +11,18 @@ const GLOW_CLASSES: Record<WelcomeGlow, string> = {
   sky: 'bg-[radial-gradient(closest-side,rgba(107,156,255,0.16),transparent)]',
 };
 
+const GLOW_PARTNERS: Record<WelcomeGlow, WelcomeGlow> = {
+  lavender: 'peach',
+  peach: 'lavender',
+  mint: 'sky',
+  sky: 'lavender',
+};
+
+const GLOW_BASE_CLASS = 'pointer-events-none absolute -top-48 -right-32 size-[560px] rounded-full';
+
+const PLAY_WHILE_ACTIVE_CLASS =
+  '[animation-play-state:paused] group-data-active/slide:[animation-play-state:running]';
+
 interface WelcomeCardProps {
   label: string;
   icon: LucideIcon;
@@ -39,8 +51,19 @@ export function WelcomeCard({
       <div
         aria-hidden="true"
         className={cn(
-          'pointer-events-none absolute -top-48 -right-32 size-[560px] rounded-full',
+          GLOW_BASE_CLASS,
+          'animate-glow-drift',
+          PLAY_WHILE_ACTIVE_CLASS,
           GLOW_CLASSES[glow],
+        )}
+      />
+      <div
+        aria-hidden="true"
+        className={cn(
+          GLOW_BASE_CLASS,
+          'animate-glow-drift-offset opacity-70 motion-reduce:hidden',
+          PLAY_WHILE_ACTIVE_CLASS,
+          GLOW_CLASSES[GLOW_PARTNERS[glow]],
         )}
       />
       <div
@@ -56,7 +79,12 @@ export function WelcomeCard({
             </span>
             {label}
           </span>
-          <h2 className="bg-linear-to-r from-[#b9a8ff] via-[#d8a7d0] to-[#f5a97f] bg-clip-text pb-0.5 text-[24px] leading-[30px] font-semibold tracking-[-0.02em] text-transparent sm:text-[28px] sm:leading-[34px]">
+          <h2
+            className={cn(
+              'animate-title-flow bg-[linear-gradient(90deg,#b9a8ff,#d8a7d0,#f5a97f,#d8a7d0,#b9a8ff)] bg-size-[200%_100%] bg-clip-text pb-0.5 text-[24px] leading-[30px] font-semibold tracking-[-0.02em] text-transparent sm:text-[28px] sm:leading-[34px]',
+              PLAY_WHILE_ACTIVE_CLASS,
+            )}
+          >
             {title}
           </h2>
           <div className="max-w-[56ch] text-body text-fg-secondary [&_strong]:font-medium [&_strong]:text-fg">
