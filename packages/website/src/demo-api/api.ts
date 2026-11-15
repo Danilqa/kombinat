@@ -2,10 +2,10 @@ import { isMatching, match, P } from 'ts-pattern';
 
 import { buildCalendar } from 'domains/calendar/utils';
 import type { DaemonStatus } from 'domains/daemon/types';
-import { routineNameSchema, runIdSchema } from 'domains/id/schemas';
-import type { RoutineName } from 'domains/id/types';
+import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import { RUNS_CURSOR_ERROR } from 'domains/run/constants';
+import { runIdSchema } from 'domains/run/ids';
 import type { RunRecord } from 'domains/run/types';
 import { createRunId, filterRuns, paginateRuns, parseRunsPageQuery } from 'domains/run/utils';
 import type { QueuedWebhook } from 'domains/webhook/types';

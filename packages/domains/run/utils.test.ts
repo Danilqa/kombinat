@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { routineNameSchema, runIdSchema } from '../id/schemas';
+import { routineNameSchema } from '../routine/ids';
+import { runIdSchema } from './ids';
 import { makeRunRecord } from './mocks';
 import type { RunRecord, RunsPage } from './types';
 import {

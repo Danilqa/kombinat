@@ -1,7 +1,8 @@
 import { isMatching, match, P } from 'ts-pattern';
 
-import type { RoutineName, RunId } from 'domains/id/types';
+import type { RoutineName } from 'domains/routine/ids';
 import type { RoutineDetail } from 'domains/routine/types';
+import type { RunId } from 'domains/run/ids';
 import type { RunRecord, RunsPage, RunWithTranscript } from 'domains/run/types';
 import type { TranscriptItem } from 'domains/transcript/types';
 import { formatRelativeCompact } from 'utils/date-time';

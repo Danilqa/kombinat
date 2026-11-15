@@ -2,14 +2,13 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router';
 import { Card, ErrorState, LoadingState, Markdown, Tabs } from 'design-system/components';
 import { PageHeader, SectionHeader } from 'design-system/layouts';
-import { routineNameSchema } from 'domains/id/schemas';
-import type { RoutineName } from 'domains/id/types';
 import {
   RoutineBadges,
   RoutineDetailList,
   RunNowButton,
   WebhookQueueButton,
 } from 'domains/routine/components';
+import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
 import { getRoutine } from 'domains/routine/requests';
 import type { RoutineDetail } from 'domains/routine/types';
 import { SkipsTable } from 'domains/scheduler/components';

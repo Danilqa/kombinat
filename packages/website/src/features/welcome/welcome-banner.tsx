@@ -22,7 +22,7 @@ import { useRef, useState, type ComponentProps, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router';
 import { Button } from 'design-system/components';
 import { cn } from 'design-system/utils';
-import { routineNameSchema } from 'domains/id/schemas';
+import { routineNameSchema } from 'domains/routine/ids';
 import { CALENDAR_PATH, ROUTINES_PATH, RUNS_PATH, getRoutinePath } from 'web-app/constants/path';
 import { NPM_URL, REPO_URL } from '../../constants';
 import { demoRoutines } from '../../demo-api/routines';

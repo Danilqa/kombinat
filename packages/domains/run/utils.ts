@@ -2,9 +2,9 @@ import { match } from 'ts-pattern';
 
 import { checkMatchesSearch } from 'utils/search';
 
-import { routineNameSchema, runIdSchema } from '../id/schemas';
-import type { RunId } from '../id/types';
+import { routineNameSchema } from '../routine/ids';
 import { RUNS_PAGE_SIZE } from './constants';
+import { runIdSchema, type RunId } from './ids';
 import { runsCursorKeySchema, runsCursorSchema } from './schemas';
 import type {
   RunRecord,

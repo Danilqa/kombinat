@@ -8,8 +8,8 @@ import type { TestContext } from 'node:test';
 import { isMatching } from 'ts-pattern';
 import { z } from 'zod';
 
-import { routineNameSchema, runIdSchema } from 'domains/id/schemas';
-import type { RunId } from 'domains/id/types';
+import { routineNameSchema } from 'domains/routine/ids';
+import { runIdSchema, type RunId } from 'domains/run/ids';
 import { runRecordSchema } from 'domains/run/schemas';
 import type { RunRecord } from 'domains/run/types';
 

@@ -15,14 +15,15 @@ import { Link } from 'react-router';
 import { match } from 'ts-pattern';
 import { Button, DropdownMenu, ErrorState } from 'design-system/components';
 import { cn } from 'design-system/utils';
+import type { CalendarEntryId } from 'domains/calendar/ids';
 import { getCalendar } from 'domains/calendar/requests';
 import type { CalendarEntry } from 'domains/calendar/types';
-import type { CalendarEntryId, RoutineName } from 'domains/id/types';
 import {
   countOverlapPairs,
   getCalendarEntryOverlapLabel,
   getCalendarEntryTitle,
 } from 'domains/calendar/utils';
+import type { RoutineName } from 'domains/routine/ids';
 import type { RunStatus } from 'domains/run/types';
 import { formatClock, formatDayMonth, formatWeekday } from 'utils/date-time';
 import { sameOriginApi } from 'utils/http';

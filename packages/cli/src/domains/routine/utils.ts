@@ -2,7 +2,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import type { AgentName } from 'domains/agent/types';
-import { routineNameSchema } from 'domains/id/schemas';
+import { routineNameSchema } from 'domains/routine/ids';
 import { describeCron, nextCronRun, parseCron } from 'utils/cron';
 import { getErrorMessage } from 'utils/error';
 

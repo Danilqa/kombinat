@@ -3,8 +3,8 @@ import { parseArgs } from 'node:util';
 
 import { isMatching, match } from 'ts-pattern';
 
-import { routineNameSchema, runIdSchema } from 'domains/id/schemas';
-import type { RunId } from 'domains/id/types';
+import { routineNameSchema } from 'domains/routine/ids';
+import { runIdSchema, type RunId } from 'domains/run/ids';
 import { runTriggerSchema } from 'domains/run/schemas';
 import type { RunTrigger } from 'domains/run/types';
 import { runTui } from 'tui';

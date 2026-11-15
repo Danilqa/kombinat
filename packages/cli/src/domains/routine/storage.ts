@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import type { RoutineName } from 'domains/id/types';
+import type { RoutineName } from 'domains/routine/ids';
 
 import { config } from '../../config';
 import type { Routine } from './types';

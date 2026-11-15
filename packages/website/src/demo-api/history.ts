@@ -1,8 +1,9 @@
 import { isMatching, match, P } from 'ts-pattern';
 
+import { sessionIdSchema, type SessionId } from 'domains/agent/ids';
 import type { AgentName } from 'domains/agent/types';
-import { runIdSchema, sessionIdSchema } from 'domains/id/schemas';
-import type { RoutineName, RunId, SessionId } from 'domains/id/types';
+import type { RoutineName } from 'domains/routine/ids';
+import { runIdSchema, type RunId } from 'domains/run/ids';
 import type { RunRecord, RunTrigger } from 'domains/run/types';
 import { compareRunsByNewest } from 'domains/run/utils';
 import type { Skip, SkipReason } from 'domains/scheduler/types';

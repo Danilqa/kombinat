@@ -1,5 +1,5 @@
 import type { AgentName } from 'domains/agent/types';
-import type { RoutineName } from 'domains/id/types';
+import type { RoutineName } from 'domains/routine/ids';
 
 import type { AgentSettings } from '../agent/types';
 

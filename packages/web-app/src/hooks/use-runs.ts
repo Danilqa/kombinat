@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import type { InfiniteData, QueryKey } from '@tanstack/react-query';
 import { isMatching } from 'ts-pattern';
 
-import type { RoutineName } from 'domains/id/types';
+import type { RoutineName } from 'domains/routine/ids';
 import { getRunsPage } from 'domains/run/requests';
 import type { RunRecord, RunsCursor, RunsPage } from 'domains/run/types';
 import { compareRunsByNewest } from 'domains/run/utils';

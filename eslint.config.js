@@ -74,16 +74,21 @@ const daemonDomains = (...domains) => ({
     'Daemon domains import only the levels before their own: agent, then routine, then run, then webhook, then scheduler.',
 });
 
+// Any domain may import the ids.ts of another, since ids.ts imports only zod.
 const sharedDomains = (...domains) => ({
-  regex: String.raw`^((\.\./)+|domains/)(${domains.join('|')})(/|$)`,
+  regex: String.raw`^((\.\./)+|domains/)(${domains.join('|')})(?!/ids$)(/|$)`,
   message:
-    'Shared domains import only the levels before their own: id, then agent, transcript, scheduler, daemon and webhook, then run, then routine and calendar.',
+    'Shared domains import only the levels before their own, or the ids of any domain: agent, transcript, scheduler, daemon and webhook, then run, then routine and calendar.',
 });
+
+const ONLY_ZOD_IN_IDS = {
+  regex: '^(?!zod$)',
+  message: 'ids.ts imports only zod, so that any domain can import it without a cycle.',
+};
 
 const DAEMON_DOMAIN_LEVELS = [['agent'], ['routine'], ['run'], ['webhook'], ['scheduler']];
 
 const SHARED_DOMAIN_LEVELS = [
-  ['id'],
   ['agent', 'transcript', 'scheduler', 'daemon', 'webhook'],
   ['run'],
   ['routine', 'calendar'],
@@ -311,6 +316,7 @@ export default defineConfig(
   ),
   restrictImports(['packages/domains/**'], ...DOMAINS_IMPORTS),
   ...restrictDomainOrder('packages/domains', SHARED_DOMAIN_LEVELS, sharedDomains, DOMAINS_IMPORTS),
+  restrictImports(['packages/domains/*/ids.ts'], ONLY_ZOD_IN_IDS),
   restrictImports(
     ['packages/design-system/**'],
     packagesAbove('domains', 'web-app', 'tui', 'cli', 'website'),

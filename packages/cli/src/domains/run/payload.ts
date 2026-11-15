@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import type { RoutineName, RunId } from 'domains/id/types';
+import type { RoutineName } from 'domains/routine/ids';
+import type { RunId } from 'domains/run/ids';
 
 import { getRunsDir } from './storage';
 

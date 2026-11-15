@@ -1,7 +1,8 @@
 import { isMatching, match, P } from 'ts-pattern';
 
-import type { RoutineName, RunId } from 'domains/id/types';
+import type { RoutineName } from 'domains/routine/ids';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
+import type { RunId } from 'domains/run/ids';
 import type { RunRecord, RunsPage, RunStatus } from 'domains/run/types';
 import { getRunDurationMs, getRunStatusLabel, getTriggerLabel } from 'domains/run/utils';
 import type { Skip } from 'domains/scheduler/types';

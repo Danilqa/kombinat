@@ -1,6 +1,5 @@
 import type { AgentName } from 'domains/agent/types';
-import { routineNameSchema } from 'domains/id/schemas';
-import type { RoutineName } from 'domains/id/types';
+import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
 import type { RunStatus } from 'domains/run/types';
 import type { SkipReason } from 'domains/scheduler/types';
 

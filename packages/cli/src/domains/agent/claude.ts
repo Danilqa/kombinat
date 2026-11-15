@@ -1,7 +1,7 @@
 import { match, P } from 'ts-pattern';
 import { z } from 'zod';
 
-import { sessionIdSchema } from 'domains/id/schemas';
+import { sessionIdSchema } from 'domains/agent/ids';
 import type { ToolResult, TranscriptItem } from 'domains/transcript/types';
 import { toPreview } from 'domains/transcript/utils';
 

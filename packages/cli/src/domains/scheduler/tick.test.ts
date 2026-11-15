@@ -4,7 +4,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 
-import { routineNameSchema, runIdSchema } from 'domains/id/schemas';
+import { routineNameSchema } from 'domains/routine/ids';
+import { runIdSchema } from 'domains/run/ids';
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kombinat-test-'));
 const routinesDir = path.join(tmp, 'routines');

@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import type { HttpClient } from 'utils/http';
 
-import type { RoutineName } from '../id/types';
+import type { RoutineName } from './ids';
 import { routineDetailSchema, routineSummarySchema, startedRunSchema } from './schemas';
 import type { RoutineDetail, RoutineSummary } from './types';
 
