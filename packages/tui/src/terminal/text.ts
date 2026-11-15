@@ -10,6 +10,10 @@ export interface Span {
 }
 export type Line = Span[];
 
+export function text(value: string, style?: string): Span {
+  return style ? { text: value, style } : { text: value };
+}
+
 // Named after what they used to be in 16 colours; the values come from the dashboard palette.
 export const S = {
   bold: '1',

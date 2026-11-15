@@ -1,5 +1,4 @@
-import { routineNameSchema } from 'domains/id/schemas';
-import type { RoutineName } from 'domains/id/types';
+import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
 
 export interface ExampleRoutine {
   name: RoutineName;

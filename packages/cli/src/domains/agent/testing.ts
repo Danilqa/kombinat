@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 
 import { match } from 'ts-pattern';
 
-import { routineNameSchema } from 'domains/id/schemas';
+import { routineNameSchema } from 'domains/routine/ids';
 import type {
   InitItem,
   ResultItem,

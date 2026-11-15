@@ -1,8 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { sessionIdSchema } from 'domains/agent/ids';
 import type { AgentName } from 'domains/agent/types';
-import { routineNameSchema, sessionIdSchema } from 'domains/id/schemas';
+import { routineNameSchema } from 'domains/routine/ids';
 import { makeRunRecord } from 'domains/run/mocks';
 import type { RunRecord } from 'domains/run/types';
 import { createRunId } from 'domains/run/utils';

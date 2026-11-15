@@ -1,8 +1,9 @@
 import type { HttpClient } from 'utils/http';
 
-import type { RoutineName, RunId } from '../id/types';
+import type { RoutineName } from '../routine/ids';
 import { transcriptSchema } from '../transcript/schemas';
 import type { Transcript } from '../transcript/types';
+import type { RunId } from './ids';
 import { runRecordSchema, runsPageSchema } from './schemas';
 import type { RunRecord, RunsCursor, RunsPage, RunWithTranscript } from './types';
 

@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { routineNameSchema, runIdSchema, sessionIdSchema } from 'domains/id/schemas';
+import { sessionIdSchema } from 'domains/agent/ids';
+import { routineNameSchema } from 'domains/routine/ids';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
+import { runIdSchema } from 'domains/run/ids';
 import type { RunRecord } from 'domains/run/types';
 import { compareRunsByNewest, decodeRunsCursor, paginateRuns } from 'domains/run/utils';
 import type { Transcript } from 'domains/transcript/types';

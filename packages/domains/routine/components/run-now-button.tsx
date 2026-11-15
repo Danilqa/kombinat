@@ -4,8 +4,8 @@ import { Loader, Play } from 'lucide-react';
 import { Button } from 'design-system/components';
 import { sameOriginApi } from 'utils/http';
 
-import type { RoutineName } from '../../id/types';
 import { QUERY_KEYS_CHANGED_BY_RUN } from '../constants';
+import type { RoutineName } from '../ids';
 import { startRoutineRun } from '../requests';
 
 type RunNowVariant = 'primary' | 'secondary';

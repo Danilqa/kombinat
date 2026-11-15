@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { routineNameSchema } from '../id/schemas';
+import { routineNameSchema } from '../routine/ids';
 
 export const skipReasonSchema = z.enum(['already_running', 'concurrency_limit', 'disabled']);
 

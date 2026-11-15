@@ -1,4 +1,5 @@
-import { routineNameSchema, runIdSchema } from '../id/schemas';
+import { routineNameSchema } from '../routine/ids';
+import { runIdSchema } from './ids';
 import type { RunRecord } from './types';
 
 export function makeRunRecord(overrides: Partial<RunRecord> = {}): RunRecord {

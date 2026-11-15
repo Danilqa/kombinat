@@ -3,9 +3,11 @@ import { test } from 'node:test';
 
 import { isMatching } from 'ts-pattern';
 
-import { calendarEntryIdSchema, routineNameSchema, runIdSchema } from '../id/schemas';
+import { routineNameSchema } from '../routine/ids';
+import { runIdSchema } from '../run/ids';
 import { makeRunRecord } from '../run/mocks';
 import type { RunRecord, RunStatus } from '../run/types';
+import { calendarEntryIdSchema } from './ids';
 import type { ScheduledRoutine } from './types';
 import { buildCalendar, countOverlapPairs, estimatePlannedMinutes } from './utils';
 

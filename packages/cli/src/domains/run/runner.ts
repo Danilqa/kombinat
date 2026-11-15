@@ -6,7 +6,8 @@ import readline from 'node:readline';
 
 import { isMatching, match } from 'ts-pattern';
 
-import type { RoutineName, RunId } from 'domains/id/types';
+import type { RoutineName } from 'domains/routine/ids';
+import type { RunId } from 'domains/run/ids';
 import type { RunRecord, RunTrigger } from 'domains/run/types';
 import { createRunId } from 'domains/run/utils';
 

@@ -1,4 +1,4 @@
-import type { RoutineName } from 'domains/id/types';
+import type { RoutineName } from 'domains/routine/ids';
 import type { SchedulerState, SkipReason } from 'domains/scheduler/types';
 import { cronRunsBetween } from 'utils/cron';
 import { getErrorMessage } from 'utils/error';

@@ -1,6 +1,6 @@
 import { match } from 'ts-pattern';
 
-import type { RunId } from 'domains/id/types';
+import type { RunId } from 'domains/run/ids';
 import { createRunId } from 'domains/run/utils';
 
 import type { Routine } from '../routine/types';

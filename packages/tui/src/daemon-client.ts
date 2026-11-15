@@ -1,8 +1,9 @@
 import { getDaemonStatus } from 'domains/daemon/requests';
 import type { DaemonStatus } from 'domains/daemon/types';
-import type { RoutineName, RunId } from 'domains/id/types';
+import type { RoutineName } from 'domains/routine/ids';
 import { getRoutine, getRoutines, startRoutineRun } from 'domains/routine/requests';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
+import type { RunId } from 'domains/run/ids';
 import { getRunsPage, getRunWithTranscript } from 'domains/run/requests';
 import type { RunRecord, RunsCursor, RunsPage, RunWithTranscript } from 'domains/run/types';
 import { createHttpClient } from 'utils/http';

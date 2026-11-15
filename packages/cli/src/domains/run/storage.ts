@@ -3,8 +3,8 @@ import path from 'node:path';
 
 import { isMatching } from 'ts-pattern';
 
-import { routineNameSchema } from 'domains/id/schemas';
-import type { RoutineName, RunId } from 'domains/id/types';
+import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
+import type { RunId } from 'domains/run/ids';
 import { runRecordSchema } from 'domains/run/schemas';
 import type { RunRecord } from 'domains/run/types';
 import { compareRunsByNewest } from 'domains/run/utils';

@@ -1,7 +1,9 @@
 import { z } from 'zod';
 
+import { sessionIdSchema } from '../agent/ids';
 import { agentNameSchema } from '../agent/schemas';
-import { routineNameSchema, runIdSchema, sessionIdSchema } from '../id/schemas';
+import { routineNameSchema } from '../routine/ids';
+import { runIdSchema } from './ids';
 
 export const runStatusSchema = z.enum(['running', 'succeeded', 'failed', 'timed_out', 'aborted']);
 
