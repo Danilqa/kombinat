@@ -3,7 +3,7 @@
 A domain is the top path of an API request, or a type that several domains share:
 
 - API paths: `/api/routines` is routine, `/api/runs` is run, `/api/calendar` is calendar and `/api/status` is daemon.
-- Shared types: id, agent, transcript, scheduler (skips) and webhook (queued webhooks).
+- Shared types: agent, transcript, scheduler (skips) and webhook (queued webhooks).
 
 Each domain has up to two halves with the same name:
 
@@ -12,31 +12,24 @@ Each domain has up to two halves with the same name:
 
 ## Map
 
-| Domain         | Shared half                                                                                                                                    | Daemon half                                                                     |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| **id**         | `RoutineName`, `RunId`, `CalendarEntryId` and `SessionId` with their branded schemas                                                           | none                                                                            |
-| **agent**      | `AgentName`, agent label                                                                                                                       | claude, codex and command adapters, registry, settings validation, `AgentTask`  |
-| **transcript** | item schemas and types, preview rule, subagent check, empty and result labels, `TranscriptList`                                                | none                                                                            |
-| **run**        | `RunRecord`, status and trigger, requests, labels, id, duration, cursor pages, `makeRunRecord`, `RunStatusBadge`, `RunDetailList`, `RunOutput` | runner, record storage with orphan reconciliation, event log and transcript     |
-| **scheduler**  | `Skip`, `SkipReason`, `SchedulerState`, skip label, `SkipsTable`                                                                               | tick loop, `scheduler.json` storage                                             |
-| **routine**    | `RoutineSummary`, `RoutineDetail`, requests, `RunNowButton`, `RoutineBadges`, `RoutineDetailList`, `WebhookQueueButton`                        | frontmatter parsing, validation and defaults, loading, next run, schedule label |
-| **calendar**   | entry schemas and types, `getCalendar`, `buildCalendar`, planned lengths, entry title and overlap labels, overlap count                        | none, `cli/src/server.ts` serves `buildCalendar`                                |
-| **daemon**     | status schema, `getDaemonStatus`, health rules, `DaemonStatusIndicator`                                                                        | none, `cli/src/server.ts` builds the status                                     |
-| **webhook**    | `QueuedWebhook`, webhook path, size and queue position labels, `WebhookQueueList`                                                              | gate, queue, and receiving: start, queue, ignore or reject                      |
+| Domain         | Shared half                                                                                                                                                  | Daemon half                                                                     |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
+| **agent**      | `AgentName`, `SessionId`, agent label                                                                                                                        | claude, codex and command adapters, registry, settings validation, `AgentTask`  |
+| **transcript** | item schemas and types, preview rule, subagent check, empty, result and hook labels, `TranscriptList`                                                        | none                                                                            |
+| **run**        | `RunRecord`, `RunId`, status and trigger, requests, labels, new ids, duration, cursor pages, `makeRunRecord`, `RunStatusBadge`, `RunDetailList`, `RunOutput` | runner, hooks, record storage with orphan reconciliation, event log, transcript |
+| **scheduler**  | `Skip`, `SkipReason`, `SchedulerState`, skip label, `SkipsTable`                                                                                             | tick loop, `scheduler.json` storage                                             |
+| **routine**    | `RoutineName`, `RoutineSummary`, `RoutineDetail`, requests, `RunNowButton`, `RoutineBadges`, `RoutineDetailList`, `WebhookQueueButton`                       | file parsing, validation, defaults, loading, next run, schedule label, examples |
+| **calendar**   | `CalendarEntryId`, entry schemas and types, `getCalendar`, `buildCalendar`, planned lengths, entry title and overlap labels, overlap count                   | none, `cli/src/server.ts` serves `buildCalendar`                                |
+| **daemon**     | status schema, `getDaemonStatus`, health rules, `DaemonStatusIndicator`                                                                                      | none, `cli/src/server.ts` builds the status                                     |
+| **webhook**    | `QueuedWebhook`, webhook path, size and queue position labels, `WebhookQueueList`                                                                            | gate, queue, and receiving: start, queue, ignore or reject                      |
 
 Not domains:
 
 - **cron** is a generic engine in `utils/cron.ts`. A schedule is a value of a routine.
-- **connect, machine-usage, readme, self-update and service** are features of the cli, in `cli/src/features/`. service picks launchd on macOS and systemd on Linux.
+- **connect, init, keep-awake, machine-usage, readme, self-update and service** are features of the cli, in `cli/src/features/`. service picks launchd on macOS and systemd on Linux.
 - **HTTP routing and read models** belong to the cli's `server.ts`.
 
 ## Definitions
-
-### id
-
-The identifiers that cross domains, as branded strings: `RoutineName` is a routine's name, which is its id, `RunId` a run's id, `CalendarEntryId` a calendar entry's id and `SessionId` an agent's session. A plain `string` does not pass for an id, and one id does not pass for another. A string becomes an id only through its schema's `parse`, where it comes in: a routine file, a state folder, a URL, a CLI argument, an agent's output or a test. The brand exists only in types, so the JSON stays the same.
-
-The ids live in a domain of their own, below all the others, because a run record holds its routine's id and a queued webhook its run's id, while routine and run sit above them.
 
 ### agent
 
@@ -54,8 +47,9 @@ Every agent gets the prompt on stdin. An agent decides which routine settings it
 
 An agent-independent view of a run's event log, ready to display: `{ eventCount, items }`. An item is one of:
 
-- `hook`: the before hook, with its command, exit code and output;
+- `hook`: the before or the after hook, with its phase, command, exit code and output;
 - `init`: the session start;
+- `model-fallback`: the agent switched from one model to another, with the reason when it gave one;
 - `text`: assistant text;
 - `tool`: a tool call with its input, a preview, and a result that is `null` while the call is pending;
 - `result`: the outcome.
@@ -67,18 +61,20 @@ The preview is the first line of the input, at most 160 characters. `isSubagent`
 One execution of a routine by its agent. The scheduler, Run now and webhooks start each run as a detached `kombinat run <name>` process, and `kombinat run <name>` in a terminal runs one in the foreground.
 
 1. Preflight checks that the routine's `cwd` exists and that the agent binary is found.
-2. The optional before hook runs with `/bin/sh -c` in `cwd`, with a 3-minute limit, `KOMBINAT_REPO` set to the project folder (the one with the `package.json`), and its `scripts/` first on `PATH`. A failure or a non-zero exit fails the run.
+2. The optional before hook runs with `/bin/sh -c` in `cwd`, with a 3-minute limit after which it is killed with the processes it started, `KOMBINAT_REPO` set to the project folder (the one with the `package.json`), and its `scripts/` first on `PATH`. A failure, a non-zero exit or the limit fails the run.
 3. The agent is spawned. Only now is the record first written, as `running` with the agent's pid. Each stdout line is appended to the event log and can update the record.
 4. A run that outlives `timeoutMinutes` gets SIGINT, then SIGTERM 60 s later, and ends as `timed_out`. Otherwise it ends as `succeeded` when the agent exits with 0 and reported no error, and as `failed` when it did not.
+5. The optional after hook runs once the outcome is known, whatever it is, a failed preflight or before hook included. It runs with `/bin/sh -c` in `cwd`, or in the project folder when `cwd` does not exist, with the before hook's 3-minute limit, `KOMBINAT_REPO` and `PATH`, plus `KOMBINAT_ROUTINE`, `KOMBINAT_RUN_ID`, `KOMBINAT_TRIGGER` and `KOMBINAT_RUN_STATUS`. It gets the finished record on stdin as one line of JSON. Its outcome is appended to the event log as an `after_hook` line and never changes the run.
 
 Invariants:
 
-- A failed preflight or before hook writes a finished `failed` record at once. Until the agent is spawned there is no record, so the daemon remembers each run it starts and counts it as running until its record appears, for at most 4 minutes.
-- A record still marked `running` whose process is gone becomes `aborted` the next time runs are listed.
+- A failed preflight or before hook writes a finished `failed` record at once, or, with an after hook, a `running` record until the hook ends. Until the agent is spawned there is no record, so the daemon remembers each run it starts and counts it as running until its record appears, for at most 4 minutes.
+- A record still marked `running` whose process is gone becomes `aborted` the next time runs are listed. An aborted run gets no after hook, because its runner is gone.
+- With an after hook, the run stays `running` until the hook ends: the runner writes the record as `running` with its own pid, waits until the event log is written, runs the hook, appends its line and only then writes the finished record, the one the hook got. So the routine does not start again while its after hook runs, and the hook's line is in the log when a client sees the run end.
 - The id is a UTC timestamp plus 4 base-36 characters, such as `20261006T110000Z-k3x9`.
 - The record is `<state dir>/runs/<routine>/<id>.json` and the event log `<id>.jsonl` next to it. This layout is a compatibility contract.
 - A webhook run's request body waits in `<id>.payload` next to them until the run starts: the daemon writes it and starts the run with `--run-id <id>`, and the runner deletes it and adds the body to the end of the prompt in a code fence.
-- The transcript is built from the event log: the before hook's line becomes a `hook` item, and the agent turns the other lines into items.
+- The transcript is built from the event log: the hook lines become `hook` items, the before hook first and the after hook last, and the agent turns the other lines into items.
 - `GET /api/runs` answers a page of runs, newest first by `startedAt`, then routine and id, with `nextCursor` and `total`. `routine` limits it to one routine and answers 404 when there is no such routine, a page holds 50 runs, and `cursor` is an opaque token for the run a page ends with, so the next page starts right after that run even when new runs arrive above it.
 
 ### scheduler
@@ -93,7 +89,7 @@ The daemon's decision of when routines start. Every `KOMBINAT_TICK_SECONDS` (def
 
 ### routine
 
-A named, version-controlled unit of recurring agent work: one markdown file, `routines/<name>.md`. Its frontmatter holds scalar values only and sets `name`, `description`, `schedule`, `cwd`, `agent` and its settings, `enabled`, `webhook` with an optional `webhookGate`, `timeoutMinutes` and an optional `before` hook. The body is the prompt.
+A named, version-controlled unit of recurring agent work: one markdown file, `routines/<name>.md`. Its frontmatter holds scalar values only and sets `name`, `description`, `schedule`, `cwd`, `agent` and its settings, `enabled`, `webhook` with an optional `webhookGate`, `timeoutMinutes` and optional `before` and `after` hooks. The body is the prompt.
 
 - `name` equals the file name and is lowercase kebab-case.
 - `schedule` is a 5-field cron in local time, or `manual`, which is stored as `null`.
@@ -135,10 +131,18 @@ Its health is `unreachable` when the request fails, `stale` when there has been 
 
 A domain imports only the domains on the levels before its own, never one on its own level. There is one order of levels per half:
 
-- Shared: `id`, then `agent`, `transcript`, `scheduler`, `daemon` and `webhook`, then `run`, then `routine` and `calendar`. Every domain types its ids with the id domain, a run record holds its agent's name, a run's transcript request returns a transcript, a routine summary embeds its last run and last skip and a detail its queued webhooks, and calendar entries carry run statuses and triggers.
+- Shared: `agent`, `transcript`, `scheduler`, `daemon` and `webhook`, then `run`, then `routine` and `calendar`. A run record holds its agent's name, a run's transcript request returns a transcript, a routine summary embeds its last run and last skip and a detail its queued webhooks, and calendar entries carry run statuses and triggers.
 - Daemon: `agent`, then `routine`, then `run`, then `webhook`, then `scheduler`. A routine validates its agent's settings, a run starts a routine's agent, a webhook starts or queues a run, and the scheduler loads routines and starts runs and queued webhooks.
 
 The orders differ, because routine is below run in the daemon but above it in the shared half. Each half is acyclic on its own, and any daemon domain may import any shared domain. ESLint enforces both orders on static imports, tests included: the agent adapter tests build their task with `makeAgentTask` instead of importing routine code. It does not see `await import()`, which tests use to load modules after they set the environment, so check those imports by hand.
+
+Besides its levels, a shared domain may import the `ids.ts` of any other, see [Ids](#ids).
+
+## Ids
+
+An id is a branded string: `RoutineName` is a routine's name, which is its id, `RunId` a run's id, `CalendarEntryId` a calendar entry's id and `SessionId` an agent's session. A plain `string` does not pass for an id, and one id does not pass for another. A string becomes an id only through its schema's `parse`, where it comes in: a routine file, a state folder, a URL, a CLI argument, an agent's output or a test. The brand exists only in types, so the JSON stays the same.
+
+Each id lives with its schema in the `ids.ts` of the domain it names: `routine/ids`, `run/ids`, `calendar/ids` and `agent/ids`. Ids cross the levels: a run record holds its routine's name and a queued webhook its run's id, while routine sits above run and run above webhook. So `ids.ts` imports only zod, which keeps it a leaf that any domain can import without a cycle. In `routine/schemas.ts`, the routine name would make one: that file imports the run schemas, which need the routine name as they load.
 
 ## Files
 
@@ -146,6 +150,7 @@ A domain folder in this package can have:
 
 - `types.ts`: the types inferred from the schemas and other domain types;
 - `schemas.ts`: zod schemas of what kombinat stores or serves. The JSON on disk and over HTTP is a contract;
+- `ids.ts`: the ids of the domain with their schemas, importing only zod, see [Ids](#ids);
 - `requests.ts`: API requests. Each takes an `HttpClient` from `utils/http` first: `sameOriginApi` in the browser, the TUI's client with its base URL and timeout;
 - `constants.ts`: fixed values, such as `RUNS_PAGE_SIZE` and `STALE_TICK_MS`;
 - `utils.ts`: pure rules and labels;

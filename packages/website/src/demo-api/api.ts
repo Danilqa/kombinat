@@ -2,12 +2,12 @@ import { isMatching, match, P } from 'ts-pattern';
 
 import { buildCalendar } from 'domains/calendar/utils';
 import type { DaemonStatus } from 'domains/daemon/types';
-import { routineNameSchema, runIdSchema } from 'domains/id/schemas';
-import type { RoutineName } from 'domains/id/types';
+import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import { RUNS_CURSOR_ERROR } from 'domains/run/constants';
+import { runIdSchema } from 'domains/run/ids';
 import type { RunRecord } from 'domains/run/types';
-import { createRunId, paginateRuns, parseRunsPageQuery } from 'domains/run/utils';
+import { createRunId, filterRuns, paginateRuns, parseRunsPageQuery } from 'domains/run/utils';
 import type { QueuedWebhook } from 'domains/webhook/types';
 import type { Skip } from 'domains/scheduler/types';
 import { describeCron, nextCronRun } from 'utils/cron';
@@ -158,10 +158,10 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
   function getRunsPage(url: URL, now: Date): ApiResponse {
     const query = parseRunsPageQuery(url.searchParams);
     if (query === null) return fail(400, RUNS_CURSOR_ERROR);
-    if (query.routine === null) return ok(paginateRuns(history.listRuns(now), query.cursor));
-    return withRoutine(query.routine, routine =>
-      ok(paginateRuns(listRoutineRuns(routine, now), query.cursor)),
-    );
+    const toPage = (runs: RunRecord[]) =>
+      ok(paginateRuns(filterRuns(runs, query.search), query.cursor));
+    if (query.routine === null) return toPage(history.listRuns(now));
+    return withRoutine(query.routine, routine => toPage(listRoutineRuns(routine, now)));
   }
 
   function getCalendar(url: URL, now: Date): ApiResponse {

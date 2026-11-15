@@ -1,32 +1,28 @@
 import { isMatching, match, P } from 'ts-pattern';
 
-import type { RoutineName, RunId } from 'domains/id/types';
+import type { RoutineName } from 'domains/routine/ids';
 import type { RoutineDetail } from 'domains/routine/types';
+import type { RunId } from 'domains/run/ids';
 import type { RunRecord, RunsPage, RunWithTranscript } from 'domains/run/types';
 import type { TranscriptItem } from 'domains/transcript/types';
 import { formatRelativeCompact } from 'utils/date-time';
 import { getErrorMessage } from 'utils/error';
 
+import { box, overlayOnto } from './components/box';
+import { confirmPopup } from './components/confirm-popup';
+import { helpPopup } from './components/help-popup';
+import { hintsBar } from './components/hints-bar';
+import { formatCopyright, statusLines } from './components/status-panel';
 import type { DaemonClient, Overview } from './daemon-client';
+import { getRoutineTabs, routinePage } from './features/routines/routine-page';
+import type { RoutineTab } from './features/routines/routine-page';
+import { routineRow } from './features/routines/routine-row';
+import { runHeaderLines } from './features/runs/run-header';
+import { runRow } from './features/runs/run-row';
+import { checkIsExpandable, transcriptLines } from './features/runs/transcript';
+import type { Action, ContentLine, PageContent } from './page-content';
 import { fitLine, S } from './terminal/text';
 import type { Line } from './terminal/text';
-import {
-  box,
-  confirmPopup,
-  formatCopyright,
-  helpPopup,
-  hintsBar,
-  checkIsExpandable,
-  overlayOnto,
-  routinePage,
-  getRoutineTabs,
-  routineRow,
-  runHeaderLines,
-  runRow,
-  statusLines,
-  transcriptLines,
-} from './views';
-import type { Action, ContentLine, PageContent, RoutineTab } from './views';
 
 type ListFocus = 'routines' | 'runs';
 type Focus = ListFocus | 'detail';

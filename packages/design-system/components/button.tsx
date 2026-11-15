@@ -26,6 +26,10 @@ const buttonVariants = cva(
         true: '',
         false: '',
       },
+      isGlass: {
+        true: '',
+        false: '',
+      },
     },
     compoundVariants: [
       {
@@ -34,11 +38,17 @@ const buttonVariants = cva(
         className:
           'bg-overlay text-fg interactive:hover:bg-overlay interactive:active:bg-overlay forced-colors:underline forced-colors:underline-offset-4',
       },
+      {
+        variant: 'secondary',
+        isGlass: true,
+        className: 'border-line-strong bg-fg/6 backdrop-blur-md interactive:hover:bg-fg/12',
+      },
     ],
     defaultVariants: {
       variant: 'primary',
       size: 'medium',
       isActive: false,
+      isGlass: false,
     },
   },
 );
@@ -52,6 +62,7 @@ function Button({
   variant = 'primary',
   size = 'medium',
   isActive = false,
+  isGlass = false,
   asChild = false,
   ...props
 }: ButtonProps) {
@@ -63,7 +74,7 @@ function Button({
       data-variant={variant}
       data-size={size}
       data-active={isActive || undefined}
-      className={cn(buttonVariants({ variant, size, isActive, className }))}
+      className={cn(buttonVariants({ variant, size, isActive, isGlass, className }))}
       {...props}
     />
   );

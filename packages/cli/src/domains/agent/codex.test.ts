@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { runIdSchema, sessionIdSchema } from 'domains/id/schemas';
+import { sessionIdSchema } from 'domains/agent/ids';
+import { runIdSchema } from 'domains/run/ids';
 import { makeRunRecord } from 'domains/run/mocks';
 
 import { codexAgent } from './codex';

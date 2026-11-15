@@ -1,7 +1,9 @@
 import { z } from 'zod';
 
-import { calendarEntryIdSchema, routineNameSchema, runIdSchema } from '../id/schemas';
+import { routineNameSchema } from '../routine/ids';
+import { runIdSchema } from '../run/ids';
 import { runStatusSchema, runTriggerSchema } from '../run/schemas';
+import { calendarEntryIdSchema } from './ids';
 
 const calendarEntryBase = {
   id: calendarEntryIdSchema,

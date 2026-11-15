@@ -1,6 +1,6 @@
 import type { z } from 'zod';
 
-import type { RoutineName } from '../id/types';
+import type { RoutineName } from '../routine/ids';
 import type {
   calendarEntrySchema,
   plannedCalendarEntrySchema,

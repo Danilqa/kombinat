@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { runIdSchema } from '../id/schemas';
+import { runIdSchema } from '../run/ids';
 
 export const queuedWebhookSchema = z.object({
   runId: runIdSchema,

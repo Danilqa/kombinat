@@ -1,8 +1,9 @@
 import type { HttpClient } from 'utils/http';
 
-import type { RoutineName, RunId } from '../id/types';
+import type { RoutineName } from '../routine/ids';
 import { transcriptSchema } from '../transcript/schemas';
 import type { Transcript } from '../transcript/types';
+import type { RunId } from './ids';
 import { runRecordSchema, runsPageSchema } from './schemas';
 import type { RunRecord, RunsCursor, RunsPage, RunWithTranscript } from './types';
 
@@ -19,6 +20,10 @@ export async function getRunsPage(
   if (routine !== null) params.set('routine', routine);
   if (cursor !== null) params.set('cursor', cursor);
   return http.request(`/api/runs?${params.toString()}`, runsPageSchema);
+}
+
+export async function searchRuns(http: HttpClient, search: string): Promise<RunsPage> {
+  return http.request(`/api/runs?${new URLSearchParams({ q: search }).toString()}`, runsPageSchema);
 }
 
 export async function getRun(

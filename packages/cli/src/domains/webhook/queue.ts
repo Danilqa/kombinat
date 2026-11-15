@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { routineNameSchema, runIdSchema } from 'domains/id/schemas';
-import type { RoutineName, RunId } from 'domains/id/types';
+import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
+import { runIdSchema, type RunId } from 'domains/run/ids';
 import type { QueuedWebhook } from 'domains/webhook/types';
 
 import { config } from '../../config';

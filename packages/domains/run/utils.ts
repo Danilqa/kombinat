@@ -1,8 +1,10 @@
 import { match } from 'ts-pattern';
 
-import { routineNameSchema, runIdSchema } from '../id/schemas';
-import type { RunId } from '../id/types';
+import { checkMatchesSearch } from 'utils/search';
+
+import { routineNameSchema } from '../routine/ids';
 import { RUNS_PAGE_SIZE } from './constants';
+import { runIdSchema, type RunId } from './ids';
 import { runsCursorKeySchema, runsCursorSchema } from './schemas';
 import type {
   RunRecord,
@@ -79,9 +81,30 @@ export function decodeRunsCursor(cursor: string): RunsCursorKey | null {
 export function parseRunsPageQuery(params: URLSearchParams): RunsPageQuery | null {
   const routine = params.get('routine');
   const cursor = params.get('cursor');
+  const search = params.get('q')?.trim() ?? '';
   const cursorKey = cursor === null ? null : decodeRunsCursor(cursor);
   if (cursor !== null && cursorKey === null) return null;
-  return { routine: routine === null ? null : routineNameSchema.parse(routine), cursor: cursorKey };
+  return {
+    routine: routine === null ? null : routineNameSchema.parse(routine),
+    cursor: cursorKey,
+    search: search === '' ? null : search,
+  };
+}
+
+export function filterRuns(runs: RunRecord[], search: string | null): RunRecord[] {
+  if (search === null) return runs;
+  return runs.filter(run =>
+    checkMatchesSearch(search, [
+      run.routine,
+      run.id,
+      getRunStatusLabel(run.status),
+      getTriggerLabel(run.trigger),
+      run.agent,
+      run.model,
+      run.resultText,
+      run.error,
+    ]),
+  );
 }
 
 export function paginateRuns(

@@ -1,4 +1,5 @@
-import type { RoutineName, RunId } from 'domains/id/types';
+import type { RoutineName } from 'domains/routine/ids';
+import type { RunId } from 'domains/run/ids';
 
 export const ROUTINES_PATH = '/';
 export const ROUTINE_PATH = '/routines/:name';

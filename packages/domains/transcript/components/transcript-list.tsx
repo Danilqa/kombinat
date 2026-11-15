@@ -1,5 +1,5 @@
 import { Check, ChevronRight, CircleAlert, Loader, X } from 'lucide-react';
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { match } from 'ts-pattern';
 
 import { CodeBlock, Collapsible, EmptyState, Markdown } from 'design-system/components';
@@ -17,6 +17,7 @@ import type {
 } from '../types';
 import {
   checkIsSubagent,
+  getHookLabel,
   getModelFallbackReasonLabel,
   getTranscriptEmptyLabel,
   getTranscriptResultLabel,
@@ -30,7 +31,7 @@ function HookRow({ item }: HookRowProps) {
   return (
     <div className="space-y-2 text-body-sm text-fg-muted">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="text-body font-medium text-fg">Before hook</span>
+        <span className="text-body font-medium text-fg">{getHookLabel(item.phase)}</span>
         <span className="min-w-0 font-mono wrap-anywhere">{item.command}</span>
         <span className={cn('font-mono tabular-nums', item.exitCode !== 0 && 'text-negative')}>
           exit {item.exitCode ?? '?'}
@@ -225,6 +226,8 @@ interface TranscriptListProps {
 }
 
 export function TranscriptList({ items, isRunning }: TranscriptListProps) {
+  // Only events that arrive after the page opens animate in, not the whole transcript.
+  const [initialKeys] = useState(() => new Set(items.map(item => item.key)));
   if (items.length === 0) return <EmptyState>{getTranscriptEmptyLabel(isRunning)}</EmptyState>;
   return (
     <div className="space-y-2">
@@ -232,7 +235,8 @@ export function TranscriptList({ items, isRunning }: TranscriptListProps) {
         <div
           key={item.key}
           className={cn(
-            'animate-in duration-300 ease-out-quint fade-in slide-in-from-bottom-1',
+            !initialKeys.has(item.key) &&
+              'animate-in duration-300 ease-out-quint fade-in slide-in-from-bottom-1',
             checkIsSubagent(item) && 'ml-5 border-l border-line-strong pl-3',
           )}
         >

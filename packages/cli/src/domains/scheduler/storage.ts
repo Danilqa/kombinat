@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import type { RoutineName } from 'domains/id/types';
+import type { RoutineName } from 'domains/routine/ids';
 import { schedulerStateSchema } from 'domains/scheduler/schemas';
 import type { SchedulerState, Skip } from 'domains/scheduler/types';
 

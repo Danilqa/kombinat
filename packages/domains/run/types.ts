@@ -1,6 +1,6 @@
 import type { z } from 'zod';
 
-import type { RoutineName } from '../id/types';
+import type { RoutineName } from '../routine/ids';
 import type { Transcript } from '../transcript/types';
 import type {
   runRecordSchema,
@@ -21,6 +21,7 @@ export type RunsPage = z.infer<typeof runsPageSchema>;
 export interface RunsPageQuery {
   routine: RoutineName | null;
   cursor: RunsCursorKey | null;
+  search: string | null;
 }
 
 export interface RunWithTranscript {
