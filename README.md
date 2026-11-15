@@ -72,7 +72,7 @@ The daemon serves a dashboard at http://localhost:7433.
 - **Calendar.**
 - **Runs.**
 - **Daemon status.**
-- **Search.** ⌘K or Ctrl K finds routines, runs by what they said, and pages.
+- **Search.**
 
 ### In the terminal
 
