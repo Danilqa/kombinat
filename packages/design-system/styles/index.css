@@ -399,19 +399,15 @@
     animation: spinner-steps 1.6s linear infinite;
   }
   & > :nth-child(1) {
-    opacity: 1;
     animation-delay: -1.6s;
   }
   & > :nth-child(2) {
-    opacity: 0.75;
     animation-delay: -1.4s;
   }
   & > :nth-child(3) {
-    opacity: 0.5;
     animation-delay: -1.2s;
   }
   & > :nth-child(4) {
-    opacity: 0.25;
     animation-delay: -1s;
   }
 }
