@@ -366,6 +366,41 @@
   }
 }
 
+/* The Steps spinner of loading.dev. Reduced motion stops the animation and leaves the resting
+   opacities, a row that fades out. */
+@utility spinner-steps {
+  & > * {
+    animation: spinner-steps 1.6s linear infinite;
+  }
+  & > :nth-child(1) {
+    opacity: 1;
+    animation-delay: -1.6s;
+  }
+  & > :nth-child(2) {
+    opacity: 0.75;
+    animation-delay: -1.4s;
+  }
+  & > :nth-child(3) {
+    opacity: 0.5;
+    animation-delay: -1.2s;
+  }
+  & > :nth-child(4) {
+    opacity: 0.25;
+    animation-delay: -1s;
+  }
+}
+
+@keyframes spinner-steps {
+  0%,
+  55% {
+    opacity: 1;
+  }
+  60%,
+  100% {
+    opacity: 0.15;
+  }
+}
+
 @layer utilities {
   .markdown.prose {
     --tw-prose-body: var(--fg-prose);

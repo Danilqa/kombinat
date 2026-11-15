@@ -3,7 +3,7 @@ import { ListOrdered } from 'lucide-react';
 import { useState } from 'react';
 import { match } from 'ts-pattern';
 
-import { Badge, Button, Popover } from 'design-system/components';
+import { Badge, Button, Popover, Spinner } from 'design-system/components';
 import { sameOriginApi } from 'utils/http';
 
 import { WebhookQueueList } from '../../webhook/components/webhook-queue-list';
@@ -70,7 +70,10 @@ export function WebhookQueueButton({ routine, count, look = 'button' }: WebhookQ
           </p>
         )}
         {data === undefined && error === null && (
-          <p className="px-3 py-2.5 text-fg-muted">Loading…</p>
+          <p className="flex items-center gap-2 px-3 py-2.5 text-fg-muted">
+            <Spinner />
+            Loading…
+          </p>
         )}
         <WebhookQueueList queue={data?.queue ?? []} />
       </Popover.Content>

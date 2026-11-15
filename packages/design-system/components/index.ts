@@ -16,3 +16,4 @@ export * from './page-states';
 export * from './relative-time';
 export * from './separator';
 export * from './sliding-pill';
+export * from './spinner';
