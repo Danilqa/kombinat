@@ -1,6 +1,9 @@
-import { createContext, use } from 'react';
+import { createContext, use, type ReactNode } from 'react';
 
 export interface CustomOverrides {
+  announcement?: ReactNode;
+  banner?: ReactNode;
+  footer?: ReactNode;
   routinesTitle?: string;
 }
 

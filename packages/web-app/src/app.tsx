@@ -1,21 +1,15 @@
-import type { ReactNode } from 'react';
 import { useLocation } from 'react-router';
 import { AppProviders } from '@web-app/app-providers';
 import { AppRoutes } from '@web-app/app-routes';
 import { AppFooter } from '@web-app/components/app-footer';
 import { AppHeader } from '@web-app/components/app-header';
-import type { CustomOverrides } from '@web-app/contexts/custom-overrides';
+import { useCustomOverrides, type CustomOverrides } from '@web-app/contexts/custom-overrides';
 import { useFocusMainOnNavigate } from '@web-app/hooks/use-focus-main-on-navigate';
 
 const MAIN_ID = 'main';
 
-interface AppLayoutProps {
-  announcement: ReactNode;
-  banner: ReactNode;
-  footer: ReactNode;
-}
-
-function AppLayout({ announcement, banner, footer }: AppLayoutProps) {
+function AppLayout() {
+  const { announcement, banner, footer = <AppFooter /> } = useCustomOverrides();
   useFocusMainOnNavigate(MAIN_ID);
   const { pathname } = useLocation();
   return (
@@ -43,16 +37,13 @@ function AppLayout({ announcement, banner, footer }: AppLayoutProps) {
 }
 
 interface AppProps {
-  announcement?: ReactNode;
-  banner?: ReactNode;
-  footer?: ReactNode;
   overrides?: CustomOverrides;
 }
 
-export function App({ announcement, banner, footer = <AppFooter />, overrides = {} }: AppProps) {
+export function App({ overrides = {} }: AppProps) {
   return (
     <AppProviders overrides={overrides}>
-      <AppLayout announcement={announcement} banner={banner} footer={footer} />
+      <AppLayout />
     </AppProviders>
   );
 }

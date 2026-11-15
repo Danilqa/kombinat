@@ -15,10 +15,12 @@ if (!rootElement) throw new Error('Missing #root element');
 createRoot(rootElement).render(
   <StrictMode>
     <App
-      announcement={<StarBar />}
-      banner={<WelcomeBanner />}
-      footer={<SiteFooter />}
-      overrides={{ routinesTitle: 'Demo routines' }}
+      overrides={{
+        announcement: <StarBar />,
+        banner: <WelcomeBanner />,
+        footer: <SiteFooter />,
+        routinesTitle: 'Demo routines',
+      }}
     />
   </StrictMode>,
 );

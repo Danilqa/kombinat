@@ -79,14 +79,14 @@ The domain map, definitions and invariants are in [packages/domains/README.md](p
 
 ### web-app
 
-- `src/app.tsx`, `app-providers.tsx` and `app-routes.tsx` make the shell. `App` takes optional `overrides` that `src/contexts/custom-overrides.ts` hands to the pages, so an embedding app such as `website` can change their text. Route patterns and path helpers live in `src/constants/path.ts`.
+- `src/app.tsx`, `app-providers.tsx` and `app-routes.tsx` make the shell. `App` takes optional `overrides` that `src/contexts/custom-overrides.ts` hands to the layout and the pages, so an embedding app such as `website` can fill the slots around the pages and change their text. Route patterns and path helpers live in `src/constants/path.ts`.
 - Server data comes through React Query, used as its docs show: `useQuery` with a `queryFn` that calls a domain request, and `useMutation` for writes. A query key starts with the API path, such as `['routines', name]` for `/api/routines/<name>`. Queries poll with `refetchInterval`, and a mutation invalidates the keys of all the data it changes.
 - Pages live in `src/features/<feature>/` next to their `.e2e.ts` specs. Files in a feature folder import each other by relative path; other imports inside `web-app` use the `@web-app/*` alias.
 - `src/index.css` imports the design-system stylesheet and adds `@source` for `domains`, so Tailwind sees the classes of domain components.
 
 ### website
 
-- `src/main.tsx` renders the web-app's `App`, exported as `web-app/app`, with the star bar of `src/layout/` in its `announcement` slot above the header, the swipeable cards of `src/features/welcome/` in its `banner` slot under the header of the routines page, and the copyright in its `footer` slot. Its `overrides` prop replaces the Routines heading of that page with "Demo routines". Vite builds it with the base `/kombinat/`, which the router takes as its basename, and the build copies `index.html` to `404.html` so that GitHub Pages opens deep links.
+- `src/main.tsx` renders the web-app's `App`, exported as `web-app/app`, with these `overrides`: the star bar of `src/layout/` as the `announcement` above the header, the swipeable cards of `src/features/welcome/` as the `banner` under the header of the routines page, the copyright as the `footer`, and "Demo routines" as the `routinesTitle` heading of that page. Vite builds it with the base `/kombinat/`, which the router takes as its basename, and the build copies `index.html` to `404.html` so that GitHub Pages opens deep links.
 - `src/demo-api/` answers the dashboard's `/api` requests in the browser, as `cli/src/server.ts` does: `routines.ts` holds the sample routines with their run outcomes and transcripts, and `history.ts` builds runs and skips from their schedules relative to now.
 - `public/og-image.gif` is the link preview image. `index.html` names it by its full URL in the Open Graph tags, since apps that unfurl links do not resolve relative paths.
 - `.github/workflows/website.yml` deploys it on every push to `main`.
