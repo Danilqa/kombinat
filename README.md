@@ -100,15 +100,15 @@ Everyone who can reach the Mac in your tailnet can then read transcripts and sta
 
 ## Routines
 
-The example routines of this repository, one row per file in [`routines/`](routines/). Put the same `routines:start` and `routines:end` comments in your own README, and `pnpm kombinat readme` keeps a table like this one up to date.
+The example routines of this repository, one row per file in [`example/routines/`](example/routines/). Put the same `routines:start` and `routines:end` comments in your own README, and `pnpm kombinat readme` keeps a table like this one up to date.
 
 <!-- prettier-ignore-start -->
 <!-- routines:start -->
 | Routine | When | What it does |
 | - | - | - |
-| [weather-example-routine](routines/weather-example-routine.md) | Weekdays at 08:00 | Says if you need an umbrella today |
-| [hello-example-routine](routines/hello-example-routine.md) | Manual | Says hello, to check that your setup works |
-| [weather-webhook-example-routine](routines/weather-webhook-example-routine.md) | On webhook | Says if you need an umbrella in the city from the request |
+| [weather-example-routine](example/routines/weather-example-routine.md) | Weekdays at 08:00 | Says if you need an umbrella today |
+| [hello-example-routine](example/routines/hello-example-routine.md) | Manual | Says hello, to check that your setup works |
+| [weather-webhook-example-routine](example/routines/weather-webhook-example-routine.md) | On webhook | Says if you need an umbrella in the city from the request |
 <!-- routines:end -->
 <!-- prettier-ignore-end -->
 

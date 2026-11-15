@@ -9,13 +9,17 @@ import { describeSchedule } from '../../domains/routine/utils';
 const START = '<!-- routines:start -->';
 const END = '<!-- routines:end -->';
 
-export function renderRoutinesTable(routinesDir = config.routinesDir): string {
+export function renderRoutinesTable(
+  routinesDir = config.routinesDir,
+  readmeDir = path.dirname(routinesDir),
+): string {
+  const linkDir = path.relative(readmeDir, routinesDir);
   const rows = loadRoutines(routinesDir)
     .sort(
       (a, b) =>
         Number(Boolean(b.schedule)) - Number(Boolean(a.schedule)) || a.name.localeCompare(b.name),
     )
-    .map(r => `| [${r.name}](routines/${r.name}.md) | ${describeWhen(r)} | ${r.description} |`);
+    .map(r => `| [${r.name}](${linkDir}/${r.name}.md) | ${describeWhen(r)} | ${r.description} |`);
   return ['| Routine | When | What it does |', '| - | - | - |', ...rows].join('\n');
 }
 
@@ -35,7 +39,7 @@ export function updateReadme(
   const start = source.indexOf(START);
   const end = source.indexOf(END);
   if (start === -1 || end === -1) throw new Error(`README.md needs ${START} and ${END} markers`);
-  const next = `${source.slice(0, start + START.length)}\n${renderRoutinesTable(routinesDir)}\n${source.slice(end)}`;
+  const next = `${source.slice(0, start + START.length)}\n${renderRoutinesTable(routinesDir, path.dirname(file))}\n${source.slice(end)}`;
   if (next === source) return false;
   fs.writeFileSync(file, next);
   return true;

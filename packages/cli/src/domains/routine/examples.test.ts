@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import { EXAMPLE_ROUTINES } from './examples';
 import { buildRoutine } from './utils';
 
-const REPO_ROUTINES = path.resolve(import.meta.dirname, '../../../../../routines');
+const REPO_ROUTINES = path.resolve(import.meta.dirname, '../../../../../example/routines');
 
 test('there is a hello, a scheduled and a webhook example', () => {
   assert.deepEqual(
@@ -16,7 +16,7 @@ test('there is a hello, a scheduled and a webhook example', () => {
 });
 
 for (const example of EXAMPLE_ROUTINES) {
-  test(`${example.name} is the same as its file in routines/`, () => {
+  test(`${example.name} is the same as its file in example/routines/`, () => {
     const file = path.join(REPO_ROUTINES, `${example.name}.md`);
     assert.equal(example.source, fs.readFileSync(file, 'utf8'));
   });
