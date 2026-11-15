@@ -103,10 +103,10 @@ function renderReadme(folder: string, manager: PackageManager): string {
 function chooseManager(
   folder: string,
   hadPackageJson: boolean,
-  options: InitOptions,
+  userAgentManager: PackageManager,
 ): PackageManager {
   const dependencies = hadPackageJson ? findDependencies(folder) : null;
-  return dependencies?.manager ?? options.userAgentManager;
+  return dependencies?.manager ?? userAgentManager;
 }
 
 function planInstall(
@@ -161,7 +161,7 @@ export function initFolder(folder: string, options: InitOptions): InitResult {
   };
 
   const hadPackageJson = fs.existsSync(path.join(folder, 'package.json'));
-  const manager = chooseManager(folder, hadPackageJson, options);
+  const manager = chooseManager(folder, hadPackageJson, options.userAgentManager);
   fs.mkdirSync(folder, { recursive: true });
   writeIfMissing('package.json', () => renderPackageJson(options.version));
   if (hasRoutines) {
