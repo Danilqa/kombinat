@@ -18,7 +18,7 @@ createRoot(rootElement).render(
       announcement={<StarBar />}
       banner={<WelcomeBanner />}
       footer={<SiteFooter />}
-      routinesTitle="Demo routines"
+      overrides={{ routinesTitle: 'Demo routines' }}
     />
   </StrictMode>,
 );

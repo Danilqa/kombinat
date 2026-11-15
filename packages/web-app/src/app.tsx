@@ -4,6 +4,7 @@ import { AppProviders } from '@web-app/app-providers';
 import { AppRoutes } from '@web-app/app-routes';
 import { AppFooter } from '@web-app/components/app-footer';
 import { AppHeader } from '@web-app/components/app-header';
+import type { CustomOverrides } from '@web-app/contexts/custom-overrides';
 import { useFocusMainOnNavigate } from '@web-app/hooks/use-focus-main-on-navigate';
 
 const MAIN_ID = 'main';
@@ -12,10 +13,9 @@ interface AppLayoutProps {
   announcement: ReactNode;
   banner: ReactNode;
   footer: ReactNode;
-  routinesTitle?: string | undefined;
 }
 
-function AppLayout({ announcement, banner, footer, routinesTitle }: AppLayoutProps) {
+function AppLayout({ announcement, banner, footer }: AppLayoutProps) {
   useFocusMainOnNavigate(MAIN_ID);
   const { pathname } = useLocation();
   return (
@@ -33,7 +33,7 @@ function AppLayout({ announcement, banner, footer, routinesTitle }: AppLayoutPro
           className="mx-auto max-w-[1180px] px-4 outline-none focus-visible:shadow-none sm:px-6"
         >
           <div key={pathname} className="animate-in duration-150 ease-out-quint fade-in">
-            <AppRoutes routinesTitle={routinesTitle} />
+            <AppRoutes />
           </div>
         </main>
       </div>
@@ -46,18 +46,13 @@ interface AppProps {
   announcement?: ReactNode;
   banner?: ReactNode;
   footer?: ReactNode;
-  routinesTitle?: string;
+  overrides?: CustomOverrides;
 }
 
-export function App({ announcement, banner, footer = <AppFooter />, routinesTitle }: AppProps) {
+export function App({ announcement, banner, footer = <AppFooter />, overrides = {} }: AppProps) {
   return (
-    <AppProviders>
-      <AppLayout
-        announcement={announcement}
-        banner={banner}
-        footer={footer}
-        routinesTitle={routinesTitle}
-      />
+    <AppProviders overrides={overrides}>
+      <AppLayout announcement={announcement} banner={banner} footer={footer} />
     </AppProviders>
   );
 }
