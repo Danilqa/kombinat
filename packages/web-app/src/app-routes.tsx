@@ -14,7 +14,7 @@ import { RunPage } from '@web-app/features/runs/run-page';
 import { RunsPage } from '@web-app/features/runs/runs-page';
 
 interface AppRoutesProps {
-  routinesTitle: string;
+  routinesTitle?: string | undefined;
 }
 
 export function AppRoutes({ routinesTitle }: AppRoutesProps) {

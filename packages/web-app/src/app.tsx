@@ -12,7 +12,7 @@ interface AppLayoutProps {
   announcement: ReactNode;
   banner: ReactNode;
   footer: ReactNode;
-  routinesTitle: string;
+  routinesTitle?: string | undefined;
 }
 
 function AppLayout({ announcement, banner, footer, routinesTitle }: AppLayoutProps) {
@@ -49,12 +49,7 @@ interface AppProps {
   routinesTitle?: string;
 }
 
-export function App({
-  announcement,
-  banner,
-  footer = <AppFooter />,
-  routinesTitle = 'Routines',
-}: AppProps) {
+export function App({ announcement, banner, footer = <AppFooter />, routinesTitle }: AppProps) {
   return (
     <AppProviders>
       <AppLayout

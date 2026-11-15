@@ -13,10 +13,10 @@ function checkHasRunningRoutine(routines: RoutineSummary[] = []): boolean {
 }
 
 interface RoutinesPageProps {
-  title: string;
+  title?: string | undefined;
 }
 
-export function RoutinesPage({ title }: RoutinesPageProps) {
+export function RoutinesPage({ title = 'Routines' }: RoutinesPageProps) {
   useDocumentTitle('Routines');
   const { data, error, isPending } = useQuery({
     queryKey: ['routines'],
