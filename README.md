@@ -46,31 +46,21 @@ Routines from the [live demo](https://danilqa.github.io/kombinat/). Open one to 
 1. Create a folder with example routines.
 
    ```bash
-   npx kombinat init my-routines   # or: pnpm dlx kombinat init my-routines
+   npx kombinat init my-routines
    ```
 
-   It creates `package.json`, three example routines in `routines/`, `README.md` and `.gitignore`, then installs the dependencies. It never overwrites a file, only adds what is missing. In an existing repository, run it in the root without a folder name and with the repository's own package manager, since npm can refuse to run in a pnpm project.
+   In an existing repo, run `npx kombinat init` in its root, or `pnpm dlx kombinat init` if it uses pnpm. It never overwrites a file.
 
-2. Try the hello routine.
+2. Start it.
 
    ```bash
    cd my-routines
-   npx kombinat run hello-example-routine
+   npx kombinat serve
    ```
 
-   It runs Claude Code once and prints the run record as JSON. The answer is in `resultText`.
+   Open http://localhost:7433. To keep it running in the background and after reboots, stop it and run `npx kombinat install`.
 
-3. Start from that folder.
-
-   ```bash
-   npx kombinat serve   # or: pnpm kombinat serve
-   ```
-
-   It runs in this terminal. To keep it running in the background and after reboots, stop it and run `npx kombinat install` instead, see [Setup](#setup).
-
-4. Write your own routines as `.md` files in `routines/`, see [Writing a routine](#writing-a-routine). Changes are picked up on the next check, no restart needed.
-
-5. Monitor and debug runs in the dashboard at http://localhost:7433, or in the terminal with `npx kombinat tui`, which also works over ssh. See [Monitoring](#monitoring). To open them from another machine, see [Remote access](#remote-access).
+3. Add your own routines to `routines/`, see [Writing a routine](#writing-a-routine). No restart needed.
 
 ## Monitoring
 
