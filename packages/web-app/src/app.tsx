@@ -1,15 +1,16 @@
+import { useContext } from 'react';
 import { useLocation } from 'react-router';
 import { AppProviders } from '@web-app/app-providers';
 import { AppRoutes } from '@web-app/app-routes';
 import { AppFooter } from '@web-app/components/app-footer';
 import { AppHeader } from '@web-app/components/app-header';
-import { useCustomOverrides, type CustomOverrides } from '@web-app/contexts/custom-overrides';
+import { CustomizationContext, type Customization } from '@web-app/contexts';
 import { useFocusMainOnNavigate } from '@web-app/hooks/use-focus-main-on-navigate';
 
 const MAIN_ID = 'main';
 
 function AppLayout() {
-  const { announcement, banner, footer = <AppFooter /> } = useCustomOverrides();
+  const { announcement, banner, footer = <AppFooter /> } = useContext(CustomizationContext);
   useFocusMainOnNavigate(MAIN_ID);
   const { pathname } = useLocation();
   return (
@@ -37,12 +38,12 @@ function AppLayout() {
 }
 
 interface AppProps {
-  overrides?: CustomOverrides;
+  customization?: Customization;
 }
 
-export function App({ overrides = {} }: AppProps) {
+export function App({ customization = {} }: AppProps) {
   return (
-    <AppProviders overrides={overrides}>
+    <AppProviders customization={customization}>
       <AppLayout />
     </AppProviders>
   );

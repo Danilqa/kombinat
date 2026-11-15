@@ -15,7 +15,7 @@ if (!rootElement) throw new Error('Missing #root element');
 createRoot(rootElement).render(
   <StrictMode>
     <App
-      overrides={{
+      customization={{
         announcement: <StarBar />,
         banner: <WelcomeBanner />,
         footer: <SiteFooter />,

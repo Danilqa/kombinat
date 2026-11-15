@@ -2,22 +2,22 @@ import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router';
 import { Tooltip } from 'design-system/components';
-import { CustomOverridesContext, type CustomOverrides } from '@web-app/contexts/custom-overrides';
+import { CustomizationContext, type Customization } from '@web-app/contexts';
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
 interface AppProvidersProps {
   children: ReactNode;
-  overrides: CustomOverrides;
+  customization: Customization;
 }
 
-export function AppProviders({ children, overrides }: AppProvidersProps) {
+export function AppProviders({ children, customization }: AppProvidersProps) {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter basename={import.meta.env.BASE_URL}>
-        <CustomOverridesContext value={overrides}>
+        <CustomizationContext.Provider value={customization}>
           <Tooltip.Provider delayDuration={300}>{children}</Tooltip.Provider>
-        </CustomOverridesContext>
+        </CustomizationContext.Provider>
       </BrowserRouter>
     </QueryClientProvider>
   );
