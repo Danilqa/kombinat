@@ -2,35 +2,35 @@
 
 > Run agents on a schedule.
 
-<a href="https://danilqa.github.io/kombinat/"><img src=".github/assets/demo.gif" alt="The Kombinat dashboard: the routines, one routine's prompt, a run's transcript and the week calendar" width="100%" /></a>
+One routine is one markdown file in your repository, so anyone on the team can write one. Merge it and it is live: a Mac or Linux machine that stays on runs it with Claude Code, Codex or any other CLI agent. Open source (MIT).
 
 [Live demo](https://danilqa.github.io/kombinat/) · [50-second video](https://www.youtube.com/watch?v=18VfIsc5RDE) · [Quickstart](#quickstart) · [What to run](#what-to-run)
 
 ## Why
 
-- **A routine is a markdown file.** The frontmatter says when, the body is the prompt.
-- **Merging is the deploy.** A routine goes through review like code and is live within five minutes.
-- **Your setup, as is.** Agents run with your logins, skills, MCP servers and `CLAUDE.md`.
+- **Merging is the deploy.** A routine goes through review like code and is live within 5 minutes.
+- **Your setup, as is.** Agents run with your logins, skills, MCP servers, browser control and `CLAUDE.md`.
 - **No API bill.** Claude Code and Codex use the subscription you already pay for.
 - **Every run on record.** Full transcripts in the browser, in the terminal and on your phone.
 - **It stops when it should.** Timeouts, an optional budget cap and no overlapping runs.
 - **It starts on events too.** Linear, GitHub or any other app starts a routine with a webhook.
 - **Small.** One command, two dependencies, no cloud and no database.
 
-Open source (MIT). It runs on an always-on Mac or Linux machine.
-
 ## What to run
 
-Six of the routines in the [live demo](https://danilqa.github.io/kombinat/). Open one to read its full prompt and see sample runs.
+Routines from the [live demo](https://danilqa.github.io/kombinat/). Open one to read its full prompt and see sample runs.
 
-| Routine                                                                                | When                                                  | What it does                                                   |
-| -------------------------------------------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------- |
-| [night-agent-tasks](https://danilqa.github.io/kombinat/routines/night-agent-tasks)     | Daily at 02:00                                        | Works through the issues labelled agent while I sleep          |
-| [flaky-e2e-fixer](https://danilqa.github.io/kombinat/routines/flaky-e2e-fixer)         | Weekdays at 07:00                                     | Finds flaky end-to-end tests in CI and fixes them              |
-| [on-call-engineer](https://danilqa.github.io/kombinat/routines/on-call-engineer)       | Daily at 09:00, 13:00, 17:00 and 21:00 and on webhook | Checks for production incidents and proposes fixes             |
-| [design-ux-issues](https://danilqa.github.io/kombinat/routines/design-ux-issues)       | Daily at 03:30                                        | Clicks through the app at night and files design and UX issues |
-| [support-signals](https://danilqa.github.io/kombinat/routines/support-signals)         | Daily at 18:00                                        | Turns the day's support chats into product signals             |
-| [write-release-notes](https://danilqa.github.io/kombinat/routines/write-release-notes) | Manual                                                | Drafts release notes from what was merged since the last tag   |
+| Routine                                                                                        | When                                                  | What it does                                                   |
+| ---------------------------------------------------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------- |
+| [night-agent-tasks](https://danilqa.github.io/kombinat/routines/night-agent-tasks)             | Daily at 02:00                                        | Works through the issues labelled agent while I sleep          |
+| [bug-fix-pickup](https://danilqa.github.io/kombinat/routines/bug-fix-pickup)                   | Daily at 11:30 and 14:30                              | Fixes the oldest unassigned bug and opens a pull request       |
+| [flaky-e2e-fixer](https://danilqa.github.io/kombinat/routines/flaky-e2e-fixer)                 | Weekdays at 07:00                                     | Finds flaky end-to-end tests in CI and fixes them              |
+| [dead-code-cleanup](https://danilqa.github.io/kombinat/routines/dead-code-cleanup)             | Weekly on Monday at 10:00                             | Removes dead code and feature flags that are on for everyone   |
+| [on-call-engineer](https://danilqa.github.io/kombinat/routines/on-call-engineer)               | Daily at 09:00, 13:00, 17:00 and 21:00 and on webhook | Checks for production incidents and proposes fixes             |
+| [post-release-monitoring](https://danilqa.github.io/kombinat/routines/post-release-monitoring) | Daily at 10:00 and 16:00                              | Watches what shipped in the last 3 days and fixes regressions  |
+| [design-ux-issues](https://danilqa.github.io/kombinat/routines/design-ux-issues)               | Daily at 03:30                                        | Clicks through the app at night and files design and UX issues |
+| [support-signals](https://danilqa.github.io/kombinat/routines/support-signals)                 | Daily at 18:00                                        | Turns the day's support chats into product signals             |
+| [write-release-notes](https://danilqa.github.io/kombinat/routines/write-release-notes)         | Manual                                                | Drafts release notes from what was merged since the last tag   |
 
 ## How it compares
 
@@ -38,7 +38,7 @@ Six of the routines in the [live demo](https://danilqa.github.io/kombinat/). Ope
 | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | Running Claude Code by hand       | The work happens on schedule, and nobody has to remember it.                                                                                   |
 | Claude Code's own Routines        | Routines that live in git and go through review, run on a machine you control with your local setup, and can use Codex or any other CLI agent. |
-| A cron job that calls `claude -p` | Run history, transcripts, timeouts, no overlapping runs, a dashboard and webhooks, without building them.                                      |
+| A cron job that calls `claude -p` | Run history, transcripts, timeouts, no overlapping runs, catch-up after sleep, a dashboard and webhooks, without building them.                |
 | A scheduled CI workflow           | Agents that run where your logins, skills and MCP servers already are, on your subscription login.                                             |
 
 ## Quickstart
@@ -49,7 +49,7 @@ Six of the routines in the [live demo](https://danilqa.github.io/kombinat/). Ope
    npx kombinat init my-routines   # or: pnpm dlx kombinat init my-routines
    ```
 
-   It creates `package.json`, three example routines in `routines/`, `README.md` and `.gitignore`, then installs the dependencies and prints the next commands. It never overwrites a file, only adds what is missing. In an existing repository, run it in the root without a folder name and with the repository's own package manager, since npm can refuse to run in a pnpm project. It pins the exact version of the package and adds it with the package manager of the lockfile it finds, otherwise with the one that started it.
+   It creates `package.json`, three example routines in `routines/`, `README.md` and `.gitignore`, then installs the dependencies. It never overwrites a file, only adds what is missing. In an existing repository, run it in the root without a folder name and with the repository's own package manager, since npm can refuse to run in a pnpm project.
 
 2. Try the hello routine.
 
@@ -58,7 +58,7 @@ Six of the routines in the [live demo](https://danilqa.github.io/kombinat/). Ope
    npx kombinat run hello-example-routine
    ```
 
-   It runs Claude Code once and prints the run record as JSON. The answer is in `resultText`. Agents run with your usual setup, so your global skills, MCP servers and `CLAUDE.md` are picked up.
+   It runs Claude Code once and prints the run record as JSON. The answer is in `resultText`.
 
 3. Start from that folder.
 
@@ -139,16 +139,14 @@ The example routines of this repository, one row per file in [`example/routines/
 - Logs and run history are stored in `~/.kombinat/`.
 - Claude and Codex use your subscription login. API key variables are removed from their environment.
 
-## Limits and security
+## Security
 
-- It runs on macOS under launchd or on Linux under systemd, see [docs/linux.md](docs/linux.md). Runs happen only while the machine is awake. On macOS you must be logged in; on Linux, lingering lets them run while you are logged out.
-- The dashboard listens on localhost only and has no login. To open it from another machine, use SSH or Tailscale Serve and limit who can reach it, see [Remote access](#remote-access).
+- The dashboard listens on localhost only and has no login, so other users of the machine can reach it. Web pages from other sites cannot start runs through it. To open it from another machine, use SSH or Tailscale Serve and limit who can reach it, see [Remote access](#remote-access).
 - Each routine sets its own permission mode, see [Agents](#agents). By default Claude Code is denied anything that needs approval, and Codex writes only in its workspace. `bypassPermissions` and `danger-full-access` let the agent do anything your user can.
 - A routine that reads outside text, such as issues, support chats or a webhook body, can be steered by that text. Give it the narrowest permissions, let it open pull requests but not merge them, and check webhook requests with a [`webhookGate`](docs/webhook.md#gate).
-- A run stops after 55 minutes by default. Claude Code can also have a budget cap. At most 3 routines run at once, and a routine never runs twice at the same time.
 - The daemon runs `git pull` every 5 minutes and installs dependencies when the lockfile changes, so protect `main` with review.
-- No telemetry. The daemon makes no network calls of its own: it only starts git, your package manager and the agents.
-- Claude Code and Codex run on your subscription login. Check the terms of your plan before a team shares one login.
+- No telemetry. The daemon makes no network calls of its own, only what it starts does: git, your package manager, the agents and your routines' commands. The dashboard loads its fonts from Google Fonts.
+- Check the terms of your plan before a team shares one subscription login.
 
 ## Setup
 
