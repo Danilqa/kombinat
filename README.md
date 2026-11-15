@@ -32,7 +32,7 @@ Example routines from the [live demo](https://danilqa.github.io/kombinat/).
 | [support-signals](https://danilqa.github.io/kombinat/routines/support-signals)                 | Daily at 18:00                                        | Turns the day's support chats into product signals             |
 | [write-release-notes](https://danilqa.github.io/kombinat/routines/write-release-notes)         | Manual                                                | Drafts release notes from what was merged since the last tag   |
 
-## ⚖️ How it compares
+## 🆚 How it compares
 
 | Instead of                        | Kombinat gives you                                                                                                                             |
 | --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -107,7 +107,7 @@ The dashboard is then at `https://mac-mini.<your-tailnet>.ts.net`, and `npx komb
 
 Everyone who can reach the Mac in your tailnet can then read transcripts and start routines. To limit that, allow only some people to reach port 443 of the Mac in your [Tailscale access rules](https://tailscale.com/kb/1018/acls).
 
-## 📝 Example routines
+## 📚 Example routines
 
 One row per file in [`example/routines/`](example/routines/). Put the same `routines:start` and `routines:end` comments in your own README, and `pnpm kombinat readme` keeps a table like this one up to date.
 
@@ -121,7 +121,7 @@ One row per file in [`example/routines/`](example/routines/). Put the same `rout
 <!-- routines:end -->
 <!-- prettier-ignore-end -->
 
-## ⚙️ How it works
+## 🧩 How it works
 
 - Each routine is a markdown file. The frontmatter sets the schedule and settings, the body is the prompt.
 - A small daemon checks every 30 seconds which routines are due and starts their agent. It also serves a dashboard at http://localhost:7433.
@@ -138,7 +138,7 @@ One row per file in [`example/routines/`](example/routines/). Put the same `rout
 - No telemetry. The daemon makes no network calls of its own, only what it starts does: git, your package manager, the agents and your routines' commands. The dashboard loads its fonts from Google Fonts.
 - Check the terms of your plan before a team shares one subscription login.
 
-## 🛠️ Setup
+## 📦 Setup
 
 You need Node 24 and the agents your routines use, logged in: Claude Code (`claude auth status`) and Codex (`codex login`). From the folder with `routines/` and `package.json`:
 
@@ -149,7 +149,7 @@ pnpm kombinat install
 
 This starts the daemon in that folder, under launchd on macOS or as a systemd user service on Linux, see [docs/linux.md](docs/linux.md). Open http://localhost:7433. There is one daemon per user, so running `install` in another folder moves it there.
 
-## ⌨️ Commands
+## 💻 Commands
 
 Run them from the same folder. With npm, use `npx kombinat` instead of `pnpm kombinat`, with Yarn `yarn kombinat`.
 
@@ -164,7 +164,7 @@ pnpm kombinat readme         # update the routines table in README.md
 pnpm kombinat uninstall      # stop and remove the daemon
 ```
 
-## ✍️ Writing a routine
+## 📝 Writing a routine
 
 ```markdown
 ---
@@ -231,7 +231,7 @@ To update Kombinat, bump `kombinat` in `package.json`, for example with a Renova
 
 Up to 0.2.2, Kombinat was published as `@danilqa/kombinat`. To move to `kombinat`, replace the dependency in `package.json`, install it and run `pnpm kombinat install` again. Until then the launchd job of the daemon points into the old package folder, which the install removes, so the daemon does not pick up the new version or start again after a reboot.
 
-## 🎛️ Configuration
+## 🔧 Configuration
 
 | Variable                  | Default               | What                                   |
 | ------------------------- | --------------------- | -------------------------------------- |
