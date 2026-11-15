@@ -27,6 +27,7 @@ import { CALENDAR_PATH, ROUTINES_PATH, RUNS_PATH, getRoutinePath } from 'web-app
 import { NPM_URL, REPO_URL } from '../../constants';
 import { demoRoutines } from '../../demo-api/routines';
 import { CodePanel } from './code-panel';
+import { GLASS_CLASS } from './glass';
 import { WelcomeCard } from './welcome-card';
 import { SandBucket, WavingHand } from './welcome-icons';
 
@@ -174,7 +175,12 @@ function ReasonList() {
     <ul className="grid items-start gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
       {REASONS.map(({ icon: Icon, title, text }) => (
         <li key={title} className="flex items-center gap-3">
-          <span className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-line bg-raised text-fg-secondary">
+          <span
+            className={cn(
+              'flex size-7 shrink-0 items-center justify-center rounded-lg text-fg-secondary',
+              GLASS_CLASS,
+            )}
+          >
             <Icon aria-hidden="true" className="size-3.5" />
           </span>
           <span className="flex flex-col gap-0.5">
@@ -253,7 +259,7 @@ export function WelcomeBanner() {
               <Button asChild size="small">
                 <ExternalLink href={REPO_URL}>View on GitHub</ExternalLink>
               </Button>
-              <Button variant="secondary" size="small" onClick={() => showSlide(3)}>
+              <Button variant="secondary" size="small" isGlass onClick={() => showSlide(3)}>
                 How to install
                 <ArrowRight
                   aria-hidden="true"
@@ -306,7 +312,7 @@ export function WelcomeBanner() {
                   How webhooks work
                 </ExternalLink>
               </Button>
-              <Button asChild variant="secondary" size="small">
+              <Button asChild variant="secondary" size="small" isGlass>
                 <Link to={getRoutinePath(routineNameSchema.parse('on-call-engineer'))}>
                   See its runs
                   <ArrowRight
@@ -342,7 +348,7 @@ export function WelcomeBanner() {
               <Button asChild size="small">
                 <ExternalLink href={`${REPO_URL}#readme`}>Read the quickstart</ExternalLink>
               </Button>
-              <Button asChild variant="secondary" size="small">
+              <Button asChild variant="secondary" size="small" isGlass>
                 <ExternalLink href={NPM_URL}>npm package</ExternalLink>
               </Button>
             </>
