@@ -366,8 +366,6 @@
   }
 }
 
-/* The Steps spinner of loading.dev. Reduced motion stops the animation and leaves the resting
-   opacities, a row that fades out. */
 @utility spinner-steps {
   & > * {
     animation: spinner-steps 1.6s linear infinite;
