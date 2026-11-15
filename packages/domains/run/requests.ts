@@ -21,6 +21,10 @@ export async function getRunsPage(
   return http.request(`/api/runs?${params.toString()}`, runsPageSchema);
 }
 
+export async function searchRuns(http: HttpClient, search: string): Promise<RunsPage> {
+  return http.request(`/api/runs?${new URLSearchParams({ q: search }).toString()}`, runsPageSchema);
+}
+
 export async function getRun(
   http: HttpClient,
   routine: RoutineName,

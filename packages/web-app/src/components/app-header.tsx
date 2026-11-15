@@ -1,39 +1,18 @@
-import { CalendarDays, History, Workflow } from 'lucide-react';
-import { useLayoutEffect, useRef, type RefObject } from 'react';
+import { Search } from 'lucide-react';
+import { useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { Link, useLocation } from 'react-router';
-import { SlidingPill } from 'design-system/components';
+import { Button, Kbd, SlidingPill } from 'design-system/components';
 import { BrandMark } from 'design-system/icons';
 import { cn } from 'design-system/utils';
 import { DaemonStatusIndicator } from 'domains/daemon/components';
-import { CALENDAR_PATH, ROUTINES_PATH, RUNS_PATH } from '@web-app/constants/path';
-
-interface NavItem {
-  label: string;
-  to: string;
-  icon: typeof Workflow;
-  checkIsActive: (pathname: string) => boolean;
-}
-
-const navItems: NavItem[] = [
-  {
-    label: 'Routines',
-    to: ROUTINES_PATH,
-    icon: Workflow,
-    checkIsActive: pathname => pathname === ROUTINES_PATH || pathname.startsWith('/routines/'),
-  },
-  {
-    label: 'Calendar',
-    to: CALENDAR_PATH,
-    icon: CalendarDays,
-    checkIsActive: pathname => pathname.startsWith(CALENDAR_PATH),
-  },
-  {
-    label: 'Runs',
-    to: RUNS_PATH,
-    icon: History,
-    checkIsActive: pathname => pathname.startsWith(RUNS_PATH),
-  },
-];
+import { navItems, type NavItem } from '@web-app/constants/nav-items';
+import { ROUTINES_PATH } from '@web-app/constants/path';
+import {
+  SEARCH_SHORTCUT_ARIA,
+  SEARCH_SHORTCUT_LABEL,
+  useSearchShortcut,
+} from '@web-app/hooks/use-search-shortcut';
+import { SearchDialog } from '@web-app/components/search-dialog';
 
 type NavCurrent = 'page' | 'true';
 
@@ -57,14 +36,11 @@ function NavLinkItem({ item, pathname }: NavLinkItemProps) {
       aria-current={getNavCurrent(item, pathname)}
       data-active={isActive || undefined}
       className={cn(
-        'group relative flex h-8 items-center gap-1.5 rounded-full px-3 text-nav font-medium transition-colors forced-colors:underline-offset-4',
+        'relative flex h-8 items-center gap-1.5 rounded-full px-3 text-nav font-medium transition-[color,background-color,scale] duration-150 active:scale-[0.97] forced-colors:underline-offset-4',
         isActive ? 'text-fg forced-colors:underline' : 'text-fg-muted hover:bg-hover hover:text-fg',
       )}
     >
-      <Icon
-        aria-hidden="true"
-        className="size-3.5 shrink-0 transition-transform duration-300 ease-out-quint group-hover:scale-115 group-active:scale-95"
-      />
+      <Icon aria-hidden="true" className="size-3.5 shrink-0" />
       {item.label}
     </Link>
   );
@@ -89,7 +65,9 @@ function useHeightProperty(ref: RefObject<HTMLElement | null>, property: string)
 export function AppHeader() {
   const { pathname } = useLocation();
   const headerRef = useRef<HTMLElement>(null);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   useHeightProperty(headerRef, '--app-header-height');
+  useSearchShortcut(() => setIsSearchOpen(isOpen => !isOpen));
   // On phones the brand and the status share the first row and the nav takes a row of its own.
   return (
     <header
@@ -114,9 +92,23 @@ export function AppHeader() {
             ))}
           </ul>
         </nav>
+        <Button
+          variant="tertiary"
+          size="small"
+          aria-label="Search"
+          aria-keyshortcuts={SEARCH_SHORTCUT_ARIA}
+          className="max-sm:size-8 max-sm:px-0"
+          onClick={() => setIsSearchOpen(true)}
+        >
+          <Search aria-hidden="true" />
+          <Kbd aria-hidden="true" className="max-sm:hidden">
+            {SEARCH_SHORTCUT_LABEL}
+          </Kbd>
+        </Button>
         <span aria-hidden="true" className="mx-1 h-4 w-px bg-line-strong max-sm:hidden" />
         <DaemonStatusIndicator />
       </div>
+      <SearchDialog open={isSearchOpen} onOpenChange={setIsSearchOpen} />
     </header>
   );
 }

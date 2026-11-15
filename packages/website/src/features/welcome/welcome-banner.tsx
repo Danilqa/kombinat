@@ -1,12 +1,12 @@
 import {
   ArrowRight,
-  Bot,
   Feather,
   GitMerge,
   PiggyBank,
   Plug,
   Scale,
-  Users,
+  ScrollText,
+  Timer,
   ArrowUpRight,
   CalendarDays,
   ChevronLeft,
@@ -27,6 +27,7 @@ import { CALENDAR_PATH, ROUTINES_PATH, RUNS_PATH, getRoutinePath } from 'web-app
 import { NPM_URL, REPO_URL } from '../../constants';
 import { demoRoutines } from '../../demo-api/routines';
 import { CodePanel } from './code-panel';
+import { GLASS_CLASS } from './glass';
 import { WelcomeCard } from './welcome-card';
 import { SandBucket, WavingHand } from './welcome-icons';
 
@@ -67,34 +68,34 @@ interface Reason {
 
 const REASONS: Reason[] = [
   {
-    icon: Bot,
-    title: 'Any agent',
-    text: 'Claude Code, Codex or any shell command, chosen per routine.',
-  },
-  {
     icon: GitMerge,
-    title: 'Lives in git',
-    text: 'Routines are markdown files in your repo. Merge one and it is live within 5 minutes.',
+    title: 'Merging is the deploy',
+    text: 'A routine goes through review like code and is live within 5 minutes.',
   },
   {
     icon: Plug,
     title: 'Your setup, as is',
-    text: 'Agents run with your logins, skills, MCP servers and CLAUDE.md. No extra config.',
+    text: 'Agents run with your logins, skills, MCP servers and CLAUDE.md.',
   },
   {
     icon: PiggyBank,
-    title: 'No API bills',
-    text: 'Runs on the Claude or Codex subscription you already pay for, never on API keys.',
+    title: 'No API bill',
+    text: 'Claude Code and Codex use the subscription you already pay for.',
   },
   {
-    icon: Users,
-    title: 'Made for teams',
-    text: 'Anyone can add a routine with a pull request, engineers or not, and review approves it.',
+    icon: ScrollText,
+    title: 'Every run on record',
+    text: 'Full transcripts in the browser, in the terminal and on your phone.',
+  },
+  {
+    icon: Timer,
+    title: 'It stops when it should',
+    text: 'Timeouts, an optional budget cap and no overlapping runs.',
   },
   {
     icon: Feather,
-    title: 'Small and predictable',
-    text: 'Two dependencies, no cloud or database. Timeouts, cost caps and no overlapping runs.',
+    title: 'Small',
+    text: 'One command, two dependencies, no cloud and no database.',
   },
 ];
 
@@ -174,7 +175,12 @@ function ReasonList() {
     <ul className="grid items-start gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
       {REASONS.map(({ icon: Icon, title, text }) => (
         <li key={title} className="flex items-center gap-3">
-          <span className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-line bg-raised text-fg-secondary">
+          <span
+            className={cn(
+              'flex size-7 shrink-0 items-center justify-center rounded-lg text-fg-secondary',
+              GLASS_CLASS,
+            )}
+          >
             <Icon aria-hidden="true" className="size-3.5" />
           </span>
           <span className="flex flex-col gap-0.5">
@@ -246,14 +252,14 @@ export function WelcomeBanner() {
           icon={WavingHand}
           iconClassName="origin-[70%_80%] group-data-active/slide:animate-hand-wave"
           glow="lavender"
-          title="Background agents, on a schedule or webhook"
+          title="Run agents on a schedule"
           aside={<RoutineFile />}
           actions={
             <>
               <Button asChild size="small">
                 <ExternalLink href={REPO_URL}>View on GitHub</ExternalLink>
               </Button>
-              <Button variant="secondary" size="small" onClick={() => showSlide(3)}>
+              <Button variant="secondary" size="small" isGlass onClick={() => showSlide(3)}>
                 How to install
                 <ArrowRight
                   aria-hidden="true"
@@ -264,10 +270,9 @@ export function WelcomeBanner() {
           }
         >
           <p>
-            <strong>Kombinat</strong> is a dead simple engine for 24/7 AI agents. A routine is a
-            markdown file with a cron schedule or a webhook, and <strong>Claude</strong>,{' '}
-            <strong>Codex</strong> or any shell command runs it with the subscription you already
-            have. This is a live demo of its dashboard.
+            One routine – one markdown file. Just merge it and it is live. Any Mac or Linux machine
+            then runs it with <strong>Claude Code</strong>, <strong>Codex</strong> or any shell
+            command, on the subscription you already pay for.
           </p>
         </WelcomeCard>
       ),
@@ -307,7 +312,7 @@ export function WelcomeBanner() {
                   How webhooks work
                 </ExternalLink>
               </Button>
-              <Button asChild variant="secondary" size="small">
+              <Button asChild variant="secondary" size="small" isGlass>
                 <Link to={getRoutinePath(routineNameSchema.parse('on-call-engineer'))}>
                   See its runs
                   <ArrowRight
@@ -343,7 +348,7 @@ export function WelcomeBanner() {
               <Button asChild size="small">
                 <ExternalLink href={`${REPO_URL}#readme`}>Read the quickstart</ExternalLink>
               </Button>
-              <Button asChild variant="secondary" size="small">
+              <Button asChild variant="secondary" size="small" isGlass>
                 <ExternalLink href={NPM_URL}>npm package</ExternalLink>
               </Button>
             </>
@@ -353,7 +358,7 @@ export function WelcomeBanner() {
             Add the package to the repository that holds your routines, put a routine in{' '}
             <strong>routines/</strong> and start it. The dashboard opens at{' '}
             <strong>localhost:7433</strong>, and <strong>pnpm kombinat install</strong> keeps it
-            running in the background and after reboots.
+            running in the background and after reboots, on macOS and Linux.
           </p>
         </WelcomeCard>
       ),
@@ -420,7 +425,7 @@ export function WelcomeBanner() {
             >
               <span
                 className={cn(
-                  'block h-1.5 rounded-full transition-all duration-300 ease-out-quint',
+                  'block h-1.5 rounded-full transition-[width,background-color] duration-300 ease-out-quint',
                   index === activeIndex ? 'w-5 bg-fg' : 'w-1.5 bg-fg-faint group-hover:bg-fg-muted',
                 )}
               />

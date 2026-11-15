@@ -1,25 +1,20 @@
-import type { ReactNode } from 'react';
 import { useLocation } from 'react-router';
 import { AppProviders } from '@web-app/app-providers';
 import { AppRoutes } from '@web-app/app-routes';
 import { AppFooter } from '@web-app/components/app-footer';
 import { AppHeader } from '@web-app/components/app-header';
+import { useCustomization, type Customization } from '@web-app/contexts';
 import { useFocusMainOnNavigate } from '@web-app/hooks/use-focus-main-on-navigate';
 
 const MAIN_ID = 'main';
 
-interface AppLayoutProps {
-  announcement: ReactNode;
-  banner: ReactNode;
-  footer: ReactNode;
-}
-
-function AppLayout({ announcement, banner, footer }: AppLayoutProps) {
+function AppLayout() {
+  const { announcement, banner, footer = <AppFooter /> } = useCustomization();
   useFocusMainOnNavigate(MAIN_ID);
   const { pathname } = useLocation();
   return (
-    <>
-      <div className="pb-20">
+    <div className="flex min-h-dvh flex-col">
+      <div className="flex-1 pb-20">
         <a href={`#${MAIN_ID}`} className="skip-link">
           Skip to content
         </a>
@@ -31,29 +26,24 @@ function AppLayout({ announcement, banner, footer }: AppLayoutProps) {
           tabIndex={-1}
           className="mx-auto max-w-[1180px] px-4 outline-none focus-visible:shadow-none sm:px-6"
         >
-          <div
-            key={pathname}
-            className="animate-in duration-300 ease-out-quint fade-in slide-in-from-bottom-2"
-          >
+          <div key={pathname} className="animate-in duration-150 ease-out-quint fade-in">
             <AppRoutes />
           </div>
         </main>
       </div>
       {footer}
-    </>
+    </div>
   );
 }
 
 interface AppProps {
-  announcement?: ReactNode;
-  banner?: ReactNode;
-  footer?: ReactNode;
+  customization?: Customization;
 }
 
-export function App({ announcement, banner, footer = <AppFooter /> }: AppProps) {
+export function App({ customization = {} }: AppProps) {
   return (
-    <AppProviders>
-      <AppLayout announcement={announcement} banner={banner} footer={footer} />
+    <AppProviders customization={customization}>
+      <AppLayout />
     </AppProviders>
   );
 }

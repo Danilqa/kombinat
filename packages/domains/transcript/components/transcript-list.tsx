@@ -1,5 +1,5 @@
 import { Check, ChevronRight, CircleAlert, Loader, X } from 'lucide-react';
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { match } from 'ts-pattern';
 
 import { CodeBlock, Collapsible, EmptyState, Markdown } from 'design-system/components';
@@ -226,6 +226,8 @@ interface TranscriptListProps {
 }
 
 export function TranscriptList({ items, isRunning }: TranscriptListProps) {
+  // Only events that arrive after the page opens animate in, not the whole transcript.
+  const [initialKeys] = useState(() => new Set(items.map(item => item.key)));
   if (items.length === 0) return <EmptyState>{getTranscriptEmptyLabel(isRunning)}</EmptyState>;
   return (
     <div className="space-y-2">
@@ -233,7 +235,8 @@ export function TranscriptList({ items, isRunning }: TranscriptListProps) {
         <div
           key={item.key}
           className={cn(
-            'animate-in duration-300 ease-out-quint fade-in slide-in-from-bottom-1',
+            !initialKeys.has(item.key) &&
+              'animate-in duration-300 ease-out-quint fade-in slide-in-from-bottom-1',
             checkIsSubagent(item) && 'ml-5 border-l border-line-strong pl-3',
           )}
         >
