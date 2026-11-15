@@ -79,7 +79,7 @@ The domain map, definitions and invariants are in [packages/domains/README.md](p
 
 ### web-app
 
-- `src/app.tsx`, `app-providers.tsx` and `app-routes.tsx` make the shell. `App` takes an optional `customization` that `CustomizationContext` in `src/contexts/` hands to the layout and the pages, so an embedding app such as `website` can fill the slots around the pages and change their text. Route patterns and path helpers live in `src/constants/path.ts`.
+- `src/app.tsx`, `app-providers.tsx` and `app-routes.tsx` make the shell. `App` takes an optional `customization` that the layout and the pages read with `useCustomization()` from `src/contexts/`, so an embedding app such as `website` can fill the slots around the pages and change their text. Route patterns and path helpers live in `src/constants/path.ts`.
 - Server data comes through React Query, used as its docs show: `useQuery` with a `queryFn` that calls a domain request, and `useMutation` for writes. A query key starts with the API path, such as `['routines', name]` for `/api/routines/<name>`. Queries poll with `refetchInterval`, and a mutation invalidates the keys of all the data it changes.
 - Pages live in `src/features/<feature>/` next to their `.e2e.ts` specs. Files in a feature folder import each other by relative path; other imports inside `web-app` use the `@web-app/*` alias.
 - `src/index.css` imports the design-system stylesheet and adds `@source` for `domains`, so Tailwind sees the classes of domain components.

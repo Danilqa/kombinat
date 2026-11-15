@@ -1,16 +1,15 @@
-import { useContext } from 'react';
 import { useLocation } from 'react-router';
 import { AppProviders } from '@web-app/app-providers';
 import { AppRoutes } from '@web-app/app-routes';
 import { AppFooter } from '@web-app/components/app-footer';
 import { AppHeader } from '@web-app/components/app-header';
-import { CustomizationContext, type Customization } from '@web-app/contexts';
+import { useCustomization, type Customization } from '@web-app/contexts';
 import { useFocusMainOnNavigate } from '@web-app/hooks/use-focus-main-on-navigate';
 
 const MAIN_ID = 'main';
 
 function AppLayout() {
-  const { announcement, banner, footer = <AppFooter /> } = useContext(CustomizationContext);
+  const { announcement, banner, footer = <AppFooter /> } = useCustomization();
   useFocusMainOnNavigate(MAIN_ID);
   const { pathname } = useLocation();
   return (

@@ -1,12 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { useContext } from 'react';
 import { Card, ErrorState, LoadingState } from 'design-system/components';
 import { PageHeader } from 'design-system/layouts';
 import { getRoutines } from 'domains/routine/requests';
 import type { RoutineSummary } from 'domains/routine/types';
 import { sameOriginApi } from 'utils/http';
 import { getPollInterval } from 'utils/polling';
-import { CustomizationContext } from '@web-app/contexts';
+import { useCustomization } from '@web-app/contexts';
 import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 import { RoutinesTable } from './routines-table';
 
@@ -16,7 +15,7 @@ function checkHasRunningRoutine(routines: RoutineSummary[] = []): boolean {
 
 export function RoutinesPage() {
   useDocumentTitle('Routines');
-  const { routinesTitle = 'Routines' } = useContext(CustomizationContext);
+  const { routinesTitle = 'Routines' } = useCustomization();
   const { data, error, isPending } = useQuery({
     queryKey: ['routines'],
     queryFn: () => getRoutines(sameOriginApi),

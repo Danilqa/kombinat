@@ -1,4 +1,4 @@
-import { createContext, type ReactNode } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
 
 export interface Customization {
   announcement?: ReactNode;
@@ -7,4 +7,10 @@ export interface Customization {
   routinesTitle?: string;
 }
 
-export const CustomizationContext = createContext<Customization>({});
+const CustomizationContext = createContext<Customization>({});
+
+export const CustomizationProvider = CustomizationContext.Provider;
+
+export function useCustomization(): Customization {
+  return useContext(CustomizationContext);
+}
