@@ -4,16 +4,17 @@ Kombinat runs routines, markdown files in `routines/`, with AI agents on a sched
 
 ## Packages
 
-| Package         | Description                                                                                                                           |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `cli`           | `kombinat`, the only published package: CLI commands and the daemon                                                                   |
-| `web-app`       | Browser dashboard (React, Vite, Tailwind), built into `packages/cli/dist/web-app`                                                     |
-| `tui`           | Terminal dashboard, an HTTP client of the daemon. Bundled into `cli`                                                                  |
-| `website`       | Demo of the browser dashboard with sample data, deployed to GitHub Pages at https://danilqa.github.io/kombinat/                       |
-| `domains`       | Shared domain layer: schemas, types, requests, labels, mocks and router-free components, see [its README](packages/domains/README.md) |
-| `design-system` | Tailwind tokens and styles, shadcn/radix components and generic layout pieces                                                         |
-| `utils`         | Business-agnostic helpers that more than one package uses: http, error, date-time, polling, cron and search                           |
-| `e2e`           | Playwright config and fixtures. The specs live next to the pages as `*.e2e.ts`                                                        |
+| Package         | Description                                                                                                                                            |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `cli`           | `kombinat`, the only published package: CLI commands and the daemon                                                                                    |
+| `web-app`       | Browser dashboard (React, Vite, Tailwind), built into `packages/cli/dist/web-app`                                                                      |
+| `tui`           | Terminal dashboard, an HTTP client of the daemon. Bundled into `cli`                                                                                   |
+| `website`       | Demo of the browser dashboard with sample data, deployed to GitHub Pages at https://danilqa.github.io/kombinat/                                        |
+| `domains`       | Shared domain layer: schemas, types, requests, labels, mocks and router-free components, see [its README](packages/domains/README.md)                  |
+| `design-system` | Tailwind tokens and styles, shadcn/radix components and generic layout pieces                                                                          |
+| `utils`         | Business-agnostic helpers that more than one package uses: http, error, date-time, polling, cron and search                                            |
+| `e2e`           | Playwright config and fixtures. The specs live next to the pages as `*.e2e.ts`                                                                         |
+| `promo`         | Source of the promo video: scenes drawn with React, a tour of the website and the scripts that record them, see [its README](packages/promo/README.md) |
 
 ## Package manager
 
@@ -31,6 +32,7 @@ pnpm test:e2e                      # Playwright against a real daemon from this 
 pnpm --filter e2e run web-app:ui   # the same in Playwright's UI mode
 pnpm cli <command>                 # the CLI from source, with example/routines as the routines folder
 pnpm --filter website dev          # the demo site at http://localhost:5174/kombinat/
+pnpm --filter promo record          # the promo video in packages/promo/out, see its README
 ```
 
 `pnpm dev`, `pnpm cli install` and `pnpm cli uninstall` take over, rewrite or remove the launchd daemon of this Mac. Run them only when asked.
@@ -45,7 +47,7 @@ To release, bump `version` in `packages/cli/package.json` and the `kombinat` ver
 
 ### Dependency rules
 
-Packages, bottom to top: `utils` → `design-system` → `domains` → `web-app` and `tui` → `cli` and `website`. A package imports only the packages below it, by name. `e2e` is tooling beside them: it imports `domains` and reaches `packages/cli` by relative path.
+Packages, bottom to top: `utils` → `design-system` → `domains` → `web-app` and `tui` → `cli` and `website`. A package imports only the packages below it, by name. `e2e` is tooling beside them: it imports `domains` and reaches `packages/cli` by relative path. `promo` is tooling too: its scenes import `design-system`, and it records the website from its build, never by import.
 
 - `domains` and `utils` never import `cli`, its config, env, `node:*` or react-router.
 - Only `web-app` and `website` import react-router, so components that link or navigate stay there: the app header, breadcrumbs, runs table, week calendar, the pages and the website's banner.
@@ -96,6 +98,12 @@ The domain map, definitions and invariants are in [packages/domains/README.md](p
 - `src/demo-api/` answers the dashboard's `/api` requests in the browser, as `cli/src/server.ts` does: `routines.ts` holds the sample routines with their run outcomes and transcripts, and `history.ts` builds runs and skips from their schedules relative to now.
 - `public/og-image.gif` is the link preview image. `index.html` names it by its full URL in the Open Graph tags, since apps that unfurl links do not resolve relative paths.
 - `.github/workflows/website.yml` deploys it on every push to `main`.
+
+### promo
+
+- `src/timeline.ts` lists the video's segments with their lengths. Each scene in `src/scenes/` draws one moment from `time`, and `scripts/record.ts` seeks it frame by frame, so the video is the same on every machine. The dashboard tour in `scripts/capture-tour.ts` clicks through the built website in real time.
+- `src/narration.ts` is the voiceover script. Its takes come from Fish Audio by hand, and `scripts/voice.ts` brings them to one pace before `record` lays them over the video.
+- The recording goes to `packages/promo/out/`, which git ignores. The video is published by hand, not from CI.
 
 ### design-system
 

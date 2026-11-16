@@ -314,6 +314,15 @@ export default defineConfig(
     packagesAbove('tui', 'cli'),
     packagesByPath('utils', 'design-system', 'domains', 'web-app', 'e2e'),
   ),
+  restrictImports(
+    ['packages/promo/**'],
+    {
+      ...packagesAbove('web-app', 'tui', 'cli', 'website'),
+      message:
+        'promo draws its scenes with design-system and records the website from its build, never by import.',
+    },
+    packagesByPath('utils', 'design-system', 'domains', 'e2e'),
+  ),
   restrictImports(['packages/domains/**'], ...DOMAINS_IMPORTS),
   ...restrictDomainOrder('packages/domains', SHARED_DOMAIN_LEVELS, sharedDomains, DOMAINS_IMPORTS),
   restrictImports(['packages/domains/*/ids.ts'], ONLY_ZOD_IN_IDS),
@@ -339,6 +348,8 @@ export default defineConfig(
     NO_NODE,
     ...TEST_ONLY_IMPORTS,
   ),
+  // The scenes run in the browser, the scripts that record them in Node.
+  restrictImportsOfKind(['packages/promo/src/**/*.{ts,tsx}'], [], NO_NODE, ...TEST_ONLY_IMPORTS),
   restrictImportsOfKind(
     ['packages/domains/**/*.{ts,tsx}'],
     ['packages/domains/*/components/**'],

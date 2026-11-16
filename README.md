@@ -4,7 +4,7 @@
 
 One routine is one markdown file, so anyone on the team can write one. Merge it and it is live: a Mac or Linux machine that stays on runs it with Claude Code, Codex or any other CLI agent. Open source (MIT).
 
-[Live demo](https://danilqa.github.io/kombinat/) · [50-second video](https://www.youtube.com/watch?v=18VfIsc5RDE) · [Quickstart](#-quickstart) · [What to run](#-what-to-run)
+[Live demo](https://danilqa.github.io/kombinat/) · [80-second video](https://www.youtube.com/watch?v=P6f0QCEyr68) · [Quickstart](#-quickstart) · [What to run](#-what-to-run)
 
 ## 💡 Why
 
@@ -31,6 +31,8 @@ Example routines from the [live demo](https://danilqa.github.io/kombinat/).
 | [design-ux-issues](https://danilqa.github.io/kombinat/routines/design-ux-issues)               | Daily at 03:30                                        | Clicks through the app at night and files design and UX issues |
 | [support-signals](https://danilqa.github.io/kombinat/routines/support-signals)                 | Daily at 18:00                                        | Turns the day's support chats into product signals             |
 | [write-release-notes](https://danilqa.github.io/kombinat/routines/write-release-notes)         | Manual                                                | Drafts release notes from what was merged since the last tag   |
+
+It is not only for work. On a Mac at home, routines can look for discounts, book appointments, check the weather or tell you when a website changes.
 
 ## 🆚 How it compares
 
