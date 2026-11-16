@@ -2,6 +2,7 @@ import type { ComponentType } from 'react';
 import type { SceneName } from '../timeline';
 import { DelegateScene } from './delegate-scene';
 import { HomeScene } from './home-scene';
+import { HomeTeaserScene } from './home-teaser-scene';
 import { OutroScene } from './outro-scene';
 import { RoutineFileScene } from './routine-file-scene';
 import { TeamFlowScene } from './team-flow-scene';
@@ -17,6 +18,7 @@ export const SCENES: Record<SceneName, ComponentType<SceneProps>> = {
   title: TitleScene,
   'routine-file': RoutineFileScene,
   'team-flow': TeamFlowScene,
+  'home-teaser': HomeTeaserScene,
   delegate: DelegateScene,
   webhook: WebhookScene,
   home: HomeScene,
