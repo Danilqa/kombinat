@@ -6,3 +6,4 @@ playwright-report/
 test-results/
 packages/cli/README.md
 packages/cli/LICENSE
+packages/promo/out/

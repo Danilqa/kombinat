@@ -32,6 +32,8 @@ Example routines from the [live demo](https://danilqa.github.io/kombinat/).
 | [support-signals](https://danilqa.github.io/kombinat/routines/support-signals)                 | Daily at 18:00                                        | Turns the day's support chats into product signals             |
 | [write-release-notes](https://danilqa.github.io/kombinat/routines/write-release-notes)         | Manual                                                | Drafts release notes from what was merged since the last tag   |
 
+It is not only for work. On a Mac at home, routines can look for discounts, book appointments, check the weather or tell you when a website changes.
+
 ## 🆚 How it compares
 
 | Instead of                        | Kombinat gives you                                                                                                                             |
