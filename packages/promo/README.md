@@ -12,14 +12,17 @@ pnpm --filter promo snapshot webhook 2 6.5    # save moments of a scene to out/s
 pnpm --filter promo record                    # record every segment and render out/kombinat.mp4
 pnpm --filter promo record webhook tour       # record only these, reuse the frames of the rest
 pnpm --filter promo voice                     # turn the voiceover takes into clips at one pace
+pnpm --filter promo thumbnail                 # render the YouTube thumbnail to out/thumbnail.png
 ```
 
 `record` builds the website and the scenes, then writes to `out/`, which git ignores:
 
 - `kombinat.mp4`: the video with the voiceover, and `kombinat-silent.mp4` without it.
-- `poster.png`: the last frame of the routine file scene, the YouTube thumbnail.
+- `poster.png`: the last frame of the routine file scene.
 - `frames/<segment>/`: the captured frames, which `record <segment>` reuses for the segments it does not name.
 - `clips/`: each segment as its own video.
+
+`thumbnail` renders `src/stills/thumbnail-still.tsx`, which shows the same routine file as the video next to a run of it.
 
 ## How it works
 

@@ -1,37 +1,8 @@
-import { CodeLine, type CodeToken } from '../components/code-line';
+import { CodeLine } from '../components/code-line';
 import { SceneHeading } from '../components/scene-heading';
 import { WindowCard } from '../components/window-card';
 import { getProgress, toRiseStyle } from '../motion';
-
-const LINES: CodeToken[][] = [
-  [{ text: '---', tone: 'faint' }],
-  [
-    { text: 'name: ', tone: 'key' },
-    { text: 'fix-e2e-tests', tone: 'value' },
-  ],
-  [
-    { text: 'description: ', tone: 'key' },
-    { text: 'Finds the failing e2e test and fixes it', tone: 'value' },
-  ],
-  [
-    { text: 'schedule: ', tone: 'key' },
-    { text: "'30 11 * * *'", tone: 'string' },
-    { text: '  # daily at 11:30', tone: 'comment' },
-  ],
-  [
-    { text: 'agent: ', tone: 'key' },
-    { text: 'claude', tone: 'value' },
-  ],
-  [
-    { text: 'model: ', tone: 'key' },
-    { text: 'claude-opus-5-5', tone: 'value' },
-  ],
-  [{ text: '---', tone: 'faint' }],
-  [],
-  [{ text: 'Open the latest failed e2e run on GitHub and find the failing test.', tone: 'prose' }],
-  [{ text: 'Fix the test or the code, prove it with 10 runs in a row,', tone: 'prose' }],
-  [{ text: 'then open a pull request.', tone: 'prose' }],
-];
+import { FIX_E2E_TESTS_LINES } from './fix-e2e-tests-file';
 
 const LINE_HEIGHT = 30;
 // The window bar and the top padding of the code.
@@ -65,7 +36,7 @@ export function RoutineFileScene({ time }: RoutineFileSceneProps) {
           className="w-[790px]"
         >
           <div className="relative py-5 pr-6 pl-3 font-mono text-[16.5px]">
-            {LINES.map((tokens, index) => (
+            {FIX_E2E_TESTS_LINES.map((tokens, index) => (
               <CodeLine
                 key={index}
                 number={index + 1}
