@@ -203,6 +203,9 @@ importers:
       ts-pattern:
         specifier: 'catalog:'
         version: 5.9.2
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.7
     devDependencies:
       '@tailwindcss/vite':
         specifier: 4.3.3

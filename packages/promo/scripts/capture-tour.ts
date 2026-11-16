@@ -4,6 +4,9 @@ import type { BrowserContext, Locator, Page } from 'playwright';
 import { DEVICE_SCALE, VIEWPORT } from '../src/timeline';
 import { WEBSITE_SITE } from './serve-sites';
 import { TOUR_OVERLAY } from './tour-overlay';
+import type { TourMark } from './voiceover';
+
+export const TOUR_MARKS_FILE = 'marks.json';
 
 interface Point {
   x: number;
@@ -14,6 +17,11 @@ interface MoveOptions {
   dx?: number;
   dy?: number;
   ms?: number;
+}
+
+interface CaptionFrame {
+  caption: string;
+  frame: number;
 }
 
 interface Frame {
@@ -101,13 +109,17 @@ async function typeSlowly(page: Page, text: string) {
 }
 
 // The steps of the dashboard tour, in real time.
-async function playTour(page: Page) {
+async function playTour(page: Page, markCaption: (caption: string) => void) {
   const pointer = createPointer(page);
+  async function caption(text: string | null) {
+    if (text !== null) markCaption(text);
+    await showCaption(page, text);
+  }
   const pause = (ms: number) => page.waitForTimeout(ms);
   const nav = page.getByRole('navigation', { name: 'Main' });
 
   await pointer.place({ x: 760, y: 140 });
-  await showCaption(page, 'Every routine, its schedule and last run');
+  await caption('Every routine, its schedule and last run');
   await pause(700);
   const onCallRow = page.locator('tbody tr').filter({ hasText: 'on-call-engineer' });
   await pointer.moveTo(onCallRow.getByRole('link', { name: 'on-call-engineer', exact: true }), {
@@ -115,12 +127,12 @@ async function playTour(page: Page) {
   });
   await pause(800);
 
-  await showCaption(page, 'The week at a glance');
+  await caption('The week at a glance');
   await pointer.click(nav.getByRole('link', { name: 'Calendar' }), { ms: 700 });
   await page.getByRole('heading', { name: 'Calendar', level: 1 }).waitFor();
   await pause(2000);
 
-  await showCaption(page, 'Search routines and runs with ⌘K');
+  await caption('Search routines and runs with ⌘K');
   await pointer.click(page.getByRole('button', { name: 'Search', exact: true }), { ms: 600 });
   await page.getByRole('dialog').waitFor();
   await pause(300);
@@ -129,14 +141,14 @@ async function playTour(page: Page) {
   await page.keyboard.press('Enter');
   await page.getByRole('heading', { name: 'on-call-engineer', level: 1 }).waitFor();
 
-  await showCaption(page, 'Schedule, settings and the webhook');
+  await caption('Schedule, settings and the webhook');
   await pointer.moveTo(page.getByText('POST /api/routines/on-call-engineer/webhook'), {
     dx: -40,
     ms: 800,
   });
   await pause(1100);
 
-  await showCaption(page, 'Every run, scheduled or from a webhook');
+  await caption('Every run, scheduled or from a webhook');
   await pointer.glide({ x: 640, y: 520 }, 400);
   await pointer.scroll(330);
   await pause(400);
@@ -150,13 +162,13 @@ async function playTour(page: Page) {
   await pointer.click(webhookRun.locator('a').first(), { ms: 500 });
   await page.getByText('Transcript', { exact: true }).first().waitFor();
 
-  await showCaption(page, 'Full transcript of every run');
+  await caption('Full transcript of every run');
   await pause(600);
   await pointer.scroll(520, 800);
   await pause(300);
   await pointer.click(page.locator('main button[aria-expanded]').nth(1), { dx: -120, ms: 600 });
   await pause(2000);
-  await showCaption(page, null);
+  await caption(null);
   await pause(300);
 }
 
@@ -186,7 +198,10 @@ export async function captureTour(context: BrowserContext, folder: string): Prom
     everyNthFrame: 1,
   });
 
-  await playTour(page);
+  const captionFrames: CaptionFrame[] = [];
+  await playTour(page, caption => {
+    captionFrames.push({ caption, frame: frames.length });
+  });
 
   await cdp.send('Page.stopScreencast');
   await page.close();
@@ -200,5 +215,10 @@ export async function captureTour(context: BrowserContext, folder: string): Prom
   });
   lines.push(`file '${last.file}'`);
   fs.writeFileSync(path.join(folder, 'frames.txt'), `${lines.join('\n')}\n`);
+  const marks: TourMark[] = captionFrames.map(({ caption, frame }) => ({
+    caption,
+    seconds: (frames[frame]?.timestamp ?? last.timestamp) - first.timestamp,
+  }));
+  fs.writeFileSync(path.join(folder, TOUR_MARKS_FILE), `${JSON.stringify(marks, null, 2)}\n`);
   return last.timestamp + 1 / 30 - first.timestamp;
 }

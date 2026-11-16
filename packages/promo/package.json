@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "voice": "tsx scripts/voice.ts",
     "record": "pnpm --filter website build && vite build && tsx scripts/record.ts",
     "snapshot": "vite build && tsx scripts/snapshot.ts",
     "test": "tsx --test 'src/**/*.test.ts'",
@@ -16,7 +17,8 @@
     "lucide-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "ts-pattern": "catalog:"
+    "ts-pattern": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.3.3",

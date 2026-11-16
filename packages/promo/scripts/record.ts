@@ -4,10 +4,11 @@ import { match } from 'ts-pattern';
 import { TIMELINE, toSegmentName } from '../src/timeline';
 import { openSession } from './browser';
 import { captureScene } from './capture-scene';
-import { captureTour } from './capture-tour';
+import { captureTour, TOUR_MARKS_FILE } from './capture-tour';
 import { OUT_DIR } from './paths';
 import { renderVideo, type RenderedSegment } from './render-video';
 import { PROMO_SITE, WEBSITE_SITE } from './serve-sites';
+import { mixVoiceover, placeVoiceLines, readTourMarks, readVoiceLines } from './voiceover';
 
 // pnpm --filter promo record captures every segment. Name segments, such as `record webhook tour`,
 // to capture only those and reuse the frames of the rest from the last recording.
@@ -51,7 +52,16 @@ for (const segment of TIMELINE) {
 await browser.close();
 
 console.log('Rendering');
-const video = renderVideo(rendered, OUT_DIR);
+const silent = renderVideo(rendered, OUT_DIR);
+const video = path.join(OUT_DIR, 'kombinat.mp4');
+const voiceLines = readVoiceLines();
+if (voiceLines.length === 0) {
+  console.log('No voiceover in out/voice, run pnpm --filter promo voice to add it');
+  fs.copyFileSync(silent.file, video);
+} else {
+  const marks = readTourMarks(path.join(framesDir, 'tour', TOUR_MARKS_FILE));
+  mixVoiceover(silent.file, placeVoiceLines(voiceLines, silent.starts, marks), video);
+}
 const titleFrames = fs.readdirSync(path.join(framesDir, 'title')).sort();
 const posterFrame = titleFrames.at(-1);
 if (posterFrame !== undefined) {

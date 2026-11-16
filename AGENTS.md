@@ -102,6 +102,7 @@ The domain map, definitions and invariants are in [packages/domains/README.md](p
 ### promo
 
 - `src/timeline.ts` lists the video's segments with their lengths. Each scene in `src/scenes/` draws one moment from `time`, and `scripts/record.ts` seeks it frame by frame, so the video is the same on every machine. The dashboard tour in `scripts/capture-tour.ts` clicks through the built website in real time.
+- `src/narration.ts` is the voiceover script. Its takes come from Fish Audio by hand, and `scripts/voice.ts` brings them to one pace before `record` lays them over the video.
 - The recording goes to `packages/promo/out/`, which git ignores. The video is published by hand, not from CI.
 
 ### design-system

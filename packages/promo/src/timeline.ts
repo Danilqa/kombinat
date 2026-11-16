@@ -3,6 +3,8 @@ import { match } from 'ts-pattern';
 export type SceneName =
   'title' | 'routine-file' | 'team-flow' | 'delegate' | 'webhook' | 'home' | 'outro';
 
+export type SegmentName = SceneName | 'tour';
+
 export interface SceneSegment {
   kind: 'scene';
   scene: SceneName;
@@ -27,14 +29,14 @@ export const FPS = 30;
 export const CROSSFADE_SECONDS = 0.4;
 
 export const TIMELINE: Segment[] = [
-  { kind: 'scene', scene: 'title', seconds: 3 },
-  { kind: 'scene', scene: 'routine-file', seconds: 6 },
-  { kind: 'scene', scene: 'team-flow', seconds: 7 },
-  { kind: 'scene', scene: 'home', seconds: 4 },
+  { kind: 'scene', scene: 'title', seconds: 4 },
+  { kind: 'scene', scene: 'routine-file', seconds: 7.2 },
+  { kind: 'scene', scene: 'team-flow', seconds: 7.5 },
+  { kind: 'scene', scene: 'home', seconds: 9.2 },
   { kind: 'scene', scene: 'delegate', seconds: 6 },
   { kind: 'scene', scene: 'webhook', seconds: 8.5 },
   { kind: 'tour' },
-  { kind: 'scene', scene: 'outro', seconds: 4 },
+  { kind: 'scene', scene: 'outro', seconds: 6 },
 ];
 
 export function listScenes(): SceneSegment[] {
@@ -46,8 +48,8 @@ export function listScenes(): SceneSegment[] {
   );
 }
 
-export function toSegmentName(segment: Segment): string {
-  return match(segment)
+export function toSegmentName(segment: Segment): SegmentName {
+  return match<Segment, SegmentName>(segment)
     .with({ kind: 'scene' }, ({ scene }) => scene)
     .with({ kind: 'tour' }, () => 'tour')
     .exhaustive();

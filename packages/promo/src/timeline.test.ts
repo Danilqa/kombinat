@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { CROSSFADE_SECONDS, findScene, listScenes, TIMELINE, toSegmentName } from './timeline';
+import { CROSSFADE_SECONDS, findScene, listScenes, TIMELINE } from './timeline';
 
 test('every scene is in the timeline once', () => {
   const names = listScenes().map(segment => segment.scene);
@@ -8,7 +8,7 @@ test('every scene is in the timeline once', () => {
 });
 
 test('the timeline has one dashboard tour', () => {
-  assert.equal(TIMELINE.filter(segment => toSegmentName(segment) === 'tour').length, 1);
+  assert.equal(TIMELINE.length - listScenes().length, 1);
 });
 
 test('every scene is longer than two crossfades', () => {
