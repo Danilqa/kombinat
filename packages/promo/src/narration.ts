@@ -18,7 +18,10 @@ const SPOKEN_NAME = 'Kombinaht';
 
 // The voiceover. Each line is one clip.
 export const NARRATION: NarrationLine[] = [
-  { segment: 'title', text: 'Kombinat runs your AI agents in the background.' },
+  {
+    segment: 'title',
+    text: 'Kombinat runs your AI agents twenty-four seven, while you focus on what matters.',
+  },
   {
     segment: 'routine-file',
     text: 'Each routine is a Markdown file: the schedule and settings on top, the prompt below.',
@@ -28,16 +31,20 @@ export const NARRATION: NarrationLine[] = [
     text: 'Anyone on the team can add one with a pull request. Once it’s merged, it runs on its schedule.',
   },
   {
-    segment: 'home',
-    text: 'It works for life at home too: catching discounts, booking appointments, checking the weather, or watching a website.',
+    segment: 'work',
+    text: 'Teams use it for on-call, release monitoring, bug fixes, design and accessibility reviews, go-to-market research, and more.',
   },
   {
     segment: 'delegate',
-    text: 'You can also hand off a task. Just mention Kombinat in a chat or on an issue.',
+    text: 'For example, hand off a task: just mention Kombinat in a chat or on an issue.',
   },
   {
     segment: 'webhook',
     text: 'A webhook starts the routine, the request goes into the prompt, and the agent reports back when it’s done.',
+  },
+  {
+    segment: 'home',
+    text: 'And at home, anything you can imagine: catching discounts, booking appointments, checking the weather, or watching a website.',
   },
   {
     segment: 'tour',

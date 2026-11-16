@@ -36,3 +36,10 @@ export function toPopStyle(progress: number): CSSProperties {
     transform: `scale(${interpolate(0.94, 1, progress)})`,
   };
 }
+
+// How lit an item is that the voiceover names at `mentions[index]`: it lights up then, and fades when a later item is named.
+export function getSpotlight(time: number, mentions: number[], index: number): number {
+  const mentionedAt = mentions[index] ?? Infinity;
+  const nextMention = Math.min(Infinity, ...mentions.filter(at => at > mentionedAt));
+  return getProgress(time, mentionedAt, 0.3) * (1 - getProgress(time, nextMention, 0.3));
+}

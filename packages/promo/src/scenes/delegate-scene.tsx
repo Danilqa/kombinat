@@ -122,7 +122,7 @@ export function DelegateScene({ time }: DelegateSceneProps) {
     <div className="absolute inset-0 flex flex-col items-center justify-center gap-12 pb-4">
       <SceneHeading
         time={time}
-        title="Delegate from"
+        title="For example, delegate from"
         accent="chat or your task manager"
         subtitle="Mention the agent in a comment, and a routine takes the task."
       />

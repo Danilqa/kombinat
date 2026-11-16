@@ -7,6 +7,7 @@ import { RoutineFileScene } from './routine-file-scene';
 import { TeamFlowScene } from './team-flow-scene';
 import { TitleScene } from './title-scene';
 import { WebhookScene } from './webhook-scene';
+import { WorkScene } from './work-scene';
 
 interface SceneProps {
   // Seconds since the scene started.
@@ -17,6 +18,7 @@ export const SCENES: Record<SceneName, ComponentType<SceneProps>> = {
   title: TitleScene,
   'routine-file': RoutineFileScene,
   'team-flow': TeamFlowScene,
+  work: WorkScene,
   home: HomeScene,
   delegate: DelegateScene,
   webhook: WebhookScene,
