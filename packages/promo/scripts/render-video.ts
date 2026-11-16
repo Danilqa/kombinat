@@ -49,6 +49,7 @@ function encodeSegment(segment: RenderedSegment, file: string) {
 // Encodes every segment, then joins them with crossfades into one video.
 export function renderVideo(segments: RenderedSegment[], outDir: string): string {
   const clipsDir = path.join(outDir, 'clips');
+  fs.rmSync(clipsDir, { recursive: true, force: true });
   fs.mkdirSync(clipsDir, { recursive: true });
   const clips = segments.map((segment, index) => {
     const file = path.join(clipsDir, `${String(index).padStart(2, '0')}-${segment.name}.mp4`);

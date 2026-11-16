@@ -110,11 +110,18 @@ async function playTour(page: Page) {
   await showCaption(page, 'Every routine, its schedule and last run');
   await pause(700);
   const onCallRow = page.locator('tbody tr').filter({ hasText: 'on-call-engineer' });
-  await pointer.moveTo(onCallRow.getByText('2 queued'), { ms: 900 });
-  await pause(900);
+  await pointer.moveTo(onCallRow.getByRole('link', { name: 'on-call-engineer', exact: true }), {
+    ms: 900,
+  });
+  await pause(800);
+
+  await showCaption(page, 'The week at a glance');
+  await pointer.click(nav.getByRole('link', { name: 'Calendar' }), { ms: 700 });
+  await page.getByRole('heading', { name: 'Calendar', level: 1 }).waitFor();
+  await pause(2000);
 
   await showCaption(page, 'Search routines and runs with ⌘K');
-  await pointer.click(page.getByRole('button', { name: 'Search', exact: true }), { ms: 700 });
+  await pointer.click(page.getByRole('button', { name: 'Search', exact: true }), { ms: 600 });
   await page.getByRole('dialog').waitFor();
   await pause(300);
   await typeSlowly(page, 'on-call');
@@ -127,13 +134,7 @@ async function playTour(page: Page) {
     dx: -40,
     ms: 800,
   });
-  await pause(1200);
-
-  await showCaption(page, 'Webhook requests wait in a queue');
-  await pointer.click(page.getByRole('button', { name: /in queue/ }), { ms: 650 });
-  await pause(2000);
-  await page.keyboard.press('Escape');
-  await pause(200);
+  await pause(1100);
 
   await showCaption(page, 'Every run, scheduled or from a webhook');
   await pointer.glide({ x: 640, y: 520 }, 400);
@@ -154,12 +155,7 @@ async function playTour(page: Page) {
   await pointer.scroll(520, 800);
   await pause(300);
   await pointer.click(page.locator('main button[aria-expanded]').nth(1), { dx: -120, ms: 600 });
-  await pause(1700);
-
-  await showCaption(page, 'The week at a glance');
-  await pointer.click(nav.getByRole('link', { name: 'Calendar' }), { ms: 700 });
-  await page.getByRole('heading', { name: 'Calendar', level: 1 }).waitFor();
-  await pause(1900);
+  await pause(2000);
   await showCaption(page, null);
   await pause(300);
 }
