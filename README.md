@@ -6,7 +6,7 @@ One routine is one markdown file, so anyone on the team can write one. Merge it 
 
 [Live demo](https://danilqa.github.io/kombinat/) · [80-second video](https://www.youtube.com/watch?v=P6f0QCEyr68) · [Quickstart](#-quickstart) · [What to run](#-what-to-run)
 
-⭐ If you like Kombinat, [star it on GitHub](https://github.com/Danilqa/kombinat) so more people can find it.
+⭐ Support Kombinat with a [star on GitHub](https://github.com/Danilqa/kombinat) so more people can find it.
 
 ## 💡 Why
 
