@@ -1,14 +1,7 @@
 import { match } from 'ts-pattern';
 
 export type SceneName =
-  | 'title'
-  | 'routine-file'
-  | 'team-flow'
-  | 'home-teaser'
-  | 'delegate'
-  | 'webhook'
-  | 'home'
-  | 'outro';
+  'title' | 'routine-file' | 'team-flow' | 'delegate' | 'webhook' | 'home' | 'outro';
 
 export interface SceneSegment {
   kind: 'scene';
@@ -37,11 +30,10 @@ export const TIMELINE: Segment[] = [
   { kind: 'scene', scene: 'title', seconds: 3 },
   { kind: 'scene', scene: 'routine-file', seconds: 6 },
   { kind: 'scene', scene: 'team-flow', seconds: 7 },
-  { kind: 'scene', scene: 'home-teaser', seconds: 4 },
+  { kind: 'scene', scene: 'home', seconds: 4 },
   { kind: 'scene', scene: 'delegate', seconds: 6 },
   { kind: 'scene', scene: 'webhook', seconds: 8.5 },
   { kind: 'tour' },
-  { kind: 'scene', scene: 'home', seconds: 7 },
   { kind: 'scene', scene: 'outro', seconds: 4 },
 ];
 
