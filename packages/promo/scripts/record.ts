@@ -62,9 +62,12 @@ if (voiceLines.length === 0) {
   const marks = readTourMarks(path.join(framesDir, 'tour', TOUR_MARKS_FILE));
   mixVoiceover(silent.file, placeVoiceLines(voiceLines, silent.starts, marks), video);
 }
-const titleFrames = fs.readdirSync(path.join(framesDir, 'title')).sort();
-const posterFrame = titleFrames.at(-1);
-if (posterFrame !== undefined) {
-  fs.copyFileSync(path.join(framesDir, 'title', posterFrame), path.join(OUT_DIR, 'poster.png'));
+const thumbnailFrames = fs.readdirSync(path.join(framesDir, 'routine-file')).sort();
+const thumbnailFrame = thumbnailFrames.at(-1);
+if (thumbnailFrame !== undefined) {
+  fs.copyFileSync(
+    path.join(framesDir, 'routine-file', thumbnailFrame),
+    path.join(OUT_DIR, 'poster.png'),
+  );
 }
 console.log(video);

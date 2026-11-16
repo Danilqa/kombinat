@@ -17,7 +17,7 @@ pnpm --filter promo voice                     # turn the voiceover takes into cl
 `record` builds the website and the scenes, then writes to `out/`, which git ignores:
 
 - `kombinat.mp4`: the video with the voiceover, and `kombinat-silent.mp4` without it.
-- `poster.png`: the last frame of the title, for a thumbnail.
+- `poster.png`: the last frame of the routine file scene, the YouTube thumbnail.
 - `frames/<segment>/`: the captured frames, which `record <segment>` reuses for the segments it does not name.
 - `clips/`: each segment as its own video.
 
