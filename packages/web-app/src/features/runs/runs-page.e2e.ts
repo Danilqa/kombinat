@@ -34,3 +34,35 @@ test('lists the latest runs of all routines and opens one', async ({ page, kombi
     .click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('triage-sentry');
 });
+
+test('keeps runs for the chosen time, and always the last run of each routine', async ({
+  page,
+  kombinat,
+  time,
+}) => {
+  const tenDays = 10 * 24 * 60;
+  kombinat.addRoutine({ name: 'triage-sentry' });
+  kombinat.addRoutine({ name: 'weekly-report' });
+  const recent = kombinat.addRun({ routine: 'triage-sentry', startedAt: time.minutesAgo(60) });
+  kombinat.addRun({ routine: 'triage-sentry', startedAt: time.minutesAgo(tenDays) });
+  const lastReport = kombinat.addRun({
+    routine: 'weekly-report',
+    startedAt: time.minutesAgo(tenDays + 60),
+  });
+  await page.goto('/runs');
+  await expect(page.getByText('3 runs')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await expect(page.getByRole('menuitemradio', { name: 'Forever' })).toBeChecked();
+  await page.getByRole('menuitemradio', { name: '1 week' }).click();
+
+  await expect(page.getByText('2 runs')).toBeVisible();
+  await expect(page.getByRole('table')).toMatchAriaSnapshot(`
+    - rowgroup:
+      - row /^triage-sentry Succeeded ${recent.id}/
+      - row /^weekly-report Succeeded ${lastReport.id}/
+  `);
+  await page.reload();
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await expect(page.getByRole('menuitemradio', { name: '1 week' })).toBeChecked();
+});

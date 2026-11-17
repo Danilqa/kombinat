@@ -74,9 +74,59 @@ function DropdownMenuCheckboxItem({
   );
 }
 
+interface DropdownMenuLabelProps extends React.ComponentProps<typeof DropdownMenuPrimitive.Label> {}
+
+function DropdownMenuLabel({ className, ...props }: DropdownMenuLabelProps) {
+  return (
+    <DropdownMenuPrimitive.Label
+      data-slot="dropdown-menu-label"
+      className={cn('px-2.5 pt-1.5 pb-1 text-caption text-fg-muted', className)}
+      {...props}
+    />
+  );
+}
+
+interface DropdownMenuRadioGroupProps extends React.ComponentProps<
+  typeof DropdownMenuPrimitive.RadioGroup
+> {}
+
+function DropdownMenuRadioGroup({ ...props }: DropdownMenuRadioGroupProps) {
+  return <DropdownMenuPrimitive.RadioGroup data-slot="dropdown-menu-radio-group" {...props} />;
+}
+
+interface DropdownMenuRadioItemProps extends React.ComponentProps<
+  typeof DropdownMenuPrimitive.RadioItem
+> {}
+
+function DropdownMenuRadioItem({ className, children, ...props }: DropdownMenuRadioItemProps) {
+  return (
+    <DropdownMenuPrimitive.RadioItem
+      data-slot="dropdown-menu-radio-item"
+      className={cn(
+        'relative flex h-8 cursor-pointer items-center rounded-md pr-3 pl-8 outline-none select-none data-highlighted:bg-hover max-sm:h-11',
+        className,
+      )}
+      {...props}
+    >
+      <span className="absolute left-2.5 flex size-3.5 items-center justify-center">
+        <DropdownMenuPrimitive.ItemIndicator>
+          <Check
+            aria-hidden="true"
+            className="size-3.5 animate-in duration-200 ease-out-quint zoom-in-50 fade-in"
+          />
+        </DropdownMenuPrimitive.ItemIndicator>
+      </span>
+      {children}
+    </DropdownMenuPrimitive.RadioItem>
+  );
+}
+
 export {
   DropdownMenu as Root,
   DropdownMenuTrigger as Trigger,
   DropdownMenuContent as Content,
   DropdownMenuCheckboxItem as CheckboxItem,
+  DropdownMenuLabel as Label,
+  DropdownMenuRadioGroup as RadioGroup,
+  DropdownMenuRadioItem as RadioItem,
 };

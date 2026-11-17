@@ -6,6 +6,7 @@ import { routineNameSchema } from 'domains/routine/ids';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import { runIdSchema } from 'domains/run/ids';
 import type { RunRecord } from 'domains/run/types';
+import type { Settings } from 'domains/settings/types';
 import { compareRunsByNewest, decodeRunsCursor, paginateRuns } from 'domains/run/utils';
 import type { Transcript } from 'domains/transcript/types';
 
@@ -102,6 +103,7 @@ function makeOverview(): Overview {
       }),
     ],
     runs: [onCallRun, smokeRun],
+    settings: { runRetentionDays: null },
   };
 }
 
@@ -148,6 +150,7 @@ interface FakeOptions {
 
 function makeClient(overview: Overview, options: FakeOptions) {
   const started: string[] = [];
+  const savedSettings: Settings[] = [];
   const client: DaemonClient = {
     getOverview() {
       return options.isDown
@@ -191,13 +194,17 @@ function makeClient(overview: Overview, options: FakeOptions) {
       started.push(name);
       return Promise.resolve();
     },
+    updateSettings(settings) {
+      savedSettings.push(settings);
+      return Promise.resolve();
+    },
   };
-  return { client, started };
+  return { client, started, savedSettings };
 }
 
 async function makeApp(options: FakeOptions = {}) {
   const overview = options.overview ?? makeOverview();
-  const { client, started } = makeClient(overview, options);
+  const { client, started, savedSettings } = makeClient(overview, options);
   const app = new TuiApp({ client, now: () => NOW, pageLoadDelayMs: null });
   await app.refresh();
   const screen = () => app.render(WIDTH, HEIGHT).map(plain).join('\n');
@@ -212,7 +219,7 @@ async function makeApp(options: FakeOptions = {}) {
     for (const key of keys) await pressChunk([key]);
     return screen();
   };
-  return { app, overview, started, screen, press, pressChunk };
+  return { app, overview, started, savedSettings, screen, press, pressChunk };
 }
 
 test('fills the terminal exactly, with the status, routines, runs and detail panels', async () => {
@@ -350,6 +357,15 @@ test('r asks before starting a routine and only y starts it through the daemon',
   assert.deepEqual(started, []);
   await press('j', 'r', 'y');
   assert.deepEqual(started, ['smoke-test']);
+});
+
+test('s shows how long runs are kept and a number key changes it', async () => {
+  const { savedSettings, press } = await makeApp();
+  assert.match(await press('s'), /Keep runs for[\s\S]*● Forever/);
+  assert.doesNotMatch(await press('x'), /Keep runs for/);
+  assert.deepEqual(savedSettings, []);
+  await press('s', '2');
+  assert.deepEqual(savedSettings, [{ runRetentionDays: 30 }]);
 });
 
 test("r on the runs panel runs that run's routine", async () => {

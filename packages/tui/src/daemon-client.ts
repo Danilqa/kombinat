@@ -6,12 +6,15 @@ import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import type { RunId } from 'domains/run/ids';
 import { getRunsPage, getRunWithTranscript } from 'domains/run/requests';
 import type { RunRecord, RunsCursor, RunsPage, RunWithTranscript } from 'domains/run/types';
+import { getSettings, updateSettings } from 'domains/settings/requests';
+import type { Settings } from 'domains/settings/types';
 import { createHttpClient } from 'utils/http';
 
 export interface Overview {
   status: DaemonStatus;
   routines: RoutineSummary[];
   runs: RunRecord[];
+  settings: Settings;
 }
 
 // Same API as the web dashboard, so "run now" starts in the launchd daemon (unlocked keychain), not over ssh.
@@ -21,6 +24,7 @@ export interface DaemonClient {
   getRuns(routine: RoutineName, cursor: RunsCursor | null): Promise<RunsPage>;
   getRun(routine: RoutineName, id: RunId): Promise<RunWithTranscript>;
   startRun(name: RoutineName): Promise<void>;
+  updateSettings(settings: Settings): Promise<void>;
 }
 
 export function createDaemonClient(baseUrl: string): DaemonClient {
@@ -32,18 +36,22 @@ export function createDaemonClient(baseUrl: string): DaemonClient {
 
   return {
     async getOverview() {
-      const [status, routines, { runs }] = await Promise.all([
+      const [status, routines, { runs }, settings] = await Promise.all([
         getDaemonStatus(http),
         getRoutines(http),
         getRunsPage(http, null, null),
+        getSettings(http),
       ]);
-      return { status, routines, runs };
+      return { status, routines, runs, settings };
     },
     getRoutine: async name => getRoutine(http, name),
     getRuns: async (routine, cursor) => getRunsPage(http, routine, cursor),
     getRun: async (routine, id) => getRunWithTranscript(http, routine, id),
     async startRun(name) {
       await startRoutineRun(http, name);
+    },
+    async updateSettings(settings) {
+      await updateSettings(http, settings);
     },
   };
 }

@@ -71,14 +71,14 @@ const packagesByPath = (...folders) => ({
 const daemonDomains = (...domains) => ({
   regex: String.raw`^(\.\./)+(domains/)?(${domains.join('|')})(/|$)`,
   message:
-    'Daemon domains import only the levels before their own: agent, then routine, then run, then webhook, then scheduler.',
+    'Daemon domains import only the levels before their own: agent and settings, then routine, then run, then webhook, then scheduler.',
 });
 
 // Any domain may import the ids.ts of another, since ids.ts imports only zod.
 const sharedDomains = (...domains) => ({
   regex: String.raw`^((\.\./)+|domains/)(${domains.join('|')})(?!/ids$)(/|$)`,
   message:
-    'Shared domains import only the levels before their own, or the ids of any domain: agent, transcript, scheduler, daemon and webhook, then run, then routine and calendar.',
+    'Shared domains import only the levels before their own, or the ids of any domain: agent, transcript, scheduler, daemon, webhook and settings, then run, then routine and calendar.',
 });
 
 const ONLY_ZOD_IN_IDS = {
@@ -86,10 +86,16 @@ const ONLY_ZOD_IN_IDS = {
   message: 'ids.ts imports only zod, so that any domain can import it without a cycle.',
 };
 
-const DAEMON_DOMAIN_LEVELS = [['agent'], ['routine'], ['run'], ['webhook'], ['scheduler']];
+const DAEMON_DOMAIN_LEVELS = [
+  ['agent', 'settings'],
+  ['routine'],
+  ['run'],
+  ['webhook'],
+  ['scheduler'],
+];
 
 const SHARED_DOMAIN_LEVELS = [
-  ['agent', 'transcript', 'scheduler', 'daemon', 'webhook'],
+  ['agent', 'transcript', 'scheduler', 'daemon', 'webhook', 'settings'],
   ['run'],
   ['routine', 'calendar'],
 ];

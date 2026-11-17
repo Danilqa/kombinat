@@ -2,7 +2,7 @@ import { isMatching, match } from 'ts-pattern';
 
 import { checkMatchesSearch } from 'utils/search';
 
-import { routineNameSchema } from '../routine/ids';
+import { routineNameSchema, type RoutineName } from '../routine/ids';
 import { RUNS_PAGE_SIZE } from './constants';
 import { runIdSchema, type RunId } from './ids';
 import { runsCursorKeySchema, runsCursorSchema } from './schemas';
@@ -132,4 +132,21 @@ export function paginateRuns(
     nextCursor: hasMore && last !== undefined ? encodeRunsCursor(last) : null,
     total: newestFirstRuns.length,
   };
+}
+
+// The newest run of each routine stays, so its last outcome never disappears.
+export function findExpiredRuns(runs: RunRecord[], retentionDays: number, now: Date): RunRecord[] {
+  const cutoff = now.getTime() - retentionDays * 86_400_000;
+  const newest = new Map<RoutineName, RunRecord>();
+  for (const run of runs) {
+    const current = newest.get(run.routine);
+    if (current === undefined || compareRunsByNewest(run, current) < 0)
+      newest.set(run.routine, run);
+  }
+  return runs.filter(
+    run =>
+      !checkIsRunActive(run) &&
+      new Date(run.startedAt).getTime() < cutoff &&
+      newest.get(run.routine) !== run,
+  );
 }

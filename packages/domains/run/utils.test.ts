@@ -10,6 +10,7 @@ import {
   decodeRunsCursor,
   encodeRunsCursor,
   filterRuns,
+  findExpiredRuns,
   paginateRuns,
   parseRunsPageQuery,
 } from './utils';
@@ -93,4 +94,27 @@ test('a run is active while it runs and while it replies to a message', () => {
   assert.equal(checkIsRunActive(makeRunRecord({ status: 'running' })), true);
   assert.equal(checkIsRunActive(makeRunRecord({ status: 'succeeded', replyPid: 42 })), true);
   assert.equal(checkIsRunActive(makeRunRecord({ status: 'failed' })), false);
+});
+
+test('expires runs older than the retention but keeps active runs and the newest of each routine', () => {
+  const now = new Date(Date.UTC(2026, 10, 20, 9));
+  const daysAgo = (routine: string, days: number, overrides: Partial<RunRecord> = {}) =>
+    makeRunRecord({
+      id: runIdSchema.parse(`run-${days}`),
+      routine: routineNameSchema.parse(routine),
+      startedAt: new Date(now.getTime() - days * 86_400_000).toISOString(),
+      status: 'succeeded',
+      ...overrides,
+    });
+  const runs = [
+    daysAgo('a', 1),
+    daysAgo('a', 8),
+    daysAgo('a', 9, { status: 'running' }),
+    daysAgo('a', 10, { replyPid: 42 }),
+    daysAgo('a', 6),
+    daysAgo('b', 20),
+    daysAgo('b', 30),
+  ];
+
+  assert.deepEqual(toIds(findExpiredRuns(runs, 7, now)), ['a/run-8', 'b/run-30']);
 });

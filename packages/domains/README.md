@@ -2,7 +2,7 @@
 
 A domain is the top path of an API request, or a type that several domains share:
 
-- API paths: `/api/routines` is routine, `/api/runs` is run, `/api/calendar` is calendar and `/api/status` is daemon.
+- API paths: `/api/routines` is routine, `/api/runs` is run, `/api/calendar` is calendar, `/api/status` is daemon and `/api/settings` is settings.
 - Shared types: agent, transcript, scheduler (skips) and webhook (queued webhooks).
 
 Each domain has up to two halves with the same name:
@@ -12,16 +12,17 @@ Each domain has up to two halves with the same name:
 
 ## Map
 
-| Domain         | Shared half                                                                                                                                                                                               | Daemon half                                                                              |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| **agent**      | `AgentName`, `SessionId`, agent label                                                                                                                                                                     | claude, codex and command adapters, registry, settings validation, `AgentTask`           |
-| **transcript** | item schemas and types, preview rule, subagent check, empty, result and hook labels, `TranscriptList`                                                                                                     | none                                                                                     |
-| **run**        | `RunRecord`, `RunId`, status and trigger, requests, labels, new ids, duration, cursor pages, active and continue rules, `makeRunRecord`, `RunStatusBadge`, `RunDetailList`, `RunOutput`, `RunMessageForm` | runner, replies, hooks, record storage with orphan reconciliation, event log, transcript |
-| **scheduler**  | `Skip`, `SkipReason`, `SchedulerState`, skip label, `SkipsTable`                                                                                                                                          | tick loop, `scheduler.json` storage                                                      |
-| **routine**    | `RoutineName`, `RoutineSummary`, `RoutineDetail`, requests, `RunNowButton`, `RoutineBadges`, `RoutineDetailList`, `WebhookQueueButton`                                                                    | file parsing, validation, defaults, loading, next run, schedule label, examples          |
-| **calendar**   | `CalendarEntryId`, entry schemas and types, `getCalendar`, `buildCalendar`, planned lengths, entry title and overlap labels, overlap count                                                                | none, `cli/src/server.ts` serves `buildCalendar`                                         |
-| **daemon**     | status schema, `getDaemonStatus`, health rules, `DaemonStatusIndicator`                                                                                                                                   | none, `cli/src/server.ts` builds the status                                              |
-| **webhook**    | `QueuedWebhook`, webhook path, size and queue position labels, `WebhookQueueList`                                                                                                                         | gate, queue, and receiving: start, queue, ignore or reject                               |
+| Domain         | Shared half                                                                                                                                                                                                             | Daemon half                                                                                         |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| **agent**      | `AgentName`, `SessionId`, agent label                                                                                                                                                                                   | claude, codex and command adapters, registry, settings validation, `AgentTask`                      |
+| **transcript** | item schemas and types, preview rule, subagent check, empty, result and hook labels, `TranscriptList`                                                                                                                   | none                                                                                                |
+| **run**        | `RunRecord`, `RunId`, status and trigger, requests, labels, new ids, duration, cursor pages, active and continue rules, expired runs, `makeRunRecord`, `RunStatusBadge`, `RunDetailList`, `RunOutput`, `RunMessageForm` | runner, replies, hooks, record storage with orphan reconciliation, event log, transcript, retention |
+| **scheduler**  | `Skip`, `SkipReason`, `SchedulerState`, skip label, `SkipsTable`                                                                                                                                                        | tick loop, `scheduler.json` storage                                                                 |
+| **routine**    | `RoutineName`, `RoutineSummary`, `RoutineDetail`, requests, `RunNowButton`, `RoutineBadges`, `RoutineDetailList`, `WebhookQueueButton`                                                                                  | file parsing, validation, defaults, loading, next run, schedule label, examples                     |
+| **calendar**   | `CalendarEntryId`, entry schemas and types, `getCalendar`, `buildCalendar`, planned lengths, entry title and overlap labels, overlap count                                                                              | none, `cli/src/server.ts` serves `buildCalendar`                                                    |
+| **daemon**     | status schema, `getDaemonStatus`, health rules, `DaemonStatusIndicator`                                                                                                                                                 | none, `cli/src/server.ts` builds the status                                                         |
+| **webhook**    | `QueuedWebhook`, webhook path, size and queue position labels, `WebhookQueueList`                                                                                                                                       | gate, queue, and receiving: start, queue, ignore or reject                                          |
+| **settings**   | `Settings`, defaults, retention options and labels, requests                                                                                                                                                            | `settings.json` storage                                                                             |
 
 Not domains:
 
@@ -76,6 +77,7 @@ Invariants:
 - The record is `<state dir>/runs/<routine>/<id>.json` and the event log `<id>.jsonl` next to it. This layout is a compatibility contract.
 - A webhook run's request body waits in `<id>.payload` next to them until the run starts: the daemon writes it and starts the run with `--run-id <id>`, and the runner deletes it and adds the body to the end of the prompt in a code fence.
 - The transcript is built from the event log: the hook lines become `hook` items, the before hook first and the after hook last, and the agent turns the other lines into items.
+- With a run retention set, the daemon deletes the record and event log of each run that is not active and started longer ago than that, except the newest run of each routine. It does so when it starts, every hour and when the retention changes.
 - `GET /api/runs` answers a page of runs, newest first by `startedAt`, then routine and id, with `nextCursor` and `total`. `routine` limits it to one routine and answers 404 when there is no such routine, a page holds 50 runs, and `cursor` is an opaque token for the run a page ends with, so the next page starts right after that run even when new runs arrive above it.
 
 #### Continuing a run
@@ -128,6 +130,10 @@ While the routine runs or has webhooks waiting, an accepted request is queued in
 
 The routine's `webhookGate`, a shell command, decides about each request first. It runs in the project folder with the `before` hook's `KOMBINAT_REPO` and `PATH`, gets the raw body on stdin and the headers as JSON in `KOMBINAT_WEBHOOK_HEADERS`, and is killed after 3 s, which answers 504. Exit 0 starts the run, and a non-blank output replaces the payload. Exit 78 starts nothing and answers 200, with the output as the body when it is JSON and `{"ok":true,"runId":null}` otherwise, so senders such as Linear do not retry. Any other exit answers 401 and logs the gate's stderr in the daemon log. The gate runs before the disabled check and the queue, so an ignored event never gets a 409 or waits.
 
+### settings
+
+How the daemon itself behaves, set from the dashboards, `GET` and `PUT /api/settings`, and kept in `<state dir>/settings.json`. `runRetentionDays` is how long runs are kept, `null` for forever, which is the default. The dashboards offer 1 week, 1 month, 3 months and forever.
+
 ### calendar
 
 The week view's read model, `GET /api/calendar?from&to` for a range of at most 32 days.
@@ -147,8 +153,8 @@ Its health is `unreachable` when the request fails, `stale` when there has been 
 
 A domain imports only the domains on the levels before its own, never one on its own level. There is one order of levels per half:
 
-- Shared: `agent`, `transcript`, `scheduler`, `daemon` and `webhook`, then `run`, then `routine` and `calendar`. A run record holds its agent's name, a run's transcript request returns a transcript, a routine summary embeds its last run and last skip and a detail its queued webhooks, and calendar entries carry run statuses and triggers.
-- Daemon: `agent`, then `routine`, then `run`, then `webhook`, then `scheduler`. A routine validates its agent's settings, a run starts a routine's agent, a webhook starts or queues a run, and the scheduler loads routines and starts runs and queued webhooks.
+- Shared: `agent`, `transcript`, `scheduler`, `daemon`, `webhook` and `settings`, then `run`, then `routine` and `calendar`. A run record holds its agent's name, a run's transcript request returns a transcript, a routine summary embeds its last run and last skip and a detail its queued webhooks, and calendar entries carry run statuses and triggers.
+- Daemon: `agent` and `settings`, then `routine`, then `run`, then `webhook`, then `scheduler`. A routine validates its agent's settings, a run's retention comes from the settings, a run starts a routine's agent, a webhook starts or queues a run, and the scheduler loads routines and starts runs and queued webhooks.
 
 The orders differ, because routine is below run in the daemon but above it in the shared half. Each half is acyclic on its own, and any daemon domain may import any shared domain. ESLint enforces both orders on static imports, tests included: the agent adapter tests build their task with `makeAgentTask` instead of importing routine code. It does not see `await import()`, which tests use to load modules after they set the environment, so check those imports by hand.
 
