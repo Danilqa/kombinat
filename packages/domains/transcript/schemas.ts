@@ -37,6 +37,12 @@ export const textItemSchema = z.object({
   isSubagent: z.boolean(),
 });
 
+export const messageItemSchema = z.object({
+  kind: z.literal('message'),
+  key: z.string(),
+  text: z.string(),
+});
+
 export const toolItemSchema = z.object({
   kind: z.literal('tool'),
   key: z.string(),
@@ -63,6 +69,7 @@ export const transcriptItemSchema = z.discriminatedUnion('kind', [
   initItemSchema,
   modelFallbackItemSchema,
   textItemSchema,
+  messageItemSchema,
   toolItemSchema,
   resultItemSchema,
 ]);

@@ -12,16 +12,16 @@ Each domain has up to two halves with the same name:
 
 ## Map
 
-| Domain         | Shared half                                                                                                                                                  | Daemon half                                                                     |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
-| **agent**      | `AgentName`, `SessionId`, agent label                                                                                                                        | claude, codex and command adapters, registry, settings validation, `AgentTask`  |
-| **transcript** | item schemas and types, preview rule, subagent check, empty, result and hook labels, `TranscriptList`                                                        | none                                                                            |
-| **run**        | `RunRecord`, `RunId`, status and trigger, requests, labels, new ids, duration, cursor pages, `makeRunRecord`, `RunStatusBadge`, `RunDetailList`, `RunOutput` | runner, hooks, record storage with orphan reconciliation, event log, transcript |
-| **scheduler**  | `Skip`, `SkipReason`, `SchedulerState`, skip label, `SkipsTable`                                                                                             | tick loop, `scheduler.json` storage                                             |
-| **routine**    | `RoutineName`, `RoutineSummary`, `RoutineDetail`, requests, `RunNowButton`, `RoutineBadges`, `RoutineDetailList`, `WebhookQueueButton`                       | file parsing, validation, defaults, loading, next run, schedule label, examples |
-| **calendar**   | `CalendarEntryId`, entry schemas and types, `getCalendar`, `buildCalendar`, planned lengths, entry title and overlap labels, overlap count                   | none, `cli/src/server.ts` serves `buildCalendar`                                |
-| **daemon**     | status schema, `getDaemonStatus`, health rules, `DaemonStatusIndicator`                                                                                      | none, `cli/src/server.ts` builds the status                                     |
-| **webhook**    | `QueuedWebhook`, webhook path, size and queue position labels, `WebhookQueueList`                                                                            | gate, queue, and receiving: start, queue, ignore or reject                      |
+| Domain         | Shared half                                                                                                                                                                                               | Daemon half                                                                              |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| **agent**      | `AgentName`, `SessionId`, agent label                                                                                                                                                                     | claude, codex and command adapters, registry, settings validation, `AgentTask`           |
+| **transcript** | item schemas and types, preview rule, subagent check, empty, result and hook labels, `TranscriptList`                                                                                                     | none                                                                                     |
+| **run**        | `RunRecord`, `RunId`, status and trigger, requests, labels, new ids, duration, cursor pages, active and continue rules, `makeRunRecord`, `RunStatusBadge`, `RunDetailList`, `RunOutput`, `RunMessageForm` | runner, replies, hooks, record storage with orphan reconciliation, event log, transcript |
+| **scheduler**  | `Skip`, `SkipReason`, `SchedulerState`, skip label, `SkipsTable`                                                                                                                                          | tick loop, `scheduler.json` storage                                                      |
+| **routine**    | `RoutineName`, `RoutineSummary`, `RoutineDetail`, requests, `RunNowButton`, `RoutineBadges`, `RoutineDetailList`, `WebhookQueueButton`                                                                    | file parsing, validation, defaults, loading, next run, schedule label, examples          |
+| **calendar**   | `CalendarEntryId`, entry schemas and types, `getCalendar`, `buildCalendar`, planned lengths, entry title and overlap labels, overlap count                                                                | none, `cli/src/server.ts` serves `buildCalendar`                                         |
+| **daemon**     | status schema, `getDaemonStatus`, health rules, `DaemonStatusIndicator`                                                                                                                                   | none, `cli/src/server.ts` builds the status                                              |
+| **webhook**    | `QueuedWebhook`, webhook path, size and queue position labels, `WebhookQueueList`                                                                                                                         | gate, queue, and receiving: start, queue, ignore or reject                               |
 
 Not domains:
 
@@ -51,6 +51,7 @@ An agent-independent view of a run's event log, ready to display: `{ eventCount,
 - `init`: the session start;
 - `model-fallback`: the agent switched from one model to another, with the reason when it gave one;
 - `text`: assistant text;
+- `message`: a message sent to the run from the dashboard, see [Continuing a run](#continuing-a-run);
 - `tool`: a tool call with its input, a preview, and a result that is `null` while the call is pending;
 - `result`: the outcome.
 
@@ -76,6 +77,21 @@ Invariants:
 - A webhook run's request body waits in `<id>.payload` next to them until the run starts: the daemon writes it and starts the run with `--run-id <id>`, and the runner deletes it and adds the body to the end of the prompt in a code fence.
 - The transcript is built from the event log: the hook lines become `hook` items, the before hook first and the after hook last, and the agent turns the other lines into items.
 - `GET /api/runs` answers a page of runs, newest first by `startedAt`, then routine and id, with `nextCursor` and `total`. `routine` limits it to one routine and answers 404 when there is no such routine, a page holds 50 runs, and `cursor` is an opaque token for the run a page ends with, so the next page starts right after that run even when new runs arrive above it.
+
+#### Continuing a run
+
+A finished run whose agent resumes sessions, the one with a resume command, can be continued: `POST /api/runs/<routine>/<id>/messages` with `{ "text": "…" }`.
+
+1. The daemon answers 400 for a blank text, 409 for a run without a resume command and 409 while the routine is running, then appends `{"type":"message","text":"…"}` to the event log.
+2. It starts a detached `kombinat reply <routine> <id>` and writes the record with its pid as `replyPid`, so the run counts as replying from the start.
+3. The reply resumes the session with the last message of the log in the routine's `cwd`, with its settings and timeout but without its hooks: `claude -p --resume <id>` or `codex exec … resume <id> -`. Its lines go to the same event log. A failure the agent did not report itself is appended as `{"type":"reply_error","error":"…"}`.
+4. It writes the record back with `replyPid` null, and the session id and resume command the reply reported. The status, times, result and cost stay those of the run.
+
+Invariants:
+
+- A run is active while it is `running` or has a `replyPid`. An active run keeps its routine running: the scheduler skips it, it counts against the concurrency limit, and Run now and webhooks wait.
+- A `replyPid` whose process is gone becomes null the next time runs are listed, and a `reply_error` line says so.
+- In the transcript, each message is followed by its reply's items, keyed under `reply-<n>`, after the run's after hook. A reply's session start is left out.
 
 ### scheduler
 
@@ -158,7 +174,7 @@ A domain folder in this package can have:
 - `*.test.ts`: unit tests next to the rules they cover, run by `pnpm test`;
 - `components/`: router-free React components, exported through `components/index.ts` as `domains/<domain>/components`. A component made of parts is exported as a namespace, as in design-system.
 
-Components per domain: run `RunStatusBadge`, `RunDetailList` and `RunOutput`; transcript `TranscriptList`; daemon `DaemonStatusIndicator`; routine `RunNowButton`, `RoutineBadges` and `RoutineDetailList`; scheduler `SkipsTable`.
+Components per domain: run `RunStatusBadge`, `RunDetailList`, `RunOutput` and `RunMessageForm`; transcript `TranscriptList`; daemon `DaemonStatusIndicator`; routine `RunNowButton`, `RoutineBadges` and `RoutineDetailList`; scheduler `SkipsTable`.
 
 Other packages import everything else per file, such as `domains/run/schemas`. Inside this package, files import each other by relative path.
 

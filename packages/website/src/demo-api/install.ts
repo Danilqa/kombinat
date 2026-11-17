@@ -10,12 +10,12 @@ export function installDemoApi(): void {
     if (url.origin !== window.location.origin || !url.pathname.startsWith('/api/')) {
       return fetchFromNetwork(input, init);
     }
-    const { status, body } = api.respond(request.method, url);
-    return Promise.resolve(
-      new Response(JSON.stringify(body), {
+    return request.text().then(text => {
+      const { status, body } = api.respond(request.method, url, text);
+      return new Response(JSON.stringify(body), {
         status,
         headers: { 'content-type': 'application/json; charset=utf-8' },
-      }),
-    );
+      });
+    });
   };
 }

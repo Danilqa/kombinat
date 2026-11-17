@@ -4,6 +4,7 @@ import type {
   hookItemSchema,
   hookPhaseSchema,
   initItemSchema,
+  messageItemSchema,
   modelFallbackItemSchema,
   resultItemSchema,
   textItemSchema,
@@ -20,6 +21,7 @@ export type HookPhase = z.infer<typeof hookPhaseSchema>;
 export type InitItem = z.infer<typeof initItemSchema>;
 export type ModelFallbackItem = z.infer<typeof modelFallbackItemSchema>;
 export type TextItem = z.infer<typeof textItemSchema>;
+export type MessageItem = z.infer<typeof messageItemSchema>;
 export type ToolItem = z.infer<typeof toolItemSchema>;
 export type ResultItem = z.infer<typeof resultItemSchema>;
 export type Transcript = z.infer<typeof transcriptSchema>;

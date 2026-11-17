@@ -4,7 +4,7 @@ import type { RoutineName } from '../routine/ids';
 import { transcriptSchema } from '../transcript/schemas';
 import type { Transcript } from '../transcript/types';
 import type { RunId } from './ids';
-import { runRecordSchema, runsPageSchema } from './schemas';
+import { runRecordSchema, runsPageSchema, sentRunMessageSchema } from './schemas';
 import type { RunRecord, RunsCursor, RunsPage, RunWithTranscript } from './types';
 
 function getRunApiPath(routine: RoutineName, id: RunId): string {
@@ -52,4 +52,17 @@ export async function getRunWithTranscript(
     getRunTranscript(http, routine, id),
   ]);
   return { run, transcript };
+}
+
+export async function sendRunMessage(
+  http: HttpClient,
+  routine: RoutineName,
+  id: RunId,
+  text: string,
+): Promise<void> {
+  await http.request(`${getRunApiPath(routine, id)}/messages`, sentRunMessageSchema, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ text }),
+  });
 }

@@ -60,6 +60,7 @@ export async function startDaemon(): Promise<Daemon> {
       KOMBINAT_ROUTINES_DIR: path.join(root, 'routines'),
       KOMBINAT_STATE_DIR: path.join(root, 'state'),
       KOMBINAT_PORT: String(port),
+      CLAUDE_BIN: path.join(import.meta.dirname, 'fake-claude.sh'),
       TZ: 'UTC',
     },
     stdio: ['ignore', 'pipe', 'pipe'],

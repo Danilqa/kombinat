@@ -6,8 +6,14 @@ import type { ToolResult, TranscriptItem } from 'domains/transcript/types';
 import { toPreview } from 'domains/transcript/utils';
 
 import { config } from '../../config';
-import { getUnattendedNote, pickOne, rejectUnsupported, withoutEnv } from './settings';
-import type { Agent, RunUpdate } from './types';
+import {
+  getReplyNote,
+  getUnattendedNote,
+  pickOne,
+  rejectUnsupported,
+  withoutEnv,
+} from './settings';
+import type { Agent, RunContext, RunUpdate } from './types';
 
 const DEFAULT_SANDBOX = 'workspace-write';
 const EFFORTS = ['minimal', 'low', 'medium', 'high', 'xhigh'] as const;
@@ -175,6 +181,22 @@ function toResult(index: number, numTurns: number, error: string | null): Transc
   };
 }
 
+// Options of exec go before its resume subcommand.
+function buildExecArgs({ routine }: RunContext): string[] {
+  const args = [
+    'exec',
+    '--json',
+    '--skip-git-repo-check',
+    '--sandbox',
+    routine.permissionMode ?? DEFAULT_SANDBOX,
+  ];
+  if (routine.model !== null) args.push('--model', routine.model);
+  if (routine.effort !== null) {
+    args.push('--config', `model_reasoning_effort="${routine.effort}"`);
+  }
+  return args;
+}
+
 export const codexAgent: Agent = {
   name: 'codex',
   output: 'jsonl',
@@ -191,24 +213,20 @@ export const codexAgent: Agent = {
   },
 
   buildInvocation(context) {
-    const { routine } = context;
-    const args = [
-      'exec',
-      '--json',
-      '--skip-git-repo-check',
-      '--sandbox',
-      routine.permissionMode ?? DEFAULT_SANDBOX,
-    ];
-    if (routine.model !== null) args.push('--model', routine.model);
-    if (routine.effort !== null) {
-      args.push('--config', `model_reasoning_effort="${routine.effort}"`);
-    }
-    args.push('-');
     return {
       command: config.codexBin,
-      args,
+      args: [...buildExecArgs(context), '-'],
       env: withoutEnv(DROPPED_ENV),
-      input: `${getUnattendedNote(context)}\n\n${routine.prompt}`,
+      input: `${getUnattendedNote(context)}\n\n${context.routine.prompt}`,
+    };
+  },
+
+  buildReplyInvocation(context, sessionId, message) {
+    return {
+      command: config.codexBin,
+      args: [...buildExecArgs(context), 'resume', sessionId, '-'],
+      env: withoutEnv(DROPPED_ENV),
+      input: `${getReplyNote(context)}\n\n${message}`,
     };
   },
 

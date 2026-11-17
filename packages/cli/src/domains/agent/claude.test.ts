@@ -122,6 +122,26 @@ test('passes the fallback models to claude -p', () => {
   assert.equal(buildArgs(null).includes('--fallback-model'), false);
 });
 
+test('resumes the session with the message and a note about the dashboard', () => {
+  const { args, input } =
+    claudeAgent.buildReplyInvocation(
+      {
+        routine: makeAgentTask({ effort: 'low' }),
+        runId: runIdSchema.parse('r1'),
+        trigger: 'manual',
+      },
+      sessionIdSchema.parse('s1'),
+      'Open a PR with the fix',
+    ) ?? assert.fail('claude continues sessions');
+  assert.equal(input, 'Open a PR with the fix');
+  assert.equal(args[args.indexOf('--resume') + 1], 's1');
+  assert.equal(args[args.indexOf('--effort') + 1], 'low');
+  assert.match(
+    args[args.indexOf('--append-system-prompt') + 1] ?? '',
+    /message from the dashboard/,
+  );
+});
+
 test('a model fallback switches the model of the run and shows in the transcript', () => {
   const fallback = {
     type: 'system',

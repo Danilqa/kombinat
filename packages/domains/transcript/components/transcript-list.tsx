@@ -9,6 +9,7 @@ import { formatDuration } from 'utils/date-time';
 import type {
   HookItem,
   InitItem,
+  MessageItem,
   ModelFallbackItem,
   ResultItem,
   TextItem,
@@ -89,6 +90,21 @@ interface TextRowProps {
 
 function TextRow({ item }: TextRowProps) {
   return <Markdown source={item.text} minHeadingLevel={3} />;
+}
+
+interface MessageRowProps {
+  item: MessageItem;
+}
+
+function MessageRow({ item }: MessageRowProps) {
+  return (
+    <div className="flex justify-end pt-6">
+      <p className="max-w-[85%] rounded-2xl rounded-br-md bg-overlay px-4 py-2.5 text-body whitespace-pre-wrap text-fg wrap-anywhere">
+        <span className="sr-only">You wrote: </span>
+        {item.text}
+      </p>
+    </div>
+  );
 }
 
 interface ToolRowProps {
@@ -215,6 +231,7 @@ function renderItem(item: TranscriptItem, isRunning: boolean) {
     .with({ kind: 'init' }, init => <InitRow item={init} />)
     .with({ kind: 'model-fallback' }, fallback => <ModelFallbackRow item={fallback} />)
     .with({ kind: 'text' }, text => <TextRow item={text} />)
+    .with({ kind: 'message' }, message => <MessageRow item={message} />)
     .with({ kind: 'tool' }, tool => <ToolRow item={tool} isPending={isRunning} />)
     .with({ kind: 'result' }, result => <ResultRow item={result} />)
     .exhaustive();

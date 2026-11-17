@@ -7,8 +7,15 @@ import { toPreview } from 'domains/transcript/utils';
 
 import { config } from '../../config';
 import { checkIsRecord } from '../../utils/json';
-import { getUnattendedNote, pickOne, rejectUnsupported, splitModels, withoutEnv } from './settings';
-import type { Agent, RunUpdate } from './types';
+import {
+  getReplyNote,
+  getUnattendedNote,
+  pickOne,
+  rejectUnsupported,
+  splitModels,
+  withoutEnv,
+} from './settings';
+import type { Agent, RunContext, RunUpdate } from './types';
 
 const DEFAULT_MODEL = 'claude-opus-5-5';
 const DEFAULT_EFFORT = 'high';
@@ -221,6 +228,32 @@ function readResult(event: ClaudeEvent): RunUpdate {
   return update;
 }
 
+function buildArgs(context: RunContext, note: string): string[] {
+  const { routine } = context;
+  const fallbackModels = splitModels(routine.fallbackModel);
+  const args = [
+    '-p',
+    '--output-format',
+    'stream-json',
+    '--verbose',
+    '--permission-mode',
+    routine.permissionMode ?? DEFAULT_PERMISSION_MODE,
+    '--permission-prompts',
+    'none',
+    '--model',
+    routine.model ?? DEFAULT_MODEL,
+    '--effort',
+    routine.effort ?? DEFAULT_EFFORT,
+    '--name',
+    `routine/${routine.name}/${context.runId}`,
+    '--append-system-prompt',
+    note,
+  ];
+  if (fallbackModels.length > 0) args.push('--fallback-model', fallbackModels.join(','));
+  if (routine.maxBudgetUsd !== null) args.push('--max-budget-usd', String(routine.maxBudgetUsd));
+  return args;
+}
+
 export const claudeAgent: Agent = {
   name: 'claude',
   output: 'jsonl',
@@ -241,31 +274,21 @@ export const claudeAgent: Agent = {
   },
 
   buildInvocation(context) {
-    const { routine } = context;
-    const fallbackModels = splitModels(routine.fallbackModel);
-    const args = [
-      '-p',
-      '--output-format',
-      'stream-json',
-      '--verbose',
-      '--permission-mode',
-      routine.permissionMode ?? DEFAULT_PERMISSION_MODE,
-      '--permission-prompts',
-      'none',
-      '--model',
-      routine.model ?? DEFAULT_MODEL,
-      '--effort',
-      routine.effort ?? DEFAULT_EFFORT,
-      '--name',
-      `routine/${routine.name}/${context.runId}`,
-      '--append-system-prompt',
-      getUnattendedNote(context),
-    ];
-    if (fallbackModels.length > 0) args.push('--fallback-model', fallbackModels.join(','));
-    if (routine.maxBudgetUsd !== null) {
-      args.push('--max-budget-usd', String(routine.maxBudgetUsd));
-    }
-    return { command: config.claudeBin, args, env: withoutEnv(DROPPED_ENV), input: routine.prompt };
+    return {
+      command: config.claudeBin,
+      args: buildArgs(context, getUnattendedNote(context)),
+      env: withoutEnv(DROPPED_ENV),
+      input: context.routine.prompt,
+    };
+  },
+
+  buildReplyInvocation(context, sessionId, message) {
+    return {
+      command: config.claudeBin,
+      args: [...buildArgs(context, getReplyNote(context)), '--resume', sessionId],
+      env: withoutEnv(DROPPED_ENV),
+      input: message,
+    };
   },
 
   readEvent(event) {

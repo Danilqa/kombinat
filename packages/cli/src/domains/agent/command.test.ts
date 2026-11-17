@@ -20,6 +20,15 @@ test('pipes the prompt into a shell command', () => {
   assert.equal(env['KOMBINAT_RUN_ID'], 'r1');
 });
 
+test('has no session to continue', () => {
+  const context = {
+    routine: makeAgentTask(),
+    runId: runIdSchema.parse('r1'),
+    trigger: 'manual' as const,
+  };
+  assert.equal(commandAgent.buildReplyInvocation(context, sessionIdSchema.parse('s1'), 'Hi'), null);
+});
+
 test('collects the output lines as the result and the transcript', () => {
   const first = { type: 'output', text: '# Report' };
   const second = { type: 'output', text: 'All good' };

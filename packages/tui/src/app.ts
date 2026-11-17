@@ -4,6 +4,7 @@ import type { RoutineName } from 'domains/routine/ids';
 import type { RoutineDetail } from 'domains/routine/types';
 import type { RunId } from 'domains/run/ids';
 import type { RunRecord, RunsPage, RunWithTranscript } from 'domains/run/types';
+import { checkIsRunActive } from 'domains/run/utils';
 import type { TranscriptItem } from 'domains/transcript/types';
 import { formatRelativeCompact } from 'utils/date-time';
 import { getErrorMessage } from 'utils/error';
@@ -325,7 +326,7 @@ export class TuiApp {
   private async loadRun(page: RunPage): Promise<void> {
     const key = runKey(page.routine, page.id);
     const cached = this.runData.get(key);
-    if (cached && !isMatching({ status: 'running' }, cached.run)) return;
+    if (cached && !checkIsRunActive(cached.run)) return;
     this.storeRun(key, await this.client.getRun(page.routine, page.id), cached);
   }
 
@@ -781,9 +782,10 @@ export class TuiApp {
           .exhaustive()
       : null;
     const body = content.lines.slice(page.scroll, page.scroll + visible).map(({ line }) => line);
-    const isFollowing =
-      isMatching({ kind: 'run', follow: true }, page) &&
-      isMatching({ status: 'running' }, this.runData.get(runKey(page.routine, page.id))?.run);
+    const followedRun = isMatching({ kind: 'run', follow: true }, page)
+      ? this.runData.get(runKey(page.routine, page.id))?.run
+      : undefined;
+    const isFollowing = followedRun !== undefined && checkIsRunActive(followedRun);
     const percent =
       content.lines.length > visible
         ? `${Math.round((100 * Math.min(content.lines.length, page.scroll + visible)) / content.lines.length)}%`
@@ -837,7 +839,7 @@ export class TuiApp {
   ): PageContent {
     const data = this.runData.get(runKey(page.routine, page.id));
     if (!data) return messageContent(error ?? 'loading…', Boolean(error));
-    const isRunning = isMatching({ status: 'running' }, data.run);
+    const isRunning = checkIsRunActive(data.run);
     const cacheKey = `${width}|${data.eventCount}|${data.expandedVersion}|${String(isRunning)}`;
     if (data.transcript?.key !== cacheKey) {
       data.transcript = {

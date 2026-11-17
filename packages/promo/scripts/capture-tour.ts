@@ -160,10 +160,12 @@ async function playTour(page: Page, markCaption: (caption: string) => void) {
   await pointer.moveTo(webhookRun.getByText('Webhook'), { ms: 600 });
   await pause(700);
   await pointer.click(webhookRun.locator('a').first(), { ms: 500 });
-  await page.getByText('Transcript', { exact: true }).first().waitFor();
+  const transcriptTab = page.getByRole('tab', { name: /Transcript & chat/ });
+  await transcriptTab.waitFor();
 
   await caption('Full transcript of every run');
-  await pause(600);
+  await pointer.click(transcriptTab, { ms: 500 });
+  await pause(100);
   await pointer.scroll(520, 800);
   await pause(300);
   await pointer.click(page.locator('main button[aria-expanded]').nth(1), { dx: -120, ms: 600 });

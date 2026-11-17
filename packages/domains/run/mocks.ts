@@ -23,6 +23,7 @@ export function makeRunRecord(overrides: Partial<RunRecord> = {}): RunRecord {
     resultText: null,
     error: null,
     logFile: '/tmp/run-1.jsonl',
+    replyPid: null,
     ...overrides,
   };
 }
