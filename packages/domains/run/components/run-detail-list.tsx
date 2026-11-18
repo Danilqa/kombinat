@@ -1,8 +1,9 @@
 import { DetailList, RelativeTime, type DetailEntry } from 'design-system/components';
-import { formatDuration, formatShort } from 'utils/date-time';
+import { formatShort } from 'utils/date-time';
 
 import type { RunRecord } from '../types';
-import { getRunDurationMs, getTriggerLabel } from '../utils';
+import { getTriggerLabel } from '../utils';
+import { RunDuration } from './run-duration';
 
 function formatOptionalTime(iso: string | null) {
   return iso ? (
@@ -23,7 +24,7 @@ function getSummaryEntries(run: RunRecord): DetailEntry[] {
       : []),
     { label: 'Started', value: formatOptionalTime(run.startedAt) },
     { label: 'Ended', value: formatOptionalTime(run.endedAt) },
-    { label: 'Duration', value: formatDuration(getRunDurationMs(run)) },
+    { label: 'Duration', value: <RunDuration run={run} /> },
     { label: 'Turns', value: run.numTurns ?? '-' },
     { label: 'Agent', value: run.agent, isMono: true },
     { label: 'Model', value: run.model ?? '-', isMono: true },

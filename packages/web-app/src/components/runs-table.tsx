@@ -1,10 +1,9 @@
 import { Link } from 'react-router';
 import { EmptyState, RelativeTime, Table } from 'design-system/components';
 import { cn } from 'design-system/utils';
-import { RunStatusBadge } from 'domains/run/components';
+import { RunDuration, RunStatusBadge } from 'domains/run/components';
 import type { RunRecord } from 'domains/run/types';
-import { getRunDurationMs, getTriggerLabel } from 'domains/run/utils';
-import { formatDuration } from 'utils/date-time';
+import { getTriggerLabel } from 'domains/run/utils';
 import { getRoutinePath, getRunPath } from '@web-app/constants/path';
 import { useRowLink } from '@web-app/hooks/use-row-link';
 
@@ -74,7 +73,7 @@ export function RunsTable({ runs, total, hasRoutineColumn, onEndReached }: RunsT
             <RelativeTime iso={run.startedAt} />
           </Table.Cell>
           <Table.Cell className="text-right text-fg tabular-nums">
-            {formatDuration(getRunDurationMs(run))}
+            <RunDuration run={run} />
           </Table.Cell>
           <Table.Cell className="text-right text-fg tabular-nums">{run.numTurns ?? '-'}</Table.Cell>
         </>

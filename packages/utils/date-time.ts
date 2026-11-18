@@ -83,7 +83,9 @@ export function formatRelative(iso: string, now: number = Date.now()): string {
   if (absSeconds < 10) return 'just now';
   const { unit, seconds } =
     relativeUnits.find(candidate => absSeconds >= candidate.seconds) ?? SECOND;
-  return relativeFormatter.format(Math.round(diffSeconds / seconds), unit);
+  const count = diffSeconds / seconds;
+  // The past counts whole units, so "1 min. ago" agrees with the 1m 50s duration next to it.
+  return relativeFormatter.format(count < 0 ? Math.trunc(count) : Math.round(count), unit);
 }
 
 // "45s", "5m", "3h 5m", "13h", "2d": short enough for a list column.
