@@ -6,6 +6,8 @@ import { match, P } from 'ts-pattern';
 
 import { buildCalendar } from 'domains/calendar/utils';
 import type { DaemonStatus } from 'domains/daemon/types';
+import { markReadRequestSchema } from 'domains/inbox/schemas';
+import { addReadRuns, listUnreadRuns } from 'domains/inbox/utils';
 import { releaseVersionSchema } from 'domains/release/ids';
 import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
 import { startRunRequestSchema } from 'domains/routine/schemas';
@@ -27,6 +29,7 @@ import { getErrorMessage } from 'utils/error';
 
 import { config } from './config';
 import { readPlanUsage } from './domains/agent/storage';
+import { readInboxState, writeInboxState } from './domains/inbox/storage';
 import { loadRoutines } from './domains/routine/storage';
 import type { Routine } from './domains/routine/types';
 import { describeSchedule, getNextRun } from './domains/routine/utils';
@@ -248,6 +251,15 @@ function updateSettings(body: Buffer): ApiResponse {
   return ok(settings.data);
 }
 
+function markRunsRead(body: Buffer): ApiResponse {
+  const request = markReadRequestSchema.safeParse(parseJson(body.toString('utf8')));
+  if (!request.success) return fail(400, 'The body must list runs with their routine and id');
+  const state = readInboxState();
+  const next = addReadRuns(state, request.data.runs, listAllRuns());
+  if (JSON.stringify(next) !== JSON.stringify(state)) writeInboxState(next);
+  return ok({ ok: true });
+}
+
 function routeApi(request: ApiRequest, context: ApiContext): ApiResponse | Promise<ApiResponse> {
   const { url, startedAt } = context;
   return match(request)
@@ -267,6 +279,8 @@ function routeApi(request: ApiRequest, context: ApiContext): ApiResponse | Promi
       withRoutine(routineNameSchema.parse(name), routine => handleWebhook(routine, context)),
     )
     .with(['GET', ['calendar']], () => getCalendar(url))
+    .with(['GET', ['inbox']], () => ok({ runs: listUnreadRuns(listAllRuns(), readInboxState()) }))
+    .with(['POST', ['inbox', 'read']], () => markRunsRead(context.request.body))
     .with(['GET', ['settings']], () => ok(readSettings()))
     .with(['PUT', ['settings']], () => updateSettings(context.request.body))
     .with(['GET', ['releases']], async () => ok(await getReleaseUpdate()))

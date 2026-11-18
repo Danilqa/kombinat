@@ -7,7 +7,7 @@ import { readSchedulerState } from '../../domains/scheduler/storage';
 
 const NOTIFY_DELAY_MS = 300;
 const SCHEDULER_FILE = 'scheduler.json';
-const STATE_ENTRIES = ['runs', 'queue', SCHEDULER_FILE];
+const STATE_ENTRIES = ['runs', 'queue', 'inbox.json', SCHEDULER_FILE];
 
 export interface LiveUpdates {
   follow: (req: http.IncomingMessage, res: http.ServerResponse) => void;

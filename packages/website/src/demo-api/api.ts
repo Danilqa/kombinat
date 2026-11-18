@@ -2,6 +2,9 @@ import { match, P } from 'ts-pattern';
 
 import { buildCalendar } from 'domains/calendar/utils';
 import type { DaemonStatus } from 'domains/daemon/types';
+import { markReadRequestSchema } from 'domains/inbox/schemas';
+import type { InboxState } from 'domains/inbox/types';
+import { addReadRuns, listUnreadRuns } from 'domains/inbox/utils';
 import type { ReleaseUpdate } from 'domains/release/types';
 import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
@@ -44,6 +47,7 @@ const MAX_CALENDAR_DAYS = 32;
 const DAEMON_UPTIME_MS = (3 * 24 + 4) * 3_600_000;
 const TICK_MS = 30_000;
 const MINUTE_MS = 60_000;
+const LAST_LOOK_MS = 24 * 3_600_000;
 
 function parseJson(text: string): unknown {
   try {
@@ -119,6 +123,10 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
   const fromLoad = (minutes: number) =>
     new Date(loadedAt.getTime() + minutes * MINUTE_MS).toISOString();
   let settings: Settings = DEFAULT_SETTINGS;
+  let inbox: InboxState = {
+    since: new Date(loadedAt.getTime() - LAST_LOOK_MS).toISOString(),
+    readRuns: [],
+  };
   const queues = new Map(
     demoRoutines.map(routine => [
       routine.name,
@@ -249,6 +257,13 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     return ok(settings);
   }
 
+  function markRunsRead(body: string, now: Date): ApiResponse {
+    const request = markReadRequestSchema.safeParse(parseJson(body));
+    if (!request.success) return fail(400, 'The body must list runs with their routine and id');
+    inbox = addReadRuns(inbox, request.data.runs, listRuns(now));
+    return ok({ ok: true });
+  }
+
   function routeApi(request: ApiRequest, url: URL, body: string, now: Date): ApiResponse {
     return match(request)
       .with(['GET', ['status']], () => ok(getStatus(now)))
@@ -260,6 +275,8 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
         withRoutine(routineNameSchema.parse(name), routine => startRun(routine, now)),
       )
       .with(['GET', ['calendar']], () => getCalendar(url, now))
+      .with(['GET', ['inbox']], () => ok({ runs: listUnreadRuns(listRuns(now), inbox) }))
+      .with(['POST', ['inbox', 'read']], () => markRunsRead(body, now))
       .with(['GET', ['settings']], () => ok(settings))
       .with(['PUT', ['settings']], () => updateSettings(body))
       .with(['GET', ['releases']], () => ok(RELEASE_UPDATE))

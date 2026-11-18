@@ -1175,7 +1175,7 @@ new file mode 100644
   ],
   pins: [
     { slotsAgo: 4, skip: 'already_running' },
-    { slotsAgo: 13, outcome: 'timed-out' },
+    { slotsAgo: 2, outcome: 'timed-out' },
     { slotsAgo: 27, outcome: 'pull-failed' },
   ],
 };

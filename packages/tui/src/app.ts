@@ -219,6 +219,7 @@ export class TuiApp {
   private runsLoads = new Map<RoutineName, Promise<void>>();
   private loadingMoreRuns = new Set<RoutineName>();
   private runData = new Map<string, RunData>();
+  private readRuns = new Set<string>();
   private pageErrors = new Map<string, string>();
   private refreshing: Promise<void> | null = null;
   private pageLoadTimer: NodeJS.Timeout | null = null;
@@ -344,6 +345,11 @@ export class TuiApp {
     const key = runKey(page.routine, page.id);
     const loaded = await this.client.getRun(page.routine, page.id);
     this.storeRun(key, loaded, this.runData.get(key));
+    if (!checkIsRunActive(loaded.run) && !this.readRuns.has(key)) {
+      this.readRuns.add(key);
+      // Older daemons, which tui --url and connect may talk to, have no inbox.
+      this.client.markRunRead(page.routine, page.id).catch(() => {});
+    }
   }
 
   private storeRun(

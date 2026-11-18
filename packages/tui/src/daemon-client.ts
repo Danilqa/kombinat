@@ -1,5 +1,6 @@
 import { getDaemonStatus, watchDaemonChanges } from 'domains/daemon/requests';
 import type { DaemonStatus } from 'domains/daemon/types';
+import { markRunsRead } from 'domains/inbox/requests';
 import { getReleaseUpdate } from 'domains/release/requests';
 import type { ReleaseUpdate } from 'domains/release/types';
 import type { RoutineName } from 'domains/routine/ids';
@@ -27,6 +28,7 @@ export interface DaemonClient {
   getRoutine(name: RoutineName): Promise<RoutineDetail>;
   getRuns(routine: RoutineName, cursor: RunsCursor | null): Promise<RunsPage>;
   getRun(routine: RoutineName, id: RunId): Promise<RunWithTranscript>;
+  markRunRead(routine: RoutineName, id: RunId): Promise<void>;
   startRun(name: RoutineName): Promise<void>;
   updateSettings(settings: Settings): Promise<void>;
   watchChanges(onChange: () => void, signal: AbortSignal): Promise<void>;
@@ -54,6 +56,7 @@ export function createDaemonClient(baseUrl: string): DaemonClient {
     getRoutine: async name => getRoutine(http, name),
     getRuns: async (routine, cursor) => getRunsPage(http, routine, cursor),
     getRun: async (routine, id) => getRunWithTranscript(http, routine, id),
+    markRunRead: async (routine, id) => markRunsRead(http, [{ routine, id }]),
     async startRun(name) {
       await startRoutineRun(http, name);
     },

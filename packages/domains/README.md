@@ -2,7 +2,7 @@
 
 A domain is the top path of an API request, or a type that several domains share:
 
-- API paths: `/api/routines` is routine, `/api/runs` is run, `/api/calendar` is calendar, `/api/status` and `/api/events` are daemon, `/api/settings` is settings and `/api/releases` is release.
+- API paths: `/api/routines` is routine, `/api/runs` is run, `/api/calendar` is calendar, `/api/status` and `/api/events` are daemon, `/api/settings` is settings, `/api/releases` is release and `/api/inbox` is inbox.
 - Shared types: agent, transcript, scheduler (skips) and webhook (queued webhooks).
 
 Each domain has up to two halves with the same name:
@@ -24,6 +24,7 @@ Each domain has up to two halves with the same name:
 | **webhook**    | `QueuedWebhook`, webhook path, size and queue position labels, `WebhookQueueList`                                                                                                                                       | gate, queue, conversations, and receiving: start, continue, queue, ignore or reject                 |
 | **settings**   | `Settings`, defaults, retention options and labels, requests                                                                                                                                                            | `settings.json` storage                                                                             |
 | **release**    | `ReleaseVersion`, `ReleaseUpdate`, requests, newer releases, the offered release, `UpdateCard`                                                                                                                          | none, `cli/src/features/self-update/releases.ts` checks GitHub and skips                            |
+| **inbox**      | `InboxState`, requests, unread runs, marking runs read, groups and their labels, the summary line                                                                                                                       | `inbox.json` storage                                                                                |
 
 Not domains:
 
@@ -153,6 +154,15 @@ Only a package installed from npm looks for releases, at most once an hour, and 
 
 `POST /api/releases/<version>/skip` stores the version in `<state dir>/releases.json`. The newest release is offered until it is skipped, and a newer one is offered again.
 
+### inbox
+
+The runs that ended since the user last looked, `GET /api/inbox`, so that a failure or a finding is not missed among the quiet runs. `<state dir>/inbox.json` holds `since`, written the first time a client asks for the inbox or marks a run read, and the runs read since then.
+
+- A run is unread when it is not active, ended after `since` and is not among the read runs. A run without an end time counts from its start.
+- `POST /api/inbox/read` with `{ "runs": [{ "routine": "…", "id": "…" }] }` marks those runs read. It keeps only the keys of runs that still exist and ended after `since`, so the file shrinks as runs are deleted, and writes it only when it changes.
+- The dashboard marks a run read when its page shows it finished, the TUI when it opens it, and Mark all as read sends the runs on screen, so a run that ends meanwhile stays unread.
+- Unread runs are grouped: Needs a look for every status but succeeded, Nothing to report for a succeeded run whose result is empty or starts with the word "No" or "Nothing", and Has findings for the rest.
+
 ### calendar
 
 The week view's read model, `GET /api/calendar?from&to` for a range of at most 32 days.
@@ -171,7 +181,7 @@ The running kombinat service as its clients see it through `GET /api/status`: ve
 - Claude Code's stream-json reports it in each `rate_limit_event` as the share used and the reset time of the 5-hour and the weekly limit. The runner writes the latest one to `<state dir>/plan-usage/claude.json` with the time it came, which the status serves.
 - A limit whose reset time has passed is left out, because what was used since is unknown until the next run reports it. The dashboard and the TUI show the share left of the most used limit next to the running count.
 
-`GET /api/events` is a stream of server-sent events with one `data: change` event, at most every 300 ms, after a routine file, a run record, the webhook queue or the skips and last scheduled times in `scheduler.json` change. Run logs and the tick time do not count: logs grow with every agent event, and clients poll the tick time with the status. A client refetches what it shows on each event and once after it reconnects. It reconnects 5 s after the stream breaks and stops when the answer is an error, such as from an older daemon or the website's demo. The dashboard follows the stream only while its tab is visible, since browsers allow 6 connections to a host across all tabs, and refetches when the tab shows again.
+`GET /api/events` is a stream of server-sent events with one `data: change` event, at most every 300 ms, after a routine file, a run record, the webhook queue, `inbox.json` or the skips and last scheduled times in `scheduler.json` change. Run logs and the tick time do not count: logs grow with every agent event, and clients poll the tick time with the status. A client refetches what it shows on each event and once after it reconnects. It reconnects 5 s after the stream breaks and stops when the answer is an error, such as from an older daemon or the website's demo. The dashboard follows the stream only while its tab is visible, since browsers allow 6 connections to a host across all tabs, and refetches when the tab shows again.
 
 Its health is `unreachable` when the request fails, `stale` when there has been no tick or the last tick is more than 5 minutes old, and `healthy` otherwise.
 
@@ -179,8 +189,8 @@ Its health is `unreachable` when the request fails, `stale` when there has been 
 
 A domain imports only the domains on the levels before its own, never one on its own level. There is one order of levels per half:
 
-- Shared: `agent`, `transcript`, `scheduler`, `daemon`, `webhook`, `settings` and `release`, then `run`, then `routine` and `calendar`. A run record holds its agent's name, a run's transcript request returns a transcript, a routine summary embeds its last run and last skip and a detail its queued webhooks, and calendar entries carry run statuses and triggers.
-- Daemon: `agent` and `settings`, then `routine`, then `run`, then `webhook`, then `scheduler`. A routine validates its agent's settings, a run's retention comes from the settings, a run starts a routine's agent, a webhook starts or queues a run, and the scheduler loads routines and starts runs and queued webhooks.
+- Shared: `agent`, `transcript`, `scheduler`, `daemon`, `webhook`, `settings` and `release`, then `run`, then `routine`, `calendar` and `inbox`. A run record holds its agent's name, a run's transcript request returns a transcript, a routine summary embeds its last run and last skip and a detail its queued webhooks, calendar entries carry run statuses and triggers, and the inbox lists runs.
+- Daemon: `agent`, `settings` and `inbox`, then `routine`, then `run`, then `webhook`, then `scheduler`. A routine validates its agent's settings, a run's retention comes from the settings, a run starts a routine's agent, a webhook starts or queues a run, and the scheduler loads routines and starts runs and queued webhooks.
 
 The orders differ, because routine is below run in the daemon but above it in the shared half. Each half is acyclic on its own, and any daemon domain may import any shared domain. ESLint enforces both orders on static imports, tests included: the agent adapter tests build their task with `makeAgentTask` instead of importing routine code. It does not see `await import()`, which tests use to load modules after they set the environment, so check those imports by hand.
 

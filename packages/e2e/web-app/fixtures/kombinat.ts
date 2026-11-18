@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import { sessionIdSchema } from 'domains/agent/ids';
 import type { AgentName } from 'domains/agent/types';
+import type { InboxState } from 'domains/inbox/types';
 import { routineNameSchema } from 'domains/routine/ids';
 import { makeRunRecord } from 'domains/run/mocks';
 import type { RunRecord } from 'domains/run/types';
@@ -46,6 +47,7 @@ export interface Kombinat {
   addRun: (run: RunFile) => RunRecord;
   addSkip: (routine: string, reason: SkipReason) => void;
   addQueuedWebhook: (webhook: QueuedWebhookFile) => void;
+  lookAtInbox: (at: string) => void;
   stallScheduler: () => void;
 }
 
@@ -121,6 +123,10 @@ export function createKombinat(root: string): Kombinat {
       const file = `${String(queuedAt.getTime()).padStart(15, '0')}-${createRunId(queuedAt)}.payload`;
       fs.mkdirSync(queueDir, { recursive: true });
       fs.writeFileSync(path.join(queueDir, file), payload);
+    },
+    lookAtInbox: at => {
+      const inbox: InboxState = { since: at, readRuns: [] };
+      fs.writeFileSync(path.join(stateDir, 'inbox.json'), JSON.stringify(inbox));
     },
     stallScheduler: () => {
       scheduler.lastTickAt = minutesAgo(10);

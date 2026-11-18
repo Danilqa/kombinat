@@ -71,14 +71,14 @@ const packagesByPath = (...folders) => ({
 const daemonDomains = (...domains) => ({
   regex: String.raw`^(\.\./)+(domains/)?(${domains.join('|')})(/|$)`,
   message:
-    'Daemon domains import only the levels before their own: agent and settings, then routine, then run, then webhook, then scheduler.',
+    'Daemon domains import only the levels before their own: agent, settings and inbox, then routine, then run, then webhook, then scheduler.',
 });
 
 // Any domain may import the ids.ts of another, since ids.ts imports only zod.
 const sharedDomains = (...domains) => ({
   regex: String.raw`^((\.\./)+|domains/)(${domains.join('|')})(?!/ids$)(/|$)`,
   message:
-    'Shared domains import only the levels before their own, or the ids of any domain: agent, transcript, scheduler, daemon, webhook, settings and release, then run, then routine and calendar.',
+    'Shared domains import only the levels before their own, or the ids of any domain: agent, transcript, scheduler, daemon, webhook, settings and release, then run, then routine, calendar and inbox.',
 });
 
 const ONLY_ZOD_IN_IDS = {
@@ -87,7 +87,7 @@ const ONLY_ZOD_IN_IDS = {
 };
 
 const DAEMON_DOMAIN_LEVELS = [
-  ['agent', 'settings'],
+  ['agent', 'settings', 'inbox'],
   ['routine'],
   ['run'],
   ['webhook'],
@@ -97,7 +97,7 @@ const DAEMON_DOMAIN_LEVELS = [
 const SHARED_DOMAIN_LEVELS = [
   ['agent', 'transcript', 'scheduler', 'daemon', 'webhook', 'settings', 'release'],
   ['run'],
-  ['routine', 'calendar'],
+  ['routine', 'calendar', 'inbox'],
 ];
 
 const NO_UI_IN_TERMINAL = {

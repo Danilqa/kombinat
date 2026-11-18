@@ -154,6 +154,7 @@ interface FakeOptions {
 function makeClient(overview: Overview, options: FakeOptions) {
   const started: string[] = [];
   const savedSettings: Settings[] = [];
+  const readRuns: string[] = [];
   const client: DaemonClient = {
     getOverview() {
       return options.isDown
@@ -193,6 +194,10 @@ function makeClient(overview: Overview, options: FakeOptions) {
       if (!run) return Promise.reject(new Error('Run not found'));
       return Promise.resolve({ run, transcript: options.transcript ?? transcript });
     },
+    markRunRead(routine, id) {
+      readRuns.push(`${routine}/${id}`);
+      return Promise.resolve();
+    },
     startRun(name) {
       started.push(name);
       return Promise.resolve();
@@ -203,12 +208,12 @@ function makeClient(overview: Overview, options: FakeOptions) {
     },
     watchChanges: () => Promise.resolve(),
   };
-  return { client, started, savedSettings };
+  return { client, started, savedSettings, readRuns };
 }
 
 async function makeApp(options: FakeOptions = {}) {
   const overview = options.overview ?? makeOverview();
-  const { client, started, savedSettings } = makeClient(overview, options);
+  const { client, started, savedSettings, readRuns } = makeClient(overview, options);
   const app = new TuiApp({ client, now: () => NOW, pageLoadDelayMs: null });
   await app.refresh();
   const screen = () => app.render(WIDTH, HEIGHT).map(plain).join('\n');
@@ -223,7 +228,7 @@ async function makeApp(options: FakeOptions = {}) {
     for (const key of keys) await pressChunk([key]);
     return screen();
   };
-  return { app, overview, started, savedSettings, screen, press, pressChunk };
+  return { app, overview, started, savedSettings, readRuns, screen, press, pressChunk };
 }
 
 test('fills the terminal exactly, with the status, routines, runs and detail panels', async () => {
@@ -269,6 +274,13 @@ test("enter opens a run from the routine's runs tab and esc goes back", async ()
   assert.match(runScreen, /▸ Bash\s+gh pr list/);
   assert.match(runScreen, /claude --resume session-1/);
   assert.match(await press('escape'), /0 {2}on-call-monitoring {2}/);
+});
+
+test('opening a finished run marks it read in the inbox once, though its page reloads', async () => {
+  const { app, readRuns, press } = await makeApp();
+  await press('enter', 'enter');
+  await app.loadVisiblePage();
+  assert.deepEqual(readRuns, ['on-call-monitoring/20261006T110000Z-abcd']);
 });
 
 test('loads older runs of a routine as the cursor nears the end of the runs tab', async () => {
