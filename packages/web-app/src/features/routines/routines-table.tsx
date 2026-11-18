@@ -6,6 +6,7 @@ import { RunNowButton, WebhookQueueButton } from 'domains/routine/components';
 import type { RoutineSummary } from 'domains/routine/types';
 import { RunStatusBadge } from 'domains/run/components';
 import { getSkipReasonLabel } from 'domains/scheduler/utils';
+import { ChangePromptMenuItem } from '@web-app/components/change-prompt-menu-item';
 import { getRoutinePath, getRunPath } from '@web-app/constants/path';
 import { useRowLink } from '@web-app/hooks/use-row-link';
 
@@ -154,6 +155,7 @@ export function RoutinesTable({ routines }: RoutinesTableProps) {
                 routine={routine.name}
                 isRunning={routine.running}
                 variant="secondary"
+                menu={<ChangePromptMenuItem routine={routine.name} />}
               />
             </Table.Cell>
           </Table.Row>

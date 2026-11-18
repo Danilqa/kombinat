@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { useParams } from 'react-router';
+import { useLocation, useParams } from 'react-router';
+import { isMatching } from 'ts-pattern';
 import { Card, ErrorState, LoadingState, Separator, Tabs } from 'design-system/components';
 import { PageHeader } from 'design-system/layouts';
 import { routineNameSchema } from 'domains/routine/ids';
@@ -14,6 +15,10 @@ import { Breadcrumbs } from '@web-app/components/breadcrumbs';
 import { RUNS_PATH, getRoutinePath } from '@web-app/constants/path';
 import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 import { RunChat } from './run-chat';
+
+// A run writes its record once its before hook is done, which takes up to three minutes.
+const START_RETRIES = 200;
+const START_RETRY_MS = 1000;
 
 interface RunViewProps extends RunWithTranscript {}
 
@@ -50,12 +55,15 @@ export function RunPage() {
   const params = useParams<'routine' | 'id'>();
   const routine = routineNameSchema.parse(params.routine ?? '');
   const id = runIdSchema.parse(params.id ?? '');
+  const isStarting = isMatching({ isStarting: true }, useLocation().state);
   useDocumentTitle(`${routine} run ${id}`);
   const { data, error, isPending } = useQuery({
     queryKey: ['runs', routine, id],
     queryFn: () => getRunWithTranscript(sameOriginApi, routine, id),
     refetchInterval: query =>
       getPollInterval(query.state.data !== undefined && checkIsRunActive(query.state.data.run)),
+    retry: isStarting && START_RETRIES,
+    retryDelay: START_RETRY_MS,
   });
 
   return (

@@ -15,6 +15,7 @@ import { SkipsTable } from 'domains/scheduler/components';
 import { sameOriginApi } from 'utils/http';
 import { getPollInterval } from 'utils/polling';
 import { Breadcrumbs } from '@web-app/components/breadcrumbs';
+import { ChangePromptMenuItem } from '@web-app/components/change-prompt-menu-item';
 import { RunsList } from '@web-app/components/runs-list';
 import { ROUTINES_PATH } from '@web-app/constants/path';
 import { useDocumentTitle } from '@web-app/hooks/use-document-title';
@@ -105,7 +106,11 @@ export function RoutinePage() {
           data && (
             <div className="flex items-center gap-2">
               <WebhookQueueButton routine={data.name} count={data.queuedWebhooks} />
-              <RunNowButton routine={data.name} isRunning={data.running} />
+              <RunNowButton
+                routine={data.name}
+                isRunning={data.running}
+                menu={<ChangePromptMenuItem routine={data.name} />}
+              />
             </div>
           )
         }

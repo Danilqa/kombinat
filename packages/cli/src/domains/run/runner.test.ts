@@ -34,7 +34,7 @@ process.env['CLAUDE_BIN'] = fakeClaude;
 const { config } = await import('../../config');
 const { buildRoutine } = await import('../routine/utils');
 const { appendChatEvent } = await import('./event-log');
-const { writePayload } = await import('./payload');
+const { writePayload, writePrompt } = await import('./payload');
 const { checkIsRunning, checkIsStarting, replyToRun, runRoutine, startDetachedRun } =
   await import('./runner');
 const { checkIsProcessAlive, listRuns, readRunRecord, writeRunRecord } = await import('./storage');
@@ -154,6 +154,19 @@ test('a webhook run gets its payload at the end of the prompt', async () => {
       .filter(file => file.endsWith('.payload')),
     [],
   );
+});
+
+test('a run started with a changed prompt gets it instead of the routine prompt, once', async () => {
+  const routine = buildRoutine(
+    path.join(tmp, 'echo-prompt.md'),
+    `---\ncwd: ${tmp}\nagent: command\ncommand: cat\n---\nTriage.`,
+  );
+  const runId = runIdSchema.parse('20261118T090000Z-prmt');
+  writePrompt(routine.name, runId, 'Triage only the newest issue.');
+  const changed = await runRoutine(routine, { trigger: 'manual', runId });
+  assert.equal(changed.resultText, 'Triage only the newest issue.');
+  const next = await runRoutine(routine, { trigger: 'manual' });
+  assert.equal(next.resultText, 'Triage.');
 });
 
 test('a started run counts as starting until its record appears or time runs out', () => {

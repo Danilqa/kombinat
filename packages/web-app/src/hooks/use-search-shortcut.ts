@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-const isApplePlatform = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
+export const isApplePlatform = /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
 
 export const SEARCH_SHORTCUT_LABEL = isApplePlatform ? '⌘K' : 'Ctrl K';
 export const SEARCH_SHORTCUT_ARIA = isApplePlatform ? 'Meta+K' : 'Control+K';
