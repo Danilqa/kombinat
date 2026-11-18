@@ -26,3 +26,18 @@ export function getSearchExcerpt(text: string, search: string): string | null {
     .trim();
   return start > 0 ? `…${excerpt}` : excerpt;
 }
+
+export interface SearchMatch {
+  start: number;
+  end: number;
+}
+
+// The whole search as one phrase, as a browser's find in page does, rather than separate words.
+export function findSearchMatches(text: string, search: string): SearchMatch[] {
+  if (search === '') return [];
+  const pattern = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+  return [...text.matchAll(pattern)].map(found => ({
+    start: found.index,
+    end: found.index + found[0].length,
+  }));
+}

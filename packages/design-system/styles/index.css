@@ -280,6 +280,14 @@
     background: rgba(107, 156, 255, 0.35);
     color: var(--fg);
   }
+  ::highlight(search-match) {
+    background-color: rgba(240, 145, 63, 0.3);
+    color: var(--fg);
+  }
+  ::highlight(search-match-current) {
+    background-color: var(--warning);
+    color: var(--page);
+  }
   button:not(:disabled),
   [role='button']:not([aria-disabled='true']),
   [role='tab']:not([aria-disabled='true']),

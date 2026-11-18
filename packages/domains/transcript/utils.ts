@@ -1,6 +1,8 @@
 import { match } from 'ts-pattern';
 
-import type { HookPhase, MessageSource, TranscriptItem } from './types';
+import { findSearchMatches } from 'utils/search';
+
+import type { HookPhase, MessageSource, ToolItem, TranscriptItem } from './types';
 
 const PREVIEW_LENGTH = 160;
 
@@ -13,6 +15,17 @@ export function toPreview(value: string): string {
 
 export function checkIsSubagent(item: TranscriptItem): boolean {
   return 'isSubagent' in item && item.isSubagent;
+}
+
+export function formatToolInput(item: ToolItem): string {
+  return item.input === undefined ? '' : JSON.stringify(item.input, null, 2);
+}
+
+// The collapsed row shows the name, so only a match in the input or result needs it opened.
+export function checkHasToolSearchMatch(item: ToolItem, search: string): boolean {
+  return [formatToolInput(item), item.result?.content ?? ''].some(
+    text => findSearchMatches(text, search).length > 0,
+  );
 }
 
 export function getTranscriptEmptyLabel(isRunning: boolean): string {
