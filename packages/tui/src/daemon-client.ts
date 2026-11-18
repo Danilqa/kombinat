@@ -1,5 +1,7 @@
 import { getDaemonStatus } from 'domains/daemon/requests';
 import type { DaemonStatus } from 'domains/daemon/types';
+import { getReleaseUpdate } from 'domains/release/requests';
+import type { ReleaseUpdate } from 'domains/release/types';
 import type { RoutineName } from 'domains/routine/ids';
 import { getRoutine, getRoutines, startRoutineRun } from 'domains/routine/requests';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
@@ -16,6 +18,7 @@ export interface Overview {
   routines: RoutineSummary[];
   runs: RunRecord[];
   settings: Settings;
+  releaseUpdate: ReleaseUpdate | null;
 }
 
 // Same API as the web dashboard, so "run now" starts in the launchd daemon (unlocked keychain), not over ssh.
@@ -37,14 +40,15 @@ export function createDaemonClient(baseUrl: string): DaemonClient {
 
   return {
     async getOverview() {
-      const [status, routines, { runs }, settings] = await Promise.all([
+      const [status, routines, { runs }, settings, releaseUpdate] = await Promise.all([
         getDaemonStatus(http),
         getRoutines(http),
         getRunsPage(http, null, null),
-        // Older daemons, which tui --url and connect may talk to, have no settings endpoint.
+        // Older daemons, which tui --url and connect may talk to, have no settings or releases endpoint.
         getSettings(http).catch(() => DEFAULT_SETTINGS),
+        getReleaseUpdate(http).catch(() => null),
       ]);
-      return { status, routines, runs, settings };
+      return { status, routines, runs, settings, releaseUpdate };
     },
     getRoutine: async name => getRoutine(http, name),
     getRuns: async (routine, cursor) => getRunsPage(http, routine, cursor),

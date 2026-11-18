@@ -233,6 +233,8 @@ The daemon runs `git pull` in the folder every 5 minutes, so merged changes go l
 
 To update Kombinat, bump `kombinat` in `package.json`, for example with a Renovate or Dependabot PR. When the lockfile changes, the daemon installs dependencies with pnpm, npm or Yarn and restarts. Running routines are not interrupted.
 
+When a new version is out, the dashboard shows it in a card in the bottom left corner, with its changelog and the command that updates, and the terminal dashboard says so in its bottom bar. Closing the card skips that version until a newer one comes out.
+
 Up to 0.2.2, Kombinat was published as `@danilqa/kombinat`. To move to `kombinat`, replace the dependency in `package.json`, install it and run `pnpm kombinat install` again. Until then the launchd job of the daemon points into the old package folder, which the install removes, so the daemon does not pick up the new version or start again after a reboot.
 
 ## 🔧 Configuration
