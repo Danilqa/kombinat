@@ -14,6 +14,7 @@ import { checkIsRunActive, createRunId } from 'domains/run/utils';
 import { config, getCliArgs } from '../../config';
 import { parseJson } from '../../utils/json';
 import { getAgent } from '../agent/registry';
+import { writePlanUsage } from '../agent/storage';
 import type { Agent, Invocation, OutputEvent, ReplyMessage } from '../agent/types';
 import type { Routine } from '../routine/types';
 import { appendChatEvent, readLastMessage } from './event-log';
@@ -130,6 +131,10 @@ async function runAgent({
     const event = toEvent(agent, line);
     log.write(`${toLogLine(agent, line, event)}\n`);
     if (event === undefined) return;
+    const limits = agent.readPlanLimits(event);
+    if (limits !== null) {
+      writePlanUsage(agent.name, { ...limits, updatedAt: new Date().toISOString() });
+    }
     const update = agent.readEvent(event, record);
     Object.assign(record, update);
     if (update.sessionId !== undefined && update.sessionId !== null) {

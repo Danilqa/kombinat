@@ -21,7 +21,9 @@ export function readJsonFile<T>(file: string, schema: z.ZodType<T>): T | null {
   return parsed.success ? parsed.data : null;
 }
 
+// Runs that write the same file at once each rename their own temporary file.
 export function writeJsonFile(file: string, value: unknown): void {
-  fs.writeFileSync(`${file}.tmp`, JSON.stringify(value, null, 2));
-  fs.renameSync(`${file}.tmp`, file);
+  const tmp = `${file}.${process.pid}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(value, null, 2));
+  fs.renameSync(tmp, file);
 }

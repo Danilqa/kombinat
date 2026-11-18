@@ -2,6 +2,7 @@ import type { z } from 'zod';
 
 import type { SessionId } from 'domains/agent/ids';
 import type { AgentName } from 'domains/agent/types';
+import type { PlanLimits } from 'domains/daemon/types';
 import type { RoutineName } from 'domains/routine/ids';
 import type { RunId } from 'domains/run/ids';
 import type { RunRecord, RunTrigger } from 'domains/run/types';
@@ -65,6 +66,7 @@ export interface Agent {
     message: ReplyMessage,
   ): Invocation | null;
   readEvent(event: unknown, record: Readonly<RunRecord>): RunUpdate;
+  readPlanLimits(event: unknown): PlanLimits | null;
   buildTranscript(events: unknown[]): TranscriptItem[];
   getResumeCommand(sessionId: SessionId): string | null;
 }

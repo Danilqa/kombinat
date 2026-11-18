@@ -248,6 +248,8 @@ export const codexAgent: Agent = {
       .otherwise(() => ({}));
   },
 
+  readPlanLimits: () => null,
+
   buildTranscript(events) {
     const items: TranscriptItem[] = [];
     const positions = new Map<string, number>();

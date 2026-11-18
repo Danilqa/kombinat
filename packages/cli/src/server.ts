@@ -26,6 +26,7 @@ import { settingsSchema } from 'domains/settings/schemas';
 import { getErrorMessage } from 'utils/error';
 
 import { config } from './config';
+import { readPlanUsage } from './domains/agent/storage';
 import { loadRoutines } from './domains/routine/storage';
 import type { Routine } from './domains/routine/types';
 import { describeSchedule, getNextRun } from './domains/routine/utils';
@@ -134,6 +135,7 @@ function getStatus(startedAt: Date): DaemonStatus {
     now: new Date().toISOString(),
     disk: readDiskSpace(config.stateDir),
     cpuLoad: readCpuLoad(),
+    claudeUsage: readPlanUsage('claude'),
   };
 }
 
