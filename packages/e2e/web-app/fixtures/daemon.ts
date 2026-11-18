@@ -53,6 +53,7 @@ async function stopProcess(daemon: ChildProcess): Promise<void> {
 export async function startDaemon(): Promise<Daemon> {
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'kombinat-e2e-')));
   const port = await getFreePort();
+  fs.mkdirSync(path.join(root, 'routines'));
   const daemon = spawn(process.execPath, [CLI, 'serve', '--no-scheduler', '--no-watch'], {
     cwd: root,
     env: {

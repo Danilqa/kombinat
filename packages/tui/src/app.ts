@@ -260,6 +260,12 @@ export class TuiApp {
     return this.refreshing;
   }
 
+  // A refresh in flight may have read the daemon before the change.
+  async reload(): Promise<void> {
+    await this.refreshing;
+    await this.refresh();
+  }
+
   private async loadOverview(): Promise<void> {
     try {
       this.overview = await this.client.getOverview();
@@ -690,8 +696,7 @@ export class TuiApp {
     } catch (err) {
       this.flash(getErrorMessage(err), 'error');
     }
-    await this.refreshing;
-    await this.refresh();
+    await this.reload();
   }
 
   private openSettings(): void {

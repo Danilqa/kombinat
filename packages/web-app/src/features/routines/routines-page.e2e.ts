@@ -2,6 +2,8 @@ import { expect, test } from 'e2e/web-app';
 
 // Idle pages poll every 15 seconds.
 const NEW_RUN_TIMEOUT_MS = 25_000;
+// Well under the poll, so only the daemon's change stream gets the run there in time.
+const LIVE_UPDATE_TIMEOUT_MS = 3000;
 
 test('lists each routine with its schedule, agent and last run', async ({
   page,
@@ -53,6 +55,66 @@ test('marks the schedule of routines that run on webhooks', async ({ page, kombi
   await expect(page.getByRole('row', { name: /say-hello/ }).getByRole('img')).toHaveCount(0);
   await triageMark.hover();
   await expect(page.getByRole('tooltip')).toHaveText('Also runs on webhook');
+});
+
+test('shows a run the moment the daemon records it', async ({ page, kombinat, time }) => {
+  kombinat.addRoutine({ name: 'triage-sentry' });
+  const changeStream = page.waitForResponse('**/api/events');
+  await page.goto('/');
+  await changeStream;
+  const row = page.getByRole('row', { name: /triage-sentry/ });
+  await expect(row).toContainText('Never run');
+
+  kombinat.addRun({ routine: 'triage-sentry', status: 'failed', startedAt: time.minutesAgo(1) });
+
+  await expect(row.getByRole('link', { name: /Failed/ })).toBeVisible({
+    timeout: LIVE_UPDATE_TIMEOUT_MS,
+  });
+});
+
+test('lets go of the change stream while the tab is hidden', async ({ page, kombinat, time }) => {
+  const setHidden = (isHidden: boolean) =>
+    page.evaluate(hidden => {
+      Object.defineProperty(document, 'hidden', { configurable: true, value: hidden });
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        value: hidden ? 'hidden' : 'visible',
+      });
+      document.dispatchEvent(new Event('visibilitychange', { bubbles: true }));
+    }, isHidden);
+  kombinat.addRoutine({ name: 'triage-sentry' });
+  const changeStream = page.waitForResponse('**/api/events');
+  await page.goto('/');
+  await changeStream;
+  const row = page.getByRole('row', { name: /triage-sentry/ });
+  await expect(row).toContainText('Never run');
+
+  const closed = page.waitForEvent('requestfailed', request =>
+    request.url().endsWith('/api/events'),
+  );
+  await setHidden(true);
+  await closed;
+  kombinat.addRun({ routine: 'triage-sentry', status: 'failed', startedAt: time.minutesAgo(1) });
+  const reopened = page.waitForResponse('**/api/events');
+  await setHidden(false);
+  await reopened;
+
+  await expect(row.getByRole('link', { name: /Failed/ })).toBeVisible({
+    timeout: LIVE_UPDATE_TIMEOUT_MS,
+  });
+});
+
+test('keeps counting the time since the last run', async ({ page, kombinat, time }) => {
+  kombinat.addRoutine({ name: 'triage-sentry' });
+  kombinat.addRun({ routine: 'triage-sentry', startedAt: time.minutesAgo(1) });
+  await page.clock.install();
+  await page.goto('/');
+  const row = page.getByRole('row', { name: /triage-sentry/ });
+  await expect(row).toContainText('1 min. ago');
+
+  await page.clock.runFor(5 * 60_000);
+
+  await expect(row).toContainText('6 min. ago');
 });
 
 test('runs a routine on demand and shows its output', async ({ page, kombinat }) => {

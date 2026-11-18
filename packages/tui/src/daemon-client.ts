@@ -1,4 +1,4 @@
-import { getDaemonStatus } from 'domains/daemon/requests';
+import { getDaemonStatus, watchDaemonChanges } from 'domains/daemon/requests';
 import type { DaemonStatus } from 'domains/daemon/types';
 import { getReleaseUpdate } from 'domains/release/requests';
 import type { ReleaseUpdate } from 'domains/release/types';
@@ -29,6 +29,7 @@ export interface DaemonClient {
   getRun(routine: RoutineName, id: RunId): Promise<RunWithTranscript>;
   startRun(name: RoutineName): Promise<void>;
   updateSettings(settings: Settings): Promise<void>;
+  watchChanges(onChange: () => void, signal: AbortSignal): Promise<void>;
 }
 
 export function createDaemonClient(baseUrl: string): DaemonClient {
@@ -59,5 +60,6 @@ export function createDaemonClient(baseUrl: string): DaemonClient {
     async updateSettings(settings) {
       await updateSettings(http, settings);
     },
+    watchChanges: async (onChange, signal) => watchDaemonChanges(http, onChange, signal),
   };
 }

@@ -56,12 +56,22 @@ function toRoutineSource({ prompt = 'Do the routine.', ...settings }: RoutineFil
   return `---\n${lines.join('\n')}\n---\n\n${prompt}\n`;
 }
 
+// Folders stay, so the daemon keeps watching them: on Linux a folder removed and made again
+// at once stays watched on its old, deleted inode.
+function removeFiles(dir: string) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const file = path.join(dir, entry.name);
+    if (entry.isDirectory()) removeFiles(file);
+    else fs.rmSync(file);
+  }
+}
+
 export function createKombinat(root: string): Kombinat {
   const routinesDir = path.join(root, 'routines');
   const stateDir = path.join(root, 'state');
-  for (const dir of [routinesDir, stateDir]) fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(routinesDir, { recursive: true });
   fs.mkdirSync(path.join(stateDir, 'runs'), { recursive: true });
+  for (const dir of [routinesDir, stateDir]) removeFiles(dir);
 
   const now = new Date().toISOString();
   const scheduler: SchedulerState = { startedAt: now, lastTickAt: now, routines: {} };

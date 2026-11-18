@@ -49,6 +49,7 @@ import {
   WEBHOOK_QUEUE_LIMIT,
 } from './domains/webhook/queue';
 import { receiveWebhook } from './domains/webhook/receive';
+import { startLiveUpdates } from './features/live-updates/live-updates';
 import {
   readCpuLoad,
   readDiskSpace,
@@ -363,11 +364,13 @@ async function handleApi(
 
 export function startServer(log: (line: string) => void): http.Server {
   const startedAt = new Date();
+  const liveUpdates = startLiveUpdates();
   const server = http.createServer((req, res) => {
     const url = new URL(req.url ?? '/', `http://localhost:${config.port}`);
     const [root, ...segments] = url.pathname.split('/').filter(Boolean);
     const respond = async (): Promise<void> => {
       if (root !== 'api') serveStatic(res, url);
+      else if (req.method === 'GET' && url.pathname === '/api/events') liveUpdates.follow(req, res);
       else sendJson(res, await handleApi(req, segments, { url, startedAt, log }));
     };
     respond().catch((error: unknown) => {
@@ -378,6 +381,7 @@ export function startServer(log: (line: string) => void): http.Server {
   });
   server.on('close', startCpuSampling());
   server.on('close', startRunCleanup(log));
+  server.on('close', liveUpdates.stop);
   server.listen(config.port, '127.0.0.1', () => {
     log(`ui at http://localhost:${config.port}`);
   });

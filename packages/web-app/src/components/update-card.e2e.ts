@@ -70,6 +70,8 @@ test('closing the card skips its version for good', async ({ page }) => {
       return releaseUpdateSchema.parse(await response.json()).skippedVersion;
     })
     .toBe('0.6.0');
-  await page.reload({ waitUntil: 'networkidle' });
+  const releases = page.waitForResponse('**/api/releases');
+  await page.reload();
+  await (await releases).finished();
   await expect(card).toBeHidden();
 });
