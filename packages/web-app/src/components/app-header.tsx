@@ -6,7 +6,8 @@ import { BrandMark } from 'design-system/icons';
 import { cn } from 'design-system/utils';
 import { DaemonStatusIndicator } from 'domains/daemon/components';
 import { navItems, type NavItem } from '@web-app/constants/nav-items';
-import { ROUTINES_PATH } from '@web-app/constants/path';
+import { INBOX_PATH, ROUTINES_PATH } from '@web-app/constants/path';
+import { useInbox } from '@web-app/hooks/use-inbox';
 import {
   SEARCH_SHORTCUT_ARIA,
   SEARCH_SHORTCUT_LABEL,
@@ -25,9 +26,10 @@ function getNavCurrent(item: NavItem, pathname: string): NavCurrent | undefined 
 interface NavLinkItemProps {
   item: NavItem;
   pathname: string;
+  unreadCount: number;
 }
 
-function NavLinkItem({ item, pathname }: NavLinkItemProps) {
+function NavLinkItem({ item, pathname, unreadCount }: NavLinkItemProps) {
   const Icon = item.icon;
   const isActive = item.checkIsActive(pathname);
   return (
@@ -36,12 +38,18 @@ function NavLinkItem({ item, pathname }: NavLinkItemProps) {
       aria-current={getNavCurrent(item, pathname)}
       data-active={isActive || undefined}
       className={cn(
-        'relative flex h-8 items-center gap-1.5 rounded-full px-3 text-nav font-medium transition-[color,background-color,scale] duration-150 active:scale-[0.97] forced-colors:underline-offset-4',
+        'relative flex h-8 items-center gap-1.5 rounded-full px-3 text-nav max-sm:px-2 font-medium transition-[color,background-color,scale] duration-150 active:scale-[0.97] forced-colors:underline-offset-4',
         isActive ? 'text-fg forced-colors:underline' : 'text-fg-muted hover:bg-hover hover:text-fg',
       )}
     >
-      <Icon aria-hidden="true" className="size-3.5 shrink-0" />
+      <Icon aria-hidden="true" className="size-3.5 shrink-0 max-sm:hidden" />
       {item.label}
+      {unreadCount > 0 && (
+        <span className="ml-0.5 min-w-4.5 animate-in rounded-full bg-fg px-1.5 text-center text-caption leading-4.5 text-page tabular-nums duration-200 zoom-in-90 fade-in">
+          {unreadCount}
+          <span className="sr-only"> unread</span>
+        </span>
+      )}
     </Link>
   );
 }
@@ -66,6 +74,7 @@ export function AppHeader() {
   const { pathname } = useLocation();
   const headerRef = useRef<HTMLElement>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const unreadCount = useInbox().data?.runs.length ?? 0;
   useHeightProperty(headerRef, '--app-header-height');
   useSearchShortcut(() => setIsSearchOpen(isOpen => !isOpen));
   // On phones the brand and the status share the first row and the nav takes a row of its own.
@@ -87,7 +96,11 @@ export function AppHeader() {
           <ul className="flex items-center gap-1">
             {navItems.map(item => (
               <li key={item.to}>
-                <NavLinkItem item={item} pathname={pathname} />
+                <NavLinkItem
+                  item={item}
+                  pathname={pathname}
+                  unreadCount={item.to === INBOX_PATH ? unreadCount : 0}
+                />
               </li>
             ))}
           </ul>

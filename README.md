@@ -75,6 +75,7 @@ The daemon serves a dashboard at http://localhost:7433.
 - **Routines.**
 - **Calendar.**
 - **Runs.**
+- **Inbox.**
 - **Daemon status.**
 - **Search.**
 
@@ -196,7 +197,7 @@ timeoutMinutes: 55
 - `enabled: false` keeps the file but stops the schedule.
 - `webhook: true` lets other apps start the routine with a request, see [docs/webhook.md](docs/webhook.md).
 
-Changes apply on the next check, no restart needed. Write the prompt so the agent never has to ask a question: nobody will answer.
+Changes apply on the next check, no restart needed. Write the prompt so the agent never has to ask a question: nobody will answer. When there is nothing to do, have it start its answer with "No" or "Nothing", such as "No open incidents.", so the dashboard's Inbox files the run under Nothing to report.
 
 ### Agents
 

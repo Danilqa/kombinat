@@ -1,6 +1,6 @@
-import { CalendarDays, History, Workflow } from 'lucide-react';
+import { CalendarDays, History, Inbox, Workflow } from 'lucide-react';
 
-import { CALENDAR_PATH, ROUTINES_PATH, RUNS_PATH } from '@web-app/constants/path';
+import { CALENDAR_PATH, INBOX_PATH, ROUTINES_PATH, RUNS_PATH } from '@web-app/constants/path';
 
 export interface NavItem {
   label: string;
@@ -27,5 +27,11 @@ export const navItems: NavItem[] = [
     to: RUNS_PATH,
     icon: History,
     checkIsActive: pathname => pathname.startsWith(RUNS_PATH),
+  },
+  {
+    label: 'Inbox',
+    to: INBOX_PATH,
+    icon: Inbox,
+    checkIsActive: pathname => pathname.startsWith(INBOX_PATH),
   },
 ];

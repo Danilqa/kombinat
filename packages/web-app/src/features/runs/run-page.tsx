@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { useLocation, useParams } from 'react-router';
 import { isMatching } from 'ts-pattern';
 import { Card, ErrorState, LoadingState, Separator, Tabs } from 'design-system/components';
@@ -14,6 +15,7 @@ import { getPollInterval } from 'utils/polling';
 import { Breadcrumbs } from '@web-app/components/breadcrumbs';
 import { RUNS_PATH, getRoutinePath } from '@web-app/constants/path';
 import { useDocumentTitle } from '@web-app/hooks/use-document-title';
+import { useMarkRunsRead } from '@web-app/hooks/use-mark-runs-read';
 import { RunChat } from './run-chat';
 
 // A run writes its record once its before hook is done, which takes up to three minutes.
@@ -65,6 +67,11 @@ export function RunPage() {
     retry: isStarting && START_RETRIES,
     retryDelay: START_RETRY_MS,
   });
+  const { mutate: markRunsRead } = useMarkRunsRead();
+  const isFinished = data !== undefined && !checkIsRunActive(data.run);
+  useEffect(() => {
+    if (isFinished) markRunsRead([{ routine, id }]);
+  }, [isFinished, routine, id, markRunsRead]);
 
   return (
     <div>
