@@ -1,4 +1,5 @@
 import { useLocation } from 'react-router';
+import { UpdateCard } from 'domains/release/components';
 import { AppProviders } from '@web-app/app-providers';
 import { AppRoutes } from '@web-app/app-routes';
 import { AppFooter } from '@web-app/components/app-footer';
@@ -32,6 +33,7 @@ function AppLayout() {
         </main>
       </div>
       {footer}
+      <UpdateCard />
     </div>
   );
 }

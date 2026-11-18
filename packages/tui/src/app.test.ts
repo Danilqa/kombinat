@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { sessionIdSchema } from 'domains/agent/ids';
+import { releaseVersionSchema } from 'domains/release/ids';
 import { routineNameSchema } from 'domains/routine/ids';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import { runIdSchema } from 'domains/run/ids';
@@ -104,6 +105,7 @@ function makeOverview(): Overview {
     ],
     runs: [onCallRun, smokeRun],
     settings: { runRetentionDays: null },
+    releaseUpdate: null,
   };
 }
 
@@ -418,6 +420,28 @@ test('does not offer to start a routine that is already running', async () => {
 test('shows a clear error when the daemon is down', async () => {
   const { screen } = await makeApp({ isDown: true });
   assert.match(screen(), /daemon not reachable/);
+});
+
+test('the bottom bar says when a newer kombinat is available, until it is skipped', async () => {
+  const overview = makeOverview();
+  const release = {
+    version: releaseVersionSchema.parse('1.3.0'),
+    notes: '- A new thing',
+    url: 'https://github.com/Danilqa/kombinat/releases/tag/v1.3.0',
+    publishedAt: '2026-10-05T12:00:00Z',
+  };
+  overview.releaseUpdate = {
+    installedVersion: releaseVersionSchema.parse('1.2.3'),
+    releases: [release],
+    skippedVersion: null,
+    updateCommand: 'pnpm add --save-exact kombinat@1.3.0',
+  };
+  const { screen } = await makeApp({ overview });
+  assert.match(screen(), /kombinat 1\.3\.0 is available · updated/);
+
+  overview.releaseUpdate = { ...overview.releaseUpdate, skippedVersion: release.version };
+  const { screen: skippedScreen } = await makeApp({ overview });
+  assert.doesNotMatch(skippedScreen(), /is available/);
 });
 
 test('q quits and ? toggles help', async () => {

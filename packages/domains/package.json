@@ -7,6 +7,7 @@
   "exports": {
     "./*": "./*.ts",
     "./daemon/components": "./daemon/components/index.ts",
+    "./release/components": "./release/components/index.ts",
     "./routine/components": "./routine/components/index.ts",
     "./run/components": "./run/components/index.ts",
     "./scheduler/components": "./scheduler/components/index.ts",

@@ -6,6 +6,7 @@ import { match, P } from 'ts-pattern';
 
 import { buildCalendar } from 'domains/calendar/utils';
 import type { DaemonStatus } from 'domains/daemon/types';
+import { releaseVersionSchema } from 'domains/release/ids';
 import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
 import { startRunRequestSchema } from 'domains/routine/schemas';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
@@ -53,6 +54,7 @@ import {
   readDiskSpace,
   startCpuSampling,
 } from './features/machine-usage/machine-usage';
+import { getReleaseUpdate, skipRelease } from './features/self-update/releases';
 import { parseJson } from './utils/json';
 
 interface ApiResponse {
@@ -265,6 +267,13 @@ function routeApi(request: ApiRequest, context: ApiContext): ApiResponse | Promi
     .with(['GET', ['calendar']], () => getCalendar(url))
     .with(['GET', ['settings']], () => ok(readSettings()))
     .with(['PUT', ['settings']], () => updateSettings(context.request.body))
+    .with(['GET', ['releases']], async () => ok(await getReleaseUpdate()))
+    .with(['POST', ['releases', P.string, 'skip']], ([, [, version]]) => {
+      const parsed = releaseVersionSchema.safeParse(version);
+      if (!parsed.success) return fail(400, `${version} is not a release version`);
+      skipRelease(parsed.data);
+      return ok({ ok: true });
+    })
     .with(['GET', ['runs']], () => getRunsPage(url))
     .with(['GET', ['runs', P.string, P.string]], ([, [, routine, id]]) =>
       withRun(routineNameSchema.parse(routine), runIdSchema.parse(id), ok),

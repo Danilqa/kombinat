@@ -2,6 +2,7 @@ import { match, P } from 'ts-pattern';
 
 import { buildCalendar } from 'domains/calendar/utils';
 import type { DaemonStatus } from 'domains/daemon/types';
+import type { ReleaseUpdate } from 'domains/release/types';
 import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import { RUNS_CURSOR_ERROR } from 'domains/run/constants';
@@ -51,6 +52,14 @@ function parseJson(text: string): unknown {
     return undefined;
   }
 }
+
+// The public demo announces no update, so visitors never read of a release that does not exist.
+const RELEASE_UPDATE: ReleaseUpdate = {
+  installedVersion: null,
+  releases: [],
+  skippedVersion: null,
+  updateCommand: null,
+};
 
 const ok = (body: unknown): ApiResponse => ({ status: 200, body });
 const fail = (status: number, error: string): ApiResponse => ({ status, body: { error } });
@@ -245,6 +254,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
       .with(['GET', ['calendar']], () => getCalendar(url, now))
       .with(['GET', ['settings']], () => ok(settings))
       .with(['PUT', ['settings']], () => updateSettings(body))
+      .with(['GET', ['releases']], () => ok(RELEASE_UPDATE))
       .with(['GET', ['runs']], () => getRunsPage(url, now))
       .with(['GET', ['runs', P.string, P.string]], ([, [, routine, id]]) => {
         const run = findRun(routineNameSchema.parse(routine), runIdSchema.parse(id), now);

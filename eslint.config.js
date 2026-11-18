@@ -78,7 +78,7 @@ const daemonDomains = (...domains) => ({
 const sharedDomains = (...domains) => ({
   regex: String.raw`^((\.\./)+|domains/)(${domains.join('|')})(?!/ids$)(/|$)`,
   message:
-    'Shared domains import only the levels before their own, or the ids of any domain: agent, transcript, scheduler, daemon, webhook and settings, then run, then routine and calendar.',
+    'Shared domains import only the levels before their own, or the ids of any domain: agent, transcript, scheduler, daemon, webhook, settings and release, then run, then routine and calendar.',
 });
 
 const ONLY_ZOD_IN_IDS = {
@@ -95,7 +95,7 @@ const DAEMON_DOMAIN_LEVELS = [
 ];
 
 const SHARED_DOMAIN_LEVELS = [
-  ['agent', 'transcript', 'scheduler', 'daemon', 'webhook', 'settings'],
+  ['agent', 'transcript', 'scheduler', 'daemon', 'webhook', 'settings', 'release'],
   ['run'],
   ['routine', 'calendar'],
 ];

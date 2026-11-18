@@ -1,5 +1,6 @@
 import { isMatching, match, P } from 'ts-pattern';
 
+import { getOfferedRelease } from 'domains/release/utils';
 import type { RoutineName } from 'domains/routine/ids';
 import type { RoutineDetail } from 'domains/routine/types';
 import type { RunId } from 'domains/run/ids';
@@ -989,7 +990,15 @@ export class TuiApp {
       ];
     if (this.overviewError) return [{ text: this.overviewError, style: S.red }];
     if (this.loadedAt === null) return [];
+    const releaseUpdate = this.overview?.releaseUpdate;
+    const offered = releaseUpdate ? getOfferedRelease(releaseUpdate) : null;
     return [
+      ...(offered === null
+        ? []
+        : [
+            { text: `kombinat ${offered.version} is available`, style: S.boldYellow },
+            { text: ' · ', style: S.dim },
+          ]),
       {
         text: `updated ${formatRelativeCompact(new Date(this.loadedAt).toISOString(), now)}`,
         style: S.dim,
