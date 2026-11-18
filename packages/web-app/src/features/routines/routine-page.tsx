@@ -15,11 +15,11 @@ import { SkipsTable } from 'domains/scheduler/components';
 import { sameOriginApi } from 'utils/http';
 import { getPollInterval } from 'utils/polling';
 import { Breadcrumbs } from '@web-app/components/breadcrumbs';
-import { ChangePromptMenuItem } from '@web-app/components/change-prompt-menu-item';
 import { RunsList } from '@web-app/components/runs-list';
 import { ROUTINES_PATH } from '@web-app/constants/path';
 import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 import { useRuns } from '@web-app/hooks/use-runs';
+import { ChangePromptMenuItem } from './change-prompt-menu-item';
 
 function checkIsRoutineRunning(routine: RoutineDetail | undefined): boolean {
   return routine?.running === true;

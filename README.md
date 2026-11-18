@@ -109,7 +109,7 @@ tailscale serve --bg 7433
 
 The dashboard is then at `https://mac-mini.<your-tailnet>.ts.net`, and `npx kombinat tui --url https://mac-mini.<your-tailnet>.ts.net` shows it in the terminal. Serve needs HTTPS certificates in your tailnet, the command asks to turn them on. They put the machine name in public certificate logs. It stays on after a reboot, `tailscale serve --https=443 off` turns it off. If the Mac has no `tailscale` command, see [Using the Tailscale CLI](https://tailscale.com/kb/1080/cli).
 
-Everyone who can reach the Mac in your tailnet can then read transcripts, start routines and message their agents. To limit that, allow only some people to reach port 443 of the Mac in your [Tailscale access rules](https://tailscale.com/kb/1018/acls).
+Everyone who can reach the Mac in your tailnet can then read transcripts, start routines, message their agents and run any prompt they write with a routine's agent, folder and permissions. To limit that, allow only some people to reach port 443 of the Mac in your [Tailscale access rules](https://tailscale.com/kb/1018/acls).
 
 ## 📚 Example routines
 
@@ -135,7 +135,7 @@ One row per file in [`example/routines/`](example/routines/). Put the same `rout
 
 ## 🔒 Security
 
-- The dashboard listens on localhost only and has no login, so other users of the machine can reach it. Whoever reaches it can message the agent of a finished run, which then works with the routine's permissions. Web pages from other sites cannot start runs or send messages through it. To open it from another machine, use SSH or Tailscale Serve and limit who can reach it, see [Remote access](#-remote-access).
+- The dashboard listens on localhost only and has no login, so other users of the machine can reach it. Whoever reaches it can message the agent of a finished run or run a routine with any prompt they write, and the agent then works with the routine's folder and permissions. Web pages from other sites cannot start runs or send messages through it. To open it from another machine, use SSH or Tailscale Serve and limit who can reach it, see [Remote access](#-remote-access).
 - Each routine sets its own permission mode, see [Agents](#agents). By default Claude Code is denied anything that needs approval, and Codex writes only in its workspace. `bypassPermissions` and `danger-full-access` let the agent do anything your user can.
 - A routine that reads outside text, such as issues, support chats or a webhook body, can be steered by that text. Give it the narrowest permissions, let it open pull requests but not merge them, and check webhook requests with a [`webhookGate`](docs/webhook.md#gate).
 - The daemon runs `git pull` every 5 minutes and installs dependencies when the lockfile changes, so protect `main` with review.
