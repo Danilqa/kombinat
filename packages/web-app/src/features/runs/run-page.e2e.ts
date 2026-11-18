@@ -139,6 +139,36 @@ test("finds text in a run's transcript, inside collapsed tool calls too", async 
   await expect(matchCount).toBeHidden();
 });
 
+test('scrolls a long tool result to the match', async ({ page, kombinat, claude }) => {
+  kombinat.addRoutine({ name: 'fix-e2e-tests' });
+  const lines = Array.from({ length: 300 }, (_, line) => `line ${line + 1}`);
+  const run = kombinat.addRun({
+    routine: 'fix-e2e-tests',
+    events: [
+      claude.toolUse('tool-1', 'Bash', { command: 'pnpm e2e' }),
+      claude.toolResult('tool-1', [...lines, 'Checkout failed'].join('\n')),
+      claude.result(),
+    ],
+  });
+
+  await page.goto(`/runs/fix-e2e-tests/${run.id}`);
+  await page.getByRole('tab', { name: /Transcript & chat/ }).click();
+  await page.getByRole('search').getByRole('textbox').fill('checkout failed');
+  const toolResult = page.getByRole('region', { name: 'Tool result' });
+
+  await expect
+    .poll(() =>
+      toolResult.evaluate(box => {
+        const [match] = CSS.highlights.get('search-match-current') ?? [];
+        if (!(match instanceof Range)) return false;
+        const boxRect = box.getBoundingClientRect();
+        const matchRect = match.getBoundingClientRect();
+        return matchRect.top >= boxRect.top && matchRect.bottom <= boxRect.bottom;
+      }),
+    )
+    .toBe(true);
+});
+
 test('shows when a run switched to a fallback model', async ({ page, kombinat, claude }) => {
   kombinat.addRoutine({
     name: 'fix-e2e-tests',

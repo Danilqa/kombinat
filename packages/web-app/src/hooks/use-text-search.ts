@@ -25,7 +25,14 @@ function findTextRanges(container: HTMLElement, search: string): Range[] {
 }
 
 function scrollToRange(range: Range | undefined) {
-  range?.startContainer.parentElement?.scrollIntoView({ block: 'center' });
+  const element = range?.startContainer.parentElement;
+  if (!range || !element) return;
+  element.scrollIntoView({ block: 'center' });
+  // A long tool result scrolls in its own box, and scrollIntoView moves only the page to that box.
+  if (element.scrollHeight > element.clientHeight) {
+    const offset = range.getBoundingClientRect().top - element.getBoundingClientRect().top;
+    element.scrollTop += offset - element.clientHeight / 2;
+  }
 }
 
 export interface TextSearch {
@@ -71,7 +78,10 @@ export function useTextSearch(
 
   useEffect(() => {
     if (!('highlights' in CSS)) return;
-    CSS.highlights.set(MATCH_HIGHLIGHT, new Highlight(...ranges));
+    // Spreading the ranges into the constructor overflows the call stack past about 100k matches.
+    const highlight = new Highlight();
+    for (const range of ranges) highlight.add(range);
+    CSS.highlights.set(MATCH_HIGHLIGHT, highlight);
     const currentRange = ranges[index];
     if (currentRange) CSS.highlights.set(CURRENT_HIGHLIGHT, new Highlight(currentRange));
     return () => {
