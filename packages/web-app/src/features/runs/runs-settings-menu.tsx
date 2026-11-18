@@ -46,7 +46,13 @@ export function RunsSettingsMenu() {
       )}
       <DropdownMenu.Root>
         <DropdownMenu.Trigger asChild>
-          <Button variant="tertiary" size="icon-small" aria-label="Settings">
+          {/* A 44px tap area on phones that keeps the header row as tall as the run count. */}
+          <Button
+            variant="tertiary"
+            size="icon-small"
+            className="relative max-sm:after:absolute max-sm:after:-inset-2"
+            aria-label="Settings"
+          >
             <Settings className="transition-transform duration-300 ease-out-quint group-data-[state=open]/button:rotate-45" />
           </Button>
         </DropdownMenu.Trigger>
