@@ -1,4 +1,4 @@
-import { Check, ChevronRight, CircleAlert, Loader, X } from 'lucide-react';
+import { ChevronRight, CircleAlert, CircleCheck, Loader, X } from 'lucide-react';
 import { memo, useState } from 'react';
 import { match } from 'ts-pattern';
 
@@ -25,6 +25,7 @@ import {
   getModelFallbackReasonLabel,
   getTranscriptEmptyLabel,
   getTranscriptResultLabel,
+  getTurnsLabel,
 } from '../utils';
 
 interface HookRowProps {
@@ -185,57 +186,48 @@ const ToolRow = memo(function ToolRow({ item, isPending, search }: ToolRowProps)
   );
 });
 
-interface ResultAppearance {
-  className: string;
-  labelClassName: string;
-  iconClassName: string;
-  icon: typeof Check;
-}
-
-function getResultAppearance(isError: boolean): ResultAppearance {
-  return match(isError)
-    .with(true, () => ({
-      className: 'bg-negative-soft',
-      labelClassName: 'text-negative',
-      iconClassName: 'bg-negative',
-      icon: X,
-    }))
-    .with(false, () => ({
-      className: 'bg-positive-soft',
-      labelClassName: 'text-positive',
-      iconClassName: 'bg-positive',
-      icon: Check,
-    }))
-    .exhaustive();
-}
-
-interface ResultRowProps {
+interface FinishedRowProps {
   item: ResultItem;
 }
 
-function ResultRow({ item }: ResultRowProps) {
-  const appearance = getResultAppearance(item.isError);
-  const Icon = appearance.icon;
+function FinishedRow({ item }: FinishedRowProps) {
   return (
-    <div
-      className={cn(
-        'flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg px-4 py-3 text-body text-fg-secondary',
-        appearance.className,
-      )}
-    >
-      <span className={cn('flex items-center gap-2 font-medium', appearance.labelClassName)}>
-        <span
-          className={cn(
-            'grid size-4 animate-in place-items-center rounded-full text-page duration-300 ease-out-quint zoom-in-50 fade-in',
-            appearance.iconClassName,
-          )}
-        >
-          <Icon className="size-2.5" strokeWidth={3.5} />
-        </span>
-        {getTranscriptResultLabel(item.isError)}
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 py-1 text-body-sm text-fg-muted">
+      <CircleCheck
+        aria-hidden="true"
+        className="size-3.5 shrink-0 animate-in text-positive duration-300 ease-out-quint zoom-in-50 fade-in"
+      />
+      <span className="text-fg-secondary">{getTranscriptResultLabel(false)}</span>
+      <span aria-hidden="true" className="text-fg-faint">
+        ·
       </span>
       <span className="tabular-nums">
-        <span className="font-medium text-fg">{item.numTurns ?? '-'}</span> turns
+        {item.numTurns ?? '-'} {getTurnsLabel(item.numTurns)}
+      </span>
+      <span aria-hidden="true" className="text-fg-faint">
+        ·
+      </span>
+      <span className="tabular-nums">{formatDuration(item.durationMs)}</span>
+    </div>
+  );
+}
+
+interface FailedRowProps {
+  item: ResultItem;
+}
+
+function FailedRow({ item }: FailedRowProps) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg bg-negative-soft px-4 py-3 text-body text-fg-secondary">
+      <span className="flex items-center gap-2 font-medium text-negative">
+        <span className="grid size-4 animate-in place-items-center rounded-full bg-negative text-page duration-300 ease-out-quint zoom-in-50 fade-in">
+          <X className="size-2.5" strokeWidth={3.5} />
+        </span>
+        {getTranscriptResultLabel(true)}
+      </span>
+      <span className="tabular-nums">
+        <span className="font-medium text-fg">{item.numTurns ?? '-'}</span>{' '}
+        {getTurnsLabel(item.numTurns)}
       </span>
       <span className="font-medium text-fg tabular-nums">{formatDuration(item.durationMs)}</span>
     </div>
@@ -250,7 +242,8 @@ function renderItem(item: TranscriptItem, isRunning: boolean, search: string) {
     .with({ kind: 'text' }, text => <TextRow item={text} />)
     .with({ kind: 'message' }, message => <MessageRow item={message} />)
     .with({ kind: 'tool' }, tool => <ToolRow item={tool} isPending={isRunning} search={search} />)
-    .with({ kind: 'result' }, result => <ResultRow item={result} />)
+    .with({ kind: 'result', isError: true }, result => <FailedRow item={result} />)
+    .with({ kind: 'result', isError: false }, result => <FinishedRow item={result} />)
     .exhaustive();
 }
 

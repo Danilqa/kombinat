@@ -36,6 +36,10 @@ export function getTranscriptResultLabel(isError: boolean): string {
   return isError ? 'Finished with error' : 'Finished';
 }
 
+export function getTurnsLabel(numTurns: number | null): string {
+  return numTurns === 1 ? 'turn' : 'turns';
+}
+
 export function getModelFallbackReasonLabel(reason: string | null): string | null {
   if (reason === null) return null;
   return match(reason)

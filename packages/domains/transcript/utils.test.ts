@@ -2,7 +2,12 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import type { ToolItem } from './types';
-import { checkHasToolSearchMatch, getHookLabel, getMessageSourceLabel } from './utils';
+import {
+  checkHasToolSearchMatch,
+  getHookLabel,
+  getMessageSourceLabel,
+  getTurnsLabel,
+} from './utils';
 
 test('a hook is labelled by its phase', () => {
   assert.equal(getHookLabel('before'), 'Before hook');
@@ -30,4 +35,11 @@ test('a tool call matches a search in its input or result, which only opening it
   assert.equal(checkHasToolSearchMatch(tool, 'TESTS PASSED'), true);
   assert.equal(checkHasToolSearchMatch(tool, 'Bash'), false);
   assert.equal(checkHasToolSearchMatch({ ...tool, input: undefined, result: null }, 'pnpm'), false);
+});
+
+test('one turn is singular, any other count or an unknown one is plural', () => {
+  assert.equal(getTurnsLabel(1), 'turn');
+  assert.equal(getTurnsLabel(49), 'turns');
+  assert.equal(getTurnsLabel(0), 'turns');
+  assert.equal(getTurnsLabel(null), 'turns');
 });

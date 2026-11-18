@@ -8,6 +8,7 @@ import {
   getModelFallbackReasonLabel,
   getTranscriptEmptyLabel,
   getTranscriptResultLabel,
+  getTurnsLabel,
 } from 'domains/transcript/utils';
 import { formatDuration } from 'utils/date-time';
 
@@ -30,6 +31,10 @@ function formatInput(input: unknown): string[] {
       return [`${key}:`, ...value.split('\n').map(line => `  ${line}`)];
     return [`${key}: ${typeof value === 'string' ? value : JSON.stringify(value)}`];
   });
+}
+
+function formatTurns(numTurns: number | null): string {
+  return `${numTurns ?? '-'} ${getTurnsLabel(numTurns)}`;
 }
 
 function blockLines(
@@ -162,18 +167,22 @@ function itemLines(
       ];
     })
     .with({ kind: 'tool' }, tool => toolLines(tool, toggle, isExpanded, width, isRunning))
-    .with({ kind: 'result' }, result => {
-      const look = result.isError
-        ? { icon: '✗', style: S.boldRed }
-        : { icon: '✓', style: S.boldGreen };
-      return [
-        [
-          text(`${look.icon} ${getTranscriptResultLabel(result.isError)}`, look.style),
-          text(`  ${result.numTurns ?? '-'} turns`),
-          text(`  ${formatDuration(result.durationMs)}`, S.magenta),
-        ],
-      ];
-    })
+    .with({ kind: 'result', isError: false }, result => [
+      [
+        text('✓ ', S.green),
+        text(
+          `${getTranscriptResultLabel(false)} · ${formatTurns(result.numTurns)} · ${formatDuration(result.durationMs)}`,
+          S.dim,
+        ),
+      ],
+    ])
+    .with({ kind: 'result', isError: true }, result => [
+      [
+        text(`✗ ${getTranscriptResultLabel(true)}`, S.boldRed),
+        text(`  ${formatTurns(result.numTurns)}`),
+        text(`  ${formatDuration(result.durationMs)}`, S.magenta),
+      ],
+    ])
     .exhaustive();
 }
 
