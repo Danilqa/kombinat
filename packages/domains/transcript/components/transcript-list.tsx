@@ -17,7 +17,9 @@ import type {
   TranscriptItem,
 } from '../types';
 import {
+  checkHasToolSearchMatch,
   checkIsSubagent,
+  formatToolInput,
   getHookLabel,
   getMessageSourceLabel,
   getModelFallbackReasonLabel,
@@ -113,12 +115,20 @@ function MessageRow({ item }: MessageRowProps) {
 interface ToolRowProps {
   item: ToolItem;
   isPending: boolean;
+  search: string;
 }
 
-const ToolRow = memo(function ToolRow({ item, isPending }: ToolRowProps) {
+const ToolRow = memo(function ToolRow({ item, isPending, search }: ToolRowProps) {
   const hasError = item.result?.isError === true;
+  const hasSearchMatch = checkHasToolSearchMatch(item, search);
+  const [isOpen, setIsOpen] = useState(false);
+  const [hadSearchMatch, setHadSearchMatch] = useState(false);
+  if (hasSearchMatch !== hadSearchMatch) {
+    setHadSearchMatch(hasSearchMatch);
+    setIsOpen(hasSearchMatch);
+  }
   return (
-    <Collapsible.Root>
+    <Collapsible.Root open={isOpen} onOpenChange={setIsOpen}>
       <Collapsible.Trigger className="group flex min-h-7 w-full items-center gap-2 rounded-sm text-left font-mono text-body-sm text-fg-muted">
         <ChevronRight
           aria-hidden="true"
@@ -127,7 +137,11 @@ const ToolRow = memo(function ToolRow({ item, isPending }: ToolRowProps) {
         <span className="shrink-0 font-medium text-fg-secondary transition-colors group-hover:text-fg">
           {item.name}
         </span>
-        <span className="min-w-0 flex-1 truncate transition-colors group-hover:text-fg-secondary">
+        {/* Search skips this cut-off line and finds its text in the input, which it opens. */}
+        <span
+          data-search-skip
+          className="min-w-0 flex-1 truncate transition-colors group-hover:text-fg-secondary"
+        >
           {item.preview}
         </span>
         {hasError && (
@@ -149,7 +163,7 @@ const ToolRow = memo(function ToolRow({ item, isPending }: ToolRowProps) {
             <div>
               <div className="eyebrow mb-1.5">Input</div>
               <CodeBlock label="Tool input" className="max-h-80">
-                {JSON.stringify(item.input, null, 2)}
+                {formatToolInput(item)}
               </CodeBlock>
             </div>
             <div>
@@ -228,14 +242,14 @@ function ResultRow({ item }: ResultRowProps) {
   );
 }
 
-function renderItem(item: TranscriptItem, isRunning: boolean) {
+function renderItem(item: TranscriptItem, isRunning: boolean, search: string) {
   return match(item)
     .with({ kind: 'hook' }, hook => <HookRow item={hook} />)
     .with({ kind: 'init' }, init => <InitRow item={init} />)
     .with({ kind: 'model-fallback' }, fallback => <ModelFallbackRow item={fallback} />)
     .with({ kind: 'text' }, text => <TextRow item={text} />)
     .with({ kind: 'message' }, message => <MessageRow item={message} />)
-    .with({ kind: 'tool' }, tool => <ToolRow item={tool} isPending={isRunning} />)
+    .with({ kind: 'tool' }, tool => <ToolRow item={tool} isPending={isRunning} search={search} />)
     .with({ kind: 'result' }, result => <ResultRow item={result} />)
     .exhaustive();
 }
@@ -243,9 +257,11 @@ function renderItem(item: TranscriptItem, isRunning: boolean) {
 interface TranscriptListProps {
   items: TranscriptItem[];
   isRunning: boolean;
+  // Opens the tool calls whose input or result has the search, so it can be found there too.
+  search: string;
 }
 
-export function TranscriptList({ items, isRunning }: TranscriptListProps) {
+export function TranscriptList({ items, isRunning, search }: TranscriptListProps) {
   // Only events that arrive after the page opens animate in, not the whole transcript.
   const [initialKeys] = useState(() => new Set(items.map(item => item.key)));
   if (items.length === 0) return <EmptyState>{getTranscriptEmptyLabel(isRunning)}</EmptyState>;
@@ -260,7 +276,7 @@ export function TranscriptList({ items, isRunning }: TranscriptListProps) {
             checkIsSubagent(item) && 'ml-5 border-l border-line-strong pl-3',
           )}
         >
-          {renderItem(item, isRunning)}
+          {renderItem(item, isRunning, search)}
         </div>
       ))}
     </div>

@@ -98,6 +98,47 @@ test('shows why a run failed', async ({ page, kombinat, claude }) => {
   await expect(page.getByText('Finished with error')).toBeVisible();
 });
 
+test("finds text in a run's transcript, inside collapsed tool calls too", async ({
+  page,
+  kombinat,
+  claude,
+}) => {
+  kombinat.addRoutine({ name: 'fix-e2e-tests' });
+  const run = kombinat.addRun({
+    routine: 'fix-e2e-tests',
+    events: [
+      claude.text('The checkout test fails, running it alone.'),
+      claude.toolUse('tool-1', 'Bash', { command: 'pnpm e2e' }),
+      claude.toolResult('tool-1', 'Checkout passed'),
+      claude.result(),
+    ],
+  });
+
+  await page.goto(`/runs/fix-e2e-tests/${run.id}`);
+  await page.getByRole('tab', { name: /Transcript & chat/ }).click();
+  const search = page.getByRole('search');
+  const matchCount = search.getByRole('status');
+  const toolResult = page.getByRole('region', { name: 'Tool result' });
+
+  await search.getByRole('textbox', { name: 'Search the transcript' }).fill('checkout');
+  await expect(matchCount).toHaveText('1 of 2');
+  await expect(toolResult).toHaveText('Checkout passed');
+  await page.keyboard.press('Enter');
+  await expect(matchCount).toHaveText('2 of 2');
+  await page.keyboard.press('Enter');
+  await expect(matchCount).toHaveText('1 of 2');
+  await search.getByRole('button', { name: 'Previous match' }).click();
+  await expect(matchCount).toHaveText('2 of 2');
+
+  await search.getByRole('textbox').fill('checkout failed');
+  await expect(matchCount).toHaveText('No matches');
+  await expect(toolResult).toBeHidden();
+
+  await search.getByRole('textbox').press('Escape');
+  await expect(search.getByRole('textbox')).toHaveValue('');
+  await expect(matchCount).toBeHidden();
+});
+
 test('shows when a run switched to a fallback model', async ({ page, kombinat, claude }) => {
   kombinat.addRoutine({
     name: 'fix-e2e-tests',
