@@ -11,6 +11,7 @@ const makeGithubRelease = (tag: string, overrides: Record<string, unknown> = {})
   html_url: `https://github.com/Danilqa/kombinat/releases/tag/${tag}`,
   body: [
     '- Added a thing (#90)',
+    '- `kombinat run <name>` takes a `--trigger`',
     '',
     '<img src="https://github.com/user-attachments/assets/1" alt="The thing" width="100%" />',
     '',
@@ -29,11 +30,11 @@ const makeRelease = (version: string): Release => ({
   publishedAt: '2026-11-18T10:00:00Z',
 });
 
-test('github releases become versions without the v, with notes but no html or compare link', () => {
+test('github releases become versions without the v, with notes but no html lines or compare link', () => {
   assert.deepEqual(parseGithubReleases([makeGithubRelease('v0.6.0')]), [
     {
       version: '0.6.0',
-      notes: '- Added a thing (#90)',
+      notes: '- Added a thing (#90)\n- `kombinat run <name>` takes a `--trigger`',
       url: 'https://github.com/Danilqa/kombinat/releases/tag/v0.6.0',
       publishedAt: '2026-11-18T10:00:00Z',
     },
@@ -53,10 +54,11 @@ test('drafts, prereleases and tags that are not versions are left out', () => {
   );
 });
 
-test('releases are fetched at most once an hour, and a failed fetch keeps the last list', async () => {
+test('releases are fetched at most once an hour, in the background after the first time', async () => {
   let now = 0;
   const loads: (() => Promise<Release[]>)[] = [
     () => Promise.resolve([makeRelease('0.6.0')]),
+    () => Promise.resolve([makeRelease('0.7.0')]),
     () => Promise.reject(new Error('rate limited')),
   ];
   let calls = 0;
@@ -72,4 +74,9 @@ test('releases are fetched at most once an hour, and a failed fetch keeps the la
   now = 60 * 60_000;
   assert.equal((await listReleases())[0]?.version, '0.6.0');
   assert.equal(calls, 2);
+  assert.equal((await listReleases())[0]?.version, '0.7.0');
+  now = 120 * 60_000;
+  await listReleases();
+  assert.equal(calls, 3);
+  assert.equal((await listReleases())[0]?.version, '0.7.0');
 });

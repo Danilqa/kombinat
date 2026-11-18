@@ -30,7 +30,8 @@ const skippedReleaseFileSchema = z.object({ skippedVersion: releaseVersionSchema
 const FULL_CHANGELOG_LINE = /^\*\*Full Changelog\*\*.*$/m;
 
 // The dashboard renders markdown without HTML, so a screenshot's <img> would show as text.
-const HTML_TAG = /<[^>]+>/g;
+// Only whole lines go, since inline text such as `kombinat run <name>` looks like a tag too.
+const HTML_LINE = /^\s*<[^>]+>\s*$/gm;
 
 const skippedReleaseFile = () => path.join(config.stateDir, 'releases.json');
 
@@ -44,7 +45,7 @@ export function parseGithubReleases(body: unknown): Release[] {
       if (draft || prerelease || publishedAt === null || !version.success) return [];
       return {
         version: version.data,
-        notes: (release.body ?? '').replace(FULL_CHANGELOG_LINE, '').replace(HTML_TAG, '').trim(),
+        notes: (release.body ?? '').replace(FULL_CHANGELOG_LINE, '').replace(HTML_LINE, '').trim(),
         url: release.html_url,
         publishedAt,
       };
@@ -58,6 +59,7 @@ async function fetchReleases(): Promise<Release[]> {
 }
 
 // A failed check keeps the releases of the last one and waits as long as a successful one.
+// Only the first check waits for GitHub, so a slow network never holds up a dashboard's refresh.
 export function createReleaseCache(
   load: () => Promise<Release[]>,
   now: () => number = Date.now,
@@ -66,10 +68,11 @@ export function createReleaseCache(
   let releases = Promise.resolve<Release[]>([]);
   return () => {
     if (now() - checkedAt < CHECK_INTERVAL_MS) return releases;
+    const isFirstCheck = checkedAt === -Infinity;
     checkedAt = now();
     const previous = releases;
     releases = load().catch(() => previous);
-    return releases;
+    return isFirstCheck ? releases : previous;
   };
 }
 
