@@ -30,7 +30,8 @@ export function getRunDurationMs(
   now: number = Date.now(),
 ): number {
   const end = run.endedAt ? new Date(run.endedAt).getTime() : now;
-  return end - new Date(run.startedAt).getTime();
+  // A clock that ticks once a second can read a moment before a run that has just started.
+  return Math.max(0, end - new Date(run.startedAt).getTime());
 }
 
 // The agent of a run is at work while the run runs and while it replies to a message.

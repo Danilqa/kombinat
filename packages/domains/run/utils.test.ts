@@ -11,6 +11,7 @@ import {
   encodeRunsCursor,
   filterRuns,
   findExpiredRuns,
+  getRunDurationMs,
   paginateRuns,
   parseRunsPageQuery,
 } from './utils';
@@ -94,6 +95,13 @@ test('a run is active while it runs and while it replies to a message', () => {
   assert.equal(checkIsRunActive(makeRunRecord({ status: 'running' })), true);
   assert.equal(checkIsRunActive(makeRunRecord({ status: 'succeeded', replyPid: 42 })), true);
   assert.equal(checkIsRunActive(makeRunRecord({ status: 'failed' })), false);
+});
+
+test('a running run lasts until now, and one that started after now has lasted nothing yet', () => {
+  const startedAt = '2026-11-10T09:00:00.000Z';
+  const now = Date.parse(startedAt);
+  assert.equal(getRunDurationMs({ startedAt, endedAt: null }, now + 90_000), 90_000);
+  assert.equal(getRunDurationMs({ startedAt, endedAt: null }, now - 700), 0);
 });
 
 test('expires runs older than the retention but keeps active runs and the newest of each routine', () => {
