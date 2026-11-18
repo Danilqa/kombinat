@@ -165,6 +165,7 @@ function toRunRecord(run: DemoRun, now: Date, messages: DemoMessage[]): RunRecor
     error: isRunning ? null : (outcome.error ?? null),
     logFile: `${STATE_DIR}/runs/${routine.name}/${run.id}.jsonl`,
     replyPid: checkIsReplying(messages, now) ? run.pid + 1 : null,
+    conversation: null,
   };
 }
 
@@ -212,7 +213,7 @@ function getReplyItems(messages: DemoMessage[], now: Date): TranscriptItem[] {
   return messages.flatMap(({ text, sentAt }, index): TranscriptItem[] => {
     const key = `reply-${index}`;
     const elapsedMs = now.getTime() - sentAt.getTime();
-    const message: TranscriptItem = { kind: 'message', key, text };
+    const message: TranscriptItem = { kind: 'message', key, text, source: 'dashboard' };
     if (elapsedMs < REPLY_MS / 2) return [message];
     const reply: TranscriptItem = {
       kind: 'text',

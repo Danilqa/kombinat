@@ -1,6 +1,7 @@
 import type { IncomingHttpHeaders } from 'node:http';
 
 import { match } from 'ts-pattern';
+import { z } from 'zod';
 
 import { config } from '../../config';
 import { parseJson } from '../../utils/json';
@@ -11,6 +12,12 @@ import { runShell } from '../run/shell';
 export const WEBHOOK_GATE_TIMEOUT_MS = 3_000;
 // EX_CONFIG: crashes exit with 1 or 2, never with this.
 export const WEBHOOK_GATE_IGNORE_EXIT_CODE = 78;
+export const WEBHOOK_GATE_CONTINUE_EXIT_CODE = 79;
+
+const continueOutputSchema = z.object({
+  conversation: z.string().trim().min(1),
+  message: z.string().trim().min(1),
+});
 
 export interface WebhookRequest {
   body: Buffer;
@@ -20,6 +27,12 @@ export interface WebhookRequest {
 interface RunDecision {
   outcome: 'run';
   payload: string;
+}
+
+interface ContinueDecision {
+  outcome: 'continue';
+  conversation: string;
+  message: string;
 }
 
 interface IgnoreDecision {
@@ -36,7 +49,19 @@ interface TimeoutDecision {
   outcome: 'timeout';
 }
 
-export type WebhookGateDecision = RunDecision | IgnoreDecision | RejectDecision | TimeoutDecision;
+export type WebhookGateDecision =
+  RunDecision | ContinueDecision | IgnoreDecision | RejectDecision | TimeoutDecision;
+
+function toContinueDecision(stdout: string): WebhookGateDecision {
+  const output = continueOutputSchema.safeParse(parseJson(stdout));
+  if (!output.success) {
+    return {
+      outcome: 'reject',
+      reason: `exited with ${WEBHOOK_GATE_CONTINUE_EXIT_CODE} without printing a conversation and a message as JSON`,
+    };
+  }
+  return { outcome: 'continue', ...output.data };
+}
 
 function toDecision(
   exitCode: number | null,
@@ -49,6 +74,7 @@ function toDecision(
       outcome: 'run',
       payload: stdout.trim() === '' ? body : stdout,
     }))
+    .with(WEBHOOK_GATE_CONTINUE_EXIT_CODE, () => toContinueDecision(stdout))
     .with(WEBHOOK_GATE_IGNORE_EXIT_CODE, (): WebhookGateDecision => ({
       outcome: 'ignore',
       response: parseJson(stdout) ?? null,

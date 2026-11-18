@@ -1,3 +1,4 @@
+import { runsPageSchema } from 'domains/run/schemas';
 import { expect, test } from 'e2e/web-app';
 
 const REPLY_TIMEOUT_MS = 25_000;
@@ -157,6 +158,40 @@ test("continues a run's session with a message and shows the reply", async ({
   await expect(page.getByText('Finished', { exact: true })).toHaveCount(2);
   await expect(page.getByText('Claude is replying')).toBeHidden();
   await expect(message).toHaveAttribute('placeholder', 'Message Claude');
+});
+
+test('a webhook of the same conversation continues the run that the first one started', async ({
+  page,
+  kombinat,
+}) => {
+  test.slow();
+  kombinat.addRoutine({
+    name: 'answer-issue',
+    webhook: true,
+    webhookGate: `printf '{"conversation":"issue-1","message":"%s"}' "$(cat)"; exit 79`,
+  });
+  const url = '/api/routines/answer-issue/webhook';
+
+  const readRuns = async () => {
+    const response = await page.request.get('/api/runs?routine=answer-issue');
+    return runsPageSchema.parse(await response.json()).runs;
+  };
+
+  await page.request.post(url, { data: 'Find the bug' });
+  await expect
+    .poll(async () => (await readRuns()).map(run => run.status), { timeout: REPLY_TIMEOUT_MS })
+    .toEqual(['succeeded']);
+  const runId = (await readRuns())[0]?.id;
+  const continued = await page.request.post(url, { data: 'Open a PR with the fix' });
+  expect(await continued.json()).toEqual({ ok: true, runId });
+
+  await page.goto(`/runs/answer-issue/${runId}`);
+  await page.getByRole('tab', { name: /Transcript & chat/ }).click();
+  await expect(page.getByText('From a webhook')).toBeVisible();
+  await expect(page.getByText('You asked: Open a PR with the fix')).toBeVisible({
+    timeout: REPLY_TIMEOUT_MS,
+  });
+  await expect(page.getByText('You wrote: Open a PR with the fix')).toHaveCount(0);
 });
 
 test('a run without an agent session cannot be continued', async ({ page, kombinat }) => {

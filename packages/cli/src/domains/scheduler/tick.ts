@@ -6,10 +6,10 @@ import { getErrorMessage } from 'utils/error';
 import { config } from '../../config';
 import { loadRoutines } from '../routine/storage';
 import type { Routine } from '../routine/types';
-import { writePayload } from '../run/payload';
 import { checkIsStarting, startDetachedRun } from '../run/runner';
 import { getRunningRuns } from '../run/storage';
 import { listQueuedRoutines, takeQueuedWebhook } from '../webhook/queue';
+import { startWebhook } from '../webhook/start';
 import { readSchedulerState, writeSchedulerState } from './storage';
 
 function loadState(now: Date): SchedulerState {
@@ -106,8 +106,7 @@ export function tick(now = new Date()): TickResult {
     if (runningNames.has(name) || runningCount >= config.maxConcurrentRuns) continue;
     const queued = takeQueuedWebhook(name);
     if (queued === null) continue;
-    if (queued.payload !== '') writePayload(name, queued.runId, queued.payload);
-    startDetachedRun(name, { trigger: 'webhook', runId: queued.runId });
+    startWebhook(name, queued);
     runningCount += 1;
     runningNames.add(name);
     started.push(name);

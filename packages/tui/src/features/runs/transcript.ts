@@ -4,6 +4,7 @@ import type { ToolItem, TranscriptItem } from 'domains/transcript/types';
 import {
   checkIsSubagent,
   getHookLabel,
+  getMessageSourceLabel,
   getModelFallbackReasonLabel,
   getTranscriptEmptyLabel,
   getTranscriptResultLabel,
@@ -149,13 +150,17 @@ function itemLines(
       );
     })
     .with({ kind: 'text' }, ({ text: source }) => renderMarkdown(source, width))
-    .with({ kind: 'message' }, message =>
-      sanitize(message.text)
-        .split('\n')
-        .flatMap((line, index) =>
-          wrapLine([text(index === 0 ? '› ' : '  ', S.accent), text(line, S.bold)], width, 2),
-        ),
-    )
+    .with({ kind: 'message' }, message => {
+      const sourceLabel = getMessageSourceLabel(message.source);
+      return [
+        ...(sourceLabel === null ? [] : wrapLine([text(`  ${sourceLabel}`, S.dim)], width, 2)),
+        ...sanitize(message.text)
+          .split('\n')
+          .flatMap((line, index) =>
+            wrapLine([text(index === 0 ? '› ' : '  ', S.accent), text(line, S.bold)], width, 2),
+          ),
+      ];
+    })
     .with({ kind: 'tool' }, tool => toolLines(tool, toggle, isExpanded, width, isRunning))
     .with({ kind: 'result' }, result => {
       const look = result.isError

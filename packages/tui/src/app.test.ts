@@ -41,6 +41,7 @@ function makeRun(routine: string, id: string, overrides: Partial<RunRecord> = {}
     error: null,
     logFile: `/state/runs/${routine}/${id}.jsonl`,
     replyPid: null,
+    conversation: null,
     ...overrides,
   };
 }
@@ -320,7 +321,7 @@ test('the transcript shows a message sent from the dashboard before its reply', 
       eventCount: 7,
       items: [
         ...transcript.items,
-        { kind: 'message', key: 'reply-0', text: 'Open a PR\nwith the fix' },
+        { kind: 'message', key: 'reply-0', text: 'Open a PR\nwith the fix', source: 'dashboard' },
         { kind: 'text', key: 'reply-0-0-0', text: 'Opened #12', isSubagent: false },
       ],
     },
@@ -334,6 +335,24 @@ test('the transcript shows a message sent from the dashboard before its reply', 
   assert.ok(message < reply);
 });
 
+test('a message from a webhook says so above it', async () => {
+  const { press } = await makeApp({
+    transcript: {
+      eventCount: 7,
+      items: [
+        ...transcript.items,
+        { kind: 'message', key: 'reply-0', text: 'Fix the flaky test too', source: 'webhook' },
+      ],
+    },
+  });
+  await press('enter');
+  const lines = (await press('enter')).split('\n');
+  const label = lines.findIndex(line => /From a webhook/.test(line));
+  assert.ok(label !== -1, lines.join('\n'));
+  assert.match(lines[label + 1] ?? '', /› Fix the flaky test too/);
+  assert.equal(lines[label]?.indexOf('From'), lines[label + 1]?.indexOf('Fix'));
+});
+
 test('an open finished run shows a message sent to it from the dashboard and its reply', async () => {
   const options: FakeOptions = {};
   const { app, screen, press } = await makeApp(options);
@@ -343,7 +362,7 @@ test('an open finished run shows a message sent to it from the dashboard and its
     eventCount: 6,
     items: [
       ...transcript.items,
-      { kind: 'message', key: 'reply-0', text: 'Open a PR' },
+      { kind: 'message', key: 'reply-0', text: 'Open a PR', source: 'dashboard' },
       { kind: 'text', key: 'reply-0-0-0', text: 'Opened #12', isSubagent: false },
     ],
   };

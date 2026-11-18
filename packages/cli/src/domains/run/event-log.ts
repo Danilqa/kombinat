@@ -5,10 +5,12 @@ import { z } from 'zod';
 
 import type { AgentName } from 'domains/agent/types';
 import type { RunRecord } from 'domains/run/types';
+import { messageSourceSchema } from 'domains/transcript/schemas';
 import type { HookItem, HookPhase, Transcript, TranscriptItem } from 'domains/transcript/types';
 
 import { parseJson } from '../../utils/json';
 import { getAgent } from '../agent/registry';
+import type { ReplyMessage } from '../agent/types';
 
 const hookEventSchema = z.object({
   type: z.enum(['before_hook', 'after_hook']),
@@ -18,14 +20,21 @@ const hookEventSchema = z.object({
 });
 export type HookEvent = z.infer<typeof hookEventSchema>;
 
-const messageEventSchema = z.object({ type: z.literal('message'), text: z.string() });
+const messageEventSchema = z.object({
+  type: z.literal('message'),
+  text: z.string(),
+  // Messages logged before webhooks could send them have no source.
+  source: messageSourceSchema.default('dashboard'),
+});
 
 const replyErrorEventSchema = z.object({ type: z.literal('reply_error'), error: z.string() });
 
-type ChatEvent = z.infer<typeof messageEventSchema> | z.infer<typeof replyErrorEventSchema>;
+type MessageEvent = z.infer<typeof messageEventSchema>;
+
+type ChatEvent = MessageEvent | z.infer<typeof replyErrorEventSchema>;
 
 interface Reply {
-  message: string;
+  message: ReplyMessage;
   events: unknown[];
   error: string | null;
 }
@@ -54,14 +63,18 @@ export function readRunEvents(record: RunRecord): unknown[] {
     .filter(event => event !== undefined);
 }
 
+function toReplyMessage({ text, source }: MessageEvent): ReplyMessage {
+  return { text, source };
+}
+
 export function appendChatEvent(record: RunRecord, event: ChatEvent): void {
   fs.appendFileSync(record.logFile, `${JSON.stringify(event)}\n`);
 }
 
-export function readLastMessage(record: RunRecord): string | null {
+export function readLastMessage(record: RunRecord): ReplyMessage | null {
   for (const event of readRunEvents(record).reverse()) {
     const message = messageEventSchema.safeParse(event);
-    if (message.success) return message.data.text;
+    if (message.success) return toReplyMessage(message.data);
   }
   return null;
 }
@@ -84,7 +97,7 @@ function toReplyItems(agent: AgentName, reply: Reply, index: number): Transcript
             isSubagent: false,
           },
         ];
-  return [{ kind: 'message', key, text: reply.message }, ...items, ...error];
+  return [{ kind: 'message', key, ...reply.message }, ...items, ...error];
 }
 
 export function buildRunTranscript(agent: AgentName, events: unknown[]): Transcript {
@@ -97,8 +110,9 @@ export function buildRunTranscript(agent: AgentName, events: unknown[]): Transcr
     const replyError = replyErrorEventSchema.safeParse(event);
     const reply = replies.at(-1);
     if (hook.success) hooks.push(toHookItem(hook.data, hooks.length));
-    else if (message.success) replies.push({ message: message.data.text, events: [], error: null });
-    else if (replyError.success && reply !== undefined) reply.error = replyError.data.error;
+    else if (message.success) {
+      replies.push({ message: toReplyMessage(message.data), events: [], error: null });
+    } else if (replyError.success && reply !== undefined) reply.error = replyError.data.error;
     else (reply?.events ?? agentEvents).push(event);
   }
   return {

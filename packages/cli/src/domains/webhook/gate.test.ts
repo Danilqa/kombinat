@@ -47,6 +47,32 @@ test('exit code 78 ignores the request and its JSON output becomes the answer', 
   });
 });
 
+test('exit code 79 continues the conversation its output names with its message', async () => {
+  assert.deepEqual(
+    await decideWebhook(
+      withGate(`echo '{"conversation":" session-1 ","message":"Fix the test too"}'; exit 79`),
+      buildRequest('{}'),
+    ),
+    { outcome: 'continue', conversation: 'session-1', message: 'Fix the test too' },
+  );
+});
+
+test('exit code 79 without a conversation and a message rejects the request', async () => {
+  for (const output of [
+    'not json',
+    '{"conversation":"session-1"}',
+    '{"conversation":" ","message":"Hi"}',
+  ]) {
+    assert.deepEqual(
+      await decideWebhook(withGate(`echo '${output}'; exit 79`), buildRequest('{}')),
+      {
+        outcome: 'reject',
+        reason: 'exited with 79 without printing a conversation and a message as JSON',
+      },
+    );
+  }
+});
+
 test('any other exit code rejects the request', async () => {
   assert.deepEqual(
     await decideWebhook(withGate('echo bad signature >&2; exit 1'), buildRequest('{}')),

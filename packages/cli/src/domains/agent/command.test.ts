@@ -26,7 +26,13 @@ test('has no session to continue', () => {
     runId: runIdSchema.parse('r1'),
     trigger: 'manual' as const,
   };
-  assert.equal(commandAgent.buildReplyInvocation(context, sessionIdSchema.parse('s1'), 'Hi'), null);
+  assert.equal(
+    commandAgent.buildReplyInvocation(context, sessionIdSchema.parse('s1'), {
+      text: 'Hi',
+      source: 'dashboard',
+    }),
+    null,
+  );
 });
 
 test('collects the output lines as the result and the transcript', () => {
