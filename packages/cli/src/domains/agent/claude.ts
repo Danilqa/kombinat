@@ -2,6 +2,7 @@ import { match, P } from 'ts-pattern';
 import { z } from 'zod';
 
 import { sessionIdSchema } from 'domains/agent/ids';
+import type { PlanLimits, UsageLimit } from 'domains/daemon/types';
 import type { ToolResult, TranscriptItem } from 'domains/transcript/types';
 import { toPreview } from 'domains/transcript/utils';
 
@@ -68,6 +69,18 @@ type ContentBlock = z.infer<typeof contentBlockSchema>;
 
 const textPartSchema = z.object({ type: z.literal('text'), text: z.string() });
 
+const usageWindowSchema = z.object({ utilization: z.number(), resetsAt: z.number() });
+type UsageWindow = z.infer<typeof usageWindowSchema>;
+
+const rateLimitInfoSchema = z.object({
+  unifiedWindows: z
+    .object({
+      five_hour: usageWindowSchema.optional(),
+      seven_day: usageWindowSchema.optional(),
+    })
+    .optional(),
+});
+
 const claudeEventSchema = z.object({
   type: z.string().optional(),
   subtype: z.string().optional(),
@@ -86,6 +99,7 @@ const claudeEventSchema = z.object({
   total_cost_usd: z.number().optional(),
   num_turns: z.number().optional(),
   duration_ms: z.number().optional(),
+  rate_limit_info: rateLimitInfoSchema.optional(),
 });
 type ClaudeEvent = z.infer<typeof claudeEventSchema>;
 
@@ -228,6 +242,14 @@ function readResult(event: ClaudeEvent): RunUpdate {
   return update;
 }
 
+function toUsageLimit(window: UsageWindow | undefined): UsageLimit | null {
+  if (window === undefined) return null;
+  return {
+    usedRatio: window.utilization,
+    resetsAt: new Date(window.resetsAt * 1000).toISOString(),
+  };
+}
+
 function buildArgs(context: RunContext, note: string): string[] {
   const { routine } = context;
   const fallbackModels = splitModels(routine.fallbackModel);
@@ -307,6 +329,17 @@ export const claudeAgent: Agent = {
       )
       .with({ type: 'result' }, readResult)
       .otherwise(() => ({}));
+  },
+
+  readPlanLimits(event) {
+    const parsed = claudeEventSchema.safeParse(event);
+    if (!parsed.success || parsed.data.type !== 'rate_limit_event') return null;
+    const windows = parsed.data.rate_limit_info?.unifiedWindows;
+    const limits: PlanLimits = {
+      session: toUsageLimit(windows?.five_hour),
+      week: toUsageLimit(windows?.seven_day),
+    };
+    return limits.session === null && limits.week === null ? null : limits;
   },
 
   buildTranscript(events) {

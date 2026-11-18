@@ -1,5 +1,12 @@
-import { LOW_DISK_BYTES, STALE_TICK_MS } from './constants';
-import type { DaemonHealth, DaemonStatus, DiskSpace } from './types';
+import { LOW_DISK_BYTES, LOW_USAGE_LEFT, STALE_TICK_MS } from './constants';
+import type {
+  CurrentUsageLimit,
+  DaemonHealth,
+  DaemonStatus,
+  DiskSpace,
+  PlanUsage,
+  UsageLimit,
+} from './types';
 
 const BYTE_UNITS = ['kilobyte', 'megabyte', 'gigabyte', 'terabyte'] as const;
 
@@ -41,4 +48,38 @@ export function formatDiskSpace(disk: DiskSpace): string {
 
 export function formatCpuLoad(load: number | null): string {
   return load === null ? '-' : percentFormatter.format(load);
+}
+
+// A limit past its reset is left out: what was used since is unknown until the next run reports it.
+export function getCurrentUsageLimits(
+  usage: PlanUsage | null | undefined,
+  now: number,
+): CurrentUsageLimit[] {
+  if (!usage) return [];
+  const limits = [
+    { label: '5-hour limit', limit: usage.session },
+    { label: 'Weekly limit', limit: usage.week },
+  ];
+  return limits.flatMap(({ label, limit }) =>
+    limit !== null && new Date(limit.resetsAt).getTime() > now ? [{ ...limit, label }] : [],
+  );
+}
+
+export function getMostUsedLimit(limits: CurrentUsageLimit[]): CurrentUsageLimit | undefined {
+  return limits.reduce<CurrentUsageLimit | undefined>(
+    (most, limit) => (most === undefined || limit.usedRatio > most.usedRatio ? limit : most),
+    undefined,
+  );
+}
+
+export function getLeftRatio(limit: UsageLimit): number {
+  return Math.min(1, Math.max(0, 1 - limit.usedRatio));
+}
+
+export function formatUsageLeft(limit: UsageLimit): string {
+  return percentFormatter.format(getLeftRatio(limit));
+}
+
+export function checkIsUsageLow(limit: UsageLimit): boolean {
+  return getLeftRatio(limit) < LOW_USAGE_LEFT;
 }

@@ -240,6 +240,19 @@ test('fills the terminal exactly, with the status, routines, runs and detail pan
   assert.match(text, /Hourly at :10, 07:00-22:59/);
 });
 
+test('the status panel grows a line with how much of the Claude plan is left', async () => {
+  const overview = makeOverview();
+  overview.status.claudeUsage = {
+    updatedAt: '2026-10-06T11:50:00Z',
+    session: { usedRatio: 0.95, resetsAt: '2026-10-06T14:00:00Z' },
+    week: { usedRatio: 0.4, resetsAt: '2026-10-09T10:00:00Z' },
+  };
+  const { app } = await makeApp({ overview });
+  const frame = app.render(WIDTH, HEIGHT);
+  assert.equal(frame.length, HEIGHT);
+  assert.match(frame.map(plain).join('\n'), /claude 5% left · 5-hour limit resets in 2h\s/);
+});
+
 test('moving through the routines list changes the detail panel', async () => {
   const { screen, press } = await makeApp();
   assert.match(screen(), /0 {2}on-call-monitoring/);

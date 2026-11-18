@@ -1,8 +1,30 @@
+import type { DaemonStatus } from 'domains/daemon/types';
+import {
+  checkIsUsageLow,
+  formatUsageLeft,
+  getCurrentUsageLimits,
+  getMostUsedLimit,
+} from 'domains/daemon/utils';
 import { formatRelativeCompact, formatSpan } from 'utils/date-time';
 
 import type { Overview } from '../daemon-client';
 import { S, text } from '../terminal/text';
 import type { Line } from '../terminal/text';
+
+function planUsageLines(status: DaemonStatus, now: number): Line[] {
+  const limit = getMostUsedLimit(getCurrentUsageLimits(status.claudeUsage, now));
+  if (limit === undefined) return [];
+  return [
+    [
+      text('claude '),
+      text(`${formatUsageLeft(limit)} left`, checkIsUsageLow(limit) ? S.boldYellow : S.cyan),
+      text(
+        ` · ${limit.label.toLowerCase()} resets ${formatRelativeCompact(limit.resetsAt, now)}`,
+        S.dim,
+      ),
+    ],
+  ];
+}
 
 export function statusLines(
   overview: Overview | null,
@@ -44,6 +66,7 @@ export function statusLines(
       text(' · ', S.dim),
       text(status.timezone, S.magenta),
     ],
+    ...planUsageLines(status, now),
   ];
 }
 

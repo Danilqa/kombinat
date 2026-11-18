@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { Fragment } from 'react';
 import { P, match } from 'ts-pattern';
 
 import { Popover } from 'design-system/components';
@@ -8,8 +9,18 @@ import { sameOriginApi } from 'utils/http';
 import { getPollInterval } from 'utils/polling';
 
 import { getDaemonStatus } from '../requests';
-import type { DaemonHealth, DaemonStatus } from '../types';
-import { checkIsDiskLow, formatCpuLoad, formatDiskSpace, getDaemonHealth } from '../utils';
+import type { CurrentUsageLimit, DaemonHealth, DaemonStatus } from '../types';
+import {
+  checkIsDiskLow,
+  checkIsUsageLow,
+  formatCpuLoad,
+  formatDiskSpace,
+  formatUsageLeft,
+  getCurrentUsageLimits,
+  getDaemonHealth,
+  getLeftRatio,
+  getMostUsedLimit,
+} from '../utils';
 
 interface DaemonHealthAppearance {
   label: string;
@@ -29,6 +40,27 @@ function checkHasRunning(status: DaemonStatus | undefined): boolean {
   return status !== undefined && status.running > 0;
 }
 
+function getClaudeLimits(status: DaemonStatus): CurrentUsageLimit[] {
+  return getCurrentUsageLimits(status.claudeUsage, new Date(status.now).getTime());
+}
+
+interface PlanUsageSummaryProps {
+  status: DaemonStatus;
+}
+
+function PlanUsageSummary({ status }: PlanUsageSummaryProps) {
+  const limit = getMostUsedLimit(getClaudeLimits(status));
+  if (limit === undefined) return null;
+  const isLow = checkIsUsageLow(limit);
+  return (
+    <span className={cn(isLow && 'text-warning')}>
+      <span aria-hidden="true"> · </span>
+      <span className={cn(!isLow && 'text-fg-secondary')}>{formatUsageLeft(limit)}</span> left
+      <span className="sr-only"> of the Claude plan</span>
+    </span>
+  );
+}
+
 interface DaemonStatusSummaryProps {
   health: DaemonHealth;
   status: DaemonStatus | undefined;
@@ -42,9 +74,55 @@ function DaemonStatusSummary({ health, status }: DaemonStatusSummaryProps) {
       <span>
         <span className="text-fg-secondary">{healthy.running}</span> of{' '}
         <span className="text-fg-secondary">{healthy.maxConcurrentRuns}</span> running
+        <PlanUsageSummary status={healthy} />
       </span>
     ))
     .otherwise(() => <span>Offline</span>);
+}
+
+interface PlanUsageDetailsProps {
+  status: DaemonStatus;
+}
+
+function PlanUsageDetails({ status }: PlanUsageDetailsProps) {
+  const usage = status.claudeUsage;
+  const limits = getClaudeLimits(status);
+  if (!usage || limits.length === 0) return null;
+  return (
+    <>
+      <p className="mt-3 mb-1.5 font-medium">Claude plan</p>
+      <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1">
+        {limits.map(limit => {
+          const isLow = checkIsUsageLow(limit);
+          return (
+            <Fragment key={limit.label}>
+              <dt className="text-fg-muted">{limit.label}</dt>
+              <dd className="tabular-nums">
+                <span className={cn(isLow && 'text-warning')}>{formatUsageLeft(limit)} left</span>
+                <span className="text-fg-muted">
+                  {' '}
+                  · resets <time dateTime={limit.resetsAt}>{formatRelative(limit.resetsAt)}</time>
+                </span>
+                <span aria-hidden="true" className="mt-1 mb-1.5 block h-1 rounded-full bg-overlay">
+                  <span
+                    className={cn(
+                      'block h-full rounded-full',
+                      isLow ? 'bg-warning' : 'bg-fg-secondary',
+                    )}
+                    style={{ width: `${getLeftRatio(limit) * 100}%` }}
+                  />
+                </span>
+              </dd>
+            </Fragment>
+          );
+        })}
+        <dt className="text-fg-muted">Updated</dt>
+        <dd className="tabular-nums">
+          <time dateTime={usage.updatedAt}>{formatRelative(usage.updatedAt)}</time>
+        </dd>
+      </dl>
+    </>
+  );
 }
 
 interface DaemonStatusDetailsProps {
@@ -138,6 +216,7 @@ export function DaemonStatusIndicator() {
         <Popover.Content side="bottom" align="end">
           <p className="mb-1.5 font-medium">{appearance.label}</p>
           {data && <DaemonStatusDetails status={data} />}
+          {data && <PlanUsageDetails status={data} />}
         </Popover.Content>
       </Popover.Root>
     </>

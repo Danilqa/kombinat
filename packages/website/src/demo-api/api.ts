@@ -43,6 +43,7 @@ export interface DemoApi {
 const MAX_CALENDAR_DAYS = 32;
 const DAEMON_UPTIME_MS = (3 * 24 + 4) * 3_600_000;
 const TICK_MS = 30_000;
+const MINUTE_MS = 60_000;
 
 function parseJson(text: string): unknown {
   try {
@@ -115,6 +116,8 @@ function toRoutineSummary(
 export function createDemoApi(loadedAt = new Date()): DemoApi {
   const history = createDemoHistory(demoRoutines, loadedAt);
   const daemonStartedAt = new Date(loadedAt.getTime() - DAEMON_UPTIME_MS);
+  const fromLoad = (minutes: number) =>
+    new Date(loadedAt.getTime() + minutes * MINUTE_MS).toISOString();
   let settings: Settings = DEFAULT_SETTINGS;
   const queues = new Map(
     demoRoutines.map(routine => [
@@ -177,6 +180,11 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
       now: now.toISOString(),
       disk: { freeBytes: 182_400_000_000, totalBytes: 494_380_000_000 },
       cpuLoad: running > 0 ? 0.46 : 0.07,
+      claudeUsage: {
+        updatedAt: fromLoad(-6),
+        session: { usedRatio: 0.34, resetsAt: fromLoad(2 * 60 + 14) },
+        week: { usedRatio: 0.58, resetsAt: fromLoad((3 * 24 + 5) * 60) },
+      },
     };
   }
 

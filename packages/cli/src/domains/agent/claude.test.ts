@@ -89,6 +89,33 @@ test('reads the session and the result into the run record', () => {
   assert.equal(claudeAgent.getResumeCommand(sessionIdSchema.parse('s1')), 'claude --resume s1');
 });
 
+test('reads the plan limits that a rate limit event reports', () => {
+  const rateLimit = (info: unknown) => ({ type: 'rate_limit_event', rate_limit_info: info });
+  assert.deepEqual(
+    claudeAgent.readPlanLimits(
+      rateLimit({
+        status: 'allowed',
+        unifiedWindows: {
+          five_hour: { utilization: 0.12, resetsAt: 1795026600 },
+          seven_day: { utilization: 0.2, resetsAt: 1795557600 },
+        },
+      }),
+    ),
+    {
+      session: { usedRatio: 0.12, resetsAt: '2026-11-18T18:30:00.000Z' },
+      week: { usedRatio: 0.2, resetsAt: '2026-11-24T22:00:00.000Z' },
+    },
+  );
+  assert.deepEqual(
+    claudeAgent.readPlanLimits(
+      rateLimit({ unifiedWindows: { seven_day: { utilization: 0.5, resetsAt: 1795557600 } } }),
+    ),
+    { session: null, week: { usedRatio: 0.5, resetsAt: '2026-11-24T22:00:00.000Z' } },
+  );
+  assert.equal(claudeAgent.readPlanLimits(rateLimit({ status: 'allowed' })), null);
+  assert.equal(claudeAgent.readPlanLimits(events[0]), null);
+});
+
 test('passes the routine settings to claude -p', () => {
   const { args, input, env } = claudeAgent.buildInvocation({
     routine: makeAgentTask({

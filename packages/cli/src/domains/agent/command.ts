@@ -43,6 +43,8 @@ export const commandAgent: Agent = {
     return { resultText: resultText.slice(-MAX_RESULT_CHARS) };
   },
 
+  readPlanLimits: () => null,
+
   buildTranscript(events) {
     const text = events
       .flatMap(event => {

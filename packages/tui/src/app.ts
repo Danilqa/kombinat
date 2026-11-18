@@ -727,7 +727,8 @@ export class TuiApp {
     const now = this.now();
     const leftWidth = clamp(Math.round(width * 0.36), 34, 56);
     const bodyHeight = height - 1;
-    const statusHeight = 4;
+    const status = statusLines(this.overview, this.overviewError, this.loadedAt, now);
+    const statusHeight = Math.max(4, status.length + 2);
     const listsHeight = bodyHeight - statusHeight;
     const routinesHeight = clamp(this.routines.length + 2, 4, Math.floor(listsHeight * 0.6));
     const left = [
@@ -736,7 +737,7 @@ export class TuiApp {
         icon: { text: '▟', style: S.accent },
         width: leftWidth,
         height: statusHeight,
-        body: statusLines(this.overview, this.overviewError, this.loadedAt, now),
+        body: status,
         isFocused: false,
         footer: formatCopyright(this.overview?.status.version, now),
       }),
