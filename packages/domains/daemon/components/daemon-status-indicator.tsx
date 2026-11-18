@@ -53,7 +53,7 @@ function PlanUsageSummary({ status }: PlanUsageSummaryProps) {
   if (limit === undefined) return null;
   const isLow = checkIsUsageLow(limit);
   return (
-    <span className={cn(isLow && 'text-warning')}>
+    <span className={cn('max-md:hidden', isLow && 'text-warning')}>
       <span aria-hidden="true"> · </span>
       <span className={cn(!isLow && 'text-fg-secondary')}>{formatUsageLeft(limit)}</span> left
       <span className="sr-only"> of the Claude plan</span>
