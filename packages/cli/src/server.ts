@@ -19,6 +19,7 @@ import {
   paginateRuns,
   parseRunsPageQuery,
 } from 'domains/run/utils';
+import { settingsSchema } from 'domains/settings/schemas';
 import { getErrorMessage } from 'utils/error';
 
 import { config } from './config';
@@ -26,6 +27,7 @@ import { loadRoutines } from './domains/routine/storage';
 import type { Routine } from './domains/routine/types';
 import { describeSchedule, getNextRun } from './domains/routine/utils';
 import { appendChatEvent, buildRunTranscript, readRunEvents } from './domains/run/event-log';
+import { deleteExpiredRuns, startRunCleanup } from './domains/run/retention';
 import {
   checkIsRunning,
   checkIsStarting,
@@ -34,6 +36,7 @@ import {
 } from './domains/run/runner';
 import { getRunningRuns, listAllRuns, listRuns, readRunRecord } from './domains/run/storage';
 import { getSkips, readSchedulerState } from './domains/scheduler/storage';
+import { readSettings, writeSettings } from './domains/settings/storage';
 import { WEBHOOK_GATE_TIMEOUT_MS } from './domains/webhook/gate';
 import type { WebhookRequest } from './domains/webhook/gate';
 import {
@@ -223,6 +226,16 @@ function getRunsPage(url: URL): ApiResponse {
   return withRoutine(query.routine, routine => toPage(listRuns(routine.name)));
 }
 
+function updateSettings(body: Buffer): ApiResponse {
+  const settings = settingsSchema.safeParse(parseJson(body.toString('utf8')));
+  if (!settings.success) {
+    return fail(400, 'runRetentionDays must be a whole number of days or null');
+  }
+  writeSettings(settings.data);
+  deleteExpiredRuns();
+  return ok(settings.data);
+}
+
 function routeApi(request: ApiRequest, context: ApiContext): ApiResponse | Promise<ApiResponse> {
   const { url, startedAt } = context;
   return match(request)
@@ -240,6 +253,8 @@ function routeApi(request: ApiRequest, context: ApiContext): ApiResponse | Promi
       withRoutine(routineNameSchema.parse(name), routine => handleWebhook(routine, context)),
     )
     .with(['GET', ['calendar']], () => getCalendar(url))
+    .with(['GET', ['settings']], () => ok(readSettings()))
+    .with(['PUT', ['settings']], () => updateSettings(context.request.body))
     .with(['GET', ['runs']], () => getRunsPage(url))
     .with(['GET', ['runs', P.string, P.string]], ([, [, routine, id]]) =>
       withRun(routineNameSchema.parse(routine), runIdSchema.parse(id), ok),
@@ -344,6 +359,7 @@ export function startServer(log: (line: string) => void): http.Server {
     });
   });
   server.on('close', startCpuSampling());
+  server.on('close', startRunCleanup(log));
   server.listen(config.port, '127.0.0.1', () => {
     log(`ui at http://localhost:${config.port}`);
   });

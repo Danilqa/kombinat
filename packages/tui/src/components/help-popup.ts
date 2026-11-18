@@ -15,6 +15,7 @@ export const HELP: Array<[string, string]> = [
   ['{  }', 'previous / next transcript item'],
   ['e', 'expand or collapse every tool call'],
   ['r', 'run the selected routine now'],
+  ['s', 'settings: how long runs are kept'],
   ['R  ctrl-r', 'refresh now'],
   ['?', 'toggle this help'],
   ['q  ctrl-c', 'quit'],

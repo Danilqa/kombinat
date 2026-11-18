@@ -5,7 +5,7 @@ import type { DaemonStatus } from 'domains/daemon/types';
 import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import { RUNS_CURSOR_ERROR } from 'domains/run/constants';
-import { runIdSchema } from 'domains/run/ids';
+import { runIdSchema, type RunId } from 'domains/run/ids';
 import { runMessageSchema } from 'domains/run/schemas';
 import type { RunRecord } from 'domains/run/types';
 import {
@@ -13,9 +13,13 @@ import {
   checkIsRunActive,
   createRunId,
   filterRuns,
+  findExpiredRuns,
   paginateRuns,
   parseRunsPageQuery,
 } from 'domains/run/utils';
+import { DEFAULT_SETTINGS } from 'domains/settings/constants';
+import { settingsSchema } from 'domains/settings/schemas';
+import type { Settings } from 'domains/settings/types';
 import type { QueuedWebhook } from 'domains/webhook/types';
 import type { Skip } from 'domains/scheduler/types';
 import { describeCron, nextCronRun } from 'utils/cron';
@@ -102,6 +106,7 @@ function toRoutineSummary(
 export function createDemoApi(loadedAt = new Date()): DemoApi {
   const history = createDemoHistory(demoRoutines, loadedAt);
   const daemonStartedAt = new Date(loadedAt.getTime() - DAEMON_UPTIME_MS);
+  let settings: Settings = DEFAULT_SETTINGS;
   const queues = new Map(
     demoRoutines.map(routine => [
       routine.name,
@@ -109,8 +114,19 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     ]),
   );
 
+  function listRuns(now: Date): RunRecord[] {
+    const runs = history.listRuns(now);
+    if (settings.runRetentionDays === null) return runs;
+    const expired = new Set(findExpiredRuns(runs, settings.runRetentionDays, now));
+    return runs.filter(run => !expired.has(run));
+  }
+
+  function findRun(routine: RoutineName, id: RunId, now: Date): RunRecord | null {
+    return listRuns(now).find(run => run.routine === routine && run.id === id) ?? null;
+  }
+
   function listRoutineRuns(routine: DemoRoutine, now: Date): RunRecord[] {
-    return history.listRuns(now).filter(run => run.routine === routine.name);
+    return listRuns(now).filter(run => run.routine === routine.name);
   }
 
   function listQueue(routine: DemoRoutine, now: Date): QueuedWebhook[] {
@@ -137,7 +153,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
   }
 
   function getStatus(now: Date): DaemonStatus {
-    const running = history.listRuns(now).filter(checkIsRunActive).length;
+    const running = listRuns(now).filter(checkIsRunActive).length;
     return {
       pid: 48213,
       startedAt: daemonStartedAt.toISOString(),
@@ -190,7 +206,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     if (query === null) return fail(400, RUNS_CURSOR_ERROR);
     const toPage = (runs: RunRecord[]) =>
       ok(paginateRuns(filterRuns(runs, query.search), query.cursor));
-    if (query.routine === null) return toPage(history.listRuns(now));
+    if (query.routine === null) return toPage(listRuns(now));
     return withRoutine(query.routine, routine => toPage(listRoutineRuns(routine, now)));
   }
 
@@ -205,7 +221,16 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     if (!isValid) {
       return fail(400, `from and to must be ISO dates spanning at most ${MAX_CALENDAR_DAYS} days`);
     }
-    return ok(buildCalendar(demoRoutines, history.listRuns(now), from, to, now));
+    return ok(buildCalendar(demoRoutines, listRuns(now), from, to, now));
+  }
+
+  function updateSettings(body: string): ApiResponse {
+    const parsed = settingsSchema.safeParse(parseJson(body));
+    if (!parsed.success) {
+      return fail(400, 'runRetentionDays must be a whole number of days or null');
+    }
+    settings = parsed.data;
+    return ok(settings);
   }
 
   function routeApi(request: ApiRequest, url: URL, body: string, now: Date): ApiResponse {
@@ -219,23 +244,22 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
         withRoutine(routineNameSchema.parse(name), routine => startRun(routine, now)),
       )
       .with(['GET', ['calendar']], () => getCalendar(url, now))
+      .with(['GET', ['settings']], () => ok(settings))
+      .with(['PUT', ['settings']], () => updateSettings(body))
       .with(['GET', ['runs']], () => getRunsPage(url, now))
       .with(['GET', ['runs', P.string, P.string]], ([, [, routine, id]]) => {
-        const run = history.findRun(routineNameSchema.parse(routine), runIdSchema.parse(id), now);
+        const run = findRun(routineNameSchema.parse(routine), runIdSchema.parse(id), now);
         return run === null ? fail(404, 'Run not found') : ok(run);
       })
       .with(['POST', ['runs', P.string, P.string, 'messages']], ([, [, name, id]]) =>
         withRoutine(routineNameSchema.parse(name), routine => {
-          const run = history.findRun(routine.name, runIdSchema.parse(id), now);
+          const run = findRun(routine.name, runIdSchema.parse(id), now);
           return run === null ? fail(404, 'Run not found') : sendMessage(routine, run, body, now);
         }),
       )
       .with(['GET', ['runs', P.string, P.string, 'transcript']], ([, [, routine, id]]) => {
-        const transcript = history.getTranscript(
-          routineNameSchema.parse(routine),
-          runIdSchema.parse(id),
-          now,
-        );
+        const run = findRun(routineNameSchema.parse(routine), runIdSchema.parse(id), now);
+        const transcript = run && history.getTranscript(run.routine, run.id, now);
         return transcript === null ? fail(404, 'Run not found') : ok(transcript);
       })
       .otherwise(() => fail(404, 'Not found'));

@@ -47,7 +47,6 @@ interface ScheduledEvents {
 export interface DemoHistory {
   listRuns(now: Date): RunRecord[];
   listSkips(routine: DemoRoutine, now: Date): Skip[];
-  findRun(routine: RoutineName, id: RunId, now: Date): RunRecord | null;
   getTranscript(routine: RoutineName, id: RunId, now: Date): Transcript | null;
   startRun(routine: DemoRoutine, now: Date): void;
   sendMessage(routine: RoutineName, id: RunId, text: string, now: Date): void;
@@ -365,10 +364,6 @@ export function createDemoHistory(routines: DemoRoutine[], loadedAt: Date): Demo
         .map(run => toRunRecord(run, now, getMessages(run.routine.name, run.id)))
         .sort(compareRunsByNewest),
     listSkips: (routine, now) => getScheduledEvents(routine, now).skips.slice(-MAX_SKIPS),
-    findRun(routine, id, now) {
-      const run = findDemoRun(routine, id, now);
-      return run === undefined ? null : toRunRecord(run, now, getMessages(routine, id));
-    },
     getTranscript(routine, id, now) {
       const run = findDemoRun(routine, id, now);
       return run === undefined ? null : buildTranscript(run, now, getMessages(routine, id));

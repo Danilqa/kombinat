@@ -2,6 +2,7 @@ import { PageHeader } from 'design-system/layouts';
 import { RunsList } from '@web-app/components/runs-list';
 import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 import { useRuns } from '@web-app/hooks/use-runs';
+import { RunsSettingsMenu } from './runs-settings-menu';
 
 export function RunsPage() {
   useDocumentTitle('Runs');
@@ -11,7 +12,12 @@ export function RunsPage() {
     <div>
       <PageHeader.Root
         title="Runs"
-        aside={runs.data && <PageHeader.Aside>{runs.data.total} runs</PageHeader.Aside>}
+        aside={
+          <div className="flex items-center gap-2">
+            {runs.data && <PageHeader.Aside>{runs.data.total} runs</PageHeader.Aside>}
+            <RunsSettingsMenu />
+          </div>
+        }
       />
       <RunsList runs={runs} hasRoutineColumn />
     </div>

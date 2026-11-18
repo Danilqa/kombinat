@@ -5,6 +5,9 @@ import type { RoutineDetail } from 'domains/routine/types';
 import type { RunId } from 'domains/run/ids';
 import type { RunRecord, RunsPage, RunWithTranscript } from 'domains/run/types';
 import { checkIsRunActive } from 'domains/run/utils';
+import { RUN_RETENTION_DAYS_OPTIONS } from 'domains/settings/constants';
+import type { Settings } from 'domains/settings/types';
+import { getRunRetentionLabel } from 'domains/settings/utils';
 import type { TranscriptItem } from 'domains/transcript/types';
 import { formatRelativeCompact } from 'utils/date-time';
 import { getErrorMessage } from 'utils/error';
@@ -13,6 +16,7 @@ import { box, overlayOnto } from './components/box';
 import { confirmPopup } from './components/confirm-popup';
 import { helpPopup } from './components/help-popup';
 import { hintsBar } from './components/hints-bar';
+import { settingsPopup } from './components/settings-popup';
 import { formatCopyright, statusLines } from './components/status-panel';
 import type { DaemonClient, Overview } from './daemon-client';
 import { getRoutineTabs, routinePage } from './features/routines/routine-page';
@@ -66,7 +70,12 @@ interface ConfirmRunOverlay {
   routine: RoutineName;
 }
 
-type Overlay = HelpOverlay | ConfirmRunOverlay;
+interface SettingsOverlay {
+  kind: 'settings';
+  settings: Settings;
+}
+
+type Overlay = HelpOverlay | ConfirmRunOverlay | SettingsOverlay;
 
 interface Message {
   text: string;
@@ -474,6 +483,7 @@ export class TuiApp {
       .with('2', () => this.focusList('runs'))
       .with('0', () => this.focusDetail())
       .with('r', () => this.askToRun())
+      .with('s', () => this.openSettings())
       .with(P.union('R', 'C-r'), () => void this.refresh())
       .otherwise(() =>
         match(this.focus)
@@ -488,6 +498,9 @@ export class TuiApp {
     this.overlay = null;
     if (key === 'y' && isMatching({ kind: 'confirm-run' }, overlay))
       void this.startRun(overlay.routine);
+    const runRetentionDays = RUN_RETENTION_DAYS_OPTIONS[Number(key) - 1];
+    if (isMatching({ kind: 'settings' }, overlay) && runRetentionDays !== undefined)
+      void this.updateSettings({ ...overlay.settings, runRetentionDays });
   }
 
   private handleListKey(list: ListFocus, key: string): void {
@@ -680,6 +693,24 @@ export class TuiApp {
     await this.refresh();
   }
 
+  private openSettings(): void {
+    if (this.overview) this.overlay = { kind: 'settings', settings: this.overview.settings };
+  }
+
+  private async updateSettings(settings: Settings): Promise<void> {
+    try {
+      await this.client.updateSettings(settings);
+      const { runRetentionDays } = settings;
+      const kept =
+        runRetentionDays === null ? 'forever' : `for ${getRunRetentionLabel(runRetentionDays)}`;
+      this.flash(`keeping runs ${kept}`, 'ok');
+    } catch (err) {
+      this.flash(getErrorMessage(err), 'error');
+    }
+    await this.refreshing;
+    await this.refresh();
+  }
+
   private flash(text: string, tone: Message['tone']): void {
     this.message = { text, tone, at: this.now() };
     this.onChange();
@@ -725,6 +756,7 @@ export class TuiApp {
     const popup = match(this.overlay)
       .with({ kind: 'help' }, () => helpPopup(width, height))
       .with({ kind: 'confirm-run' }, ({ routine }) => confirmPopup(routine, width))
+      .with({ kind: 'settings' }, ({ settings }) => settingsPopup(settings, width))
       .exhaustive();
     return overlayOnto(frame, popup, width);
   }
