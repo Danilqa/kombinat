@@ -116,11 +116,15 @@ test("finds text in a run's transcript, inside collapsed tool calls too", async 
 
   await page.goto(`/runs/fix-e2e-tests/${run.id}`);
   await page.getByRole('tab', { name: /Transcript & chat/ }).click();
+  const searchButton = page.getByRole('button', { name: 'Search the transcript' });
   const search = page.getByRole('search');
   const matchCount = search.getByRole('status');
   const toolResult = page.getByRole('region', { name: 'Tool result' });
 
-  await search.getByRole('textbox', { name: 'Search the transcript' }).fill('checkout');
+  await expect(search).toBeHidden();
+  await searchButton.click();
+  await expect(search.getByRole('textbox', { name: 'Search the transcript' })).toBeFocused();
+  await page.keyboard.type('checkout');
   await expect(matchCount).toHaveText('1 of 2');
   await expect(toolResult).toHaveText('Checkout passed');
   await page.keyboard.press('Enter');
@@ -135,8 +139,10 @@ test("finds text in a run's transcript, inside collapsed tool calls too", async 
   await expect(toolResult).toBeHidden();
 
   await search.getByRole('textbox').press('Escape');
+  await expect(search).toBeHidden();
+  await expect(searchButton).toBeFocused();
+  await searchButton.click();
   await expect(search.getByRole('textbox')).toHaveValue('');
-  await expect(matchCount).toBeHidden();
 });
 
 test('scrolls a long tool result to the match', async ({ page, kombinat, claude }) => {
@@ -153,6 +159,7 @@ test('scrolls a long tool result to the match', async ({ page, kombinat, claude 
 
   await page.goto(`/runs/fix-e2e-tests/${run.id}`);
   await page.getByRole('tab', { name: /Transcript & chat/ }).click();
+  await page.getByRole('button', { name: 'Search the transcript' }).click();
   await page.getByRole('search').getByRole('textbox').fill('checkout failed');
   const toolResult = page.getByRole('region', { name: 'Tool result' });
 

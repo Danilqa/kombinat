@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { Search } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation, useParams } from 'react-router';
 import { isMatching } from 'ts-pattern';
-import { Card, ErrorState, LoadingState, Separator, Tabs } from 'design-system/components';
+import { Button, Card, ErrorState, LoadingState, Separator, Tabs } from 'design-system/components';
 import { PageHeader } from 'design-system/layouts';
 import { routineNameSchema } from 'domains/routine/ids';
 import { RunDetailList, RunOutput, RunStatusBadge } from 'domains/run/components';
@@ -26,15 +27,47 @@ interface RunViewProps extends RunWithTranscript {}
 
 function RunView({ run, transcript }: RunViewProps) {
   const hasOutput = Boolean(run.error) || Boolean(run.resultText);
+  const [tab, setTab] = useState('information');
+  const [searchValue, setSearchValue] = useState<string | null>(null);
+  const isSearchOpen = searchValue !== null;
+  const searchButtonRef = useRef<HTMLButtonElement>(null);
+  const canSearch = tab === 'transcript' && transcript.items.length > 0;
+
+  function handleTabChange(value: string) {
+    setTab(value);
+    setSearchValue(null);
+  }
+
+  function handleSearchClose() {
+    setSearchValue(null);
+    searchButtonRef.current?.focus();
+  }
+
   return (
-    <Tabs.Root defaultValue="information" className="gap-4">
-      <Tabs.List>
-        <Tabs.Trigger value="information">Information</Tabs.Trigger>
-        <Tabs.Trigger value="transcript">
-          Transcript & chat
-          <span className="text-fg-secondary tabular-nums">{transcript.eventCount}</span>
-        </Tabs.Trigger>
-      </Tabs.List>
+    <Tabs.Root value={tab} onValueChange={handleTabChange} className="gap-4">
+      <div className="flex items-center justify-between gap-2">
+        <Tabs.List>
+          <Tabs.Trigger value="information">Information</Tabs.Trigger>
+          <Tabs.Trigger value="transcript">
+            Transcript & chat
+            <span className="text-fg-secondary tabular-nums">{transcript.eventCount}</span>
+          </Tabs.Trigger>
+        </Tabs.List>
+        {canSearch && (
+          <Button
+            ref={searchButtonRef}
+            variant="tertiary"
+            size="icon-small"
+            className="max-sm:-my-0.5 max-sm:size-9"
+            isActive={isSearchOpen}
+            aria-expanded={isSearchOpen}
+            onClick={() => (isSearchOpen ? handleSearchClose() : setSearchValue(''))}
+          >
+            <Search aria-hidden="true" />
+            <span className="sr-only">Search the transcript</span>
+          </Button>
+        )}
+      </div>
       <Tabs.Content value="information">
         <Card.Root className="gap-0 py-0">
           <RunDetailList run={run} />
@@ -47,7 +80,13 @@ function RunView({ run, transcript }: RunViewProps) {
         </Card.Root>
       </Tabs.Content>
       <Tabs.Content value="transcript">
-        <RunChat run={run} transcript={transcript} />
+        <RunChat
+          run={run}
+          transcript={transcript}
+          searchValue={searchValue}
+          onSearchValueChange={setSearchValue}
+          onSearchClose={handleSearchClose}
+        />
       </Tabs.Content>
     </Tabs.Root>
   );

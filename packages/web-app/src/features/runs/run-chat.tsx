@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import { Spinner } from 'design-system/components';
 import { useDebouncedValue } from 'design-system/utils';
 import { getAgentLabel } from 'domains/agent/utils';
@@ -12,24 +12,36 @@ import { TranscriptSearch } from './transcript-search';
 
 const SEARCH_DELAY_MS = 150;
 
-interface RunChatProps extends RunWithTranscript {}
+interface RunChatProps extends RunWithTranscript {
+  searchValue: string | null;
+  onSearchValueChange: (value: string) => void;
+  onSearchClose: () => void;
+}
 
-export function RunChat({ run, transcript }: RunChatProps) {
+export function RunChat({
+  run,
+  transcript,
+  searchValue,
+  onSearchValueChange,
+  onSearchClose,
+}: RunChatProps) {
   const stickToBottom = useStickToBottom(transcript.eventCount);
   const transcriptRef = useRef<HTMLDivElement>(null);
-  const [searchValue, setSearchValue] = useState('');
-  const search = useDebouncedValue(searchValue.trim(), SEARCH_DELAY_MS);
+  const debouncedSearch = useDebouncedValue(searchValue?.trim() ?? '', SEARCH_DELAY_MS);
+  const search = searchValue === null ? '' : debouncedSearch;
   const textSearch = useTextSearch(transcriptRef, search);
+
   return (
     <div className="space-y-6">
-      {transcript.items.length > 0 && (
-        <div className="sticky top-[var(--app-header-height,0px)] z-20 bg-page py-2">
+      {searchValue !== null && (
+        <div className="sticky top-[var(--app-header-height,0px)] z-20 flex justify-end bg-page py-2">
           <TranscriptSearch
             value={searchValue}
             matchCount={search === searchValue.trim() ? textSearch.count : null}
             current={textSearch.current}
-            onValueChange={setSearchValue}
+            onValueChange={onSearchValueChange}
             onMove={textSearch.move}
+            onClose={onSearchClose}
           />
         </div>
       )}
