@@ -72,6 +72,38 @@ test('shows a run the moment the daemon records it', async ({ page, kombinat, ti
   });
 });
 
+test('lets go of the change stream while the tab is hidden', async ({ page, kombinat, time }) => {
+  const setHidden = (isHidden: boolean) =>
+    page.evaluate(hidden => {
+      Object.defineProperty(document, 'hidden', { configurable: true, value: hidden });
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        value: hidden ? 'hidden' : 'visible',
+      });
+      document.dispatchEvent(new Event('visibilitychange', { bubbles: true }));
+    }, isHidden);
+  kombinat.addRoutine({ name: 'triage-sentry' });
+  const changeStream = page.waitForResponse('**/api/events');
+  await page.goto('/');
+  await changeStream;
+  const row = page.getByRole('row', { name: /triage-sentry/ });
+  await expect(row).toContainText('Never run');
+
+  const closed = page.waitForEvent('requestfailed', request =>
+    request.url().endsWith('/api/events'),
+  );
+  await setHidden(true);
+  await closed;
+  kombinat.addRun({ routine: 'triage-sentry', status: 'failed', startedAt: time.minutesAgo(1) });
+  const reopened = page.waitForResponse('**/api/events');
+  await setHidden(false);
+  await reopened;
+
+  await expect(row.getByRole('link', { name: /Failed/ })).toBeVisible({
+    timeout: LIVE_UPDATE_TIMEOUT_MS,
+  });
+});
+
 test('keeps counting the time since the last run', async ({ page, kombinat, time }) => {
   kombinat.addRoutine({ name: 'triage-sentry' });
   kombinat.addRun({ routine: 'triage-sentry', startedAt: time.minutesAgo(1) });
