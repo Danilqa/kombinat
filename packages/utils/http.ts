@@ -13,6 +13,8 @@ export async function readResponse<T>(response: Response, schema: z.ZodType<T>):
 
 export interface HttpClient {
   request<T>(path: string, schema: z.ZodType<T>, init?: RequestInit): Promise<T>;
+  // Has no timeout. Null when the server answers with an error instead of a stream.
+  openStream(path: string, init?: RequestInit): Promise<ReadableStream<Uint8Array> | null>;
 }
 
 interface HttpClientOptions {
@@ -26,10 +28,14 @@ export function createHttpClient({
   timeoutMs,
   networkErrorMessage,
 }: HttpClientOptions = {}): HttpClient {
-  async function send(path: string, init: RequestInit | undefined): Promise<Response> {
+  async function send(
+    path: string,
+    init: RequestInit | undefined,
+    sendTimeoutMs: number | undefined,
+  ): Promise<Response> {
     const url = `${baseUrl}${path}`;
     const options =
-      timeoutMs === undefined ? init : { ...init, signal: AbortSignal.timeout(timeoutMs) };
+      sendTimeoutMs === undefined ? init : { ...init, signal: AbortSignal.timeout(sendTimeoutMs) };
     if (networkErrorMessage === undefined) return fetch(url, options);
     try {
       return await fetch(url, options);
@@ -40,7 +46,11 @@ export function createHttpClient({
 
   return {
     async request(path, schema, init) {
-      return readResponse(await send(path, init), schema);
+      return readResponse(await send(path, init, timeoutMs), schema);
+    },
+    async openStream(path, init) {
+      const response = await send(path, init, undefined);
+      return response.ok ? response.body : null;
     },
   };
 }

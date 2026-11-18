@@ -59,8 +59,13 @@ function toRoutineSource({ prompt = 'Do the routine.', ...settings }: RoutineFil
 export function createKombinat(root: string): Kombinat {
   const routinesDir = path.join(root, 'routines');
   const stateDir = path.join(root, 'state');
-  for (const dir of [routinesDir, stateDir]) fs.rmSync(dir, { recursive: true, force: true });
-  fs.mkdirSync(routinesDir, { recursive: true });
+  // Emptied rather than removed, so the daemon keeps watching them.
+  for (const dir of [routinesDir, stateDir]) {
+    fs.mkdirSync(dir, { recursive: true });
+    for (const entry of fs.readdirSync(dir)) {
+      fs.rmSync(path.join(dir, entry), { recursive: true, force: true });
+    }
+  }
   fs.mkdirSync(path.join(stateDir, 'runs'), { recursive: true });
 
   const now = new Date().toISOString();

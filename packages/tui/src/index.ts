@@ -13,12 +13,15 @@ export function runTui(baseUrl: string, stopSignal?: AbortSignal): Promise<void>
     throw new Error('tui needs an interactive terminal');
   const terminal = new Terminal();
   const draw = () => terminal.draw(app.render(terminal.width, terminal.height));
-  const app = new TuiApp({ client: createDaemonClient(baseUrl), onChange: draw });
+  const client = createDaemonClient(baseUrl);
+  const app = new TuiApp({ client, onChange: draw });
+  const watching = new AbortController();
   let pollTimer: NodeJS.Timeout | undefined;
   let frameTimer: NodeJS.Timeout | undefined;
 
   return new Promise(resolve => {
     const quit = () => {
+      watching.abort();
       clearTimeout(pollTimer);
       clearTimeout(frameTimer);
       app.dispose();
@@ -36,10 +39,10 @@ export function runTui(baseUrl: string, stopSignal?: AbortSignal): Promise<void>
       process.on(signal, quit);
     stopSignal?.addEventListener('abort', quit);
 
-    const poll = async () => {
-      await app.refresh();
+    const schedulePoll = () => {
+      clearTimeout(pollTimer);
       pollTimer = setTimeout(
-        () => void poll(),
+        () => void app.refresh().then(schedulePoll),
         app.checkHasActiveRuns() ? POLL_ACTIVE_MS : POLL_IDLE_MS,
       );
     };
@@ -55,7 +58,8 @@ export function runTui(baseUrl: string, stopSignal?: AbortSignal): Promise<void>
       }
       draw();
     }, draw);
-    void poll();
+    void app.refresh().then(schedulePoll);
+    void client.watchChanges(() => void app.reload().then(schedulePoll), watching.signal);
     repaint();
   });
 }

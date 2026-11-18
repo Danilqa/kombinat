@@ -201,6 +201,7 @@ function makeClient(overview: Overview, options: FakeOptions) {
       savedSettings.push(settings);
       return Promise.resolve();
     },
+    watchChanges: () => Promise.resolve(),
   };
   return { client, started, savedSettings };
 }

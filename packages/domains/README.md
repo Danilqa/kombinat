@@ -2,7 +2,7 @@
 
 A domain is the top path of an API request, or a type that several domains share:
 
-- API paths: `/api/routines` is routine, `/api/runs` is run, `/api/calendar` is calendar, `/api/status` is daemon, `/api/settings` is settings and `/api/releases` is release.
+- API paths: `/api/routines` is routine, `/api/runs` is run, `/api/calendar` is calendar, `/api/status` and `/api/events` are daemon, `/api/settings` is settings and `/api/releases` is release.
 - Shared types: agent, transcript, scheduler (skips) and webhook (queued webhooks).
 
 Each domain has up to two halves with the same name:
@@ -20,7 +20,7 @@ Each domain has up to two halves with the same name:
 | **scheduler**  | `Skip`, `SkipReason`, `SchedulerState`, skip label, `SkipsTable`                                                                                                                                                        | tick loop, `scheduler.json` storage                                                                 |
 | **routine**    | `RoutineName`, `RoutineSummary`, `RoutineDetail`, requests, `RunNowButton`, `RoutineBadges`, `RoutineDetailList`, `WebhookQueueButton`                                                                                  | file parsing, validation, defaults, loading, next run, schedule label, examples                     |
 | **calendar**   | `CalendarEntryId`, entry schemas and types, `getCalendar`, `buildCalendar`, planned lengths, entry title and overlap labels, overlap count                                                                              | none, `cli/src/server.ts` serves `buildCalendar`                                                    |
-| **daemon**     | status schema, `getDaemonStatus`, health rules, `DaemonStatusIndicator`                                                                                                                                                 | none, `cli/src/server.ts` builds the status                                                         |
+| **daemon**     | status schema, `getDaemonStatus`, `watchDaemonChanges`, health rules, `DaemonStatusIndicator`                                                                                                                           | none, `cli/src/server.ts` builds the status                                                         |
 | **webhook**    | `QueuedWebhook`, webhook path, size and queue position labels, `WebhookQueueList`                                                                                                                                       | gate, queue, conversations, and receiving: start, continue, queue, ignore or reject                 |
 | **settings**   | `Settings`, defaults, retention options and labels, requests                                                                                                                                                            | `settings.json` storage                                                                             |
 | **release**    | `ReleaseVersion`, `ReleaseUpdate`, requests, newer releases, the offered release, `UpdateCard`                                                                                                                          | none, `cli/src/features/self-update/releases.ts` checks GitHub and skips                            |
@@ -28,7 +28,7 @@ Each domain has up to two halves with the same name:
 Not domains:
 
 - **cron** is a generic engine in `utils/cron.ts`. A schedule is a value of a routine.
-- **connect, init, keep-awake, machine-usage, readme, self-update and service** are features of the cli, in `cli/src/features/`. service picks launchd on macOS and systemd on Linux.
+- **connect, init, keep-awake, live-updates, machine-usage, readme, self-update and service** are features of the cli, in `cli/src/features/`. service picks launchd on macOS and systemd on Linux, and live-updates watches the routines and state folders for `/api/events`.
 - **HTTP routing and read models** belong to the cli's `server.ts`.
 
 ## Definitions
@@ -165,6 +165,8 @@ The week view's read model, `GET /api/calendar?from&to` for a range of at most 3
 ### daemon
 
 The running kombinat service as its clients see it through `GET /api/status`: version, pid, start time, last scheduler tick, routines and state folders, agent binaries, concurrency limit, running count, time zone and now.
+
+`GET /api/events` is a stream of server-sent events with one `data: change` event, at most every 300 ms, after a routine file, a run record, the webhook queue or `scheduler.json` changes. Run logs do not count, since they grow with every agent event. A client refetches what it shows on each event and once after it reconnects. It reconnects 5 s after the stream breaks and stops when the answer is an error, such as from an older daemon or the website's demo.
 
 Its health is `unreachable` when the request fails, `stale` when there has been no tick or the last tick is more than 5 minutes old, and `healthy` otherwise.
 

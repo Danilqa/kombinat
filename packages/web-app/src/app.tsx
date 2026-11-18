@@ -6,12 +6,14 @@ import { AppFooter } from '@web-app/components/app-footer';
 import { AppHeader } from '@web-app/components/app-header';
 import { useCustomization, type Customization } from '@web-app/contexts';
 import { useFocusMainOnNavigate } from '@web-app/hooks/use-focus-main-on-navigate';
+import { useLiveUpdates } from '@web-app/hooks/use-live-updates';
 
 const MAIN_ID = 'main';
 
 function AppLayout() {
   const { announcement, banner, footer = <AppFooter /> } = useCustomization();
   useFocusMainOnNavigate(MAIN_ID);
+  useLiveUpdates();
   const { pathname } = useLocation();
   return (
     <div className="flex min-h-dvh flex-col">

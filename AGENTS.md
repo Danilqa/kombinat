@@ -76,13 +76,13 @@ The domain map, definitions and invariants are in [packages/domains/README.md](p
 ### cli
 
 - `src/cli.ts` holds the commands and `src/server.ts` the HTTP API and read models. `src/config.ts` stays one folder below the package root, which it finds from its own location.
-- `src/domains/` holds the daemon halves, `src/features/` connect, init, keep-awake, machine-usage, readme, self-update and service, and `src/utils/` json and package-manager.
+- `src/domains/` holds the daemon halves, `src/features/` connect, init, keep-awake, live-updates, machine-usage, readme, self-update and service, and `src/utils/` json and package-manager.
 - `bin/kombinat.js` runs `src/cli.ts` through tsx in a checkout and `dist/cli.js` when installed from npm. esbuild bundles the workspace packages and keeps only zod and ts-pattern external. An npm package that bundled code imports at runtime must be a `cli` dependency, on the esbuild external list and in the CI check of `dist/cli.js` imports.
 
 ### web-app
 
 - `src/app.tsx`, `app-providers.tsx` and `app-routes.tsx` make the shell. `App` takes an optional `customization` that the layout and the pages read with `useCustomization()` from `src/contexts/`, so an embedding app such as `website` can fill the slots around the pages and change their text. Route patterns and path helpers live in `src/constants/path.ts`.
-- Server data comes through React Query, used as its docs show: `useQuery` with a `queryFn` that calls a domain request, and `useMutation` for writes. A query key starts with the API path, such as `['routines', name]` for `/api/routines/<name>`. Queries poll with `refetchInterval`, and a mutation invalidates the keys of all the data it changes.
+- Server data comes through React Query, used as its docs show: `useQuery` with a `queryFn` that calls a domain request, and `useMutation` for writes. A query key starts with the API path, such as `['routines', name]` for `/api/routines/<name>`. Queries poll with `refetchInterval`, and a mutation invalidates the keys of all the data it changes. `useLiveUpdates` in the layout invalidates every query each time the daemon's `GET /api/events` stream reports a change, and the polls stay as the fallback for when the stream is down.
 - Pages live in `src/features/<feature>/` next to their `.e2e.ts` specs. Files in a feature folder import each other by relative path; other imports inside `web-app` use the `@web-app/*` alias.
 - `src/index.css` imports the design-system stylesheet and adds `@source` for `domains`, so Tailwind sees the classes of domain components.
 
