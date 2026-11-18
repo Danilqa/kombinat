@@ -52,6 +52,7 @@ function UpdateCommand({ command }: UpdateCommandProps) {
 }
 
 // Closing the card skips its version, so it comes back only for a newer release.
+// It is sticky rather than fixed, so it takes room at the end of the page and every row can scroll clear of it.
 export function UpdateCard() {
   const titleId = useId();
   const queryClient = useQueryClient();
@@ -94,7 +95,7 @@ export function UpdateCard() {
       inert={isClosing}
       onAnimationEnd={finishClosing}
       className={cn(
-        'fixed right-4 bottom-4 left-4 z-40 flex max-h-[min(30rem,calc(100dvh-2rem))] max-w-104 flex-col rounded-xl border border-line bg-raised text-body-sm text-fg shadow-popover ease-out-quint',
+        'sticky bottom-4 z-40 mx-4 mb-4 flex max-h-[min(30rem,calc(100dvh-2rem))] max-w-104 flex-col rounded-xl border border-line bg-raised text-body-sm text-fg shadow-popover ease-out-quint',
         isClosing
           ? 'animate-out duration-150 fade-out-0 slide-out-to-bottom-2'
           : 'animate-in duration-300 fade-in-0 slide-in-from-bottom-2',
