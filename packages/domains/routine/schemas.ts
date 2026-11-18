@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { agentNameSchema } from '../agent/schemas';
+import { runIdSchema } from '../run/ids';
 import { runRecordSchema } from '../run/schemas';
 import { skipSchema } from '../scheduler/schemas';
 import { queuedWebhookSchema } from '../webhook/schemas';
@@ -39,3 +40,7 @@ export const routineDetailSchema = routineSummarySchema.extend({
 });
 
 export const startedRunSchema = z.object({ ok: z.literal(true) });
+
+export const startedRunWithIdSchema = startedRunSchema.extend({ runId: runIdSchema });
+
+export const startRunRequestSchema = z.object({ prompt: z.string().regex(/\S/) });

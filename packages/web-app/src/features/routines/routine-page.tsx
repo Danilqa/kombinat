@@ -19,6 +19,7 @@ import { RunsList } from '@web-app/components/runs-list';
 import { ROUTINES_PATH } from '@web-app/constants/path';
 import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 import { useRuns } from '@web-app/hooks/use-runs';
+import { ChangePromptMenuItem } from './change-prompt-menu-item';
 
 function checkIsRoutineRunning(routine: RoutineDetail | undefined): boolean {
   return routine?.running === true;
@@ -103,9 +104,13 @@ export function RoutinePage() {
         crumbs={[{ label: 'Routines', to: ROUTINES_PATH }]}
         aside={
           data && (
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center gap-2">
               <WebhookQueueButton routine={data.name} count={data.queuedWebhooks} />
-              <RunNowButton routine={data.name} isRunning={data.running} />
+              <RunNowButton
+                routine={data.name}
+                isRunning={data.running}
+                menu={<ChangePromptMenuItem routine={data.name} />}
+              />
             </div>
           )
         }

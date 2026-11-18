@@ -7,6 +7,7 @@ import { match, P } from 'ts-pattern';
 import { buildCalendar } from 'domains/calendar/utils';
 import type { DaemonStatus } from 'domains/daemon/types';
 import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
+import { startRunRequestSchema } from 'domains/routine/schemas';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import { RUNS_CURSOR_ERROR } from 'domains/run/constants';
 import { runIdSchema, type RunId } from 'domains/run/ids';
@@ -15,6 +16,7 @@ import type { RunRecord } from 'domains/run/types';
 import {
   checkCanContinueRun,
   checkIsRunActive,
+  createRunId,
   filterRuns,
   paginateRuns,
   parseRunsPageQuery,
@@ -27,6 +29,7 @@ import { loadRoutines } from './domains/routine/storage';
 import type { Routine } from './domains/routine/types';
 import { describeSchedule, getNextRun } from './domains/routine/utils';
 import { appendChatEvent, buildRunTranscript, readRunEvents } from './domains/run/event-log';
+import { writePrompt } from './domains/run/payload';
 import { deleteExpiredRuns, startRunCleanup } from './domains/run/retention';
 import {
   checkIsRunning,
@@ -158,10 +161,15 @@ function getRoutineDetail(routine: Routine): ApiResponse {
   return ok(detail);
 }
 
-function startRun(routine: Routine): ApiResponse {
+function startRun(routine: Routine, body: Buffer): ApiResponse {
+  const request =
+    body.length === 0 ? null : startRunRequestSchema.safeParse(parseJson(body.toString('utf8')));
+  if (request?.success === false) return fail(400, 'The body must be JSON with a prompt');
   if (checkIsRunning(routine.name)) return fail(409, `${routine.name} is already running`);
-  startDetachedRun(routine.name, { trigger: 'manual' });
-  return { status: 202, body: { ok: true } };
+  const runId = createRunId();
+  if (request !== null) writePrompt(routine.name, runId, request.data.prompt);
+  startDetachedRun(routine.name, { trigger: 'manual', runId });
+  return { status: 202, body: { ok: true, runId } };
 }
 
 function sendMessage(routine: Routine, run: RunRecord, body: Buffer): ApiResponse {
@@ -247,7 +255,9 @@ function routeApi(request: ApiRequest, context: ApiContext): ApiResponse | Promi
       withRoutine(routineNameSchema.parse(name), getRoutineDetail),
     )
     .with(['POST', ['routines', P.string, 'run']], ([, [, name]]) =>
-      withRoutine(routineNameSchema.parse(name), startRun),
+      withRoutine(routineNameSchema.parse(name), routine =>
+        startRun(routine, context.request.body),
+      ),
     )
     .with(['POST', ['routines', P.string, 'webhook']], ([, [, name]]) =>
       withRoutine(routineNameSchema.parse(name), routine => handleWebhook(routine, context)),

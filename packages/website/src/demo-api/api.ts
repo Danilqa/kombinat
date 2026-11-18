@@ -184,8 +184,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     if (listRoutineRuns(routine, now).some(checkIsRunActive)) {
       return fail(409, `${routine.name} is already running`);
     }
-    history.startRun(routine, now);
-    return { status: 202, body: { ok: true } };
+    return { status: 202, body: { ok: true, runId: history.startRun(routine, now) } };
   }
 
   function sendMessage(routine: DemoRoutine, run: RunRecord, body: string, now: Date): ApiResponse {

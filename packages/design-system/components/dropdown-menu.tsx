@@ -43,6 +43,21 @@ function DropdownMenuContent({
   );
 }
 
+interface DropdownMenuItemProps extends React.ComponentProps<typeof DropdownMenuPrimitive.Item> {}
+
+function DropdownMenuItem({ className, ...props }: DropdownMenuItemProps) {
+  return (
+    <DropdownMenuPrimitive.Item
+      data-slot="dropdown-menu-item"
+      className={cn(
+        'flex h-8 cursor-pointer items-center gap-2 rounded-md px-2.5 outline-none select-none data-highlighted:bg-hover max-sm:h-11 [&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:text-fg-muted',
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
 interface DropdownMenuCheckboxItemProps extends React.ComponentProps<
   typeof DropdownMenuPrimitive.CheckboxItem
 > {}
@@ -125,6 +140,7 @@ export {
   DropdownMenu as Root,
   DropdownMenuTrigger as Trigger,
   DropdownMenuContent as Content,
+  DropdownMenuItem as Item,
   DropdownMenuCheckboxItem as CheckboxItem,
   DropdownMenuLabel as Label,
   DropdownMenuRadioGroup as RadioGroup,

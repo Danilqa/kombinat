@@ -18,7 +18,7 @@ import type { Agent, Invocation, OutputEvent } from '../agent/types';
 import type { Routine } from '../routine/types';
 import { appendChatEvent, readLastMessage } from './event-log';
 import { getBeforeHookError, HOOK_TIMEOUT_MS, runHook } from './hooks';
-import { appendPayload, takePayload } from './payload';
+import { appendPayload, takePayload, takePrompt } from './payload';
 import { getRunsDir, listRuns, readRunRecord, writeRunRecord } from './storage';
 
 export interface RunOptions {
@@ -203,9 +203,9 @@ export async function runRoutine(
     replyPid: null,
   };
 
+  const prompt = takePrompt(routine.name, id) ?? routine.prompt;
   const payload = takePayload(routine.name, id);
-  const task =
-    payload === null ? routine : { ...routine, prompt: appendPayload(routine.prompt, payload) };
+  const task = { ...routine, prompt: payload === null ? prompt : appendPayload(prompt, payload) };
   const invocation = agent.buildInvocation({ routine: task, runId: id, trigger: options.trigger });
   const outcome = await runAgent({
     routine,

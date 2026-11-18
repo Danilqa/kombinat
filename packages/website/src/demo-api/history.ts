@@ -48,7 +48,7 @@ export interface DemoHistory {
   listRuns(now: Date): RunRecord[];
   listSkips(routine: DemoRoutine, now: Date): Skip[];
   getTranscript(routine: RoutineName, id: RunId, now: Date): Transcript | null;
-  startRun(routine: DemoRoutine, now: Date): void;
+  startRun(routine: DemoRoutine, now: Date): RunId;
   sendMessage(routine: RoutineName, id: RunId, text: string, now: Date): void;
 }
 
@@ -371,7 +371,9 @@ export function createDemoHistory(routines: DemoRoutine[], loadedAt: Date): Demo
     startRun(routine, now) {
       const random = createRandom(`${routine.name}:run-now:${now.toISOString()}`);
       const outcome = { ...pickOutcome(routine, random), minutes: RUN_NOW_MINUTES };
-      startedRuns.push(createRun(routine, outcome, 'manual', null, now, random));
+      const run = createRun(routine, outcome, 'manual', null, now, random);
+      startedRuns.push(run);
+      return run.id;
     },
     sendMessage(routine, id, text, now) {
       messages.set(`${routine}/${id}`, [...getMessages(routine, id), { text, sentAt: now }]);

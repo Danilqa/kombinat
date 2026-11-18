@@ -8,6 +8,7 @@ import { RunStatusBadge } from 'domains/run/components';
 import { getSkipReasonLabel } from 'domains/scheduler/utils';
 import { getRoutinePath, getRunPath } from '@web-app/constants/path';
 import { useRowLink } from '@web-app/hooks/use-row-link';
+import { ChangePromptMenuItem } from './change-prompt-menu-item';
 
 interface ScheduleCellProps {
   routine: RoutineSummary;
@@ -154,6 +155,7 @@ export function RoutinesTable({ routines }: RoutinesTableProps) {
                 routine={routine.name}
                 isRunning={routine.running}
                 variant="secondary"
+                menu={<ChangePromptMenuItem routine={routine.name} />}
               />
             </Table.Cell>
           </Table.Row>
