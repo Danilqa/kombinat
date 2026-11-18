@@ -42,7 +42,7 @@ function NavLinkItem({ item, pathname, unreadCount }: NavLinkItemProps) {
         isActive ? 'text-fg forced-colors:underline' : 'text-fg-muted hover:bg-hover hover:text-fg',
       )}
     >
-      <Icon aria-hidden="true" className="size-3.5 shrink-0" />
+      <Icon aria-hidden="true" className="size-3.5 shrink-0 max-sm:hidden" />
       {item.label}
       {unreadCount > 0 && (
         <span className="ml-0.5 min-w-4.5 animate-in rounded-full bg-fg px-1.5 text-center text-caption leading-4.5 text-page tabular-nums duration-200 zoom-in-90 fade-in">

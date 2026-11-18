@@ -11,39 +11,30 @@ function getRunEndTime(run: Pick<RunRecord, 'startedAt' | 'endedAt'>): number {
   return Date.parse(run.endedAt ?? run.startedAt);
 }
 
-function checkIsSameRun(a: InboxRunKey, b: InboxRunKey): boolean {
-  return a.routine === b.routine && a.id === b.id;
-}
+const toReadKey = ({ routine, id }: InboxRunKey) => `${routine}/${id}`;
 
 export function toInboxRunKey({ routine, id }: InboxRunKey): InboxRunKey {
   return { routine, id };
 }
 
-export function checkIsRunUnread(run: RunRecord, state: InboxState): boolean {
-  return (
-    !checkIsRunActive(run) &&
-    getRunEndTime(run) > Date.parse(state.since) &&
-    !state.readRuns.some(key => checkIsSameRun(key, run))
-  );
-}
-
 export function listUnreadRuns(runs: RunRecord[], state: InboxState): RunRecord[] {
+  const since = Date.parse(state.since);
+  const readKeys = new Set(state.readRuns.map(toReadKey));
   return runs
-    .filter(run => checkIsRunUnread(run, state))
+    .filter(
+      run => !checkIsRunActive(run) && getRunEndTime(run) > since && !readKeys.has(toReadKey(run)),
+    )
     .sort((a, b) => getRunEndTime(b) - getRunEndTime(a));
 }
 
 // Keeps only the keys that still mark a run read, so the file shrinks as runs are deleted.
 export function addReadRuns(state: InboxState, keys: InboxRunKey[], runs: RunRecord[]): InboxState {
-  const readRuns = [...state.readRuns, ...keys.map(toInboxRunKey)];
+  const since = Date.parse(state.since);
+  const readKeys = new Set([...state.readRuns, ...keys].map(toReadKey));
   return {
     since: state.since,
     readRuns: runs
-      .filter(
-        run =>
-          getRunEndTime(run) > Date.parse(state.since) &&
-          readRuns.some(key => checkIsSameRun(key, run)),
-      )
+      .filter(run => getRunEndTime(run) > since && readKeys.has(toReadKey(run)))
       .map(toInboxRunKey),
   };
 }

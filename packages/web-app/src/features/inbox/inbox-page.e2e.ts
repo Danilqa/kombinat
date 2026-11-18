@@ -32,7 +32,7 @@ test('groups the runs that ended since the last look and clears them as they are
 
   await inbox.click();
 
-  await expect(page.getByText('3 unread')).toBeVisible();
+  await expect(page.getByRole('main').getByText('3 unread')).toBeVisible();
   await expect(page.getByRole('main')).toMatchAriaSnapshot(`
     - region "Needs a look":
       - heading "Needs a look"
