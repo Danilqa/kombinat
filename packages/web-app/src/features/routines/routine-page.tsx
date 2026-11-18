@@ -104,7 +104,7 @@ export function RoutinePage() {
         crumbs={[{ label: 'Routines', to: ROUTINES_PATH }]}
         aside={
           data && (
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center gap-2">
               <WebhookQueueButton routine={data.name} count={data.queuedWebhooks} />
               <RunNowButton
                 routine={data.name}

@@ -41,7 +41,7 @@ export function RunNowButton({ routine, isRunning, variant = 'primary', menu }: 
   }
 
   return (
-    <div className="flex items-center justify-end gap-2">
+    <div className="flex min-w-0 items-center justify-end gap-2">
       <span role="status" className="sr-only">
         {isSuccess && `Started a run of ${routine}`}
       </span>
