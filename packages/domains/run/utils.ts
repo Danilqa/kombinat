@@ -1,4 +1,4 @@
-import { match } from 'ts-pattern';
+import { isMatching, match } from 'ts-pattern';
 
 import { checkMatchesSearch } from 'utils/search';
 
@@ -31,6 +31,16 @@ export function getRunDurationMs(
 ): number {
   const end = run.endedAt ? new Date(run.endedAt).getTime() : now;
   return end - new Date(run.startedAt).getTime();
+}
+
+// The agent of a run is at work while the run runs and while it replies to a message.
+export function checkIsRunActive(run: Pick<RunRecord, 'status' | 'replyPid'>): boolean {
+  return isMatching({ status: 'running' }, run) || run.replyPid !== null;
+}
+
+// Only an agent that resumes sessions gives a run a resume command, and it needs the session.
+export function checkCanContinueRun(run: Pick<RunRecord, 'resumeCommand'>): boolean {
+  return run.resumeCommand !== null;
 }
 
 export function getRunStatusLabel(status: RunStatus): string {

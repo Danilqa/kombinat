@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 
-import { isMatching, match, P } from 'ts-pattern';
+import { match, P } from 'ts-pattern';
 
 import { buildCalendar } from 'domains/calendar/utils';
 import type { DaemonStatus } from 'domains/daemon/types';
@@ -10,17 +10,29 @@ import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import { RUNS_CURSOR_ERROR } from 'domains/run/constants';
 import { runIdSchema, type RunId } from 'domains/run/ids';
+import { runMessageSchema } from 'domains/run/schemas';
 import type { RunRecord } from 'domains/run/types';
-import { filterRuns, paginateRuns, parseRunsPageQuery } from 'domains/run/utils';
+import {
+  checkCanContinueRun,
+  checkIsRunActive,
+  filterRuns,
+  paginateRuns,
+  parseRunsPageQuery,
+} from 'domains/run/utils';
 import { getErrorMessage } from 'utils/error';
 
 import { config } from './config';
 import { loadRoutines } from './domains/routine/storage';
 import type { Routine } from './domains/routine/types';
 import { describeSchedule, getNextRun } from './domains/routine/utils';
-import { buildRunTranscript, readRunEvents } from './domains/run/event-log';
-import { checkIsRunning, checkIsStarting, startDetachedRun } from './domains/run/runner';
-import { listAllRuns, listRuns, readRunRecord } from './domains/run/storage';
+import { appendChatEvent, buildRunTranscript, readRunEvents } from './domains/run/event-log';
+import {
+  checkIsRunning,
+  checkIsStarting,
+  startDetachedReply,
+  startDetachedRun,
+} from './domains/run/runner';
+import { getRunningRuns, listAllRuns, listRuns, readRunRecord } from './domains/run/storage';
 import { getSkips, readSchedulerState } from './domains/scheduler/storage';
 import { WEBHOOK_GATE_TIMEOUT_MS } from './domains/webhook/gate';
 import type { WebhookRequest } from './domains/webhook/gate';
@@ -35,6 +47,7 @@ import {
   readDiskSpace,
   startCpuSampling,
 } from './features/machine-usage/machine-usage';
+import { parseJson } from './utils/json';
 
 interface ApiResponse {
   status: number;
@@ -88,7 +101,7 @@ function toRoutineSummary(routine: Routine, runs: RunRecord[]): RoutineSummary {
     timeoutMinutes: routine.timeoutMinutes,
     maxBudgetUsd: routine.maxBudgetUsd,
     file: path.relative(config.projectRoot, routine.file),
-    running: checkIsStarting(routine.name) || runs.some(isMatching({ status: 'running' })),
+    running: checkIsStarting(routine.name) || runs.some(checkIsRunActive),
     lastRun: runs[0] ?? null,
     lastSkip: getSkips(routine.name).at(-1) ?? null,
   };
@@ -106,7 +119,7 @@ function getStatus(startedAt: Date): DaemonStatus {
     codexBin: config.codexBin,
     maxConcurrentRuns: config.maxConcurrentRuns,
     running:
-      listAllRuns().filter(isMatching({ status: 'running' })).length +
+      getRunningRuns().length +
       loadRoutines().filter(routine => checkIsStarting(routine.name)).length,
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     now: new Date().toISOString(),
@@ -145,6 +158,20 @@ function getRoutineDetail(routine: Routine): ApiResponse {
 function startRun(routine: Routine): ApiResponse {
   if (checkIsRunning(routine.name)) return fail(409, `${routine.name} is already running`);
   startDetachedRun(routine.name, { trigger: 'manual' });
+  return { status: 202, body: { ok: true } };
+}
+
+function sendMessage(routine: Routine, run: RunRecord, body: Buffer): ApiResponse {
+  const message = runMessageSchema.safeParse(parseJson(body.toString('utf8')));
+  if (!message.success) return fail(400, 'The message needs text');
+  if (!checkCanContinueRun(run)) {
+    return fail(409, `This ${run.agent} run has no session to continue`);
+  }
+  if (checkIsRunning(routine.name)) {
+    return fail(409, `${routine.name} is running, send the message once it is done`);
+  }
+  appendChatEvent(run, { type: 'message', text: message.data.text });
+  startDetachedReply(run);
   return { status: 202, body: { ok: true } };
 }
 
@@ -216,6 +243,13 @@ function routeApi(request: ApiRequest, context: ApiContext): ApiResponse | Promi
     .with(['GET', ['runs']], () => getRunsPage(url))
     .with(['GET', ['runs', P.string, P.string]], ([, [, routine, id]]) =>
       withRun(routineNameSchema.parse(routine), runIdSchema.parse(id), ok),
+    )
+    .with(['POST', ['runs', P.string, P.string, 'messages']], ([, [, routine, id]]) =>
+      withRoutine(routineNameSchema.parse(routine), found =>
+        withRun(found.name, runIdSchema.parse(id), run =>
+          sendMessage(found, run, context.request.body),
+        ),
+      ),
     )
     .with(['GET', ['runs', P.string, P.string, 'transcript']], ([, [, routine, id]]) =>
       withRun(routineNameSchema.parse(routine), runIdSchema.parse(id), record =>

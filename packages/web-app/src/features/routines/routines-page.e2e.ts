@@ -72,7 +72,9 @@ test('runs a routine on demand and shows its output', async ({ page, kombinat })
     - definition: Manual
     - text: Result
     - paragraph: Hello from Kombinat
-    - heading "Transcript" [level=2]
+  `);
+  await page.getByRole('tab', { name: /Transcript & chat/ }).click();
+  await expect(page.getByRole('tabpanel')).toMatchAriaSnapshot(`
     - paragraph: Hello from Kombinat
   `);
 });

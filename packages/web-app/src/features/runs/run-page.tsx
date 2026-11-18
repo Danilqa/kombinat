@@ -1,49 +1,48 @@
 import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router';
-import { isMatching } from 'ts-pattern';
-import { Card, ErrorState, LoadingState, Separator } from 'design-system/components';
-import { PageHeader, SectionHeader } from 'design-system/layouts';
+import { Card, ErrorState, LoadingState, Separator, Tabs } from 'design-system/components';
+import { PageHeader } from 'design-system/layouts';
 import { routineNameSchema } from 'domains/routine/ids';
 import { RunDetailList, RunOutput, RunStatusBadge } from 'domains/run/components';
 import { runIdSchema } from 'domains/run/ids';
 import { getRunWithTranscript } from 'domains/run/requests';
 import type { RunWithTranscript } from 'domains/run/types';
-import { TranscriptList } from 'domains/transcript/components';
+import { checkIsRunActive } from 'domains/run/utils';
 import { sameOriginApi } from 'utils/http';
 import { getPollInterval } from 'utils/polling';
 import { Breadcrumbs } from '@web-app/components/breadcrumbs';
 import { RUNS_PATH, getRoutinePath } from '@web-app/constants/path';
 import { useDocumentTitle } from '@web-app/hooks/use-document-title';
-
-function checkIsRunActive(data: RunWithTranscript | undefined): boolean {
-  return isMatching({ run: { status: 'running' } }, data);
-}
+import { RunChat } from './run-chat';
 
 interface RunViewProps extends RunWithTranscript {}
 
 function RunView({ run, transcript }: RunViewProps) {
-  const isRunning = isMatching({ status: 'running' }, run);
   const hasOutput = Boolean(run.error) || Boolean(run.resultText);
   return (
-    <div className="space-y-10">
-      <Card.Root className="gap-0 py-0">
-        <RunDetailList run={run} />
-        {hasOutput && (
-          <>
-            <Separator />
-            <RunOutput run={run} />
-          </>
-        )}
-      </Card.Root>
-      <section>
-        <SectionHeader.Root
-          aside={<SectionHeader.Aside>{transcript.eventCount} events</SectionHeader.Aside>}
-        >
-          Transcript
-        </SectionHeader.Root>
-        <TranscriptList items={transcript.items} isRunning={isRunning} />
-      </section>
-    </div>
+    <Tabs.Root defaultValue="information" className="gap-4">
+      <Tabs.List>
+        <Tabs.Trigger value="information">Information</Tabs.Trigger>
+        <Tabs.Trigger value="transcript">
+          Transcript & chat
+          <span className="text-fg-secondary tabular-nums">{transcript.eventCount}</span>
+        </Tabs.Trigger>
+      </Tabs.List>
+      <Tabs.Content value="information">
+        <Card.Root className="gap-0 py-0">
+          <RunDetailList run={run} />
+          {hasOutput && (
+            <>
+              <Separator />
+              <RunOutput run={run} />
+            </>
+          )}
+        </Card.Root>
+      </Tabs.Content>
+      <Tabs.Content value="transcript">
+        <RunChat run={run} transcript={transcript} />
+      </Tabs.Content>
+    </Tabs.Root>
   );
 }
 
@@ -55,7 +54,8 @@ export function RunPage() {
   const { data, error, isPending } = useQuery({
     queryKey: ['runs', routine, id],
     queryFn: () => getRunWithTranscript(sameOriginApi, routine, id),
-    refetchInterval: query => getPollInterval(checkIsRunActive(query.state.data)),
+    refetchInterval: query =>
+      getPollInterval(query.state.data !== undefined && checkIsRunActive(query.state.data.run)),
   });
 
   return (

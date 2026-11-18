@@ -6,6 +6,7 @@ import { runIdSchema } from './ids';
 import { makeRunRecord } from './mocks';
 import type { RunRecord, RunsPage } from './types';
 import {
+  checkIsRunActive,
   decodeRunsCursor,
   encodeRunsCursor,
   filterRuns,
@@ -86,4 +87,10 @@ test('filters runs by their routine, id, status, trigger, model, result and erro
   assert.deepEqual(toIds(filterRuns(runs, 'run-2')), ['fix-e2e-tests/run-2']);
   assert.deepEqual(filterRuns(runs, 'email'), []);
   assert.equal(filterRuns(runs, null), runs);
+});
+
+test('a run is active while it runs and while it replies to a message', () => {
+  assert.equal(checkIsRunActive(makeRunRecord({ status: 'running' })), true);
+  assert.equal(checkIsRunActive(makeRunRecord({ status: 'succeeded', replyPid: 42 })), true);
+  assert.equal(checkIsRunActive(makeRunRecord({ status: 'failed' })), false);
 });

@@ -13,8 +13,8 @@ import { describeCron } from 'utils/cron';
 import { config, DEFAULT_PORT } from './config';
 import { getRoutine, loadRoutines } from './domains/routine/storage';
 import { getNextRun } from './domains/routine/utils';
-import { runRoutine } from './domains/run/runner';
-import { ensureStateDirs, listRuns } from './domains/run/storage';
+import { replyToRun, runRoutine } from './domains/run/runner';
+import { ensureStateDirs, listRuns, readRunRecord } from './domains/run/storage';
 import { readSchedulerState } from './domains/scheduler/storage';
 import { startSchedulerLoop } from './domains/scheduler/tick';
 import { connect } from './features/connect/connect';
@@ -44,6 +44,8 @@ const USAGE = `kombinat, run from the folder that holds routines/ (init, connect
   validate                  parse every routine file and report errors
   readme                    regenerate the routines table in README.md
   run <name>                run one routine now in the foreground (what the scheduler spawns)
+  reply <name> <run id>     continue the run's agent session with the last message sent from
+                            the dashboard (what the dashboard spawns)
   serve                     run scheduler + web UI (what launchd or systemd runs); pulls the
                             main branch every 5 min, installs deps and restarts when the
                             lockfile changes; in a checkout of kombinat also builds the UI and
@@ -156,6 +158,17 @@ async function runOne(name: string | undefined, options: CliOptions): Promise<vo
   process.exitCode = isMatching({ status: 'succeeded' }, record) ? 0 : 1;
 }
 
+async function replyOne(name: string | undefined, runId: string | undefined): Promise<void> {
+  if (name === undefined || runId === undefined) {
+    throw new Error('reply needs a routine and a run id');
+  }
+  const routine = getRoutine(routineNameSchema.parse(name));
+  const run = readRunRecord(routine.name, parseRunId(runId));
+  if (run === null) throw new Error(`${name} has no run ${runId}`);
+  const record = await replyToRun(routine, run);
+  console.log(JSON.stringify(record, null, 2));
+}
+
 function serve(options: CliOptions): void {
   ensureStateDirs();
   const managed = config.managed ? ', managed' : '';
@@ -264,7 +277,7 @@ async function main(): Promise<void> {
       'no-install': { type: 'boolean', default: false },
     },
   });
-  const [command, name] = positionals;
+  const [command, name, runId] = positionals;
   checkFlag(values.url !== undefined, 'url', command, 'tui');
   checkFlag(values.port !== undefined, 'port', command, 'connect');
   checkFlag(values.tui, 'tui', command, 'connect');
@@ -293,6 +306,7 @@ async function main(): Promise<void> {
       console.log(updateReadme() ? 'README.md updated' : 'README.md already up to date'),
     )
     .with('run', () => runOne(name, options))
+    .with('reply', () => replyOne(name, runId))
     .with('serve', () => serve(options))
     .with('pull', pull)
     .with('dev', () => dev(options))

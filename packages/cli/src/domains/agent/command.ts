@@ -33,6 +33,8 @@ export const commandAgent: Agent = {
     };
   },
 
+  buildReplyInvocation: () => null,
+
   readEvent(event, record) {
     const output = outputEventSchema.safeParse(event);
     if (!output.success) return {};

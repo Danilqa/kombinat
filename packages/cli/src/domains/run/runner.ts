@@ -9,13 +9,14 @@ import { isMatching, match } from 'ts-pattern';
 import type { RoutineName } from 'domains/routine/ids';
 import type { RunId } from 'domains/run/ids';
 import type { RunRecord, RunTrigger } from 'domains/run/types';
-import { createRunId } from 'domains/run/utils';
+import { checkIsRunActive, createRunId } from 'domains/run/utils';
 
 import { config, getCliArgs } from '../../config';
 import { parseJson } from '../../utils/json';
 import { getAgent } from '../agent/registry';
 import type { Agent, Invocation, OutputEvent } from '../agent/types';
 import type { Routine } from '../routine/types';
+import { appendChatEvent, readLastMessage } from './event-log';
 import { getBeforeHookError, HOOK_TIMEOUT_MS, runHook } from './hooks';
 import { appendPayload, takePayload } from './payload';
 import { getRunsDir, listRuns, readRunRecord, writeRunRecord } from './storage';
@@ -73,6 +74,7 @@ interface AgentRun {
   invocation: Invocation;
   record: RunRecord;
   hookTimeoutMs: number;
+  persist: (record: RunRecord) => void;
 }
 
 // Runs the preflight, the before hook and the agent, and returns how the run ended.
@@ -82,6 +84,7 @@ async function runAgent({
   invocation,
   record,
   hookTimeoutMs,
+  persist,
 }: AgentRun): Promise<Partial<RunRecord>> {
   if (!fs.existsSync(routine.cwd)) {
     return { status: 'failed', error: `cwd does not exist: ${routine.cwd}` };
@@ -113,7 +116,7 @@ async function runAgent({
     stdio: ['pipe', 'pipe', 'pipe'],
   });
   record.pid = child.pid ?? null;
-  writeRunRecord(record);
+  persist(record);
 
   const log = fs.createWriteStream(record.logFile, { flags: 'a' });
   const stderrChunks: string[] = [];
@@ -130,7 +133,7 @@ async function runAgent({
     Object.assign(record, update);
     if (update.sessionId !== undefined && update.sessionId !== null) {
       record.resumeCommand = agent.getResumeCommand(update.sessionId);
-      writeRunRecord(record);
+      persist(record);
     }
   });
 
@@ -197,13 +200,21 @@ export async function runRoutine(
     resultText: null,
     error: null,
     logFile: path.join(runsDir, `${id}.jsonl`),
+    replyPid: null,
   };
 
   const payload = takePayload(routine.name, id);
   const task =
     payload === null ? routine : { ...routine, prompt: appendPayload(routine.prompt, payload) };
   const invocation = agent.buildInvocation({ routine: task, runId: id, trigger: options.trigger });
-  const outcome = await runAgent({ routine, agent, invocation, record, hookTimeoutMs });
+  const outcome = await runAgent({
+    routine,
+    agent,
+    invocation,
+    record,
+    hookTimeoutMs,
+    persist: writeRunRecord,
+  });
   const finished: RunRecord = { ...record, ...outcome, endedAt: new Date().toISOString() };
   try {
     if (routine.after !== null) {
@@ -231,6 +242,47 @@ export async function runRoutine(
   return finished;
 }
 
+// Resumes the run's session with the last message of its log. The hooks belong to the run, not to replies.
+export async function replyToRun(routine: Routine, run: RunRecord): Promise<RunRecord> {
+  const agent = getAgent(run.agent);
+  const replying: RunRecord = { ...run, replyPid: process.pid };
+  writeRunRecord(replying);
+  const message = readLastMessage(run);
+  const invocation =
+    routine.agent === run.agent && run.sessionId !== null && message !== null
+      ? agent.buildReplyInvocation(
+          { routine, runId: run.id, trigger: run.trigger },
+          run.sessionId,
+          message,
+        )
+      : null;
+  const session: RunRecord = { ...replying, error: null };
+  const outcome: Partial<RunRecord> =
+    invocation === null
+      ? { status: 'failed', error: `This run's ${run.agent} session cannot be continued` }
+      : await runAgent({
+          routine: { ...routine, before: null },
+          agent,
+          invocation,
+          record: session,
+          hookTimeoutMs: HOOK_TIMEOUT_MS,
+          persist: ({ sessionId, resumeCommand }) =>
+            writeRunRecord({ ...replying, sessionId, resumeCommand }),
+        });
+  // An error the agent reported is in its own events already.
+  if (!isMatching({ status: 'succeeded' }, outcome) && session.error === null) {
+    appendChatEvent(run, { type: 'reply_error', error: outcome.error ?? 'The reply failed' });
+  }
+  const finished: RunRecord = {
+    ...run,
+    sessionId: session.sessionId,
+    resumeCommand: session.resumeCommand,
+    replyPid: null,
+  };
+  writeRunRecord(finished);
+  return finished;
+}
+
 interface PendingStart {
   runId: RunId;
   startedAt: number;
@@ -250,9 +302,7 @@ export function checkIsStarting(routineName: RoutineName, now = Date.now()): boo
 }
 
 export function checkIsRunning(routineName: RoutineName): boolean {
-  return (
-    checkIsStarting(routineName) || listRuns(routineName).some(isMatching({ status: 'running' }))
-  );
+  return checkIsStarting(routineName) || listRuns(routineName).some(checkIsRunActive);
 }
 
 export function startDetachedRun(routineName: RoutineName, options: RunOptions): void {
@@ -266,4 +316,16 @@ export function startDetachedRun(routineName: RoutineName, options: RunOptions):
     detached: true,
     stdio: 'ignore',
   }).unref();
+}
+
+export function startDetachedReply(run: RunRecord): void {
+  const child = spawn(process.execPath, getCliArgs('reply', run.routine, run.id), {
+    cwd: config.projectRoot,
+    env: process.env,
+    detached: true,
+    stdio: 'ignore',
+  });
+  // Written at once, so the run counts as replying before the reply process starts.
+  writeRunRecord({ ...run, replyPid: child.pid ?? null });
+  child.unref();
 }

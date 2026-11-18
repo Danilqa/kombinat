@@ -1,4 +1,4 @@
-import { isMatching, match, P } from 'ts-pattern';
+import { match, P } from 'ts-pattern';
 
 import { buildCalendar } from 'domains/calendar/utils';
 import type { DaemonStatus } from 'domains/daemon/types';
@@ -6,8 +6,16 @@ import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import { RUNS_CURSOR_ERROR } from 'domains/run/constants';
 import { runIdSchema } from 'domains/run/ids';
+import { runMessageSchema } from 'domains/run/schemas';
 import type { RunRecord } from 'domains/run/types';
-import { createRunId, filterRuns, paginateRuns, parseRunsPageQuery } from 'domains/run/utils';
+import {
+  checkCanContinueRun,
+  checkIsRunActive,
+  createRunId,
+  filterRuns,
+  paginateRuns,
+  parseRunsPageQuery,
+} from 'domains/run/utils';
 import type { QueuedWebhook } from 'domains/webhook/types';
 import type { Skip } from 'domains/scheduler/types';
 import { describeCron, nextCronRun } from 'utils/cron';
@@ -24,12 +32,21 @@ export interface ApiResponse {
 type ApiRequest = [method: string, segments: string[]];
 
 export interface DemoApi {
-  respond(method: string, url: URL, now?: Date): ApiResponse;
+  respond(method: string, url: URL, body: string, now?: Date): ApiResponse;
 }
 
 const MAX_CALENDAR_DAYS = 32;
 const DAEMON_UPTIME_MS = (3 * 24 + 4) * 3_600_000;
 const TICK_MS = 30_000;
+
+function parseJson(text: string): unknown {
+  try {
+    const value: unknown = JSON.parse(text);
+    return value;
+  } catch {
+    return undefined;
+  }
+}
 
 const ok = (body: unknown): ApiResponse => ({ status: 200, body });
 const fail = (status: number, error: string): ApiResponse => ({ status, body: { error } });
@@ -76,7 +93,7 @@ function toRoutineSummary(
     timeoutMinutes: routine.timeoutMinutes,
     maxBudgetUsd: routine.maxBudgetUsd,
     file: `routines/${routine.name}.md`,
-    running: runs.some(isMatching({ status: 'running' })),
+    running: runs.some(checkIsRunActive),
     lastRun: runs[0] ?? null,
     lastSkip: skips.at(-1) ?? null,
   };
@@ -97,7 +114,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
   }
 
   function listQueue(routine: DemoRoutine, now: Date): QueuedWebhook[] {
-    const isRunning = listRoutineRuns(routine, now).some(isMatching({ status: 'running' }));
+    const isRunning = listRoutineRuns(routine, now).some(checkIsRunActive);
     return isRunning ? (queues.get(routine.name) ?? []) : [];
   }
 
@@ -120,7 +137,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
   }
 
   function getStatus(now: Date): DaemonStatus {
-    const running = history.listRuns(now).filter(isMatching({ status: 'running' })).length;
+    const running = history.listRuns(now).filter(checkIsRunActive).length;
     return {
       pid: 48213,
       startedAt: daemonStartedAt.toISOString(),
@@ -148,10 +165,23 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
   }
 
   function startRun(routine: DemoRoutine, now: Date): ApiResponse {
-    if (listRoutineRuns(routine, now).some(isMatching({ status: 'running' }))) {
+    if (listRoutineRuns(routine, now).some(checkIsRunActive)) {
       return fail(409, `${routine.name} is already running`);
     }
     history.startRun(routine, now);
+    return { status: 202, body: { ok: true } };
+  }
+
+  function sendMessage(routine: DemoRoutine, run: RunRecord, body: string, now: Date): ApiResponse {
+    const message = runMessageSchema.safeParse(parseJson(body));
+    if (!message.success) return fail(400, 'The message needs text');
+    if (!checkCanContinueRun(run)) {
+      return fail(409, `This ${run.agent} run has no session to continue`);
+    }
+    if (listRoutineRuns(routine, now).some(checkIsRunActive)) {
+      return fail(409, `${routine.name} is running, send the message once it is done`);
+    }
+    history.sendMessage(routine.name, run.id, message.data.text, now);
     return { status: 202, body: { ok: true } };
   }
 
@@ -178,7 +208,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     return ok(buildCalendar(demoRoutines, history.listRuns(now), from, to, now));
   }
 
-  function routeApi(request: ApiRequest, url: URL, now: Date): ApiResponse {
+  function routeApi(request: ApiRequest, url: URL, body: string, now: Date): ApiResponse {
     return match(request)
       .with(['GET', ['status']], () => ok(getStatus(now)))
       .with(['GET', ['routines']], () => ok(demoRoutines.map(routine => getSummary(routine, now))))
@@ -194,6 +224,12 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
         const run = history.findRun(routineNameSchema.parse(routine), runIdSchema.parse(id), now);
         return run === null ? fail(404, 'Run not found') : ok(run);
       })
+      .with(['POST', ['runs', P.string, P.string, 'messages']], ([, [, name, id]]) =>
+        withRoutine(routineNameSchema.parse(name), routine => {
+          const run = history.findRun(routine.name, runIdSchema.parse(id), now);
+          return run === null ? fail(404, 'Run not found') : sendMessage(routine, run, body, now);
+        }),
+      )
       .with(['GET', ['runs', P.string, P.string, 'transcript']], ([, [, routine, id]]) => {
         const transcript = history.getTranscript(
           routineNameSchema.parse(routine),
@@ -206,9 +242,9 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
   }
 
   return {
-    respond(method, url, now = new Date()) {
+    respond(method, url, body, now = new Date()) {
       const segments = url.pathname.split('/').filter(Boolean).slice(1).map(decodeURIComponent);
-      return routeApi([method, segments], url, now);
+      return routeApi([method, segments], url, body, now);
     },
   };
 }

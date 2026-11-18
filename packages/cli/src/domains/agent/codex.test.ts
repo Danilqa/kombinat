@@ -128,3 +128,29 @@ test('passes the routine settings to codex exec', () => {
   assert.match(input, /unattended by the kombinat scheduler[\s\S]*\n\nHello$/);
   assert.equal(env['OPENAI_API_KEY'], undefined);
 });
+
+test('resumes the thread with the exec options before the resume subcommand', () => {
+  const { args, input } =
+    codexAgent.buildReplyInvocation(
+      {
+        routine: makeAgentTask({ model: 'gpt-5.5' }),
+        runId: runIdSchema.parse('r1'),
+        trigger: 'manual',
+      },
+      sessionIdSchema.parse('thread-1'),
+      'Open a PR with the fix',
+    ) ?? assert.fail('codex continues sessions');
+  assert.deepEqual(args, [
+    'exec',
+    '--json',
+    '--skip-git-repo-check',
+    '--sandbox',
+    'workspace-write',
+    '--model',
+    'gpt-5.5',
+    'resume',
+    'thread-1',
+    '-',
+  ]);
+  assert.match(input, /message from the dashboard[\s\S]*\n\nOpen a PR with the fix$/);
+});

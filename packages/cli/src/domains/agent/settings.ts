@@ -42,3 +42,10 @@ export function getUnattendedNote({ routine, runId, trigger }: RunContext): stri
     'Nobody is watching and nobody can answer questions, so make sensible calls, record them, and finish on your own.',
   ].join(' ');
 }
+
+export function getReplyNote({ routine, runId }: RunContext): string {
+  return [
+    `This session continues run ${runId} of the kombinat routine "${routine.name}" with a message from the dashboard.`,
+    'Nobody can answer questions while you work, so make sensible calls, record them, and finish on your own.',
+  ].join(' ');
+}

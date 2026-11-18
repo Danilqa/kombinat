@@ -1,5 +1,7 @@
 import { expect, test } from 'e2e/web-app';
 
+const REPLY_TIMEOUT_MS = 25_000;
+
 test("shows a run's result, transcript and how to resume it", async ({
   page,
   kombinat,
@@ -25,14 +27,19 @@ test("shows a run's result, transcript and how to resume it", async ({
   await expect(page.getByRole('main')).toMatchAriaSnapshot(`
     - heading "${run.id}" [level=1]
     - text: Succeeded
-    - term: Resume
-    - definition: claude --resume b5c1e2d4
-    - text: Result
-    - paragraph:
-      - text: Fixed the
-      - strong: checkout
-      - text: test.
+    - tablist:
+      - tab "Information" [selected]
+      - tab "Transcript & chat 5"
+    - tabpanel "Information":
+      - term: Resume
+      - definition: claude --resume b5c1e2d4
+      - text: Result
+      - paragraph:
+        - text: Fixed the
+        - strong: checkout
+        - text: test.
   `);
+  await page.getByRole('tab', { name: 'Transcript & chat 5' }).click();
   await expect(page.getByText('Session started')).toBeVisible();
   await expect(page.getByText('The checkout test fails, running it alone.')).toBeVisible();
   await page.getByRole('button', { name: 'Bash pnpm e2e checkout' }).click();
@@ -64,6 +71,7 @@ test('shows why a run failed', async ({ page, kombinat, claude }) => {
   await expect(page.getByRole('region', { name: 'Run error' })).toHaveText(
     'Reached the budget of $2.00',
   );
+  await page.getByRole('tab', { name: /Transcript & chat/ }).click();
   await page.getByRole('button', { name: 'Bash pnpm e2e Failed' }).click();
   await expect(page.getByRole('region', { name: 'Tool error' })).toHaveText('Command timed out');
   await expect(page.getByText('Finished with error')).toBeVisible();
@@ -87,6 +95,7 @@ test('shows when a run switched to a fallback model', async ({ page, kombinat, c
   });
 
   await page.goto(`/runs/fix-e2e-tests/${run.id}`);
+  await page.getByRole('tab', { name: /Transcript & chat/ }).click();
 
   await expect(page.getByText('Switched model')).toBeVisible();
   await expect(page.getByText('claude-opus-5-5 → claude-sonnet-5-5')).toBeVisible();
@@ -106,6 +115,7 @@ test('shows the before hook first and the after hook last', async ({ page, kombi
   });
 
   await page.goto(`/runs/fix-e2e-tests/${run.id}`);
+  await page.getByRole('tab', { name: /Transcript & chat/ }).click();
 
   await expect(page.getByText(/^(Before hook|Finished|After hook)$/)).toHaveText([
     'Before hook',
@@ -116,4 +126,50 @@ test('shows the before hook first and the after hook last', async ({ page, kombi
     'Already up to date.',
     'Posted to #routines',
   ]);
+});
+
+test("continues a run's session with a message and shows the reply", async ({
+  page,
+  kombinat,
+  claude,
+}) => {
+  test.slow();
+  kombinat.addRoutine({ name: 'fix-e2e-tests' });
+  const run = kombinat.addRun({
+    routine: 'fix-e2e-tests',
+    sessionId: 'b5c1e2d4',
+    resumeCommand: 'claude --resume b5c1e2d4',
+    events: [claude.init(), claude.text('The checkout test is flaky.'), claude.result()],
+  });
+
+  await page.goto(`/runs/fix-e2e-tests/${run.id}`);
+  await page.getByRole('tab', { name: /Transcript & chat/ }).click();
+  const message = page.getByRole('textbox', { name: 'Message' });
+  await expect(message).toHaveAttribute('placeholder', 'Message Claude');
+  await message.fill('Open a PR with the fix');
+  await message.press('Enter');
+
+  await expect(message).toHaveValue('');
+  await expect(page.getByText(/Open a PR with the fix$/)).toHaveText(
+    ['You wrote: Open a PR with the fix', 'You asked: Open a PR with the fix'],
+    { timeout: REPLY_TIMEOUT_MS },
+  );
+  await expect(page.getByText('Finished', { exact: true })).toHaveCount(2);
+  await expect(page.getByText('Claude is replying')).toBeHidden();
+  await expect(message).toHaveAttribute('placeholder', 'Message Claude');
+});
+
+test('a run without an agent session cannot be continued', async ({ page, kombinat }) => {
+  kombinat.addRoutine({ name: 'say-hello', agent: 'command', command: 'echo Hello' });
+  const run = kombinat.addRun({
+    routine: 'say-hello',
+    agent: 'command',
+    events: [{ type: 'output', text: 'Hello' }],
+  });
+
+  await page.goto(`/runs/say-hello/${run.id}`);
+  await page.getByRole('tab', { name: /Transcript & chat/ }).click();
+
+  await expect(page.getByText('This run has no agent session to continue.')).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Message' })).toHaveCount(0);
 });

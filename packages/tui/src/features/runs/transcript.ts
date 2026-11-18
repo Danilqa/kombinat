@@ -149,6 +149,13 @@ function itemLines(
       );
     })
     .with({ kind: 'text' }, ({ text: source }) => renderMarkdown(source, width))
+    .with({ kind: 'message' }, message =>
+      sanitize(message.text)
+        .split('\n')
+        .flatMap((line, index) =>
+          wrapLine([text(index === 0 ? '› ' : '  ', S.accent), text(line, S.bold)], width, 2),
+        ),
+    )
     .with({ kind: 'tool' }, tool => toolLines(tool, toggle, isExpanded, width, isRunning))
     .with({ kind: 'result' }, result => {
       const look = result.isError
@@ -194,7 +201,8 @@ export function transcriptLines(
   for (const item of items) {
     const isSubagent = checkIsSubagent(item);
     const needsGap =
-      isMatching({ kind: P.union('text', 'result') }, item) || isMatching('text', previousKind);
+      isMatching({ kind: P.union('text', 'message', 'result') }, item) ||
+      isMatching(P.union('text', 'message'), previousKind);
     if (needsGap && (lines.at(-1)?.line.length ?? 0) > 0) lines.push(blank());
     const innerWidth = isSubagent ? width - 2 : width;
     const action: Action = { kind: 'toggle', key: item.key };

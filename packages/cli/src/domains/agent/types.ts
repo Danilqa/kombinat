@@ -54,6 +54,11 @@ export interface Agent {
   readonly binaryEnv: string | null;
   resolveSettings(raw: AgentSettings): AgentSettings;
   buildInvocation(context: RunContext): Invocation;
+  buildReplyInvocation(
+    context: RunContext,
+    sessionId: SessionId,
+    message: string,
+  ): Invocation | null;
   readEvent(event: unknown, record: Readonly<RunRecord>): RunUpdate;
   buildTranscript(events: unknown[]): TranscriptItem[];
   getResumeCommand(sessionId: SessionId): string | null;

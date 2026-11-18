@@ -29,7 +29,13 @@ export const runRecordSchema = z.object({
   resultText: z.string().nullable(),
   error: z.string().nullable(),
   logFile: z.string(),
+  // Records written before runs could be continued have no replyPid.
+  replyPid: z.number().nullable().default(null),
 });
+
+export const runMessageSchema = z.object({ text: z.string().trim().min(1) });
+
+export const sentRunMessageSchema = z.object({ ok: z.literal(true) });
 
 export const runsCursorSchema = z.string().brand<'RunsCursor'>();
 

@@ -38,6 +38,7 @@ function makeRun(routine: string, id: string, overrides: Partial<RunRecord> = {}
     resultText: 'All quiet',
     error: null,
     logFile: `/state/runs/${routine}/${id}.jsonl`,
+    replyPid: null,
     ...overrides,
   };
 }
@@ -302,6 +303,43 @@ test('the transcript labels the before hook and the after hook', async () => {
   const after = lines.findIndex(line => /after hook {2}notify-slack {2}exit 1/.test(line));
   assert.ok(before !== -1 && result !== -1 && after !== -1, lines.join('\n'));
   assert.ok(before < result && result < after);
+});
+
+test('the transcript shows a message sent from the dashboard before its reply', async () => {
+  const { press } = await makeApp({
+    transcript: {
+      eventCount: 7,
+      items: [
+        ...transcript.items,
+        { kind: 'message', key: 'reply-0', text: 'Open a PR\nwith the fix' },
+        { kind: 'text', key: 'reply-0-0-0', text: 'Opened #12', isSubagent: false },
+      ],
+    },
+  });
+  await press('enter');
+  const lines = (await press('enter')).split('\n');
+  const message = lines.findIndex(line => /› Open a PR/.test(line));
+  const reply = lines.findIndex(line => /Opened #12/.test(line));
+  assert.ok(message !== -1 && reply !== -1, lines.join('\n'));
+  assert.equal(lines[message + 1]?.indexOf('with the fix'), lines[message]?.indexOf('Open a PR'));
+  assert.ok(message < reply);
+});
+
+test('an open finished run shows a message sent to it from the dashboard and its reply', async () => {
+  const options: FakeOptions = {};
+  const { app, screen, press } = await makeApp(options);
+  await press('enter');
+  assert.doesNotMatch(await press('enter'), /Open a PR/);
+  options.transcript = {
+    eventCount: 6,
+    items: [
+      ...transcript.items,
+      { kind: 'message', key: 'reply-0', text: 'Open a PR' },
+      { kind: 'text', key: 'reply-0-0-0', text: 'Opened #12', isSubagent: false },
+    ],
+  };
+  await app.refresh();
+  assert.match(screen(), /› Open a PR[\s\S]*Opened #12/);
 });
 
 test('r asks before starting a routine and only y starts it through the daemon', async () => {

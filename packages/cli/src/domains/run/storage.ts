@@ -7,10 +7,11 @@ import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
 import type { RunId } from 'domains/run/ids';
 import { runRecordSchema } from 'domains/run/schemas';
 import type { RunRecord } from 'domains/run/types';
-import { compareRunsByNewest } from 'domains/run/utils';
+import { checkIsRunActive, compareRunsByNewest } from 'domains/run/utils';
 
 import { config } from '../../config';
 import { readJsonFile, writeJsonFile } from '../../utils/json';
+import { appendChatEvent } from './event-log';
 
 export function getRunsDir(routine: RoutineName): string {
   return path.join(config.stateDir, 'runs', routine);
@@ -41,6 +42,12 @@ export function checkIsProcessAlive(pid: number | null): boolean {
 }
 
 function reconcileRecord(record: RunRecord): RunRecord {
+  if (record.replyPid !== null && !checkIsProcessAlive(record.replyPid)) {
+    const reconciled: RunRecord = { ...record, replyPid: null };
+    appendChatEvent(record, { type: 'reply_error', error: 'Reply process disappeared' });
+    writeRunRecord(reconciled);
+    return reconciled;
+  }
   if (!isMatching({ status: 'running' }, record) || checkIsProcessAlive(record.pid)) return record;
   const reconciled: RunRecord = {
     ...record,
@@ -78,5 +85,5 @@ export function listAllRuns(): RunRecord[] {
 }
 
 export function getRunningRuns(): RunRecord[] {
-  return listAllRuns().filter(isMatching({ status: 'running' }));
+  return listAllRuns().filter(checkIsRunActive);
 }

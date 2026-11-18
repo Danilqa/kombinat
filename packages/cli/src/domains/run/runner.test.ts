@@ -8,6 +8,9 @@ import type { TestContext } from 'node:test';
 import { isMatching } from 'ts-pattern';
 import { z } from 'zod';
 
+import { spawnSync } from 'node:child_process';
+
+import { sessionIdSchema } from 'domains/agent/ids';
 import { routineNameSchema } from 'domains/routine/ids';
 import { runIdSchema, type RunId } from 'domains/run/ids';
 import { runRecordSchema } from 'domains/run/schemas';
@@ -30,9 +33,11 @@ process.env['CLAUDE_BIN'] = fakeClaude;
 
 const { config } = await import('../../config');
 const { buildRoutine } = await import('../routine/utils');
+const { appendChatEvent } = await import('./event-log');
 const { writePayload } = await import('./payload');
-const { checkIsStarting, runRoutine, startDetachedRun } = await import('./runner');
-const { checkIsProcessAlive, readRunRecord, writeRunRecord } = await import('./storage');
+const { checkIsRunning, checkIsStarting, replyToRun, runRoutine, startDetachedRun } =
+  await import('./runner');
+const { checkIsProcessAlive, listRuns, readRunRecord, writeRunRecord } = await import('./storage');
 const { makeRunRecord } = await import('domains/run/mocks');
 
 function makeRoutine(name: string, frontmatter: string) {
@@ -425,4 +430,59 @@ test('the finished record is written even when the after hook step throws', asyn
   assert.equal(stored.status, 'failed');
   assert.equal(stored.exitCode, 2);
   assert.notEqual(stored.endedAt, null);
+});
+
+function makeFinishedRun(
+  routine: string,
+  id: string,
+  overrides: Partial<RunRecord> = {},
+): RunRecord {
+  const runId = runIdSchema.parse(id);
+  const runsDir = path.join(tmp, 'state', 'runs', routine);
+  fs.mkdirSync(runsDir, { recursive: true });
+  const run = makeRunRecord({
+    id: runId,
+    routine: routineNameSchema.parse(routine),
+    status: 'succeeded',
+    endedAt: '2026-10-06T11:05:00Z',
+    sessionId: sessionIdSchema.parse('s1'),
+    resumeCommand: 'claude --resume s1',
+    resultText: 'Found the bug',
+    logFile: path.join(runsDir, `${runId}.jsonl`),
+    ...overrides,
+  });
+  fs.writeFileSync(run.logFile, '');
+  writeRunRecord(run);
+  return run;
+}
+
+test('a reply resumes the session with the last message and leaves the outcome of the run alone', async () => {
+  const routine = buildRoutine(path.join(tmp, 'chat.md'), `---\ncwd: ${tmp}\n---\nFind the bug.`);
+  const run = makeFinishedRun('chat', '20261117T090000Z-chat');
+  appendChatEvent(run, { type: 'message', text: 'Open a PR with the fix' });
+  const finished = await replyToRun(routine, run);
+  assert.deepEqual(finished, run);
+  assert.deepEqual(readRunRecord(run.routine, run.id), run);
+  assert.deepEqual(readLogTypes(run), ['message', 'result']);
+});
+
+test('a reply that cannot start logs why', async () => {
+  const routine = makeRoutine('chat-command', '');
+  const run = makeFinishedRun('chat-command', '20261117T090000Z-cmnd', { agent: 'command' });
+  appendChatEvent(run, { type: 'message', text: 'Again' });
+  const finished = await replyToRun(routine, run);
+  assert.equal(finished.replyPid, null);
+  assert.deepEqual(readLog(run).at(-1), {
+    type: 'reply_error',
+    error: "This run's command session cannot be continued",
+  });
+});
+
+test('a replying run keeps its routine running until its reply process is gone', () => {
+  const run = makeFinishedRun('chat-busy', '20261117T090000Z-busy', { replyPid: process.pid });
+  assert.equal(checkIsRunning(run.routine), true);
+  writeRunRecord({ ...run, replyPid: spawnSync('true').pid });
+  assert.equal(checkIsRunning(run.routine), false);
+  assert.equal(listRuns(run.routine)[0]?.replyPid, null);
+  assert.deepEqual(readLog(run), [{ type: 'reply_error', error: 'Reply process disappeared' }]);
 });

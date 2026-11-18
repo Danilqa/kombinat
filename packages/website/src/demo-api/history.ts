@@ -19,6 +19,9 @@ const DAY_MS = 86_400_000;
 const MAX_SKIPS = 50;
 // Short enough to watch a run started with Run now finish.
 const RUN_NOW_MINUTES = 0.5;
+const REPLY_MS = 4000;
+const REPLY_TEXT =
+  'This is the demo, so no agent runs here. On your machine, Kombinat resumes the session of this run with your message, and the reply streams into this transcript as the agent works.';
 
 interface DemoRun {
   routine: DemoRoutine;
@@ -29,6 +32,11 @@ interface DemoRun {
   startedAt: Date;
   pid: number;
   sessionId: SessionId;
+}
+
+interface DemoMessage {
+  text: string;
+  sentAt: Date;
 }
 
 interface ScheduledEvents {
@@ -42,6 +50,7 @@ export interface DemoHistory {
   findRun(routine: RoutineName, id: RunId, now: Date): RunRecord | null;
   getTranscript(routine: RoutineName, id: RunId, now: Date): Transcript | null;
   startRun(routine: DemoRoutine, now: Date): void;
+  sendMessage(routine: RoutineName, id: RunId, text: string, now: Date): void;
 }
 
 function fail(message: string): never {
@@ -121,7 +130,12 @@ function buildSteps(run: DemoRun): TranscriptItem[] {
   return run.outcome.steps.map((step, index) => step(String(index)));
 }
 
-function toRunRecord(run: DemoRun, now: Date): RunRecord {
+function checkIsReplying(messages: DemoMessage[], now: Date): boolean {
+  const last = messages.at(-1);
+  return last !== undefined && last.sentAt.getTime() + REPLY_MS > now.getTime();
+}
+
+function toRunRecord(run: DemoRun, now: Date, messages: DemoMessage[]): RunRecord {
   const { routine, outcome } = run;
   const durationMs = getDurationMs(run);
   const isRunning = checkIsRunning(run, now);
@@ -151,6 +165,7 @@ function toRunRecord(run: DemoRun, now: Date): RunRecord {
     resultText: isRunning ? null : (outcome.resultText ?? null),
     error: isRunning ? null : (outcome.error ?? null),
     logFile: `${STATE_DIR}/runs/${routine.name}/${run.id}.jsonl`,
+    replyPid: checkIsReplying(messages, now) ? run.pid + 1 : null,
   };
 }
 
@@ -193,11 +208,41 @@ function getRunningItems(run: DemoRun, now: Date): TranscriptItem[] {
   return [...reached.slice(0, -1), { ...last, result: null }];
 }
 
-function buildTranscript(run: DemoRun, now: Date): Transcript {
-  const record = toRunRecord(run, now);
+// A reply shows its text halfway through and its result once it is done.
+function getReplyItems(messages: DemoMessage[], now: Date): TranscriptItem[] {
+  return messages.flatMap(({ text, sentAt }, index): TranscriptItem[] => {
+    const key = `reply-${index}`;
+    const elapsedMs = now.getTime() - sentAt.getTime();
+    const message: TranscriptItem = { kind: 'message', key, text };
+    if (elapsedMs < REPLY_MS / 2) return [message];
+    const reply: TranscriptItem = {
+      kind: 'text',
+      key: `${key}-text`,
+      text: REPLY_TEXT,
+      isSubagent: false,
+    };
+    if (elapsedMs < REPLY_MS) return [message, reply];
+    return [
+      message,
+      reply,
+      {
+        kind: 'result',
+        key: `${key}-result`,
+        text: REPLY_TEXT,
+        isError: false,
+        costUsd: null,
+        numTurns: 1,
+        durationMs: REPLY_MS,
+      },
+    ];
+  });
+}
+
+function buildTranscript(run: DemoRun, now: Date, messages: DemoMessage[]): Transcript {
+  const record = toRunRecord(run, now, messages);
   const items = checkIsRunning(run, now)
     ? getRunningItems(run, now)
-    : [...buildSteps(run), ...getResultItems(record)];
+    : [...buildSteps(run), ...getResultItems(record), ...getReplyItems(messages, now)];
   const toolResults = items.filter(isMatching({ kind: 'tool', result: P.nonNullable }));
   return { eventCount: items.length + toolResults.length, items };
 }
@@ -271,6 +316,8 @@ export function createDemoHistory(routines: DemoRoutine[], loadedAt: Date): Demo
     ...toStartedRuns(routine, 'manual', routine.manualRuns),
     ...toStartedRuns(routine, 'webhook', routine.webhookRuns),
   ]);
+  const messages = new Map<string, DemoMessage[]>();
+  const getMessages = (routine: RoutineName, id: RunId) => messages.get(`${routine}/${id}`) ?? [];
   const slotsBeforeLoad = new Map(
     routines.map(routine => [
       routine.name,
@@ -315,21 +362,24 @@ export function createDemoHistory(routines: DemoRoutine[], loadedAt: Date): Demo
   return {
     listRuns: now =>
       listDemoRuns(now)
-        .map(run => toRunRecord(run, now))
+        .map(run => toRunRecord(run, now, getMessages(run.routine.name, run.id)))
         .sort(compareRunsByNewest),
     listSkips: (routine, now) => getScheduledEvents(routine, now).skips.slice(-MAX_SKIPS),
     findRun(routine, id, now) {
       const run = findDemoRun(routine, id, now);
-      return run === undefined ? null : toRunRecord(run, now);
+      return run === undefined ? null : toRunRecord(run, now, getMessages(routine, id));
     },
     getTranscript(routine, id, now) {
       const run = findDemoRun(routine, id, now);
-      return run === undefined ? null : buildTranscript(run, now);
+      return run === undefined ? null : buildTranscript(run, now, getMessages(routine, id));
     },
     startRun(routine, now) {
       const random = createRandom(`${routine.name}:run-now:${now.toISOString()}`);
       const outcome = { ...pickOutcome(routine, random), minutes: RUN_NOW_MINUTES };
       startedRuns.push(createRun(routine, outcome, 'manual', null, now, random));
+    },
+    sendMessage(routine, id, text, now) {
+      messages.set(`${routine}/${id}`, [...getMessages(routine, id), { text, sentAt: now }]);
     },
   };
 }
