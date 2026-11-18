@@ -6,6 +6,7 @@ import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import type { RunId } from 'domains/run/ids';
 import { getRunsPage, getRunWithTranscript } from 'domains/run/requests';
 import type { RunRecord, RunsCursor, RunsPage, RunWithTranscript } from 'domains/run/types';
+import { DEFAULT_SETTINGS } from 'domains/settings/constants';
 import { getSettings, updateSettings } from 'domains/settings/requests';
 import type { Settings } from 'domains/settings/types';
 import { createHttpClient } from 'utils/http';
@@ -40,7 +41,8 @@ export function createDaemonClient(baseUrl: string): DaemonClient {
         getDaemonStatus(http),
         getRoutines(http),
         getRunsPage(http, null, null),
-        getSettings(http),
+        // Older daemons, which tui --url and connect may talk to, have no settings endpoint.
+        getSettings(http).catch(() => DEFAULT_SETTINGS),
       ]);
       return { status, routines, runs, settings };
     },
