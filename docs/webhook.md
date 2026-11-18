@@ -26,6 +26,7 @@ While the routine runs, new requests wait in a queue and start one by one, oldes
 | --------- | ----------------------------------------------------------------------- |
 | `0`       | The run starts. What the command prints, if anything, replaces the body |
 | `78`      | No run. The answer is `200`, with what the command prints if it is JSON |
+| `79`      | The request belongs to a conversation, see [below](#conversations)      |
 | Other     | No run. The answer is `401`                                             |
 
 For example, to run only for new Linear issues:
@@ -64,3 +65,33 @@ console.log(JSON.stringify(issue));
 It rejects requests with a wrong signature or older than a minute, skips everything but new issues, and prints only the fields the agent needs. The prompt stays short, and the queue shows which issue each request is about.
 
 Keep secrets in `KOMBINAT_` variables: they are the only ones that `install` saves for the daemon.
+
+## Conversations
+
+Some requests belong together, such as the messages of one Linear agent session or the comments on one pull request. A gate ties them to one run: it exits with `79` and prints a key for the conversation and the message for the agent as JSON:
+
+```json
+{ "conversation": "<key>", "message": "…" }
+```
+
+- The first message of a conversation starts a run, as a request body would, and the run keeps the key.
+- A later message with the same key continues that run, as a message sent from its run page does: it goes into the run's chat, and the agent resumes its session, told that the message came from a webhook. The hooks do not run again.
+- When that run has no session to continue, such as a run of the `command` agent or one that failed before its agent started, the message starts a new run, which takes over the key.
+- While the routine runs, messages wait in the queue with the other webhooks and continue their run once the routine is free.
+- `runId` in the answer is the run that the message continues or starts. A queued message gets the run it is expected to continue, which can miss when a run still at work ends without a session.
+
+Keys belong to one routine, and the key is kept on its run, so once the run is deleted, the next message starts a new one. Output that is not such JSON answers `401`.
+
+For example, to keep one run per Linear agent session, check the signature as above, then:
+
+```ts
+// scripts/check-linear-agent.ts
+const event = JSON.parse(body.toString());
+if (event.type !== 'AgentSessionEvent') process.exit(78);
+const message = event.action === 'created' ? event.promptContext : event.agentActivity?.body;
+if (!message) process.exit(78);
+console.log(JSON.stringify({ conversation: event.agentSession.id, message }));
+process.exit(79);
+```
+
+The session's first event starts a run with the issue's context, and each message written to the agent in that session continues it.

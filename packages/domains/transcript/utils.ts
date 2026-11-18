@@ -1,6 +1,6 @@
 import { match } from 'ts-pattern';
 
-import type { HookPhase, TranscriptItem } from './types';
+import type { HookPhase, MessageSource, TranscriptItem } from './types';
 
 const PREVIEW_LENGTH = 160;
 
@@ -39,5 +39,13 @@ export function getHookLabel(phase: HookPhase): string {
   return match(phase)
     .with('before', () => 'Before hook')
     .with('after', () => 'After hook')
+    .exhaustive();
+}
+
+// Messages from the dashboard are the reader's own, so only other senders get a label.
+export function getMessageSourceLabel(source: MessageSource): string | null {
+  return match(source)
+    .with('dashboard', () => null)
+    .with('webhook', () => 'From a webhook')
     .exhaustive();
 }

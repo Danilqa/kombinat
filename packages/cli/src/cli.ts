@@ -44,8 +44,8 @@ const USAGE = `kombinat, run from the folder that holds routines/ (init, connect
   validate                  parse every routine file and report errors
   readme                    regenerate the routines table in README.md
   run <name>                run one routine now in the foreground (what the scheduler spawns)
-  reply <name> <run id>     continue the run's agent session with the last message sent from
-                            the dashboard (what the dashboard spawns)
+  reply <name> <run id>     continue the run's agent session with the last message sent to it
+                            from the dashboard or a webhook (what the daemon spawns)
   serve                     run scheduler + web UI (what launchd or systemd runs); pulls the
                             main branch every 5 min, installs deps and restarts when the
                             lockfile changes; in a checkout of kombinat also builds the UI and
@@ -65,6 +65,7 @@ interface CliOptions {
   trigger: RunTrigger;
   scheduledFor: string | null;
   runId: RunId | null;
+  conversation: string | null;
   watch: boolean;
   scheduler: boolean;
   url: string | null;
@@ -153,6 +154,7 @@ async function runOne(name: string | undefined, options: CliOptions): Promise<vo
     trigger: options.trigger,
     scheduledFor: options.scheduledFor,
     runId: options.runId,
+    conversation: options.conversation,
   });
   console.log(JSON.stringify(record, null, 2));
   process.exitCode = isMatching({ status: 'succeeded' }, record) ? 0 : 1;
@@ -269,6 +271,7 @@ async function main(): Promise<void> {
       trigger: { type: 'string', default: 'manual' },
       'scheduled-for': { type: 'string' },
       'run-id': { type: 'string' },
+      conversation: { type: 'string' },
       'no-watch': { type: 'boolean', default: false },
       'no-scheduler': { type: 'boolean', default: false },
       url: { type: 'string' },
@@ -278,6 +281,7 @@ async function main(): Promise<void> {
     },
   });
   const [command, name, runId] = positionals;
+  checkFlag(values.conversation !== undefined, 'conversation', command, 'run');
   checkFlag(values.url !== undefined, 'url', command, 'tui');
   checkFlag(values.port !== undefined, 'port', command, 'connect');
   checkFlag(values.tui, 'tui', command, 'connect');
@@ -286,6 +290,7 @@ async function main(): Promise<void> {
     trigger: parseTrigger(values.trigger),
     scheduledFor: values['scheduled-for'] ?? null,
     runId: values['run-id'] === undefined ? null : parseRunId(values['run-id']),
+    conversation: values.conversation ?? null,
     watch: !values['no-watch'],
     scheduler: !values['no-scheduler'],
     url: values.url === undefined ? null : parseUrl(values.url),

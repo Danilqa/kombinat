@@ -102,7 +102,7 @@ test('each message is followed by its reply, after the after hook of the run', (
     { type: 'system', subtype: 'init', model: 'claude-opus-5-5', cwd: '/repo' },
     { type: 'assistant', message: { content: [{ type: 'text', text: 'Opened #12' }] } },
     { type: 'result', result: 'Opened #12', is_error: false, num_turns: 1, duration_ms: 900 },
-    { type: 'message', text: 'Merge it' },
+    { type: 'message', text: 'Merge it', source: 'webhook' },
     { type: 'reply_error', error: 'claude binary not found' },
   ];
   const { eventCount, items } = buildRunTranscript('claude', events);
@@ -120,7 +120,18 @@ test('each message is followed by its reply, after the after hook of the run', (
       ['text', 'reply-1-error'],
     ],
   );
-  assert.deepEqual(items[3], { kind: 'message', key: 'reply-0', text: 'Open a PR with the fix' });
+  assert.deepEqual(items[3], {
+    kind: 'message',
+    key: 'reply-0',
+    text: 'Open a PR with the fix',
+    source: 'dashboard',
+  });
+  assert.deepEqual(items[6], {
+    kind: 'message',
+    key: 'reply-1',
+    text: 'Merge it',
+    source: 'webhook',
+  });
   assert.deepEqual(items.at(-1), {
     kind: 'text',
     key: 'reply-1-error',
@@ -133,8 +144,8 @@ test('reads the last message sent to a run', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kombinat-event-log-'));
   const record = makeRunRecord({ logFile: path.join(dir, 'run.jsonl') });
   assert.equal(readLastMessage(record), null);
-  appendChatEvent(record, { type: 'message', text: 'Open a PR' });
+  appendChatEvent(record, { type: 'message', text: 'Open a PR', source: 'dashboard' });
   appendChatEvent(record, { type: 'reply_error', error: 'failed' });
-  appendChatEvent(record, { type: 'message', text: 'Try again' });
-  assert.equal(readLastMessage(record), 'Try again');
+  appendChatEvent(record, { type: 'message', text: 'Try again', source: 'webhook' });
+  assert.deepEqual(readLastMessage(record), { text: 'Try again', source: 'webhook' });
 });

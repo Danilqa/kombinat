@@ -15,13 +15,13 @@ Each domain has up to two halves with the same name:
 | Domain         | Shared half                                                                                                                                                                                                             | Daemon half                                                                                         |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | **agent**      | `AgentName`, `SessionId`, agent label                                                                                                                                                                                   | claude, codex and command adapters, registry, settings validation, `AgentTask`                      |
-| **transcript** | item schemas and types, preview rule, subagent check, empty, result and hook labels, `TranscriptList`                                                                                                                   | none                                                                                                |
+| **transcript** | item schemas and types, message source, preview rule, subagent check, empty, result, hook and message source labels, `TranscriptList`                                                                                   | none                                                                                                |
 | **run**        | `RunRecord`, `RunId`, status and trigger, requests, labels, new ids, duration, cursor pages, active and continue rules, expired runs, `makeRunRecord`, `RunStatusBadge`, `RunDetailList`, `RunOutput`, `RunMessageForm` | runner, replies, hooks, record storage with orphan reconciliation, event log, transcript, retention |
 | **scheduler**  | `Skip`, `SkipReason`, `SchedulerState`, skip label, `SkipsTable`                                                                                                                                                        | tick loop, `scheduler.json` storage                                                                 |
 | **routine**    | `RoutineName`, `RoutineSummary`, `RoutineDetail`, requests, `RunNowButton`, `RoutineBadges`, `RoutineDetailList`, `WebhookQueueButton`                                                                                  | file parsing, validation, defaults, loading, next run, schedule label, examples                     |
 | **calendar**   | `CalendarEntryId`, entry schemas and types, `getCalendar`, `buildCalendar`, planned lengths, entry title and overlap labels, overlap count                                                                              | none, `cli/src/server.ts` serves `buildCalendar`                                                    |
 | **daemon**     | status schema, `getDaemonStatus`, health rules, `DaemonStatusIndicator`                                                                                                                                                 | none, `cli/src/server.ts` builds the status                                                         |
-| **webhook**    | `QueuedWebhook`, webhook path, size and queue position labels, `WebhookQueueList`                                                                                                                                       | gate, queue, and receiving: start, queue, ignore or reject                                          |
+| **webhook**    | `QueuedWebhook`, webhook path, size and queue position labels, `WebhookQueueList`                                                                                                                                       | gate, queue, conversations, and receiving: start, continue, queue, ignore or reject                 |
 | **settings**   | `Settings`, defaults, retention options and labels, requests                                                                                                                                                            | `settings.json` storage                                                                             |
 | **release**    | `ReleaseVersion`, `ReleaseUpdate`, requests, newer releases, the offered release, `UpdateCard`                                                                                                                          | none, `cli/src/features/self-update/releases.ts` checks GitHub and skips                            |
 
@@ -53,7 +53,7 @@ An agent-independent view of a run's event log, ready to display: `{ eventCount,
 - `init`: the session start;
 - `model-fallback`: the agent switched from one model to another, with the reason when it gave one;
 - `text`: assistant text;
-- `message`: a message sent to the run from the dashboard, see [Continuing a run](#continuing-a-run);
+- `message`: a message sent to the run from the dashboard or a webhook, with its source, see [Continuing a run](#continuing-a-run);
 - `tool`: a tool call with its input, a preview, and a result that is `null` while the call is pending;
 - `result`: the outcome.
 
@@ -77,6 +77,7 @@ Invariants:
 - The id is a UTC timestamp plus 4 base-36 characters, such as `20261006T110000Z-k3x9`.
 - The record is `<state dir>/runs/<routine>/<id>.json` and the event log `<id>.jsonl` next to it. This layout is a compatibility contract.
 - A webhook run's request body waits in `<id>.payload` next to them until the run starts: the daemon writes it and starts the run with `--run-id <id>`, and the runner deletes it and adds the body to the end of the prompt in a code fence.
+- A run started for a webhook [conversation](#conversations) keeps its key in `conversation`, passed as `--conversation=<key>`. Other runs have `null`.
 - The transcript is built from the event log: the hook lines become `hook` items, the before hook first and the after hook last, and the agent turns the other lines into items.
 - With a run retention set, the daemon deletes the record and event log of each run that is not active and started longer ago than that, except the newest run of each routine. It does so when it starts, every hour and when the retention changes.
 - `GET /api/runs` answers a page of runs, newest first by `startedAt`, then routine and id, with `nextCursor` and `total`. `routine` limits it to one routine and answers 404 when there is no such routine, a page holds 50 runs, and `cursor` is an opaque token for the run a page ends with, so the next page starts right after that run even when new runs arrive above it.
@@ -85,9 +86,9 @@ Invariants:
 
 A finished run whose agent resumes sessions, the one with a resume command, can be continued: `POST /api/runs/<routine>/<id>/messages` with `{ "text": "…" }`.
 
-1. The daemon answers 400 for a blank text, 409 for a run without a resume command and 409 while the routine is running, then appends `{"type":"message","text":"…"}` to the event log.
+1. The daemon answers 400 for a blank text, 409 for a run without a resume command and 409 while the routine is running, then appends `{"type":"message","text":"…","source":"dashboard"}` to the event log. A webhook [conversation](#conversations) sends messages the same way, with `"source":"webhook"`, and waits in the queue instead of a 409.
 2. It starts a detached `kombinat reply <routine> <id>` and writes the record with its pid as `replyPid`, so the run counts as replying from the start.
-3. The reply resumes the session with the last message of the log in the routine's `cwd`, with its settings and timeout but without its hooks: `claude -p --resume <id>` or `codex exec … resume <id> -`. Its lines go to the same event log. A failure the agent did not report itself is appended as `{"type":"reply_error","error":"…"}`.
+3. The reply resumes the session with the last message of the log in the routine's `cwd`, told whether it came from the dashboard or a webhook, with its settings and timeout but without its hooks: `claude -p --resume <id>` or `codex exec … resume <id> -`. Its lines go to the same event log. A failure the agent did not report itself is appended as `{"type":"reply_error","error":"…"}`.
 4. It writes the record back with `replyPid` null, and the session id and resume command the reply reported. The status, times, result and cost stay those of the run.
 
 Invariants:
@@ -95,6 +96,7 @@ Invariants:
 - A run is active while it is `running` or has a `replyPid`. An active run keeps its routine running: the scheduler skips it, it counts against the concurrency limit, and Run now and webhooks wait.
 - A `replyPid` whose process is gone becomes null the next time runs are listed, and a `reply_error` line says so.
 - In the transcript, each message is followed by its reply's items, keyed under `reply-<n>`, after the run's after hook. A reply's session start is left out.
+- A message logged without a source came from the dashboard, since only it sent messages before webhooks could.
 
 ### scheduler
 
@@ -129,7 +131,15 @@ A routine with `webhook: true` accepts it. Its request body, at most 256 KB, bec
 
 While the routine runs or has webhooks waiting, an accepted request is queued instead, as `<state dir>/queue/<routine>/<time>-<run id>.payload`, and still answers 200 with the id its run will get. The time is in milliseconds and strictly increasing, so the file names sort oldest first. A routine holds at most 100 queued webhooks, after which the answer is 429. The scheduler starts them, so they wait while it is off.
 
-The routine's `webhookGate`, a shell command, decides about each request first. It runs in the project folder with the `before` hook's `KOMBINAT_REPO` and `PATH`, gets the raw body on stdin and the headers as JSON in `KOMBINAT_WEBHOOK_HEADERS`, and is killed after 3 s, which answers 504. Exit 0 starts the run, and a non-blank output replaces the payload. Exit 78 starts nothing and answers 200, with the output as the body when it is JSON and `{"ok":true,"runId":null}` otherwise, so senders such as Linear do not retry. Any other exit answers 401 and logs the gate's stderr in the daemon log. The gate runs before the disabled check and the queue, so an ignored event never gets a 409 or waits.
+The routine's `webhookGate`, a shell command, decides about each request first. It runs in the project folder with the `before` hook's `KOMBINAT_REPO` and `PATH`, gets the raw body on stdin and the headers as JSON in `KOMBINAT_WEBHOOK_HEADERS`, and is killed after 3 s, which answers 504. Exit 0 starts the run, and a non-blank output replaces the payload. Exit 79 makes the request part of a conversation, see below. Exit 78 starts nothing and answers 200, with the output as the body when it is JSON and `{"ok":true,"runId":null}` otherwise, so senders such as Linear do not retry. Any other exit answers 401 and logs the gate's stderr in the daemon log. The gate runs before the disabled check and the queue, so an ignored event never gets a 409 or waits.
+
+#### Conversations
+
+A gate that exits with 79 prints `{"conversation":"<key>","message":"…"}`, with a key and a message that are not blank, or the request is rejected with 401. The key ties the requests of one conversation in the other app to one run of the routine, in `start.ts`:
+
+1. The conversation's run is the newest run of the routine with that key in `conversation`, when it has a resume command.
+2. With such a run, the message continues it as a dashboard message does, with `"source":"webhook"`. Without one, the message is the payload of a new webhook run that gets the key.
+3. While the routine runs or has webhooks waiting, the request is queued like any other, with the key in a `<time>-<run id>.conversation` file next to its payload, and 1 and 2 happen when the scheduler takes it. The answer's `runId` is the newest run with the key when it is active or has a resume command, else the run that is starting with the key, else the run that an earlier queued request with the key will start, else the request's own. A run at work counts before it reports its session, so the answer can miss when that run ends without one.
 
 ### settings
 

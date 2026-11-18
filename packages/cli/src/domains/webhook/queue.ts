@@ -12,9 +12,10 @@ const PREVIEW_CHARS = 2000;
 
 let lastQueuedAt = 0;
 
-export interface QueuedPayload {
+export interface WebhookRun {
   runId: RunId;
   payload: string;
+  conversation: string | null;
 }
 
 function getQueueDir(routine: RoutineName): string {
@@ -34,14 +35,27 @@ export function countQueuedWebhooks(routine: RoutineName): number {
   return listQueueFiles(routine).length;
 }
 
-export function enqueueWebhook(routine: RoutineName, runId: RunId, payload: string): boolean {
+function getConversationFile(routine: RoutineName, entry: string): string {
+  return path.join(getQueueDir(routine), `${entry.slice(0, -'.payload'.length)}.conversation`);
+}
+
+function readConversation(routine: RoutineName, entry: string): string | null {
+  const file = getConversationFile(routine, entry);
+  return fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null;
+}
+
+export function enqueueWebhook(routine: RoutineName, webhook: WebhookRun): boolean {
   if (countQueuedWebhooks(routine) >= WEBHOOK_QUEUE_LIMIT) return false;
   const dir = getQueueDir(routine);
   fs.mkdirSync(dir, { recursive: true });
   // Keeps the order of webhooks that arrive in the same millisecond.
   lastQueuedAt = Math.max(Date.now(), lastQueuedAt + 1);
-  const queuedAt = String(lastQueuedAt).padStart(15, '0');
-  fs.writeFileSync(path.join(dir, `${queuedAt}-${runId}.payload`), payload);
+  const entry = `${String(lastQueuedAt).padStart(15, '0')}-${webhook.runId}.payload`;
+  // Before the payload, since a webhook is queued once its payload file exists.
+  if (webhook.conversation !== null) {
+    fs.writeFileSync(getConversationFile(routine, entry), webhook.conversation);
+  }
+  fs.writeFileSync(path.join(dir, entry), webhook.payload);
   return true;
 }
 
@@ -49,13 +63,22 @@ function getRunId(entry: string): RunId {
   return runIdSchema.parse(entry.slice(entry.indexOf('-') + 1, -'.payload'.length));
 }
 
-export function takeQueuedWebhook(routine: RoutineName): QueuedPayload | null {
+export function takeQueuedWebhook(routine: RoutineName): WebhookRun | null {
   const [oldest] = listQueueFiles(routine);
   if (oldest === undefined) return null;
   const file = path.join(getQueueDir(routine), oldest);
   const payload = fs.readFileSync(file, 'utf8');
+  const conversation = readConversation(routine, oldest);
   fs.rmSync(file);
-  return { runId: getRunId(oldest), payload };
+  fs.rmSync(getConversationFile(routine, oldest), { force: true });
+  return { runId: getRunId(oldest), payload, conversation };
+}
+
+export function findQueuedConversation(routine: RoutineName, conversation: string): RunId | null {
+  const entry = listQueueFiles(routine).find(
+    candidate => readConversation(routine, candidate) === conversation,
+  );
+  return entry === undefined ? null : getRunId(entry);
 }
 
 export function listQueuedWebhooks(routine: RoutineName): QueuedWebhook[] {

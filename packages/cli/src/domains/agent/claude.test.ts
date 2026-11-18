@@ -131,7 +131,7 @@ test('resumes the session with the message and a note about the dashboard', () =
         trigger: 'manual',
       },
       sessionIdSchema.parse('s1'),
-      'Open a PR with the fix',
+      { text: 'Open a PR with the fix', source: 'dashboard' },
     ) ?? assert.fail('claude continues sessions');
   assert.equal(input, 'Open a PR with the fix');
   assert.equal(args[args.indexOf('--resume') + 1], 's1');
@@ -140,6 +140,16 @@ test('resumes the session with the message and a note about the dashboard', () =
     args[args.indexOf('--append-system-prompt') + 1] ?? '',
     /message from the dashboard/,
   );
+});
+
+test('says when the message came from a webhook', () => {
+  const { args } =
+    claudeAgent.buildReplyInvocation(
+      { routine: makeAgentTask(), runId: runIdSchema.parse('r1'), trigger: 'webhook' },
+      sessionIdSchema.parse('s1'),
+      { text: 'Fix the flaky test too', source: 'webhook' },
+    ) ?? assert.fail('claude continues sessions');
+  assert.match(args[args.indexOf('--append-system-prompt') + 1] ?? '', /message from a webhook/);
 });
 
 test('a model fallback switches the model of the run and shows in the transcript', () => {

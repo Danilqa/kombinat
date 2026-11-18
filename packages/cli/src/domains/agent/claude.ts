@@ -285,9 +285,9 @@ export const claudeAgent: Agent = {
   buildReplyInvocation(context, sessionId, message) {
     return {
       command: config.claudeBin,
-      args: [...buildArgs(context, getReplyNote(context)), '--resume', sessionId],
+      args: [...buildArgs(context, getReplyNote(context, message.source)), '--resume', sessionId],
       env: withoutEnv(DROPPED_ENV),
-      input: message,
+      input: message.text,
     };
   },
 

@@ -19,6 +19,7 @@ import type {
 import {
   checkIsSubagent,
   getHookLabel,
+  getMessageSourceLabel,
   getModelFallbackReasonLabel,
   getTranscriptEmptyLabel,
   getTranscriptResultLabel,
@@ -97,10 +98,12 @@ interface MessageRowProps {
 }
 
 function MessageRow({ item }: MessageRowProps) {
+  const sourceLabel = getMessageSourceLabel(item.source);
   return (
-    <div className="flex justify-end pt-6">
+    <div className="flex flex-col items-end gap-1.5 pt-6">
+      {sourceLabel !== null && <p className="text-caption text-fg-muted">{sourceLabel}</p>}
       <p className="max-w-[85%] rounded-2xl rounded-br-md bg-overlay px-4 py-2.5 text-body whitespace-pre-wrap text-fg wrap-anywhere">
-        <span className="sr-only">You wrote: </span>
+        {sourceLabel === null && <span className="sr-only">You wrote: </span>}
         {item.text}
       </p>
     </div>

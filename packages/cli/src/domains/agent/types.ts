@@ -5,7 +5,7 @@ import type { AgentName } from 'domains/agent/types';
 import type { RoutineName } from 'domains/routine/ids';
 import type { RunId } from 'domains/run/ids';
 import type { RunRecord, RunTrigger } from 'domains/run/types';
-import type { TranscriptItem } from 'domains/transcript/types';
+import type { MessageSource, TranscriptItem } from 'domains/transcript/types';
 
 import type { outputEventSchema } from './schemas';
 
@@ -29,6 +29,11 @@ export interface RunContext {
   routine: AgentTask;
   runId: RunId;
   trigger: RunTrigger;
+}
+
+export interface ReplyMessage {
+  text: string;
+  source: MessageSource;
 }
 
 export interface Invocation {
@@ -57,7 +62,7 @@ export interface Agent {
   buildReplyInvocation(
     context: RunContext,
     sessionId: SessionId,
-    message: string,
+    message: ReplyMessage,
   ): Invocation | null;
   readEvent(event: unknown, record: Readonly<RunRecord>): RunUpdate;
   buildTranscript(events: unknown[]): TranscriptItem[];

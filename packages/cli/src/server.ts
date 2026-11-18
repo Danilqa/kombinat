@@ -29,7 +29,7 @@ import { config } from './config';
 import { loadRoutines } from './domains/routine/storage';
 import type { Routine } from './domains/routine/types';
 import { describeSchedule, getNextRun } from './domains/routine/utils';
-import { appendChatEvent, buildRunTranscript, readRunEvents } from './domains/run/event-log';
+import { buildRunTranscript, readRunEvents } from './domains/run/event-log';
 import { writePrompt } from './domains/run/payload';
 import { deleteExpiredRuns, startRunCleanup } from './domains/run/retention';
 import {
@@ -183,8 +183,7 @@ function sendMessage(routine: Routine, run: RunRecord, body: Buffer): ApiRespons
   if (checkIsRunning(routine.name)) {
     return fail(409, `${routine.name} is running, send the message once it is done`);
   }
-  appendChatEvent(run, { type: 'message', text: message.data.text });
-  startDetachedReply(run);
+  startDetachedReply(run, { text: message.data.text, source: 'dashboard' });
   return { status: 202, body: { ok: true } };
 }
 

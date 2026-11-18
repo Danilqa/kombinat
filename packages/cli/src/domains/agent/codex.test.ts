@@ -138,7 +138,7 @@ test('resumes the thread with the exec options before the resume subcommand', ()
         trigger: 'manual',
       },
       sessionIdSchema.parse('thread-1'),
-      'Open a PR with the fix',
+      { text: 'Open a PR with the fix', source: 'dashboard' },
     ) ?? assert.fail('codex continues sessions');
   assert.deepEqual(args, [
     'exec',
@@ -153,4 +153,14 @@ test('resumes the thread with the exec options before the resume subcommand', ()
     '-',
   ]);
   assert.match(input, /message from the dashboard[\s\S]*\n\nOpen a PR with the fix$/);
+});
+
+test('says when the message came from a webhook', () => {
+  const { input } =
+    codexAgent.buildReplyInvocation(
+      { routine: makeAgentTask(), runId: runIdSchema.parse('r1'), trigger: 'webhook' },
+      sessionIdSchema.parse('thread-1'),
+      { text: 'Fix the flaky test too', source: 'webhook' },
+    ) ?? assert.fail('codex continues sessions');
+  assert.match(input, /message from a webhook[\s\S]*\n\nFix the flaky test too$/);
 });

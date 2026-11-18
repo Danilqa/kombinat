@@ -14,7 +14,7 @@ import { checkIsRunActive, createRunId } from 'domains/run/utils';
 import { config, getCliArgs } from '../../config';
 import { parseJson } from '../../utils/json';
 import { getAgent } from '../agent/registry';
-import type { Agent, Invocation, OutputEvent } from '../agent/types';
+import type { Agent, Invocation, OutputEvent, ReplyMessage } from '../agent/types';
 import type { Routine } from '../routine/types';
 import { appendChatEvent, readLastMessage } from './event-log';
 import { getBeforeHookError, HOOK_TIMEOUT_MS, runHook } from './hooks';
@@ -25,6 +25,7 @@ export interface RunOptions {
   trigger: RunTrigger;
   scheduledFor?: string | null;
   runId?: RunId | null;
+  conversation?: string | null;
 }
 
 const PENDING_START_MS = HOOK_TIMEOUT_MS + 60_000;
@@ -201,6 +202,7 @@ export async function runRoutine(
     error: null,
     logFile: path.join(runsDir, `${id}.jsonl`),
     replyPid: null,
+    conversation: options.conversation ?? null,
   };
 
   const prompt = takePrompt(routine.name, id) ?? routine.prompt;
@@ -286,6 +288,7 @@ export async function replyToRun(routine: Routine, run: RunRecord): Promise<RunR
 interface PendingStart {
   runId: RunId;
   startedAt: number;
+  conversation: string | null;
 }
 
 // Until a run writes its record, only this process knows it started.
@@ -301,6 +304,16 @@ export function checkIsStarting(routineName: RoutineName, now = Date.now()): boo
   return isWaiting;
 }
 
+export function findStartingConversationRun(
+  routineName: RoutineName,
+  conversation: string,
+): RunId | null {
+  const pending = pendingStarts.get(routineName);
+  return checkIsStarting(routineName) && pending?.conversation === conversation
+    ? pending.runId
+    : null;
+}
+
 export function checkIsRunning(routineName: RoutineName): boolean {
   return checkIsStarting(routineName) || listRuns(routineName).some(checkIsRunActive);
 }
@@ -309,7 +322,13 @@ export function startDetachedRun(routineName: RoutineName, options: RunOptions):
   const runId = options.runId ?? createRunId();
   const args = getCliArgs('run', routineName, '--trigger', options.trigger, '--run-id', runId);
   if (options.scheduledFor) args.push('--scheduled-for', options.scheduledFor);
-  pendingStarts.set(routineName, { runId, startedAt: Date.now() });
+  // With =, a key that starts with a dash is still the value.
+  if (options.conversation) args.push(`--conversation=${options.conversation}`);
+  pendingStarts.set(routineName, {
+    runId,
+    startedAt: Date.now(),
+    conversation: options.conversation ?? null,
+  });
   spawn(process.execPath, args, {
     cwd: config.projectRoot,
     env: process.env,
@@ -318,7 +337,8 @@ export function startDetachedRun(routineName: RoutineName, options: RunOptions):
   }).unref();
 }
 
-export function startDetachedReply(run: RunRecord): void {
+export function startDetachedReply(run: RunRecord, message: ReplyMessage): void {
+  appendChatEvent(run, { type: 'message', ...message });
   const child = spawn(process.execPath, getCliArgs('reply', run.routine, run.id), {
     cwd: config.projectRoot,
     env: process.env,

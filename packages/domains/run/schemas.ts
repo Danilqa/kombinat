@@ -31,6 +31,8 @@ export const runRecordSchema = z.object({
   logFile: z.string(),
   // Records written before runs could be continued have no replyPid.
   replyPid: z.number().nullable().default(null),
+  // Records written before webhooks could continue runs have no conversation.
+  conversation: z.string().nullable().default(null),
 });
 
 export const runMessageSchema = z.object({ text: z.string().trim().min(1) });

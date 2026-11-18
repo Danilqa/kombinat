@@ -226,7 +226,7 @@ export const codexAgent: Agent = {
       command: config.codexBin,
       args: [...buildExecArgs(context), 'resume', sessionId, '-'],
       env: withoutEnv(DROPPED_ENV),
-      input: `${getReplyNote(context)}\n\n${message}`,
+      input: `${getReplyNote(context, message.source)}\n\n${message.text}`,
     };
   },
 
