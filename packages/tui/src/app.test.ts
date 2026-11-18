@@ -325,6 +325,23 @@ test('the transcript shows a message sent from the dashboard before its reply', 
   assert.ok(message < reply);
 });
 
+test('an open finished run shows a message sent to it from the dashboard and its reply', async () => {
+  const options: FakeOptions = {};
+  const { app, screen, press } = await makeApp(options);
+  await press('enter');
+  assert.doesNotMatch(await press('enter'), /Open a PR/);
+  options.transcript = {
+    eventCount: 6,
+    items: [
+      ...transcript.items,
+      { kind: 'message', key: 'reply-0', text: 'Open a PR' },
+      { kind: 'text', key: 'reply-0-0-0', text: 'Opened #12', isSubagent: false },
+    ],
+  };
+  await app.refresh();
+  assert.match(screen(), /› Open a PR[\s\S]*Opened #12/);
+});
+
 test('r asks before starting a routine and only y starts it through the daemon', async () => {
   const { started, press } = await makeApp();
   assert.match(await press('r'), /Start on-call-monitoring now\?/);

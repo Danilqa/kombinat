@@ -323,11 +323,11 @@ export class TuiApp {
       });
   }
 
+  // Refetched on every poll, even when finished, since a message from the dashboard continues a finished run.
   private async loadRun(page: RunPage): Promise<void> {
     const key = runKey(page.routine, page.id);
-    const cached = this.runData.get(key);
-    if (cached && !checkIsRunActive(cached.run)) return;
-    this.storeRun(key, await this.client.getRun(page.routine, page.id), cached);
+    const loaded = await this.client.getRun(page.routine, page.id);
+    this.storeRun(key, loaded, this.runData.get(key));
   }
 
   private storeRun(
