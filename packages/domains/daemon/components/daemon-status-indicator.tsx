@@ -3,7 +3,7 @@ import { Fragment } from 'react';
 import { P, match } from 'ts-pattern';
 
 import { Popover } from 'design-system/components';
-import { cn } from 'design-system/utils';
+import { cn, useLiveText } from 'design-system/utils';
 import { formatRelative } from 'utils/date-time';
 import { sameOriginApi } from 'utils/http';
 import { getPollInterval } from 'utils/polling';
@@ -21,6 +21,15 @@ import {
   getLeftRatio,
   getMostUsedLimit,
 } from '../utils';
+
+interface LiveRelativeTimeProps {
+  iso: string;
+}
+
+function LiveRelativeTime({ iso }: LiveRelativeTimeProps) {
+  const relative = useLiveText(now => formatRelative(iso, now));
+  return <time dateTime={iso}>{relative}</time>;
+}
 
 interface DaemonHealthAppearance {
   label: string;
@@ -101,7 +110,7 @@ function PlanUsageDetails({ status }: PlanUsageDetailsProps) {
                 <span className={cn(isLow && 'text-warning')}>{formatUsageLeft(limit)} left</span>
                 <span className="text-fg-muted">
                   {' '}
-                  · resets <time dateTime={limit.resetsAt}>{formatRelative(limit.resetsAt)}</time>
+                  · resets <LiveRelativeTime iso={limit.resetsAt} />
                 </span>
                 <span aria-hidden="true" className="mt-1 mb-1.5 block h-1 rounded-full bg-overlay">
                   <span
@@ -118,7 +127,7 @@ function PlanUsageDetails({ status }: PlanUsageDetailsProps) {
         })}
         <dt className="text-fg-muted">Updated</dt>
         <dd className="tabular-nums">
-          <time dateTime={usage.updatedAt}>{formatRelative(usage.updatedAt)}</time>
+          <LiveRelativeTime iso={usage.updatedAt} />
         </dd>
       </dl>
     </>
@@ -140,11 +149,7 @@ function DaemonStatusDetails({ status }: DaemonStatusDetailsProps) {
       <dd className="font-mono tabular-nums">{status.pid}</dd>
       <dt className="text-fg-muted">Last tick</dt>
       <dd className="tabular-nums">
-        {status.lastTickAt === null ? (
-          'never'
-        ) : (
-          <time dateTime={status.lastTickAt}>{formatRelative(status.lastTickAt)}</time>
-        )}
+        {status.lastTickAt === null ? 'never' : <LiveRelativeTime iso={status.lastTickAt} />}
       </dd>
       <dt className="text-fg-muted">Time zone</dt>
       <dd className="font-mono">{status.timezone}</dd>

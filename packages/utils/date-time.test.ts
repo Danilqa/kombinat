@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { formatDuration, formatRelativeCompact, formatSpan } from './date-time';
+import { formatDuration, formatRelative, formatRelativeCompact, formatSpan } from './date-time';
 
 const now = Date.parse('2026-10-06T12:00:00Z');
 const offset = (ms: number) => new Date(now + ms).toISOString();
@@ -19,6 +19,12 @@ test('formatRelativeCompact says now, in or ago', () => {
   assert.equal(formatRelativeCompact(offset(9 * 60_000), now), 'in 9m');
   assert.equal(formatRelativeCompact(offset(-50 * 60_000), now), '50m ago');
   assert.equal(formatRelativeCompact(null, now), '-');
+});
+
+test('formatRelative counts whole units in the past, as a duration does, and rounds the future', () => {
+  assert.equal(formatRelative(offset(-110_000), now), '1 min. ago');
+  assert.equal(formatRelative(offset(-(2 * 3_600_000 - 60_000)), now), '1 hr. ago');
+  assert.equal(formatRelative(offset(110_000), now), 'in 2 min.');
 });
 
 test('formatDuration matches the dashboard', () => {

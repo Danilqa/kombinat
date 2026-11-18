@@ -3,7 +3,7 @@ import { History, Loader, Play, Search, Workflow } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Badge, Command, Kbd } from 'design-system/components';
-import { useDebouncedValue } from 'design-system/utils';
+import { useDebouncedValue, useLiveText } from 'design-system/utils';
 import { QUERY_KEYS_CHANGED_BY_RUN } from 'domains/routine/constants';
 import type { RoutineName } from 'domains/routine/ids';
 import { getRoutines, startRoutineRun } from 'domains/routine/requests';
@@ -84,6 +84,7 @@ interface RunItemProps {
 }
 
 function RunItem({ run, excerpt, onSelect }: RunItemProps) {
+  const startedAgo = useLiveText(now => formatRelativeCompact(run.startedAt, now));
   return (
     <Command.Item value={toRunValue(run)} onSelect={onSelect}>
       <History aria-hidden="true" />
@@ -99,7 +100,7 @@ function RunItem({ run, excerpt, onSelect }: RunItemProps) {
         )}
       </span>
       <span className="shrink-0 text-body-sm text-fg-muted tabular-nums max-sm:hidden">
-        {formatRelativeCompact(run.startedAt)}
+        {startedAgo}
       </span>
       <RunStatusBadge status={run.status} />
     </Command.Item>

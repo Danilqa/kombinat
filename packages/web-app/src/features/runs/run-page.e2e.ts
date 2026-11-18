@@ -49,6 +49,26 @@ test("shows a run's result, transcript and how to resume it", async ({
   await expect(page.getByText('Finished', { exact: true })).toBeVisible();
 });
 
+test("counts a running run's duration every second", async ({ page, kombinat, time }) => {
+  kombinat.addRoutine({ name: 'fix-e2e-tests' });
+  const run = kombinat.addRun({
+    routine: 'fix-e2e-tests',
+    status: 'running',
+    startedAt: time.minutesAgo(1),
+    endedAt: null,
+    exitCode: null,
+    pid: process.pid,
+  });
+  await page.clock.install();
+  await page.goto(`/runs/fix-e2e-tests/${run.id}`);
+  const duration = page.getByRole('definition').filter({ hasText: /^\d+m \d+s$/ });
+  await expect(duration).toHaveText(/^1m \ds$/);
+
+  await page.clock.runFor(30_000);
+
+  await expect(duration).toHaveText(/^1m 3\ds$/);
+});
+
 test('shows why a run failed', async ({ page, kombinat, claude }) => {
   kombinat.addRoutine({ name: 'fix-e2e-tests' });
   const run = kombinat.addRun({
