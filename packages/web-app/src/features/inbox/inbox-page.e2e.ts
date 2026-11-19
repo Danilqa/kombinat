@@ -63,3 +63,53 @@ test('groups the runs that ended since the last look and clears them as they are
   ).toBeVisible();
   await expect(inbox).toHaveAccessibleName('Inbox');
 });
+
+test.describe('on a tablet', () => {
+  test.use({ viewport: { width: 768, height: 1024 } });
+
+  test('fits the highlight of the Inbox tab to it once its count clears', async ({
+    page,
+    kombinat,
+    time,
+  }) => {
+    kombinat.addRoutine({ name: 'triage-sentry' });
+    kombinat.lookAtInbox(time.minutesAgo(120));
+    kombinat.addRun({ routine: 'triage-sentry', startedAt: time.minutesAgo(60) });
+    await page.goto('/inbox');
+    const nav = page.getByRole('navigation', { name: 'Main' });
+    const inbox = nav.getByRole('link', { name: /Inbox/ });
+    const highlight = nav.locator(':scope > span');
+    await expect(inbox).toHaveAccessibleName('Inbox 1 unread');
+
+    await page.getByRole('button', { name: 'Mark all as read' }).click();
+
+    await expect(inbox).toHaveAccessibleName('Inbox');
+    await expect
+      .poll(async () => (await highlight.boundingBox())?.width)
+      .toBe((await inbox.boundingBox())?.width);
+  });
+});
+
+test.describe('on a phone', () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+
+  test('opens the Inbox from beside the search and clears its count', async ({
+    page,
+    kombinat,
+    time,
+  }) => {
+    kombinat.addRoutine({ name: 'triage-sentry' });
+    kombinat.lookAtInbox(time.minutesAgo(120));
+    kombinat.addRun({ routine: 'triage-sentry', startedAt: time.minutesAgo(60) });
+    kombinat.addRun({ routine: 'triage-sentry', startedAt: time.minutesAgo(30) });
+    await page.goto('/');
+    const inbox = page.getByRole('banner').getByRole('link', { name: /Inbox/ });
+    await expect(inbox).toHaveAccessibleName('Inbox 2 unread');
+
+    await inbox.tap();
+    await page.getByRole('button', { name: 'Mark all as read' }).tap();
+
+    await expect(inbox).toHaveAccessibleName('Inbox');
+    await expect(inbox).toHaveAttribute('aria-current', 'page');
+  });
+});

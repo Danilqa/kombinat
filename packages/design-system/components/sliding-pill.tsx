@@ -43,10 +43,20 @@ export function SlidingPill({ activeSelector, className }: SlidingPillProps) {
   useLayoutEffect(() => {
     const container = pillRef.current?.parentElement;
     if (!container) return;
+    let observedActive: Element | null = null;
+    const resizeObserver = new ResizeObserver(() => update());
+    // The active item can resize alone, as when its badge appears, while the list keeps its width.
+    const observeActive = (active: Element | null) => {
+      if (active === observedActive) return;
+      if (observedActive) resizeObserver.unobserve(observedActive);
+      if (active) resizeObserver.observe(active);
+      observedActive = active;
+    };
     const update = () => {
       const active = container.querySelector(activeSelector);
+      observeActive(active);
       setBox(previous => {
-        if (active === null)
+        if (active === null || active.getClientRects().length === 0)
           return previous.isVisible ? { ...previous, isVisible: false } : previous;
         const containerRect = container.getBoundingClientRect();
         const activeRect = active.getBoundingClientRect();
@@ -61,7 +71,6 @@ export function SlidingPill({ activeSelector, className }: SlidingPillProps) {
       });
     };
     update();
-    const resizeObserver = new ResizeObserver(update);
     resizeObserver.observe(container);
     for (const item of container.children) {
       if (item !== pillRef.current) resizeObserver.observe(item);
