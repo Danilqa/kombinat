@@ -19,8 +19,9 @@ export function settingsPopup({ runRetentionDays }: Settings, width: number): Li
     [],
     [text(' Keep runs for')],
     ...options,
-    [text(' Older runs are deleted, except the', S.dim)],
-    [text(' last run of each routine.', S.dim)],
+    [text(' Older runs and webhook calls are', S.dim)],
+    [text(' deleted, except the last run of each', S.dim)],
+    [text(' routine.', S.dim)],
     [],
     [
       text(` 1-${RUN_RETENTION_DAYS_OPTIONS.length}`, S.boldGreen),

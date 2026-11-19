@@ -24,13 +24,20 @@ export function deleteExpiredRuns(now = new Date()): RunRecord[] {
   return expired;
 }
 
-export function startRunCleanup(log: (line: string) => void): () => void {
+interface Cleanup {
+  items: string;
+  deleteExpired: () => unknown[];
+}
+
+export function startCleanup(log: (line: string) => void, cleanups: Cleanup[]): () => void {
   const run = () => {
-    try {
-      const deleted = deleteExpiredRuns();
-      if (deleted.length > 0) log(`deleted ${deleted.length} expired runs`);
-    } catch (err) {
-      log(`run cleanup failed: ${getErrorMessage(err)}`);
+    for (const { items, deleteExpired } of cleanups) {
+      try {
+        const deleted = deleteExpired();
+        if (deleted.length > 0) log(`deleted ${deleted.length} expired ${items}`);
+      } catch (err) {
+        log(`${items} cleanup failed: ${getErrorMessage(err)}`);
+      }
     }
   };
   run();

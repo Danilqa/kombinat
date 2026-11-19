@@ -18,6 +18,10 @@ curl -X POST http://localhost:7433/api/routines/review-pr/webhook -d '{"pullRequ
 
 While the routine runs, new requests wait in a queue and start one by one, oldest first, at the daemon's 30-second check. The agent gets only the body, not the headers or the query string.
 
+## Call log
+
+The Webhooks tab of the routine, in the dashboard and in the terminal dashboard, lists its latest calls, newest first: when each came, the status of the answer, what it did, such as the run it started or why the gate rejected it, and the start of its body. The daemon keeps the last 100 calls of each routine, with their whole body, in `webhooks/<routine>/` of its state folder, and deletes the older ones with the runs when the settings menu of the Runs page keeps runs for a limited time. Requests to a routine without `webhook: true` and bodies over 256 KB are not logged.
+
 ## Gate
 
 `webhookGate` is an optional shell command that decides about each request first, for example to check the sender's signature or to skip events. It runs in the folder with `routines/`, gets the body on stdin and the headers as JSON in `KOMBINAT_WEBHOOK_HEADERS`, and has 3 seconds.
