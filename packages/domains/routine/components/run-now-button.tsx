@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, Loader, Play } from 'lucide-react';
 
@@ -26,6 +26,7 @@ interface RunNowButtonProps {
 
 export function RunNowButton({ routine, isRunning, variant = 'primary', menu }: RunNowButtonProps) {
   const queryClient = useQueryClient();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { mutate, isPending, isSuccess, error } = useMutation({
     mutationFn: () => startRoutineRun(sameOriginApi, routine),
     onSuccess: () =>
@@ -35,6 +36,8 @@ export function RunNowButton({ routine, isRunning, variant = 'primary', menu }: 
   });
   // aria-disabled instead of disabled keeps keyboard focus on the button after it is pressed.
   const isUnavailable = isRunning || isPending;
+  // Closed when a run starts, so the menu does not open again by itself once the run ends.
+  if (isUnavailable && isMenuOpen) setIsMenuOpen(false);
 
   function startRun() {
     if (!isUnavailable) mutate();
@@ -74,12 +77,16 @@ export function RunNowButton({ routine, isRunning, variant = 'primary', menu }: 
           <span className="sr-only"> {routine}</span>
         </Button>
         {menu && (
-          <DropdownMenu.Root>
+          <DropdownMenu.Root
+            open={isMenuOpen}
+            onOpenChange={isOpen => setIsMenuOpen(isOpen && !isUnavailable)}
+          >
             <DropdownMenu.Trigger asChild>
               <Button
                 variant={variant}
                 size="small"
                 aria-label={`More ways to run ${routine}`}
+                aria-disabled={isUnavailable || undefined}
                 className={cn(
                   'rounded-l-none pr-2 pl-1.5 interactive:active:scale-100',
                   MENU_TRIGGER_CLASS_NAMES[variant],

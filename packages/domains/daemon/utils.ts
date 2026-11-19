@@ -65,6 +65,10 @@ export function getCurrentUsageLimits(
   );
 }
 
+export function getClaudeLimits(status: DaemonStatus): CurrentUsageLimit[] {
+  return getCurrentUsageLimits(status.claudeUsage, new Date(status.now).getTime());
+}
+
 export function getMostUsedLimit(limits: CurrentUsageLimit[]): CurrentUsageLimit | undefined {
   return limits.reduce<CurrentUsageLimit | undefined>(
     (most, limit) => (most === undefined || limit.usedRatio > most.usedRatio ? limit : most),

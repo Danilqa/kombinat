@@ -1,7 +1,7 @@
 import { useState, type KeyboardEvent, type SubmitEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader, Play, RotateCcw } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router';
+import { useLocation, useNavigate, useParams } from 'react-router';
 import { Button, Card, ErrorState, Kbd, LoadingState } from 'design-system/components';
 import { PageHeader } from 'design-system/layouts';
 import { QUERY_KEYS_CHANGED_BY_RUN } from 'domains/routine/constants';
@@ -25,6 +25,7 @@ export function ChangePromptPage() {
   const name = routineNameSchema.parse(useParams<'name'>().name ?? '');
   useDocumentTitle(`Change prompt of ${name}`);
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const [changedPrompt, setChangedPrompt] = useState<string | null>(null);
   const { data, error, isPending } = useQuery({
@@ -48,6 +49,12 @@ export function ChangePromptPage() {
   function submit(event: SubmitEvent) {
     event.preventDefault();
     if (!isUnavailable) startRun.mutate(prompt);
+  }
+
+  // Back to the page it was opened from, or to the routine when the page was opened by its URL.
+  function cancel() {
+    if (location.key === 'default') void navigate(getRoutinePath(name));
+    else void navigate(-1);
   }
 
   function submitOnShortcut(event: KeyboardEvent<HTMLTextAreaElement>) {
@@ -86,6 +93,9 @@ export function ChangePromptPage() {
                   Reset
                 </Button>
               )}
+              <Button type="button" variant="tertiary" size="small" onClick={cancel}>
+                Cancel
+              </Button>
               <Button
                 type="submit"
                 form={FORM_ID}

@@ -4,7 +4,7 @@ import { Link, useLocation } from 'react-router';
 import { Button, Kbd, SlidingPill } from 'design-system/components';
 import { BrandMark } from 'design-system/icons';
 import { cn, useHeightProperty } from 'design-system/utils';
-import { DaemonStatusIndicator } from 'domains/daemon/components';
+import { DaemonStatusIndicator, PlanUsageIndicator } from 'domains/daemon/components';
 import { navItems, type NavItem } from '@web-app/constants/nav-items';
 import { INBOX_PATH, ROUTINES_PATH } from '@web-app/constants/path';
 import { useInbox } from '@web-app/hooks/use-inbox';
@@ -103,6 +103,7 @@ export function AppHeader() {
         </Button>
         <span aria-hidden="true" className="mx-1 h-4 w-px bg-line-strong max-sm:hidden" />
         <DaemonStatusIndicator />
+        <PlanUsageIndicator />
       </div>
       <SearchDialog open={isSearchOpen} onOpenChange={setIsSearchOpen} />
     </header>

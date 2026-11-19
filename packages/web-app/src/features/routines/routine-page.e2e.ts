@@ -39,6 +39,44 @@ test("shows a routine's settings, runs, skipped runs and prompt", async ({ page,
   await expect(page.getByRole('heading', { name: 'Steps' })).toBeVisible();
 });
 
+test('keeps the open tab in the URL', async ({ page, kombinat }) => {
+  kombinat.addRoutine({ name: 'triage-sentry', prompt: '## Steps\n\nFix the top issue.' });
+  await page.goto('/routines/triage-sentry');
+
+  await page.getByRole('tab', { name: 'Prompt' }).click();
+  await expect(page).toHaveURL(/\/routines\/triage-sentry\?tab=prompt$/);
+  await page.reload();
+  await expect(page.getByRole('tab', { name: 'Prompt' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('heading', { name: 'Steps' })).toBeVisible();
+
+  await page.getByRole('tab', { name: /^Runs/ }).click();
+  await expect(page).toHaveURL(/\/routines\/triage-sentry$/);
+  await page.goto('/routines/triage-sentry?tab=webhooks');
+  await expect(page.getByRole('tab', { name: /^Runs/ })).toHaveAttribute('aria-selected', 'true');
+});
+
+test('blocks both halves of the run button while the routine runs', async ({ page, kombinat }) => {
+  kombinat.addRoutine({ name: 'triage-sentry' });
+  kombinat.addRun({
+    routine: 'triage-sentry',
+    status: 'running',
+    endedAt: null,
+    exitCode: null,
+    pid: process.pid,
+  });
+  await page.goto('/routines/triage-sentry');
+
+  await expect(page.getByRole('button', { name: 'Running triage-sentry' })).toHaveAttribute(
+    'aria-disabled',
+    'true',
+  );
+  const menu = page.getByRole('button', { name: 'More ways to run triage-sentry' });
+  await expect(menu).toHaveAttribute('aria-disabled', 'true');
+  await menu.click({ force: true });
+  await menu.press('Enter');
+  await expect(page.getByRole('menu')).toBeHidden();
+});
+
 test('logs the webhook calls of a routine with what each of them did', async ({
   page,
   kombinat,

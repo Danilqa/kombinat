@@ -41,6 +41,7 @@ test("shows a run's result, transcript and how to resume it", async ({
         - text: test.
   `);
   await page.getByRole('tab', { name: 'Transcript & chat 5' }).click();
+  await expect(page).toHaveURL(new RegExp(`/runs/fix-e2e-tests/${run.id}\\?tab=transcript$`));
   await expect(page.getByText('Session started')).toBeVisible();
   await expect(page.getByText('The checkout test fails, running it alone.')).toBeVisible();
   await page.getByRole('button', { name: 'Bash pnpm e2e checkout' }).click();

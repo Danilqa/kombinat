@@ -17,6 +17,7 @@ import { Breadcrumbs } from '@web-app/components/breadcrumbs';
 import { RUNS_PATH, getRoutinePath } from '@web-app/constants/path';
 import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 import { useMarkRunsRead } from '@web-app/hooks/use-mark-runs-read';
+import { useTabSearchParam } from '@web-app/hooks/use-tab-search-param';
 import { RunChat } from './run-chat';
 
 // A run writes its record once its before hook is done, which takes up to three minutes.
@@ -27,11 +28,11 @@ interface RunViewProps extends RunWithTranscript {}
 
 function RunView({ run, transcript }: RunViewProps) {
   const hasOutput = Boolean(run.error) || Boolean(run.resultText);
-  const [tab, setTab] = useState('information');
+  const [tab, setTab] = useTabSearchParam(['information', 'transcript']);
   const [searchValue, setSearchValue] = useState<string | null>(null);
   const isSearchOpen = searchValue !== null;
   const searchButtonRef = useRef<HTMLButtonElement>(null);
-  const canSearch = tab === 'transcript' && transcript.items.length > 0;
+  const canSearch = isMatching('transcript', tab) && transcript.items.length > 0;
 
   function handleTabChange(value: string) {
     setTab(value);
