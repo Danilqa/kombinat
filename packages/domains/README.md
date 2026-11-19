@@ -144,10 +144,10 @@ A gate that exits with 79 prints `{"conversation":"<key>","message":"…"}`, wit
 
 #### Call log
 
-Each request that reaches a routine with `webhook: true` is logged as a call in `<state dir>/webhooks/<routine>/<id>.json`, in `call-log.ts`: when it came, its outcome (`started`, `continued`, `queued`, `ignored`, `rejected`, `timed_out`, `disabled` or `queue_full`), the status of the answer, the run it started, continued or will start, the gate's reason for a rejection and the whole body. The id is the time it came in milliseconds, strictly increasing, so the file names sort oldest first.
+Each request that reaches a routine with `webhook: true` is logged as a call in `<state dir>/webhooks/<routine>/<id>.json`, in `call-log.ts`: when it came, its outcome (`started`, `continued`, `queued`, `ignored`, `rejected`, `timed_out`, `disabled` or `queue_full`), the status of the answer, the run it started, continued or will start and the gate's reason for a rejection. Its whole body sits next to it in `<id>.body`. The id is the time it came in milliseconds, strictly increasing, so the file names sort oldest first.
 
 - A routine keeps its newest 100 calls: logging a call deletes the older ones.
-- The routine detail serves them newest first, each with the size of its body and its first 500 characters instead of the body.
+- The routine detail serves them newest first, each with the size of its body and its first 500 characters instead of the body. It reads only the start of each body file, since clients poll the detail.
 - With a run retention set, the daemon deletes the calls that came longer ago than that, at the same times as it deletes runs. Unlike with runs, the newest call of a routine is not kept.
 
 ### settings

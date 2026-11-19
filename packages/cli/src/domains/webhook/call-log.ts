@@ -2,10 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { match, P } from 'ts-pattern';
-import { z } from 'zod';
+import type { z } from 'zod';
 
 import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
-import { webhookCallIdSchema } from 'domains/webhook/ids';
+import { webhookCallIdSchema, type WebhookCallId } from 'domains/webhook/ids';
 import { webhookCallSchema } from 'domains/webhook/schemas';
 import type { WebhookCall } from 'domains/webhook/types';
 import { findExpiredWebhookCalls } from 'domains/webhook/utils';
@@ -17,10 +17,10 @@ import type { WebhookOutcome } from './receive';
 
 export const WEBHOOK_CALL_LIMIT = 100;
 const PREVIEW_CHARS = 500;
+// A character takes at most 4 bytes of UTF-8.
+const PREVIEW_BYTES = PREVIEW_CHARS * 4;
 
-const storedWebhookCallSchema = webhookCallSchema
-  .omit({ bytes: true, preview: true })
-  .extend({ body: z.string() });
+const storedWebhookCallSchema = webhookCallSchema.omit({ bytes: true, preview: true });
 
 type StoredWebhookCall = z.infer<typeof storedWebhookCallSchema>;
 
@@ -51,6 +51,30 @@ function listCallFiles(routine: RoutineName): string[] {
     .filter(entry => entry.endsWith('.json'))
     .sort()
     .reverse();
+}
+
+function getBodyFile(routine: RoutineName, id: WebhookCallId): string {
+  return path.join(getCallsDir(routine), `${id}.body`);
+}
+
+function deleteCall(routine: RoutineName, id: WebhookCallId): void {
+  fs.rmSync(path.join(getCallsDir(routine), `${id}.json`), { force: true });
+  fs.rmSync(getBodyFile(routine, id), { force: true });
+}
+
+function readBodyStart(file: string): Pick<WebhookCall, 'bytes' | 'preview'> {
+  if (!fs.existsSync(file)) return { bytes: 0, preview: '' };
+  const fd = fs.openSync(file, 'r');
+  try {
+    const buffer = Buffer.alloc(PREVIEW_BYTES);
+    const bytesRead = fs.readSync(fd, buffer, 0, PREVIEW_BYTES, 0);
+    return {
+      bytes: fs.fstatSync(fd).size,
+      preview: buffer.toString('utf8', 0, bytesRead).slice(0, PREVIEW_CHARS),
+    };
+  } finally {
+    fs.closeSync(fd);
+  }
 }
 
 function readCalls(routine: RoutineName): StoredWebhookCall[] {
@@ -93,19 +117,20 @@ export function logWebhookCall(routine: RoutineName, entry: WebhookCallEntry): v
     receivedAt: new Date(lastReceivedAt).toISOString(),
     ...logged,
     status: entry.status,
-    body: entry.body.toString('utf8'),
   };
+  // Before the call, since a call is logged once its JSON file exists.
+  fs.writeFileSync(getBodyFile(routine, id), entry.body);
   writeJsonFile(path.join(dir, `${id}.json`), call);
   for (const old of listCallFiles(routine).slice(WEBHOOK_CALL_LIMIT)) {
-    fs.rmSync(path.join(dir, old), { force: true });
+    deleteCall(routine, webhookCallIdSchema.parse(old.slice(0, -'.json'.length)));
   }
 }
 
+// Reads only the start of each body, since clients poll the routine detail.
 export function listWebhookCalls(routine: RoutineName): WebhookCall[] {
-  return readCalls(routine).map(({ body, ...call }) => ({
+  return readCalls(routine).map(call => ({
     ...call,
-    bytes: Buffer.byteLength(body),
-    preview: body.slice(0, PREVIEW_CHARS),
+    ...readBodyStart(getBodyFile(routine, call.id)),
   }));
 }
 
@@ -116,9 +141,7 @@ export function deleteExpiredWebhookCalls(now = new Date()): StoredWebhookCall[]
   return fs.readdirSync(root).flatMap(entry => {
     const routine = routineNameSchema.parse(entry);
     const expired = findExpiredWebhookCalls(readCalls(routine), runRetentionDays, now);
-    for (const call of expired) {
-      fs.rmSync(path.join(getCallsDir(routine), `${call.id}.json`), { force: true });
-    }
+    for (const call of expired) deleteCall(routine, call.id);
     return expired;
   });
 }

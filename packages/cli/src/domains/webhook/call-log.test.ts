@@ -18,6 +18,10 @@ const triage = routineNameSchema.parse('triage');
 const review = routineNameSchema.parse('review');
 const runId = runIdSchema.parse('20261119T090000Z-ab12');
 
+function listStoredFiles(routine: typeof triage): string[] {
+  return fs.readdirSync(path.join(tmp, 'state', 'webhooks', routine));
+}
+
 function logIgnored(routine: typeof triage, receivedAt: string, body = '{}'): void {
   logWebhookCall(routine, {
     receivedAt: new Date(receivedAt),
@@ -46,6 +50,7 @@ test('deletes the webhook calls older than the run retention once one is set', (
     ['2026-11-19T09:00:00.000Z'],
   );
   assert.deepEqual(listWebhookCalls(review), []);
+  assert.deepEqual(listStoredFiles(review), []);
 });
 
 test('lists the newest calls first with a preview of the body, and keeps only the newest ones', () => {
@@ -54,7 +59,7 @@ test('lists the newest calls first with a preview of the body, and keeps only th
     receivedAt: started,
     outcome: { outcome: 'started', runId },
     status: 200,
-    body: Buffer.from(`{"title":"${'é'.repeat(600)}"}`),
+    body: Buffer.from(`{"title":"${'é'.repeat(1200)}"}`),
   });
   logWebhookCall(review, {
     receivedAt: started,
@@ -81,7 +86,7 @@ test('lists the newest calls first with a preview of the body, and keeps only th
       status: 200,
       runId,
       reason: null,
-      bytes: 1212,
+      bytes: 2412,
       preview: `{"title":"${'é'.repeat(490)}`,
     },
   ]);
@@ -93,4 +98,5 @@ test('lists the newest calls first with a preview of the body, and keeps only th
     listWebhookCalls(review).map(call => call.outcome),
     Array.from({ length: WEBHOOK_CALL_LIMIT }, () => 'ignored'),
   );
+  assert.equal(listStoredFiles(review).length, WEBHOOK_CALL_LIMIT * 2);
 });
