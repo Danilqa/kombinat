@@ -94,11 +94,7 @@ function toReplyMessage({ text, source }: MessageEvent): ChatMessage {
   return { text, source };
 }
 
-export function appendChatEvent(record: RunRecord, event: ChatEvent): void {
-  fs.appendFileSync(record.logFile, `${JSON.stringify(event)}\n`);
-}
-
-export function appendUsageLimitEvent(record: RunRecord, event: UsageLimitEvent): void {
+export function appendLogEvent(record: RunRecord, event: ChatEvent | UsageLimitEvent): void {
   fs.appendFileSync(record.logFile, `${JSON.stringify(event)}\n`);
 }
 

@@ -19,12 +19,7 @@ import { writePlanUsage } from '../agent/storage';
 import type { Agent, Invocation, OutputEvent, RunContext, UsageLimitStop } from '../agent/types';
 import type { Routine } from '../routine/types';
 import type { ChatMessage } from './event-log';
-import {
-  appendChatEvent,
-  appendUsageLimitEvent,
-  readLastMessage,
-  readRunEvents,
-} from './event-log';
+import { appendLogEvent, readLastMessage, readRunEvents } from './event-log';
 import { getBeforeHookError, HOOK_TIMEOUT_MS, runHook } from './hooks';
 import { appendPayload, takePayload, takePrompt } from './payload';
 import { getRunsDir, listRuns, readRunRecord, writeRunRecord } from './storage';
@@ -242,7 +237,7 @@ async function runWaitingOutLimits(run: LimitedRun): Promise<Partial<RunRecord>>
           });
     if (wait === null || invocation === null) return exit.outcome;
 
-    appendUsageLimitEvent(record, { type: 'usage_limit_wait', ...wait });
+    appendLogEvent(record, { type: 'usage_limit_wait', ...wait });
     writeRunRecord({
       ...record,
       status: 'waiting',
@@ -252,7 +247,7 @@ async function runWaitingOutLimits(run: LimitedRun): Promise<Partial<RunRecord>>
       usageLimit: wait,
     });
     const waitOutcome = await waitOutUsageLimit(record, wait);
-    appendUsageLimitEvent(record, {
+    appendLogEvent(record, {
       type: 'usage_limit_end',
       at: new Date().toISOString(),
       outcome: waitOutcome,
@@ -401,7 +396,7 @@ export async function replyToRun(routine: Routine, run: RunRecord): Promise<RunR
         ).outcome;
   // An error the agent reported is in its own events already.
   if (!isMatching({ status: 'succeeded' }, outcome) && session.error === null) {
-    appendChatEvent(run, { type: 'reply_error', error: outcome.error ?? 'The reply failed' });
+    appendLogEvent(run, { type: 'reply_error', error: outcome.error ?? 'The reply failed' });
   }
   const finished: RunRecord = {
     ...run,
@@ -466,7 +461,7 @@ export function startDetachedRun(routineName: RoutineName, options: RunOptions):
 }
 
 export function startDetachedReply(run: RunRecord, message: ChatMessage): void {
-  appendChatEvent(run, { type: 'message', ...message });
+  appendLogEvent(run, { type: 'message', ...message });
   const child = spawn(process.execPath, getCliArgs('reply', run.routine, run.id), {
     cwd: config.projectRoot,
     env: process.env,

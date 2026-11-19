@@ -7,6 +7,7 @@ import { makeRunRecord } from './mocks';
 import type { RunRecord, RunsPage } from './types';
 import {
   checkIsRunActive,
+  checkIsRunAtWork,
   decodeRunsCursor,
   encodeRunsCursor,
   filterRuns,
@@ -95,6 +96,12 @@ test('a run is active while it runs and while it replies to a message', () => {
   assert.equal(checkIsRunActive(makeRunRecord({ status: 'running' })), true);
   assert.equal(checkIsRunActive(makeRunRecord({ status: 'succeeded', replyPid: 42 })), true);
   assert.equal(checkIsRunActive(makeRunRecord({ status: 'failed' })), false);
+});
+
+test('a run that waits for a usage limit is active but not at work', () => {
+  assert.equal(checkIsRunActive(makeRunRecord({ status: 'waiting' })), true);
+  assert.equal(checkIsRunAtWork(makeRunRecord({ status: 'waiting' })), false);
+  assert.equal(checkIsRunAtWork(makeRunRecord({ status: 'succeeded', replyPid: 42 })), true);
 });
 
 test('a running run lasts until now, and one that started after now has lasted nothing yet', () => {

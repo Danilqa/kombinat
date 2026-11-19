@@ -14,7 +14,11 @@ import type {
   RunsPageQuery,
   RunStatus,
   RunTrigger,
+  UsageLimitWait,
 } from './types';
+
+// The runner continues a run within seconds of its reset when a slot is free.
+const CONTINUE_GRACE_MS = 10_000;
 
 export function createRunId(now = new Date()): RunId {
   const stamp = now
@@ -37,6 +41,19 @@ export function getRunDurationMs(
 // A run is active while its agent is at work, waits out a usage limit or replies to a message.
 export function checkIsRunActive(run: Pick<RunRecord, 'status' | 'replyPid'>): boolean {
   return isMatching({ status: P.union('running', 'waiting') }, run) || run.replyPid !== null;
+}
+
+// A run that waits out a usage limit uses neither the Mac nor the plan, so it takes no slot.
+export function checkIsRunAtWork(run: Pick<RunRecord, 'status' | 'replyPid'>): boolean {
+  return checkIsRunActive(run) && !isMatching({ status: 'waiting' }, run);
+}
+
+// Past its reset, a waiting run continues as soon as a run at work finishes and frees a slot.
+export function checkIsWaitingForSlot(
+  wait: Pick<UsageLimitWait, 'continuesAt'>,
+  now: number,
+): boolean {
+  return now - new Date(wait.continuesAt).getTime() > CONTINUE_GRACE_MS;
 }
 
 // Only an agent that resumes sessions gives a run a resume command, and it needs the session.

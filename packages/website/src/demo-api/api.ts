@@ -15,6 +15,7 @@ import type { RunRecord } from 'domains/run/types';
 import {
   checkCanContinueRun,
   checkIsRunActive,
+  checkIsRunAtWork,
   createRunId,
   filterRuns,
   findExpiredRuns,
@@ -228,9 +229,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
   }
 
   function getStatus(now: Date): DaemonStatus {
-    const running = listRuns(now).filter(
-      run => checkIsRunActive(run) && !isMatching({ status: 'waiting' }, run),
-    ).length;
+    const running = listRuns(now).filter(checkIsRunAtWork).length;
     return {
       pid: 48213,
       startedAt: daemonStartedAt.toISOString(),

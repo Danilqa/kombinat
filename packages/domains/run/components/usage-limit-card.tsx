@@ -4,7 +4,7 @@ import { useId, useState } from 'react';
 import { isMatching } from 'ts-pattern';
 
 import { Button } from 'design-system/components';
-import { useLiveText } from 'design-system/utils';
+import { useLiveText, useLiveValue } from 'design-system/utils';
 import { formatClockOrDayTime, formatRelative } from 'utils/date-time';
 import { sameOriginApi } from 'utils/http';
 
@@ -13,6 +13,7 @@ import { getUsageLimitLabel } from '../../transcript/utils';
 import { QUERY_KEYS_CHANGED_BY_WAIT_ACTION } from '../constants';
 import { sendWaitAction } from '../requests';
 import type { RunRecord, UsageLimitWait, UsageLimitWaitAction } from '../types';
+import { checkIsWaitingForSlot } from '../utils';
 
 const SOON_MS = 10_000;
 
@@ -43,6 +44,7 @@ export function UsageLimitCard({ run, wait }: UsageLimitCardProps) {
       ? `, ${formatRelative(wait.continuesAt, now)}`
       : '',
   );
+  const isWaitingForSlot = useLiveValue(now => checkIsWaitingForSlot(wait, now));
   const isBusy = isPending || requested !== null;
   const isContinuing = isMatching('continue', requested);
   const isStopping = isMatching('stop', requested);
@@ -58,18 +60,34 @@ export function UsageLimitCard({ run, wait }: UsageLimitCardProps) {
     >
       <h2 id={titleId} className="flex items-start gap-2 text-body font-medium text-fg">
         <Hourglass aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-info" />
-        Waiting for {getAgentLabel(run.agent)}&rsquo;s {getUsageLimitLabel(wait.limit)} to reset
+        {isWaitingForSlot ? (
+          'Waiting for a free run slot'
+        ) : (
+          <>
+            Waiting for {getAgentLabel(run.agent)}&rsquo;s {getUsageLimitLabel(wait.limit)} to reset
+          </>
+        )}
       </h2>
       <p className="mt-1 text-body-sm text-fg-muted sm:pl-6">
         The agent stopped at{' '}
         <time dateTime={wait.stoppedAt} className="text-fg-secondary tabular-nums">
           {formatClockOrDayTime(wait.stoppedAt)}
         </time>
-        . Kombinat continues its session at{' '}
-        <time dateTime={wait.continuesAt} className="font-medium text-fg tabular-nums">
-          {formatClockOrDayTime(wait.continuesAt)}
-        </time>
-        {countdown}, right where it left off.
+        {isWaitingForSlot ? (
+          <>
+            {' '}
+            and the {getUsageLimitLabel(wait.limit)} has reset. All run slots are taken, so Kombinat
+            continues its session as soon as another run finishes.
+          </>
+        ) : (
+          <>
+            . Kombinat continues its session at{' '}
+            <time dateTime={wait.continuesAt} className="font-medium text-fg tabular-nums">
+              {formatClockOrDayTime(wait.continuesAt)}
+            </time>
+            {countdown}, right where it left off.
+          </>
+        )}
       </p>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 sm:pl-6">
         <div className="flex items-center gap-2">

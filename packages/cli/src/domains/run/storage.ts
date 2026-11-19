@@ -11,7 +11,7 @@ import { checkIsRunActive, compareRunsByNewest } from 'domains/run/utils';
 
 import { config } from '../../config';
 import { readJsonFile, writeJsonFile } from '../../utils/json';
-import { appendChatEvent, appendUsageLimitEvent } from './event-log';
+import { appendLogEvent } from './event-log';
 
 export function getRunsDir(routine: RoutineName): string {
   return path.join(config.stateDir, 'runs', routine);
@@ -44,12 +44,12 @@ export function checkIsProcessAlive(pid: number | null): boolean {
 function reconcileRecord(record: RunRecord): RunRecord {
   if (record.replyPid !== null && !checkIsProcessAlive(record.replyPid)) {
     const reconciled: RunRecord = { ...record, replyPid: null };
-    appendChatEvent(record, { type: 'reply_error', error: 'Reply process disappeared' });
+    appendLogEvent(record, { type: 'reply_error', error: 'Reply process disappeared' });
     writeRunRecord(reconciled);
     return reconciled;
   }
-  const isAtWork = isMatching({ status: P.union('running', 'waiting') }, record);
-  if (!isAtWork || checkIsProcessAlive(record.pid)) return record;
+  const hasRunner = isMatching({ status: P.union('running', 'waiting') }, record);
+  if (!hasRunner || checkIsProcessAlive(record.pid)) return record;
   const endedAt = new Date().toISOString();
   const reconciled: RunRecord = {
     ...record,
@@ -59,7 +59,7 @@ function reconcileRecord(record: RunRecord): RunRecord {
     usageLimit: null,
   };
   if (record.usageLimit !== null) {
-    appendUsageLimitEvent(record, { type: 'usage_limit_end', at: endedAt, outcome: 'stopped' });
+    appendLogEvent(record, { type: 'usage_limit_end', at: endedAt, outcome: 'stopped' });
   }
   writeRunRecord(reconciled);
   return reconciled;

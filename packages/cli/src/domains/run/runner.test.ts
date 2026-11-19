@@ -45,7 +45,7 @@ process.env['CLAUDE_BIN'] = fakeClaude;
 
 const { config } = await import('../../config');
 const { buildRoutine } = await import('../routine/utils');
-const { appendChatEvent } = await import('./event-log');
+const { appendLogEvent } = await import('./event-log');
 const { writePayload, writePrompt } = await import('./payload');
 const { checkIsRunning, checkIsStarting, replyToRun, runRoutine, startDetachedRun } =
   await import('./runner');
@@ -492,7 +492,7 @@ function makeFinishedRun(
 test('a reply resumes the session with the last message and leaves the outcome of the run alone', async () => {
   const routine = buildRoutine(path.join(tmp, 'chat.md'), `---\ncwd: ${tmp}\n---\nFind the bug.`);
   const run = makeFinishedRun('chat', '20261117T090000Z-chat');
-  appendChatEvent(run, { type: 'message', text: 'Open a PR with the fix', source: 'dashboard' });
+  appendLogEvent(run, { type: 'message', text: 'Open a PR with the fix', source: 'dashboard' });
   const finished = await replyToRun(routine, run);
   assert.deepEqual(finished, run);
   assert.deepEqual(readRunRecord(run.routine, run.id), run);
@@ -502,7 +502,7 @@ test('a reply resumes the session with the last message and leaves the outcome o
 test('a reply that cannot start logs why', async () => {
   const routine = makeRoutine('chat-command', '');
   const run = makeFinishedRun('chat-command', '20261117T090000Z-cmnd', { agent: 'command' });
-  appendChatEvent(run, { type: 'message', text: 'Again', source: 'dashboard' });
+  appendLogEvent(run, { type: 'message', text: 'Again', source: 'dashboard' });
   const finished = await replyToRun(routine, run);
   assert.equal(finished.replyPid, null);
   assert.deepEqual(readLog(run).at(-1), {

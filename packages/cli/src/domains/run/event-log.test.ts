@@ -8,7 +8,7 @@ import { match } from 'ts-pattern';
 
 import { makeRunRecord } from 'domains/run/mocks';
 
-import { appendChatEvent, buildRunTranscript, readLastMessage, readRunEvents } from './event-log';
+import { appendLogEvent, buildRunTranscript, readLastMessage, readRunEvents } from './event-log';
 
 test('the before hook comes first and every logged event is counted', () => {
   const events = [
@@ -203,8 +203,8 @@ test('reads the last message sent to a run', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kombinat-event-log-'));
   const record = makeRunRecord({ logFile: path.join(dir, 'run.jsonl') });
   assert.equal(readLastMessage(record), null);
-  appendChatEvent(record, { type: 'message', text: 'Open a PR', source: 'dashboard' });
-  appendChatEvent(record, { type: 'reply_error', error: 'failed' });
-  appendChatEvent(record, { type: 'message', text: 'Try again', source: 'webhook' });
+  appendLogEvent(record, { type: 'message', text: 'Open a PR', source: 'dashboard' });
+  appendLogEvent(record, { type: 'reply_error', error: 'failed' });
+  appendLogEvent(record, { type: 'message', text: 'Try again', source: 'webhook' });
   assert.deepEqual(readLastMessage(record), { text: 'Try again', source: 'webhook' });
 });

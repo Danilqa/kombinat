@@ -19,6 +19,7 @@ import type { RunRecord } from 'domains/run/types';
 import {
   checkCanContinueRun,
   checkIsRunActive,
+  checkIsRunAtWork,
   createRunId,
   filterRuns,
   paginateRuns,
@@ -146,7 +147,7 @@ function getStatus(startedAt: Date): DaemonStatus {
     codexBin: config.codexBin,
     maxConcurrentRuns: config.maxConcurrentRuns,
     running:
-      getRunningRuns().filter(run => !isMatching({ status: 'waiting' }, run)).length +
+      getRunningRuns().filter(checkIsRunAtWork).length +
       loadRoutines().filter(routine => checkIsStarting(routine.name)).length,
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     now: new Date().toISOString(),

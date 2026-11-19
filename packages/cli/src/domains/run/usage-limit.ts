@@ -5,10 +5,12 @@ import { match } from 'ts-pattern';
 
 import { usageLimitWaitActionSchema } from 'domains/run/schemas';
 import type { RunRecord, UsageLimitWait, UsageLimitWaitAction } from 'domains/run/types';
+import { checkIsRunAtWork } from 'domains/run/utils';
 import type { UsageLimitOutcome } from 'domains/transcript/types';
 
+import { config } from '../../config';
 import type { UsageLimitStop } from '../agent/types';
-import { getRunsDir } from './storage';
+import { getRunningRuns, getRunsDir } from './storage';
 
 // A limit resets on the server's clock, so a session continued on the second could be refused again.
 const RESET_GRACE_MS = 60_000;
@@ -46,11 +48,16 @@ function takeWaitAction(record: RunRecord): UsageLimitWaitAction | null {
   return action.success ? action.data : null;
 }
 
+function checkHasFreeSlot(): boolean {
+  return getRunningRuns().filter(checkIsRunAtWork).length < config.maxConcurrentRuns;
+}
+
+// Continue now skips the slot check, as Run now does, since someone asked for it.
 function readWaitOutcome(record: RunRecord, continuesAt: number): UsageLimitOutcome | null {
   return match(takeWaitAction(record))
     .with('stop', (): UsageLimitOutcome => 'stopped')
     .with('continue', (): UsageLimitOutcome => 'continued')
-    .with(null, () => (Date.now() >= continuesAt ? 'continued' : null))
+    .with(null, () => (Date.now() >= continuesAt && checkHasFreeSlot() ? 'continued' : null))
     .exhaustive();
 }
 
@@ -63,11 +70,15 @@ export function waitOutUsageLimit(
   takeWaitAction(record);
   const continuesAt = new Date(wait.continuesAt).getTime();
   return new Promise(resolve => {
-    const timer = setInterval(() => {
+    const poll = () => {
       const outcome = readWaitOutcome(record, continuesAt);
-      if (outcome === null) return;
-      clearInterval(timer);
+      if (outcome === null) {
+        // Runs that share a reset check at different moments, so two never take the last slot.
+        setTimeout(poll, POLL_MS * (0.5 + Math.random()));
+        return;
+      }
       resolve(outcome);
-    }, POLL_MS);
+    };
+    setTimeout(poll, POLL_MS * Math.random());
   });
 }

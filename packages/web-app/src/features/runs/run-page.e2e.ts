@@ -114,6 +114,34 @@ test('a run that waits for a usage limit says when it continues and can continue
   await expect(card.getByRole('button', { name: 'Continuing…' })).toBeVisible();
 });
 
+test('a waiting run past its reset says it continues once another run finishes', async ({
+  page,
+  kombinat,
+  time,
+}) => {
+  kombinat.addRoutine({ name: 'fix-e2e-tests' });
+  const run = kombinat.addRun({
+    routine: 'fix-e2e-tests',
+    status: 'waiting',
+    endedAt: null,
+    exitCode: null,
+    pid: process.pid,
+    sessionId: 'b5c1e2d4',
+    resumeCommand: 'claude --resume b5c1e2d4',
+    usageLimit: {
+      limit: 'session',
+      stoppedAt: time.minutesAgo(300),
+      continuesAt: time.minutesAgo(2),
+    },
+  });
+
+  await page.goto(`/runs/fix-e2e-tests/${run.id}`);
+
+  const card = page.getByRole('region', { name: 'Waiting for a free run slot' });
+  await expect(card).toContainText('the 5-hour limit has reset');
+  await expect(card.getByRole('button', { name: 'Continue now' })).toBeVisible();
+});
+
 test('shows why a run failed', async ({ page, kombinat, claude }) => {
   kombinat.addRoutine({ name: 'fix-e2e-tests' });
   const run = kombinat.addRun({

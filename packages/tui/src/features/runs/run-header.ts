@@ -1,5 +1,5 @@
 import type { RunRecord } from 'domains/run/types';
-import { getRunDurationMs, getTriggerLabel } from 'domains/run/utils';
+import { checkIsWaitingForSlot, getRunDurationMs, getTriggerLabel } from 'domains/run/utils';
 import { getUsageLimitLabel } from 'domains/transcript/utils';
 import { formatDuration } from 'utils/date-time';
 
@@ -26,10 +26,15 @@ export function runHeaderLines(
       : [
           {
             label: 'continues',
-            value: [
-              ...timeValue(run.usageLimit.continuesAt, now),
-              text(`  after the ${getUsageLimitLabel(run.usageLimit.limit)}`, S.dim),
-            ],
+            value: checkIsWaitingForSlot(run.usageLimit, now)
+              ? [
+                  text('once another run finishes'),
+                  text(`  the ${getUsageLimitLabel(run.usageLimit.limit)} has reset`, S.dim),
+                ]
+              : [
+                  ...timeValue(run.usageLimit.continuesAt, now),
+                  text(`  after the ${getUsageLimitLabel(run.usageLimit.limit)}`, S.dim),
+                ],
             isWide: true,
           },
         ]),
