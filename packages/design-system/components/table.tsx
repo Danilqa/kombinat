@@ -69,7 +69,7 @@ function TableFrame({ header, tableClassName, children }: TableFrameProps) {
         <div
           aria-hidden="true"
           inert
-          className="sticky top-[var(--app-header-height,0px)] z-10 -mx-px -mt-px h-[calc(var(--table-header-height,36px)+2px)] bg-page"
+          className="top-below-headers sticky z-10 -mx-px -mt-px h-[calc(var(--table-header-height,36px)+2px)] bg-page"
         >
           <div
             ref={copyScrollerRef}

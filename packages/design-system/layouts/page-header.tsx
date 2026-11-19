@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import { cn } from '../utils';
+import { useRef, type ReactNode } from 'react';
+import { cn, useHeightProperty } from '../utils';
 
 interface PageHeaderTitleProps {
   children: ReactNode;
@@ -12,6 +12,20 @@ function PageHeaderTitle({ children, className }: PageHeaderTitleProps) {
   );
 }
 
+interface PageHeaderBarProps {
+  children: ReactNode;
+}
+
+function PageHeaderBar({ children }: PageHeaderBarProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  useHeightProperty(ref, '--page-header-height');
+  return (
+    <div ref={ref} className="sticky top-[var(--app-header-height,0px)] z-30 mb-3 bg-page pb-3">
+      {children}
+    </div>
+  );
+}
+
 interface PageHeaderProps {
   title: string;
   aside?: ReactNode;
@@ -19,10 +33,12 @@ interface PageHeaderProps {
 
 function PageHeader({ title, aside }: PageHeaderProps) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
-      <PageHeaderTitle>{title}</PageHeaderTitle>
-      {aside}
-    </div>
+    <PageHeaderBar>
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+        <PageHeaderTitle>{title}</PageHeaderTitle>
+        {aside}
+      </div>
+    </PageHeaderBar>
   );
 }
 
@@ -34,4 +50,9 @@ function PageHeaderAside({ children }: PageHeaderAsideProps) {
   return <span className="text-body-sm text-fg-muted tabular-nums">{children}</span>;
 }
 
-export { PageHeader as Root, PageHeaderTitle as Title, PageHeaderAside as Aside };
+export {
+  PageHeader as Root,
+  PageHeaderBar as Bar,
+  PageHeaderTitle as Title,
+  PageHeaderAside as Aside,
+};

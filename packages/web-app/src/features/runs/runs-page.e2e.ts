@@ -66,3 +66,27 @@ test('keeps runs for the chosen time, and always the last run of each routine', 
   await page.getByRole('button', { name: 'Settings' }).click();
   await expect(page.getByRole('menuitemradio', { name: '1 week' })).toBeChecked();
 });
+
+test('keeps the page header and the table header on top as the list scrolls', async ({
+  page,
+  kombinat,
+  time,
+}) => {
+  kombinat.addRoutine({ name: 'triage-sentry' });
+  for (let index = 1; index <= 40; index++) {
+    kombinat.addRun({ routine: 'triage-sentry', startedAt: time.minutesAgo(index * 10) });
+  }
+  await page.goto('/runs');
+  const title = page.getByRole('heading', { level: 1, name: 'Runs' });
+  await expect(page.getByText('40 runs')).toBeVisible();
+
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+
+  await expect(title).toBeInViewport();
+  const titleBox = await title.boundingBox();
+  const titleBottom = (titleBox?.y ?? 0) + (titleBox?.height ?? 0);
+  const headerTops = await page
+    .locator('th', { hasText: /^Routine$/ })
+    .evaluateAll(cells => cells.map(cell => cell.getBoundingClientRect().top));
+  expect(headerTops.filter(top => top > titleBottom && top < titleBottom + 32)).toHaveLength(1);
+});

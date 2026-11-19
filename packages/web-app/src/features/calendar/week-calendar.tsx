@@ -758,7 +758,7 @@ export function WeekCalendar() {
     <>
       {currentWeek.error && <ErrorState message={currentWeek.error.message} />}
       <div className="text-fg [--hour-height:48px] max-sm:[--hour-height:60px]">
-        <div className="sticky top-[var(--app-header-height,0px)] z-40 bg-page">
+        <div className="top-below-headers sticky z-40 bg-page">
           <div className="rounded-t-xl border-x border-t border-line bg-surface">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
               <h2 aria-live="polite" className="text-title-md text-fg tabular-nums">
