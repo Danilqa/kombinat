@@ -1,5 +1,6 @@
 const CACHE = 'kombinat-offline-v1';
 const OFFLINE_URL = '/offline.html';
+const GATEWAY_ERRORS = [502, 503, 504];
 
 const cacheOfflinePage = () =>
   caches.open(CACHE).then(cache => cache.add(new Request(OFFLINE_URL, { cache: 'reload' })));
@@ -27,6 +28,8 @@ self.addEventListener('fetch', event => {
     (async () => {
       try {
         const response = (await event.preloadResponse) ?? (await fetch(event.request));
+        // A proxy in front, such as Tailscale Serve, answers itself while the daemon is down.
+        if (GATEWAY_ERRORS.includes(response.status)) throw new Error('The daemon is down');
         // An update of Kombinat may change the page while this worker stays the same.
         event.waitUntil(cacheOfflinePage().catch(() => undefined));
         return response;

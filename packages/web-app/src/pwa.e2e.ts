@@ -67,4 +67,24 @@ test.describe('with the service worker', () => {
     await context.setOffline(false);
     await expect(page.getByRole('heading', { name: 'Runs', level: 1 })).toBeVisible();
   });
+
+  test('a proxy that answers for the stopped daemon still gets the page that says so', async ({
+    page,
+    context,
+  }) => {
+    await page.goto('/runs');
+    await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
+    // Playwright cannot route a navigation preload, so the worker fetches the page itself.
+    await page.evaluate(async () => {
+      const registration = await navigator.serviceWorker.ready;
+      await registration.navigationPreload.disable();
+    });
+
+    await context.route('**/*', route => route.fulfill({ status: 502, body: '' }));
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Daemon is unreachable' })).toBeVisible();
+
+    await context.unrouteAll();
+    await expect(page.getByRole('heading', { name: 'Runs', level: 1 })).toBeVisible();
+  });
 });
