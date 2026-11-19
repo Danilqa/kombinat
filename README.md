@@ -79,6 +79,10 @@ The daemon serves a dashboard at http://localhost:7433.
 - **Daemon status.**
 - **Search.**
 
+### As an app
+
+The dashboard installs as an app with its own window and icon: Install in the address bar of Chrome or Edge, File → Add to Dock in Safari on a Mac, or Share → Add to Home Screen on an iPhone. Install it from http://localhost:7433 or from a [Tailscale Serve](#with-tailscale-serve) address, which stay the same, unlike the local port of `kombinat connect`. In Chrome and Edge, the icon counts the unread runs of the Inbox. When the daemon can't be reached, the app says so and opens the dashboard by itself once it answers.
+
 ### In the terminal
 
 <img src=".github/assets/tui.png" alt="Kombinat in the terminal: routines, recent runs and a routine's run history" width="100%" />

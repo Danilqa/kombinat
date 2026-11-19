@@ -51,8 +51,8 @@ const RESTART_SOURCES = ['tui/src', ...SHARED_PACKAGES];
 const REBUILD_SOURCES = ['web-app/src', 'design-system', ...SHARED_PACKAGES];
 
 const webAppSources = (workspaceRoot: string) =>
-  [...REBUILD_SOURCES, 'web-app/index.html', 'web-app/vite.config.ts'].map(source =>
-    path.join(workspaceRoot, 'packages', source),
+  [...REBUILD_SOURCES, 'web-app/index.html', 'web-app/public', 'web-app/vite.config.ts'].map(
+    source => path.join(workspaceRoot, 'packages', source),
   );
 
 export function checkIsWebAppStale(workspaceRoot = config.workspaceRoot): boolean {

@@ -95,7 +95,7 @@ export function UpdateCard() {
       inert={isClosing}
       onAnimationEnd={finishClosing}
       className={cn(
-        'sticky bottom-4 z-40 mx-4 mb-4 flex max-h-[min(30rem,calc(100dvh-2rem))] max-w-104 flex-col rounded-xl border border-line bg-raised text-body-sm text-fg shadow-popover ease-out-quint',
+        'sticky bottom-[calc(--spacing(4)+env(safe-area-inset-bottom))] z-40 mx-4 mb-4 flex max-h-[min(30rem,calc(100dvh-2rem-env(safe-area-inset-top)-env(safe-area-inset-bottom)))] max-w-104 flex-col rounded-xl border border-line bg-raised text-body-sm text-fg shadow-popover ease-out-quint',
         isClosing
           ? 'animate-out duration-150 fade-out-0 slide-out-to-bottom-2'
           : 'animate-in duration-300 fade-in-0 slide-in-from-bottom-2',

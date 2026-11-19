@@ -85,6 +85,7 @@ The domain map, definitions and invariants are in [packages/domains/README.md](p
 - Server data comes through React Query, used as its docs show: `useQuery` with a `queryFn` that calls a domain request, and `useMutation` for writes. A query key starts with the API path, such as `['routines', name]` for `/api/routines/<name>`. Queries poll with `refetchInterval`, and a mutation invalidates the keys of all the data it changes. `useLiveUpdates` in the layout invalidates every query each time the daemon's `GET /api/events` stream reports a change, and follows the stream only while the tab is visible. The polls stay as the fallback for when the stream is down.
 - Pages live in `src/features/<feature>/` next to their `.e2e.ts` specs. Files in a feature folder import each other by relative path; other imports inside `web-app` use the `@web-app/*` alias.
 - `src/index.css` imports the design-system stylesheet and adds `@source` for `domains`, so Tailwind sees the classes of domain components.
+- `public/` makes the dashboard an installable app: the manifest, the icons and `sw.js`, the service worker that `src/main.tsx` registers in the build. It answers only page loads, with `offline.html` when the daemon is unreachable, and caches nothing else. The edges of the layout pad by `env(safe-area-inset-*)`, since the app draws under the iPhone's status bar.
 
 ### tui
 
