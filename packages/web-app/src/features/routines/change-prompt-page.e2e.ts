@@ -36,6 +36,21 @@ test('runs a routine once with a changed prompt and opens that run', async ({ pa
   await expect(page.getByText('Triage the newest issue.')).toBeVisible();
 });
 
+test('closes the prompt editor back to the page it was opened from', async ({ page, kombinat }) => {
+  kombinat.addRoutine({ name: 'echo-prompt' });
+  await page.goto('/');
+
+  await page.getByRole('button', { name: 'More ways to run echo-prompt' }).click();
+  await page.getByRole('menuitem', { name: 'Change prompt and run' }).click();
+  await expect(page).toHaveURL(/\/routines\/echo-prompt\/run$/);
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page).toHaveURL(/\/$/);
+
+  await page.goto('/routines/echo-prompt/run');
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page).toHaveURL(/\/routines\/echo-prompt$/);
+});
+
 test('refuses to start a run with a blank prompt', async ({ page, kombinat }) => {
   kombinat.addRoutine({ name: 'echo-prompt' });
 

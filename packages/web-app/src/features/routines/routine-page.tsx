@@ -19,6 +19,7 @@ import { RunsList } from '@web-app/components/runs-list';
 import { ROUTINES_PATH } from '@web-app/constants/path';
 import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 import { useRuns } from '@web-app/hooks/use-runs';
+import { useTabSearchParam } from '@web-app/hooks/use-tab-search-param';
 import { ChangePromptMenuItem } from './change-prompt-menu-item';
 import { WebhookCallsList } from './webhook-calls-list';
 
@@ -52,12 +53,15 @@ interface RoutineViewProps {
 
 function RoutineView({ routine }: RoutineViewProps) {
   const runs = useRuns(routine.name, routine.lastRun);
+  const [tab, setTab] = useTabSearchParam(
+    routine.webhook ? ['runs', 'prompt', 'webhooks'] : ['runs', 'prompt'],
+  );
   return (
     <div className="space-y-10">
       <Card.Root className="gap-0 py-0">
         <RoutineDetailList routine={routine} />
       </Card.Root>
-      <Tabs.Root defaultValue="runs" className="gap-4">
+      <Tabs.Root value={tab} onValueChange={setTab} className="gap-4">
         <Tabs.List>
           <Tabs.Trigger value="runs">
             Runs
