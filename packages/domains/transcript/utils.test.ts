@@ -3,7 +3,7 @@ import { test } from 'node:test';
 
 import type { ToolItem } from './types';
 import {
-  checkHasToolSearchMatch,
+  countToolSearchMatches,
   getHookLabel,
   getMessageSourceLabel,
   getTurnsLabel,
@@ -19,7 +19,7 @@ test('only a message from another sender than the dashboard is labelled', () => 
   assert.equal(getMessageSourceLabel('webhook'), 'From a webhook');
 });
 
-test('a tool call matches a search in its input or result, which only opening it shows', () => {
+test('a tool call counts the matches in its input and result, which only opening it shows', () => {
   const tool: ToolItem = {
     kind: 'tool',
     key: 'tool-1',
@@ -27,14 +27,18 @@ test('a tool call matches a search in its input or result, which only opening it
     name: 'Bash',
     input: { command: 'pnpm test' },
     preview: 'pnpm test',
-    result: { content: '12 tests passed', isError: false },
+    result: { content: '12 tests passed, pnpm test done', isError: false },
     isSubagent: false,
   };
 
-  assert.equal(checkHasToolSearchMatch(tool, '"command": "pnpm'), true);
-  assert.equal(checkHasToolSearchMatch(tool, 'TESTS PASSED'), true);
-  assert.equal(checkHasToolSearchMatch(tool, 'Bash'), false);
-  assert.equal(checkHasToolSearchMatch({ ...tool, input: undefined, result: null }, 'pnpm'), false);
+  assert.equal(countToolSearchMatches(tool, 'pnpm test'), 2);
+  assert.equal(countToolSearchMatches(tool, '"command": "pnpm'), 1);
+  assert.equal(countToolSearchMatches(tool, 'TESTS PASSED'), 1);
+  assert.equal(countToolSearchMatches(tool, 'Bash'), 0);
+  assert.equal(
+    countToolSearchMatches({ ...tool, input: undefined, result: null }, 'result yet'),
+    1,
+  );
 });
 
 test('one turn is singular, any other count or an unknown one is plural', () => {

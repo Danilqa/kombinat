@@ -33,11 +33,19 @@ export interface SearchMatch {
 }
 
 // The whole search as one phrase, as a browser's find in page does, rather than separate words.
+function toSearchPattern(search: string): RegExp {
+  return new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+}
+
 export function findSearchMatches(text: string, search: string): SearchMatch[] {
   if (search === '') return [];
-  const pattern = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
-  return [...text.matchAll(pattern)].map(found => ({
+  return [...text.matchAll(toSearchPattern(search))].map(found => ({
     start: found.index,
     end: found.index + found[0].length,
   }));
+}
+
+export function countSearchMatches(text: string, search: string): number {
+  if (search === '') return 0;
+  return text.match(toSearchPattern(search))?.length ?? 0;
 }
