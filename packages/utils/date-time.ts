@@ -84,6 +84,14 @@ export function formatDayTime(iso: string): string {
   return dayTimeFormatter.format(new Date(iso));
 }
 
+// Today's times need only the clock. A weekly limit can reset on another day.
+export function formatClockOrDayTime(iso: string, now: number = Date.now()): string {
+  const date = new Date(iso);
+  return date.toDateString() === new Date(now).toDateString()
+    ? formatClock(date)
+    : formatDayTime(iso);
+}
+
 export function formatTimestamp(iso: string): string {
   return timestampFormatter.format(new Date(iso));
 }

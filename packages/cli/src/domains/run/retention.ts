@@ -11,7 +11,7 @@ import { getRunsDir, listAllRuns } from './storage';
 const CLEANUP_INTERVAL_MS = 3_600_000;
 
 function deleteRun({ routine, id }: RunRecord): void {
-  for (const extension of ['json', 'jsonl']) {
+  for (const extension of ['json', 'jsonl', 'wait']) {
     fs.rmSync(path.join(getRunsDir(routine), `${id}.${extension}`), { force: true });
   }
 }

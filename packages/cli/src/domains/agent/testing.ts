@@ -23,6 +23,7 @@ export function makeAgentTask(overrides: Partial<AgentTask> = {}): AgentTask {
     permissionMode: null,
     command: null,
     maxBudgetUsd: null,
+    onUsageLimit: null,
     ...overrides,
   };
 }

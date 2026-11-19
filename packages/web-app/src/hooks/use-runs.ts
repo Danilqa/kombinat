@@ -1,12 +1,11 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import type { InfiniteData, QueryKey } from '@tanstack/react-query';
-import { isMatching } from 'ts-pattern';
 
 import type { RoutineName } from 'domains/routine/ids';
 import { getRunsPage } from 'domains/run/requests';
 import type { RunRecord, RunsCursor, RunsPage } from 'domains/run/types';
-import { compareRunsByNewest } from 'domains/run/utils';
+import { checkIsRunActive, compareRunsByNewest } from 'domains/run/utils';
 import { sameOriginApi } from 'utils/http';
 import { getPollInterval } from 'utils/polling';
 
@@ -23,8 +22,8 @@ export interface RunsQuery {
   loadNextPage: () => void;
 }
 
-function checkHasRunningRun(data: InfiniteData<RunsPage> | undefined): boolean {
-  return data?.pages.some(page => page.runs.some(isMatching({ status: 'running' }))) === true;
+function checkHasActiveRun(data: InfiniteData<RunsPage> | undefined): boolean {
+  return data?.pages.some(page => page.runs.some(checkIsRunActive)) === true;
 }
 
 function checkIsBehind(loadedRun: RunRecord | undefined, latestRun: RunRecord | null): boolean {
@@ -48,7 +47,7 @@ export function useRuns(
       initialPageParam: null,
       getNextPageParam: page => page.nextCursor,
       select: toLoadedRuns,
-      refetchInterval: query => getPollInterval(checkHasRunningRun(query.state.data)),
+      refetchInterval: query => getPollInterval(checkHasActiveRun(query.state.data)),
     });
   // The routine query can see a new run, or the end of one, before these pages do.
   const isBehind = data !== undefined && checkIsBehind(data.runs[0], latestRun);

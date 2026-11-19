@@ -3,9 +3,23 @@ import { z } from 'zod';
 import { sessionIdSchema } from '../agent/ids';
 import { agentNameSchema } from '../agent/schemas';
 import { routineNameSchema } from '../routine/ids';
+import { usageLimitKindSchema } from '../transcript/schemas';
 import { runIdSchema } from './ids';
 
-export const runStatusSchema = z.enum(['running', 'succeeded', 'failed', 'timed_out', 'aborted']);
+export const runStatusSchema = z.enum([
+  'running',
+  'waiting',
+  'succeeded',
+  'failed',
+  'timed_out',
+  'aborted',
+]);
+
+export const usageLimitWaitSchema = z.object({
+  limit: usageLimitKindSchema,
+  stoppedAt: z.string(),
+  continuesAt: z.string(),
+});
 
 export const runTriggerSchema = z.enum(['schedule', 'manual', 'catch_up', 'webhook']);
 
@@ -33,11 +47,17 @@ export const runRecordSchema = z.object({
   replyPid: z.number().nullable().default(null),
   // Records written before webhooks could continue runs have no conversation.
   conversation: z.string().nullable().default(null),
+  // Set while the run waits for a usage limit to reset. Older records have none.
+  usageLimit: usageLimitWaitSchema.nullable().default(null),
 });
 
 export const runMessageSchema = z.object({ text: z.string().trim().min(1) });
 
 export const sentRunMessageSchema = z.object({ ok: z.literal(true) });
+
+export const usageLimitWaitActionSchema = z.enum(['continue', 'stop']);
+
+export const sentWaitActionSchema = z.object({ ok: z.literal(true) });
 
 export const runsCursorSchema = z.string().brand<'RunsCursor'>();
 

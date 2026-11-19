@@ -1,4 +1,4 @@
-import { isMatching, match } from 'ts-pattern';
+import { isMatching, match, P } from 'ts-pattern';
 
 import { checkMatchesSearch } from 'utils/search';
 
@@ -34,9 +34,9 @@ export function getRunDurationMs(
   return Math.max(0, end - new Date(run.startedAt).getTime());
 }
 
-// The agent of a run is at work while the run runs and while it replies to a message.
+// A run is active while its agent is at work, waits out a usage limit or replies to a message.
 export function checkIsRunActive(run: Pick<RunRecord, 'status' | 'replyPid'>): boolean {
-  return isMatching({ status: 'running' }, run) || run.replyPid !== null;
+  return isMatching({ status: P.union('running', 'waiting') }, run) || run.replyPid !== null;
 }
 
 // Only an agent that resumes sessions gives a run a resume command, and it needs the session.
@@ -47,6 +47,7 @@ export function checkCanContinueRun(run: Pick<RunRecord, 'resumeCommand'>): bool
 export function getRunStatusLabel(status: RunStatus): string {
   return match(status)
     .with('running', () => 'Running')
+    .with('waiting', () => 'Waiting for limit')
     .with('succeeded', () => 'Succeeded')
     .with('failed', () => 'Failed')
     .with('timed_out', () => 'Timed out')

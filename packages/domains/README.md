@@ -12,19 +12,19 @@ Each domain has up to two halves with the same name:
 
 ## Map
 
-| Domain         | Shared half                                                                                                                                                                                                             | Daemon half                                                                                         |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| **agent**      | `AgentName`, `SessionId`, agent label                                                                                                                                                                                   | claude, codex and command adapters, registry, settings validation, `AgentTask`, plan usage storage  |
-| **transcript** | item schemas and types, message source, preview rule, subagent check, tool input, result and search match count, empty, result, hook and message source labels, `TranscriptList`                                        | none                                                                                                |
-| **run**        | `RunRecord`, `RunId`, status and trigger, requests, labels, new ids, duration, cursor pages, active and continue rules, expired runs, `makeRunRecord`, `RunStatusBadge`, `RunDetailList`, `RunOutput`, `RunMessageForm` | runner, replies, hooks, record storage with orphan reconciliation, event log, transcript, retention |
-| **scheduler**  | `Skip`, `SkipReason`, `SchedulerState`, skip label, `SkipsTable`                                                                                                                                                        | tick loop, `scheduler.json` storage                                                                 |
-| **routine**    | `RoutineName`, `RoutineSummary`, `RoutineDetail`, requests, `RunNowButton`, `RoutineBadges`, `RoutineDetailList`, `WebhookQueueButton`                                                                                  | file parsing, validation, defaults, loading, next run, schedule label, examples                     |
-| **calendar**   | `CalendarEntryId`, entry schemas and types, `getCalendar`, `buildCalendar`, planned lengths, entry title and overlap labels, overlap count                                                                              | none, `cli/src/server.ts` serves `buildCalendar`                                                    |
-| **daemon**     | status schema, `getDaemonStatus`, `watchDaemonChanges`, health rules, plan usage rules, `DaemonStatusIndicator`                                                                                                         | none, `cli/src/server.ts` builds the status                                                         |
-| **webhook**    | `QueuedWebhook`, `WebhookCall`, `WebhookCallId`, webhook path, size, queue position and outcome labels, expired calls, `WebhookQueueList`                                                                               | gate, queue, conversations, call log, and receiving: start, continue, queue, ignore or reject       |
-| **settings**   | `Settings`, defaults, retention options and labels, requests                                                                                                                                                            | `settings.json` storage                                                                             |
-| **release**    | `ReleaseVersion`, `ReleaseUpdate`, requests, newer releases, the offered release, `UpdateCard`                                                                                                                          | none, `cli/src/features/self-update/releases.ts` checks GitHub and skips                            |
-| **inbox**      | `InboxState`, requests, unread runs, marking runs read, groups and their labels, the summary line                                                                                                                       | `inbox.json` storage                                                                                |
+| Domain         | Shared half                                                                                                                                                                                                                               | Daemon half                                                                                                            |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| **agent**      | `AgentName`, `SessionId`, agent label                                                                                                                                                                                                     | claude, codex and command adapters, registry, settings validation, `AgentTask`, plan usage storage                     |
+| **transcript** | item schemas and types, message source, usage limit kinds, preview rule, subagent check, tool input, result and search match count, empty, result, hook, message source and usage limit labels, `TranscriptList`                          | none                                                                                                                   |
+| **run**        | `RunRecord`, `RunId`, status and trigger, requests, labels, new ids, duration, cursor pages, active and continue rules, expired runs, `makeRunRecord`, `RunStatusBadge`, `RunDetailList`, `RunOutput`, `RunMessageForm`, `UsageLimitCard` | runner, replies, hooks, usage limit waits, record storage with orphan reconciliation, event log, transcript, retention |
+| **scheduler**  | `Skip`, `SkipReason`, `SchedulerState`, skip label, `SkipsTable`                                                                                                                                                                          | tick loop, `scheduler.json` storage                                                                                    |
+| **routine**    | `RoutineName`, `RoutineSummary`, `RoutineDetail`, requests, `RunNowButton`, `RoutineBadges`, `RoutineDetailList`, `WebhookQueueButton`                                                                                                    | file parsing, validation, defaults, loading, next run, schedule label, examples                                        |
+| **calendar**   | `CalendarEntryId`, entry schemas and types, `getCalendar`, `buildCalendar`, planned lengths, entry title and overlap labels, overlap count                                                                                                | none, `cli/src/server.ts` serves `buildCalendar`                                                                       |
+| **daemon**     | status schema, `getDaemonStatus`, `watchDaemonChanges`, health rules, plan usage rules, `DaemonStatusIndicator`                                                                                                                           | none, `cli/src/server.ts` builds the status                                                                            |
+| **webhook**    | `QueuedWebhook`, `WebhookCall`, `WebhookCallId`, webhook path, size, queue position and outcome labels, expired calls, `WebhookQueueList`                                                                                                 | gate, queue, conversations, call log, and receiving: start, continue, queue, ignore or reject                          |
+| **settings**   | `Settings`, defaults, retention options and labels, requests                                                                                                                                                                              | `settings.json` storage                                                                                                |
+| **release**    | `ReleaseVersion`, `ReleaseUpdate`, requests, newer releases, the offered release, `UpdateCard`                                                                                                                                            | none, `cli/src/features/self-update/releases.ts` checks GitHub and skips                                               |
+| **inbox**      | `InboxState`, requests, unread runs, marking runs read, groups and their labels, the summary line                                                                                                                                         | `inbox.json` storage                                                                                                   |
 
 Not domains:
 
@@ -53,6 +53,7 @@ An agent-independent view of a run's event log, ready to display: `{ eventCount,
 - `hook`: the before or the after hook, with its phase, command, exit code and output;
 - `init`: the session start;
 - `model-fallback`: the agent switched from one model to another, with the reason when it gave one;
+- `usage-limit`: the run stopped at a usage limit and waited, see [Waiting out a usage limit](#waiting-out-a-usage-limit);
 - `text`: assistant text;
 - `message`: a message sent to the run from the dashboard or a webhook, with its source, see [Continuing a run](#continuing-a-run);
 - `tool`: a tool call with its input, a preview, and a result that is `null` while the call is pending;
@@ -73,7 +74,7 @@ One execution of a routine by its agent. The scheduler, Run now and webhooks sta
 Invariants:
 
 - A failed preflight or before hook writes a finished `failed` record at once, or, with an after hook, a `running` record until the hook ends. Until the agent is spawned there is no record, so the daemon remembers each run it starts and counts it as running until its record appears, for at most 4 minutes.
-- A record still marked `running` whose process is gone becomes `aborted` the next time runs are listed. An aborted run gets no after hook, because its runner is gone.
+- A record still marked `running` or `waiting` whose process is gone becomes `aborted` the next time runs are listed. An aborted run gets no after hook, because its runner is gone.
 - With an after hook, the run stays `running` until the hook ends: the runner writes the record as `running` with its own pid, waits until the event log is written, runs the hook, appends its line and only then writes the finished record, the one the hook got. So the routine does not start again while its after hook runs, and the hook's line is in the log when a client sees the run end.
 - The id is a UTC timestamp plus 4 base-36 characters, such as `20261006T110000Z-k3x9`.
 - The record is `<state dir>/runs/<routine>/<id>.json` and the event log `<id>.jsonl` next to it. This layout is a compatibility contract.
@@ -82,6 +83,21 @@ Invariants:
 - The transcript is built from the event log: the hook lines become `hook` items, the before hook first and the after hook last, and the agent turns the other lines into items.
 - With a run retention set, the daemon deletes the record and event log of each run that is not active and started longer ago than that, except the newest run of each routine. It does so when it starts, every hour and when the retention changes.
 - `GET /api/runs` answers a page of runs, newest first by `startedAt`, then routine and id, with `nextCursor` and `total`. `routine` limits it to one routine and answers 404 when there is no such routine, a page holds 50 runs, and `cursor` is an opaque token for the run a page ends with, so the next page starts right after that run even when new runs arrive above it.
+
+#### Waiting out a usage limit
+
+A Claude run whose agent stops at the 5-hour or weekly limit of the plan waits for the reset and continues, unless its routine sets `onUsageLimit: fail`. In `usage-limit.ts`:
+
+1. The agent stopped at a limit when the last message of its process is the synthetic one that Claude Code marks `rate_limit` and its last `rate_limit_event` is `rejected` with a reset time. The reset must be in the future and at most 8 days away, and the run must have a session, or the run ends as it would have.
+2. The runner appends `{"type":"usage_limit_wait","limit":"session","stoppedAt":"…","continuesAt":"…"}` to the event log and writes the record as `waiting`, with its own pid and the wait in `usageLimit`. It continues 1 minute after the reset, which the server keeps by its own clock.
+3. It checks the clock every second, so a computer that slept still continues on time, and reads `<id>.wait` next to the record, which `POST /api/runs/<routine>/<id>/wait/continue` and `/wait/stop` write. Both answer 409 when the run is not `waiting`.
+4. It appends `{"type":"usage_limit_end","at":"…","outcome":"continued"}`, or `"stopped"`. Continued, the run is `running` again and resumes the session with a note that the limit reset, without its before hook, for the time left of `timeoutMinutes`: the wait does not count. Its turns, cost and duration add up. Stopped, the run ends as `failed` with the agent's error.
+
+Invariants:
+
+- A waiting run is active, so its routine does not start again, but it takes no part of the concurrency limit and of the status's running count.
+- The after hook runs once, when the run ends.
+- In the transcript, each wait is a `usage-limit` item in the place of the result that the limit cut short, and the continued session follows it without its session start, keyed under `resume-<n>`.
 
 #### Continuing a run
 
@@ -94,7 +110,7 @@ A finished run whose agent resumes sessions, the one with a resume command, can 
 
 Invariants:
 
-- A run is active while it is `running` or has a `replyPid`. An active run keeps its routine running: the scheduler skips it, it counts against the concurrency limit, and Run now and webhooks wait.
+- A run is active while it is `running` or `waiting` or has a `replyPid`. An active run keeps its routine running: the scheduler skips it, and Run now and webhooks wait. It counts against the concurrency limit unless it is `waiting`.
 - A `replyPid` whose process is gone becomes null the next time runs are listed, and a `reply_error` line says so.
 - In the transcript, each message is followed by its reply's items, keyed under `reply-<n>`, after the run's after hook. A reply's session start is left out.
 - A message logged without a source came from the dashboard, since only it sent messages before webhooks could.
@@ -105,7 +121,7 @@ The daemon's decision of when routines start. Every `KOMBINAT_TICK_SECONDS` (def
 
 - The run's trigger is `catch_up` when more than one time came due or the time is older than two ticks plus 60 s, and `schedule` otherwise.
 - A disabled routine, or one that is already running, gets a skip.
-- At the concurrency limit (`KOMBINAT_MAX_CONCURRENT`, default 3) the routine does not start and no skip is recorded.
+- At the concurrency limit (`KOMBINAT_MAX_CONCURRENT`, default 3) the routine does not start and no skip is recorded. A `waiting` run takes no part of the limit.
 - After the scheduled times, each enabled routine with `webhook: true` that is idle starts its oldest queued webhook, within the same limit.
 - `scheduler.json` holds `lastTickAt` and, for each routine, its last scheduled time and its last 50 skips.
 
@@ -184,6 +200,8 @@ The week view's read model, `GET /api/calendar?from&to` for a range of at most 3
 
 The running kombinat service as its clients see it through `GET /api/status`: version, pid, start time, last scheduler tick, routines and state folders, agent binaries, concurrency limit, running count, time zone and now.
 
+`running` counts the runs at work, so a run that waits for a usage limit is left out.
+
 `claudeUsage` is how much of the Claude subscription the newest run used, or `null` before any run reported it:
 
 - Claude Code's stream-json reports it in each `rate_limit_event` as the share used and the reset time of the 5-hour and the weekly limit. The runner writes the latest one to `<state dir>/plan-usage/claude.json` with the time it came, which the status serves.
@@ -224,7 +242,7 @@ A domain folder in this package can have:
 - `*.test.ts`: unit tests next to the rules they cover, run by `pnpm test`;
 - `components/`: router-free React components, exported through `components/index.ts` as `domains/<domain>/components`. A component made of parts is exported as a namespace, as in design-system.
 
-Components per domain: run `RunStatusBadge`, `RunDetailList`, `RunOutput` and `RunMessageForm`; transcript `TranscriptList`; daemon `DaemonStatusIndicator`; routine `RunNowButton`, `RoutineBadges` and `RoutineDetailList`; scheduler `SkipsTable`.
+Components per domain: run `RunStatusBadge`, `RunDetailList`, `RunOutput`, `RunMessageForm` and `UsageLimitCard`; transcript `TranscriptList`; daemon `DaemonStatusIndicator`; routine `RunNowButton`, `RoutineBadges` and `RoutineDetailList`; scheduler `SkipsTable`.
 
 Other packages import everything else per file, such as `domains/run/schemas`. Inside this package, files import each other by relative path.
 

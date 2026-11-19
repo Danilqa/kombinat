@@ -4,10 +4,16 @@ import { sessionIdSchema, type SessionId } from 'domains/agent/ids';
 import type { AgentName } from 'domains/agent/types';
 import type { RoutineName } from 'domains/routine/ids';
 import { runIdSchema, type RunId } from 'domains/run/ids';
-import type { RunRecord, RunTrigger } from 'domains/run/types';
+import type { RunRecord, RunStatus, RunTrigger, UsageLimitWaitAction } from 'domains/run/types';
 import { compareRunsByNewest } from 'domains/run/utils';
 import type { Skip, SkipReason } from 'domains/scheduler/types';
-import type { Transcript, TranscriptItem } from 'domains/transcript/types';
+import type {
+  Transcript,
+  TranscriptItem,
+  UsageLimitItem,
+  UsageLimitKind,
+  UsageLimitOutcome,
+} from 'domains/transcript/types';
 import { cronRunsBetween } from 'utils/cron';
 
 import { STATE_DIR } from './constants';
@@ -39,6 +45,21 @@ interface DemoMessage {
   sentAt: Date;
 }
 
+interface DemoWaitAction {
+  action: UsageLimitWaitAction;
+  at: Date;
+}
+
+interface DemoPause {
+  limit: UsageLimitKind;
+  afterStep: number;
+  stoppedAt: Date;
+  continuesAt: Date;
+  // When the wait ends: at the reset, or earlier with Continue now or Stop waiting.
+  endedAt: Date;
+  outcome: UsageLimitOutcome;
+}
+
 interface ScheduledEvents {
   runs: DemoRun[];
   skips: Skip[];
@@ -50,6 +71,7 @@ export interface DemoHistory {
   getTranscript(routine: RoutineName, id: RunId, now: Date): Transcript | null;
   startRun(routine: DemoRoutine, now: Date): RunId;
   sendMessage(routine: RoutineName, id: RunId, text: string, now: Date): void;
+  sendWaitAction(routine: RoutineName, id: RunId, action: UsageLimitWaitAction, now: Date): void;
 }
 
 function fail(message: string): never {
@@ -105,8 +127,43 @@ function getDurationMs(run: DemoRun): number {
   return Math.round(run.outcome.minutes * 60_000);
 }
 
-function checkIsRunning(run: DemoRun, now: Date): boolean {
-  return run.startedAt.getTime() + getDurationMs(run) > now.getTime();
+function getPause(run: DemoRun, waitAction: DemoWaitAction | undefined): DemoPause | null {
+  const { usageLimit, steps } = run.outcome;
+  if (usageLimit === undefined) return null;
+  const workMs = (getDurationMs(run) * usageLimit.afterStep) / steps.length;
+  const stoppedAt = new Date(run.startedAt.getTime() + workMs);
+  const continuesAt = new Date(stoppedAt.getTime() + usageLimit.waitMinutes * 60_000);
+  const isEarly =
+    waitAction !== undefined && waitAction.at >= stoppedAt && waitAction.at < continuesAt;
+  return {
+    limit: usageLimit.limit,
+    afterStep: usageLimit.afterStep,
+    stoppedAt,
+    continuesAt,
+    endedAt: isEarly ? waitAction.at : continuesAt,
+    outcome: isEarly && isMatching({ action: 'stop' }, waitAction) ? 'stopped' : 'continued',
+  };
+}
+
+function getEndTime(run: DemoRun, pause: DemoPause | null): number {
+  if (pause === null) return run.startedAt.getTime() + getDurationMs(run);
+  if (isMatching({ outcome: 'stopped' }, pause)) return pause.endedAt.getTime();
+  const workedBeforeMs = pause.stoppedAt.getTime() - run.startedAt.getTime();
+  return pause.endedAt.getTime() + getDurationMs(run) - workedBeforeMs;
+}
+
+function checkIsRunning(run: DemoRun, pause: DemoPause | null, now: Date): boolean {
+  return getEndTime(run, pause) > now.getTime();
+}
+
+function checkIsWaiting(pause: DemoPause, now: Date): boolean {
+  return now >= pause.stoppedAt && now < pause.endedAt;
+}
+
+function getStatus(run: DemoRun, pause: DemoPause | null, now: Date): RunStatus {
+  if (pause !== null && checkIsWaiting(pause, now)) return 'waiting';
+  if (checkIsRunning(run, pause, now)) return 'running';
+  return isMatching({ outcome: 'stopped' }, pause) ? 'failed' : run.outcome.status;
 }
 
 function getExitCode(outcome: DemoOutcome): number | null {
@@ -134,16 +191,26 @@ function checkIsReplying(messages: DemoMessage[], now: Date): boolean {
   return last !== undefined && last.sentAt.getTime() + REPLY_MS > now.getTime();
 }
 
-function toRunRecord(run: DemoRun, now: Date, messages: DemoMessage[]): RunRecord {
+function toRunRecord(
+  run: DemoRun,
+  now: Date,
+  messages: DemoMessage[],
+  pause: DemoPause | null,
+): RunRecord {
   const { routine, outcome } = run;
   const durationMs = getDurationMs(run);
-  const isRunning = checkIsRunning(run, now);
+  const isRunning = checkIsRunning(run, pause, now);
+  const isStopped = !isRunning && isMatching({ outcome: 'stopped' }, pause);
   const hasSession =
     !isMatching({ agent: 'command' }, routine) &&
     buildSteps(run).some(isMatching({ kind: 'init' }));
   const sessionId = hasSession ? run.sessionId : null;
   const hasResult =
-    !isRunning && isMatching({ agent: 'claude' }, routine) && outcome.numTurns !== undefined;
+    !isRunning &&
+    !isStopped &&
+    isMatching({ agent: 'claude' }, routine) &&
+    outcome.numTurns !== undefined;
+  const isFinished = !isRunning && !isStopped;
   return {
     id: run.id,
     routine: routine.name,
@@ -151,21 +218,33 @@ function toRunRecord(run: DemoRun, now: Date, messages: DemoMessage[]): RunRecor
     trigger: run.trigger,
     scheduledFor: run.scheduledFor?.toISOString() ?? null,
     startedAt: run.startedAt.toISOString(),
-    endedAt: isRunning ? null : new Date(run.startedAt.getTime() + durationMs).toISOString(),
-    status: isRunning ? 'running' : outcome.status,
+    endedAt: isRunning ? null : new Date(getEndTime(run, pause)).toISOString(),
+    status: getStatus(run, pause, now),
     pid: run.pid,
-    exitCode: isRunning ? null : getExitCode(outcome),
+    exitCode: isStopped ? 1 : isRunning ? null : getExitCode(outcome),
     sessionId,
     resumeCommand: sessionId === null ? null : getResumeCommand(routine.agent, sessionId),
     model: hasSession ? (outcome.model ?? routine.runModel) : null,
-    costUsd: isRunning ? null : (outcome.costUsd ?? null),
-    numTurns: isRunning ? null : (outcome.numTurns ?? null),
+    costUsd: isFinished ? (outcome.costUsd ?? null) : null,
+    numTurns: isFinished ? (outcome.numTurns ?? null) : null,
     durationMs: hasResult ? durationMs : null,
-    resultText: isRunning ? null : (outcome.resultText ?? null),
-    error: isRunning ? null : (outcome.error ?? null),
+    resultText: isFinished ? (outcome.resultText ?? null) : null,
+    error: isStopped
+      ? "You've hit your session limit"
+      : isFinished
+        ? (outcome.error ?? null)
+        : null,
     logFile: `${STATE_DIR}/runs/${routine.name}/${run.id}.jsonl`,
     replyPid: checkIsReplying(messages, now) ? run.pid + 1 : null,
     conversation: null,
+    usageLimit:
+      pause !== null && checkIsWaiting(pause, now)
+        ? {
+            limit: pause.limit,
+            stoppedAt: pause.stoppedAt.toISOString(),
+            continuesAt: pause.continuesAt.toISOString(),
+          }
+        : null,
   };
 }
 
@@ -198,14 +277,47 @@ function getResultItems(record: RunRecord): TranscriptItem[] {
     .exhaustive();
 }
 
+function getWorkedMs(run: DemoRun, pause: DemoPause | null, now: Date): number {
+  const elapsedMs = now.getTime() - run.startedAt.getTime();
+  if (pause === null || now <= pause.stoppedAt) return elapsedMs;
+  const workedBeforeMs = pause.stoppedAt.getTime() - run.startedAt.getTime();
+  return workedBeforeMs + Math.max(0, now.getTime() - pause.endedAt.getTime());
+}
+
+function toPauseItem(pause: DemoPause, now: Date): UsageLimitItem {
+  return {
+    kind: 'usage-limit',
+    key: 'usage-limit-0',
+    limit: pause.limit,
+    stoppedAt: pause.stoppedAt.toISOString(),
+    continuesAt: pause.continuesAt.toISOString(),
+    end: now >= pause.endedAt ? { at: pause.endedAt.toISOString(), outcome: pause.outcome } : null,
+  };
+}
+
+function withPause(items: TranscriptItem[], pause: DemoPause | null, now: Date): TranscriptItem[] {
+  if (pause === null || now < pause.stoppedAt) return items;
+  return [
+    ...items.slice(0, pause.afterStep),
+    toPauseItem(pause, now),
+    ...(isMatching({ outcome: 'stopped' }, pause) ? [] : items.slice(pause.afterStep)),
+  ];
+}
+
 // A running run shows the steps it has reached so far, with the last tool call still pending.
-function getRunningItems(run: DemoRun, now: Date): TranscriptItem[] {
+function getRunningItems(run: DemoRun, pause: DemoPause | null, now: Date): TranscriptItem[] {
   const steps = buildSteps(run);
-  const progress = (now.getTime() - run.startedAt.getTime()) / getDurationMs(run);
-  const reached = steps.slice(0, Math.max(1, Math.ceil(progress * steps.length)));
+  const isWaiting = pause !== null && checkIsWaiting(pause, now);
+  const progress = getWorkedMs(run, pause, now) / getDurationMs(run);
+  const reached = isWaiting
+    ? steps.slice(0, pause.afterStep)
+    : steps.slice(0, Math.max(1, Math.ceil(progress * steps.length)));
   const last = reached.at(-1);
-  if (last === undefined || !isMatching({ kind: 'tool' }, last)) return reached;
-  return [...reached.slice(0, -1), { ...last, result: null }];
+  const items =
+    isWaiting || last === undefined || !isMatching({ kind: 'tool' }, last)
+      ? reached
+      : [...reached.slice(0, -1), { ...last, result: null }];
+  return withPause(items, pause, now);
 }
 
 // A reply shows its text halfway through and its result once it is done.
@@ -238,11 +350,20 @@ function getReplyItems(messages: DemoMessage[], now: Date): TranscriptItem[] {
   });
 }
 
-function buildTranscript(run: DemoRun, now: Date, messages: DemoMessage[]): Transcript {
-  const record = toRunRecord(run, now, messages);
-  const items = checkIsRunning(run, now)
-    ? getRunningItems(run, now)
-    : [...buildSteps(run), ...getResultItems(record), ...getReplyItems(messages, now)];
+function buildTranscript(
+  run: DemoRun,
+  now: Date,
+  messages: DemoMessage[],
+  pause: DemoPause | null,
+): Transcript {
+  const record = toRunRecord(run, now, messages, pause);
+  const items = checkIsRunning(run, pause, now)
+    ? getRunningItems(run, pause, now)
+    : [
+        ...withPause(buildSteps(run), pause, now),
+        ...getResultItems(record),
+        ...getReplyItems(messages, now),
+      ];
   const toolResults = items.filter(isMatching({ kind: 'tool', result: P.nonNullable }));
   return { eventCount: items.length + toolResults.length, items };
 }
@@ -318,6 +439,9 @@ export function createDemoHistory(routines: DemoRoutine[], loadedAt: Date): Demo
   ]);
   const messages = new Map<string, DemoMessage[]>();
   const getMessages = (routine: RoutineName, id: RunId) => messages.get(`${routine}/${id}`) ?? [];
+  const waitActions = new Map<string, DemoWaitAction>();
+  const findPause = (run: DemoRun) =>
+    getPause(run, waitActions.get(`${run.routine.name}/${run.id}`));
   const slotsBeforeLoad = new Map(
     routines.map(routine => [
       routine.name,
@@ -362,12 +486,14 @@ export function createDemoHistory(routines: DemoRoutine[], loadedAt: Date): Demo
   return {
     listRuns: now =>
       listDemoRuns(now)
-        .map(run => toRunRecord(run, now, getMessages(run.routine.name, run.id)))
+        .map(run => toRunRecord(run, now, getMessages(run.routine.name, run.id), findPause(run)))
         .sort(compareRunsByNewest),
     listSkips: (routine, now) => getScheduledEvents(routine, now).skips.slice(-MAX_SKIPS),
     getTranscript(routine, id, now) {
       const run = findDemoRun(routine, id, now);
-      return run === undefined ? null : buildTranscript(run, now, getMessages(routine, id));
+      return run === undefined
+        ? null
+        : buildTranscript(run, now, getMessages(routine, id), findPause(run));
     },
     startRun(routine, now) {
       const random = createRandom(`${routine.name}:run-now:${now.toISOString()}`);
@@ -378,6 +504,9 @@ export function createDemoHistory(routines: DemoRoutine[], loadedAt: Date): Demo
     },
     sendMessage(routine, id, text, now) {
       messages.set(`${routine}/${id}`, [...getMessages(routine, id), { text, sentAt: now }]);
+    },
+    sendWaitAction(routine, id, action, now) {
+      waitActions.set(`${routine}/${id}`, { action, at: now });
     },
   };
 }

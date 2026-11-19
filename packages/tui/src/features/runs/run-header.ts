@@ -1,5 +1,6 @@
 import type { RunRecord } from 'domains/run/types';
 import { getRunDurationMs, getTriggerLabel } from 'domains/run/utils';
+import { getUsageLimitLabel } from 'domains/transcript/utils';
 import { formatDuration } from 'utils/date-time';
 
 import { detailRows, timeValue } from '../../components/detail-rows';
@@ -20,6 +21,18 @@ export function runHeaderLines(
 ): ContentLine[] {
   const pairs: DetailPair[] = [
     { label: 'status', value: statusBadge(run.status, now) },
+    ...(run.usageLimit === null
+      ? []
+      : [
+          {
+            label: 'continues',
+            value: [
+              ...timeValue(run.usageLimit.continuesAt, now),
+              text(`  after the ${getUsageLimitLabel(run.usageLimit.limit)}`, S.dim),
+            ],
+            isWide: true,
+          },
+        ]),
     { label: 'trigger', value: [text(getTriggerLabel(run.trigger))] },
     ...(run.scheduledFor
       ? [{ label: 'scheduled', value: timeValue(run.scheduledFor, now), isWide: true }]

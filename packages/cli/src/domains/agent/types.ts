@@ -6,7 +6,7 @@ import type { PlanLimits } from 'domains/daemon/types';
 import type { RoutineName } from 'domains/routine/ids';
 import type { RunId } from 'domains/run/ids';
 import type { RunRecord, RunTrigger } from 'domains/run/types';
-import type { MessageSource, TranscriptItem } from 'domains/transcript/types';
+import type { MessageSource, TranscriptItem, UsageLimitKind } from 'domains/transcript/types';
 
 import type { outputEventSchema } from './schemas';
 
@@ -19,6 +19,7 @@ export interface AgentSettings {
   permissionMode: string | null;
   command: string | null;
   maxBudgetUsd: number | null;
+  onUsageLimit: string | null;
 }
 
 export interface AgentTask extends AgentSettings {
@@ -32,9 +33,17 @@ export interface RunContext {
   trigger: RunTrigger;
 }
 
+// A run that waited out a usage limit continues its session without a message.
+export type ReplySource = MessageSource | 'usage_limit';
+
 export interface ReplyMessage {
   text: string;
-  source: MessageSource;
+  source: ReplySource;
+}
+
+export interface UsageLimitStop {
+  limit: UsageLimitKind;
+  resetsAt: string;
 }
 
 export interface Invocation {
@@ -67,6 +76,7 @@ export interface Agent {
   ): Invocation | null;
   readEvent(event: unknown, record: Readonly<RunRecord>): RunUpdate;
   readPlanLimits(event: unknown): PlanLimits | null;
+  findUsageLimitStop(events: unknown[]): UsageLimitStop | null;
   buildTranscript(events: unknown[]): TranscriptItem[];
   getResumeCommand(sessionId: SessionId): string | null;
 }

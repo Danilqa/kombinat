@@ -13,6 +13,10 @@ import type {
   toolResultSchema,
   transcriptItemSchema,
   transcriptSchema,
+  usageLimitEndSchema,
+  usageLimitItemSchema,
+  usageLimitKindSchema,
+  usageLimitOutcomeSchema,
 } from './schemas';
 
 export type ToolResult = z.infer<typeof toolResultSchema>;
@@ -27,3 +31,7 @@ export type MessageSource = z.infer<typeof messageSourceSchema>;
 export type ToolItem = z.infer<typeof toolItemSchema>;
 export type ResultItem = z.infer<typeof resultItemSchema>;
 export type Transcript = z.infer<typeof transcriptSchema>;
+export type UsageLimitKind = z.infer<typeof usageLimitKindSchema>;
+export type UsageLimitOutcome = z.infer<typeof usageLimitOutcomeSchema>;
+export type UsageLimitEnd = z.infer<typeof usageLimitEndSchema>;
+export type UsageLimitItem = z.infer<typeof usageLimitItemSchema>;

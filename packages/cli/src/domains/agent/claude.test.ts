@@ -116,6 +116,49 @@ test('reads the plan limits that a rate limit event reports', () => {
   assert.equal(claudeAgent.readPlanLimits(events[0]), null);
 });
 
+test('finds the usage limit that cut a turn short, with its reset', () => {
+  const rejected = (rateLimitType: string) => ({
+    type: 'rate_limit_event',
+    rate_limit_info: { status: 'rejected', resetsAt: 1795026600, rateLimitType },
+  });
+  const limitMessage = {
+    type: 'assistant',
+    error: 'rate_limit',
+    message: { content: [{ type: 'text', text: "You've hit your limit · resets 7:30pm" }] },
+  };
+  const reply = { type: 'assistant', message: { content: [{ type: 'text', text: 'Done' }] } };
+  assert.deepEqual(claudeAgent.findUsageLimitStop([rejected('five_hour'), limitMessage]), {
+    limit: 'session',
+    resetsAt: '2026-11-18T18:30:00.000Z',
+  });
+  assert.equal(
+    claudeAgent.findUsageLimitStop([rejected('seven_day_opus'), limitMessage])?.limit,
+    'week',
+  );
+  // Extra usage can take over after a rejection, and then the turn goes on.
+  assert.equal(claudeAgent.findUsageLimitStop([rejected('five_hour'), reply]), null);
+  // A server throttle is a rate_limit error too, but the plan still has usage left.
+  assert.equal(
+    claudeAgent.findUsageLimitStop([
+      { type: 'rate_limit_event', rate_limit_info: { status: 'allowed', resetsAt: 1795026600 } },
+      limitMessage,
+    ]),
+    null,
+  );
+});
+
+test('waits out usage limits unless the routine says fail', () => {
+  assert.equal(claudeAgent.resolveSettings(makeAgentTask()).onUsageLimit, 'wait');
+  assert.equal(
+    claudeAgent.resolveSettings(makeAgentTask({ onUsageLimit: 'fail' })).onUsageLimit,
+    'fail',
+  );
+  assert.throws(
+    () => claudeAgent.resolveSettings(makeAgentTask({ onUsageLimit: 'retry' })),
+    /onUsageLimit must be one of wait, fail/,
+  );
+});
+
 test('passes the routine settings to claude -p', () => {
   const { args, input, env } = claudeAgent.buildInvocation({
     routine: makeAgentTask({

@@ -2,6 +2,7 @@ import type { AgentName } from 'domains/agent/types';
 import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
 import type { RunStatus } from 'domains/run/types';
 import type { SkipReason } from 'domains/scheduler/types';
+import type { UsageLimitKind } from 'domains/transcript/types';
 import type { WebhookCallOutcome } from 'domains/webhook/types';
 
 import { HOME } from './constants';
@@ -21,7 +22,14 @@ import {
   type TranscriptStep,
 } from './transcript';
 
-export type FinishedStatus = Exclude<RunStatus, 'running'>;
+export type FinishedStatus = Exclude<RunStatus, 'running' | 'waiting'>;
+
+// The agent stops at a usage limit after this many steps and continues once it resets.
+export interface DemoUsageLimit {
+  limit: UsageLimitKind;
+  afterStep: number;
+  waitMinutes: number;
+}
 
 export interface DemoOutcome {
   id: string;
@@ -35,6 +43,7 @@ export interface DemoOutcome {
   error?: string;
   exitCode?: number | null;
   model?: string;
+  usageLimit?: DemoUsageLimit;
   steps: TranscriptStep[];
 }
 
@@ -749,6 +758,43 @@ c03a5f2 Merge pull request #478 from acme/cache-browsers
   ],
 };
 
+const flakyFixSteps: TranscriptStep[] = [
+  opusInit,
+  bash(
+    'gh run list --workflow e2e.yml --created ">=$(date -v-1d +%F)" --json databaseId,attempt --jq \'[.[] | select(.attempt > 1)]\'',
+    '[{"attempt":2,"databaseId":128812}]',
+  ),
+  bash(
+    'gh run view 128812 --attempt 1 --log-failed | grep -A4 "✘"',
+    `  ✘  settings/avatar.e2e.ts:18:1 › uploads an avatar (5.2s)
+    Error: expect(locator).toHaveAttribute(expected)
+    Expected pattern: /avatars\\/.+\\.png/
+    Received string:  "/avatars/default.png"`,
+  ),
+  read(
+    `${REPO}/e2e/settings/avatar.e2e.ts`,
+    `20    await page.getByLabel('Avatar').setInputFiles('fixtures/cat.png');
+21    await page.getByRole('button', { name: 'Save' }).click();
+22    await expect(page.getByRole('img', { name: 'Avatar' })).toHaveAttribute('src', /avatars\\/.+\\.png/);`,
+  ),
+  text(
+    'Save is clicked while the upload request is still running, so the form saves the old avatar.',
+  ),
+  edit(
+    `${REPO}/e2e/settings/avatar.e2e.ts`,
+    "await page.getByLabel('Avatar').setInputFiles('fixtures/cat.png');",
+    "const upload = page.waitForResponse('**/api/uploads');\n    await page.getByLabel('Avatar').setInputFiles('fixtures/cat.png');\n    await upload;",
+  ),
+  bash(
+    'pnpm playwright test settings/avatar.e2e.ts --repeat-each 50',
+    'Running 50 tests using 4 workers\n  50 passed (1.7m)',
+  ),
+  bash(
+    'gh pr create --title "Wait for the avatar upload before saving" --body-file /tmp/pr.md',
+    'https://github.com/acme/web/pull/497',
+  ),
+];
+
 const flakyE2eFixer: DemoRoutine = {
   name: routineNameSchema.parse('flaky-e2e-fixer'),
   description: 'Finds flaky end-to-end tests in CI and fixes them',
@@ -776,42 +822,19 @@ For each flaky test, find the cause in its trace, fix the test or the code, and 
       numTurns: 24,
       resultText:
         "Fixed 'uploads an avatar': it clicked Save before the upload finished. It now waits for the upload response, 50 runs in a row pass, and #497 is open.",
-      steps: [
-        opusInit,
-        bash(
-          'gh run list --workflow e2e.yml --created ">=$(date -v-1d +%F)" --json databaseId,attempt --jq \'[.[] | select(.attempt > 1)]\'',
-          '[{"attempt":2,"databaseId":128812}]',
-        ),
-        bash(
-          'gh run view 128812 --attempt 1 --log-failed | grep -A4 "✘"',
-          `  ✘  settings/avatar.e2e.ts:18:1 › uploads an avatar (5.2s)
-    Error: expect(locator).toHaveAttribute(expected)
-    Expected pattern: /avatars\\/.+\\.png/
-    Received string:  "/avatars/default.png"`,
-        ),
-        read(
-          `${REPO}/e2e/settings/avatar.e2e.ts`,
-          `20    await page.getByLabel('Avatar').setInputFiles('fixtures/cat.png');
-21    await page.getByRole('button', { name: 'Save' }).click();
-22    await expect(page.getByRole('img', { name: 'Avatar' })).toHaveAttribute('src', /avatars\\/.+\\.png/);`,
-        ),
-        text(
-          'Save is clicked while the upload request is still running, so the form saves the old avatar.',
-        ),
-        edit(
-          `${REPO}/e2e/settings/avatar.e2e.ts`,
-          "await page.getByLabel('Avatar').setInputFiles('fixtures/cat.png');",
-          "const upload = page.waitForResponse('**/api/uploads');\n    await page.getByLabel('Avatar').setInputFiles('fixtures/cat.png');\n    await upload;",
-        ),
-        bash(
-          'pnpm playwright test settings/avatar.e2e.ts --repeat-each 50',
-          'Running 50 tests using 4 workers\n  50 passed (1.7m)',
-        ),
-        bash(
-          'gh pr create --title "Wait for the avatar upload before saving" --body-file /tmp/pr.md',
-          'https://github.com/acme/web/pull/497',
-        ),
-      ],
+      steps: flakyFixSteps,
+    },
+    {
+      id: 'paused',
+      weight: 0,
+      status: 'succeeded',
+      minutes: 12,
+      costUsd: 0.97,
+      numTurns: 25,
+      resultText:
+        "Fixed 'uploads an avatar': it clicked Save before the upload finished. It now waits for the upload response, 50 runs in a row pass, and #497 is open.",
+      usageLimit: { limit: 'session', afterStep: 5, waitMinutes: 70 },
+      steps: flakyFixSteps,
     },
     {
       id: 'stable',
@@ -831,6 +854,7 @@ For each flaky test, find the cause in its trace, fix the test or the code, and 
       ],
     },
   ],
+  manualRuns: [{ minutesAgo: 23, outcome: 'paused' }],
 };
 
 const BUGS_COMMAND =

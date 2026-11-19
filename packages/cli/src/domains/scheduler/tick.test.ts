@@ -90,6 +90,7 @@ test('a routine that is still running is skipped and not started twice', () => {
     logFile: path.join(tmp, 'r1.jsonl'),
     replyPid: null,
     conversation: null,
+    usageLimit: null,
   });
   const result = tick(new Date('2026-09-30T10:02:30'));
   assert.deepEqual(result.started, []);
@@ -98,6 +99,33 @@ test('a routine that is still running is skipped and not started twice', () => {
     readSchedulerState()?.routines[everyMinute]?.skips.at(-1)?.reason,
     'already_running',
   );
+});
+
+test('a run that waits for a usage limit keeps its routine busy but takes no slot', () => {
+  const waitingNames = ['wait-a', 'wait-b', 'wait-c'];
+  for (const name of waitingNames) {
+    writeRoutine(name, 'schedule: "* * * * *"');
+    writeRunRecord(
+      makeRunRecord({
+        id: runIdSchema.parse(`${name}-1`),
+        routine: routineNameSchema.parse(name),
+        status: 'waiting',
+        pid: process.pid,
+        logFile: path.join(tmp, `${name}-1.jsonl`),
+        usageLimit: {
+          limit: 'session',
+          stoppedAt: '2026-09-30T10:00:00Z',
+          continuesAt: '2026-09-30T11:01:00Z',
+        },
+      }),
+    );
+  }
+  writeRoutine('free', 'schedule: "* * * * *"\nagent: command\ncommand: "true"');
+
+  const result = tick(new Date('2026-09-30T10:03:30'));
+  assert.deepEqual(result.started, ['free']);
+  for (const name of waitingNames) assert.ok(result.skipped.includes(`${name} (already running)`));
+  for (const name of [...waitingNames, 'free']) fs.rmSync(path.join(routinesDir, `${name}.md`));
 });
 
 test('catch-up window never reaches back before the last tick', () => {

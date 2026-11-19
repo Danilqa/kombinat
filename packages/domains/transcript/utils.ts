@@ -1,8 +1,16 @@
 import { match } from 'ts-pattern';
 
+import { formatClockOrDayTime } from 'utils/date-time';
 import { countSearchMatches } from 'utils/search';
 
-import type { HookPhase, MessageSource, ToolItem, TranscriptItem } from './types';
+import type {
+  HookPhase,
+  MessageSource,
+  ToolItem,
+  TranscriptItem,
+  UsageLimitItem,
+  UsageLimitKind,
+} from './types';
 
 const PREVIEW_LENGTH = 160;
 
@@ -70,4 +78,22 @@ export function getMessageSourceLabel(source: MessageSource): string | null {
     .with('dashboard', () => null)
     .with('webhook', () => 'From a webhook')
     .exhaustive();
+}
+
+export function getUsageLimitLabel(limit: UsageLimitKind): string {
+  return match(limit)
+    .with('session', () => '5-hour limit')
+    .with('week', () => 'weekly limit')
+    .with('other', () => 'usage limit')
+    .exhaustive();
+}
+
+export function getUsageLimitPauseLabel(item: UsageLimitItem, now: number = Date.now()): string {
+  const at = (iso: string) => formatClockOrDayTime(iso, now);
+  const end = match(item.end)
+    .with(null, () => `continues at ${at(item.continuesAt)} when it resets`)
+    .with({ outcome: 'continued' }, ({ at: endedAt }) => `continued at ${at(endedAt)}`)
+    .with({ outcome: 'stopped' }, ({ at: endedAt }) => `stopped waiting at ${at(endedAt)}`)
+    .exhaustive();
+  return `${at(item.stoppedAt)}, ${end}`;
 }

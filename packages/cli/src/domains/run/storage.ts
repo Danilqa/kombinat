@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { isMatching } from 'ts-pattern';
+import { isMatching, P } from 'ts-pattern';
 
 import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
 import type { RunId } from 'domains/run/ids';
@@ -11,7 +11,7 @@ import { checkIsRunActive, compareRunsByNewest } from 'domains/run/utils';
 
 import { config } from '../../config';
 import { readJsonFile, writeJsonFile } from '../../utils/json';
-import { appendChatEvent } from './event-log';
+import { appendChatEvent, appendUsageLimitEvent } from './event-log';
 
 export function getRunsDir(routine: RoutineName): string {
   return path.join(config.stateDir, 'runs', routine);
@@ -48,13 +48,19 @@ function reconcileRecord(record: RunRecord): RunRecord {
     writeRunRecord(reconciled);
     return reconciled;
   }
-  if (!isMatching({ status: 'running' }, record) || checkIsProcessAlive(record.pid)) return record;
+  const isAtWork = isMatching({ status: P.union('running', 'waiting') }, record);
+  if (!isAtWork || checkIsProcessAlive(record.pid)) return record;
+  const endedAt = new Date().toISOString();
   const reconciled: RunRecord = {
     ...record,
     status: 'aborted',
-    endedAt: new Date().toISOString(),
+    endedAt,
     error: 'Runner process disappeared',
+    usageLimit: null,
   };
+  if (record.usageLimit !== null) {
+    appendUsageLimitEvent(record, { type: 'usage_limit_end', at: endedAt, outcome: 'stopped' });
+  }
   writeRunRecord(reconciled);
   return reconciled;
 }

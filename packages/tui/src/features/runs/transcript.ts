@@ -9,6 +9,8 @@ import {
   getTranscriptEmptyLabel,
   getTranscriptResultLabel,
   getTurnsLabel,
+  getUsageLimitLabel,
+  getUsageLimitPauseLabel,
 } from 'domains/transcript/utils';
 import { formatDuration } from 'utils/date-time';
 
@@ -183,6 +185,17 @@ function itemLines(
         text(`  ${formatDuration(result.durationMs)}`, S.magenta),
       ],
     ])
+    .with({ kind: 'usage-limit' }, pause =>
+      wrapLine(
+        [
+          text('‖ ', S.blue),
+          text(`Paused at the ${getUsageLimitLabel(pause.limit)}`, S.bold),
+          text(`  ${getUsageLimitPauseLabel(pause)}`, S.dim),
+        ],
+        width,
+        2,
+      ),
+    )
     .exhaustive();
 }
 

@@ -20,6 +20,11 @@ function getStatusAppearance(status: RunStatus): StatusAppearance {
       dotClassName: 'bg-warning',
       isPulsing: true,
     }))
+    .with('waiting', (): StatusAppearance => ({
+      variant: 'info',
+      dotClassName: 'bg-info',
+      isPulsing: false,
+    }))
     .with('succeeded', (): StatusAppearance => ({
       variant: 'positive',
       dotClassName: 'bg-positive',

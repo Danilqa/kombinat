@@ -10,17 +10,25 @@ import type { RoutineName } from 'domains/routine/ids';
 import type { RunId } from 'domains/run/ids';
 import type { RunRecord, RunTrigger } from 'domains/run/types';
 import { checkIsRunActive, createRunId } from 'domains/run/utils';
+import { getUsageLimitLabel } from 'domains/transcript/utils';
 
 import { config, getCliArgs } from '../../config';
 import { parseJson } from '../../utils/json';
 import { getAgent } from '../agent/registry';
 import { writePlanUsage } from '../agent/storage';
-import type { Agent, Invocation, OutputEvent, ReplyMessage } from '../agent/types';
+import type { Agent, Invocation, OutputEvent, RunContext, UsageLimitStop } from '../agent/types';
 import type { Routine } from '../routine/types';
-import { appendChatEvent, readLastMessage } from './event-log';
+import type { ChatMessage } from './event-log';
+import {
+  appendChatEvent,
+  appendUsageLimitEvent,
+  readLastMessage,
+  readRunEvents,
+} from './event-log';
 import { getBeforeHookError, HOOK_TIMEOUT_MS, runHook } from './hooks';
 import { appendPayload, takePayload, takePrompt } from './payload';
 import { getRunsDir, listRuns, readRunRecord, writeRunRecord } from './storage';
+import { planUsageLimitWait, waitOutUsageLimit } from './usage-limit';
 
 export interface RunOptions {
   trigger: RunTrigger;
@@ -32,6 +40,7 @@ export interface RunOptions {
 const PENDING_START_MS = HOOK_TIMEOUT_MS + 60_000;
 const KILL_GRACE_MS = 60_000;
 const STDERR_CHUNKS = 200;
+const CONTINUE_TEXT = 'The usage limit has reset. Continue the task from where you stopped.';
 
 function checkIsBinaryFound(command: string): boolean {
   if (command.includes('/')) return fs.existsSync(command);
@@ -46,13 +55,13 @@ interface KillTimer {
 }
 
 // Ctrl-C first so the agent can wrap up, SIGTERM if it is still around a minute later.
-function killAfter(child: ChildProcess, minutes: number): KillTimer {
+function killAfter(child: ChildProcess, ms: number): KillTimer {
   let fired = false;
   const timer = setTimeout(() => {
     fired = true;
     child.kill('SIGINT');
     setTimeout(() => child.kill('SIGTERM'), KILL_GRACE_MS).unref();
-  }, minutes * 60_000);
+  }, ms);
   return { clear: () => clearTimeout(timer), checkHasFired: () => fired };
 }
 
@@ -76,8 +85,21 @@ interface AgentRun {
   invocation: Invocation;
   record: RunRecord;
   hookTimeoutMs: number;
+  timeoutMs: number;
   persist: (record: RunRecord) => void;
 }
+
+interface AgentExit {
+  outcome: Partial<RunRecord>;
+  usageLimitStop: UsageLimitStop | null;
+  workedMs: number;
+}
+
+const exitWith = (outcome: Partial<RunRecord>, workedMs = 0): AgentExit => ({
+  outcome,
+  usageLimitStop: null,
+  workedMs,
+});
 
 // Runs the preflight, the before hook and the agent, and returns how the run ended.
 async function runAgent({
@@ -86,23 +108,24 @@ async function runAgent({
   invocation,
   record,
   hookTimeoutMs,
+  timeoutMs,
   persist,
-}: AgentRun): Promise<Partial<RunRecord>> {
+}: AgentRun): Promise<AgentExit> {
   if (!fs.existsSync(routine.cwd)) {
-    return {
+    return exitWith({
       status: 'failed',
       error: `cwd does not exist: ${routine.cwd} (create it or change cwd in the routine)`,
-    };
+    });
   }
   if (!checkIsBinaryFound(invocation.command)) {
     const hint =
       agent.binaryEnv === null
         ? ''
         : ` (set ${agent.binaryEnv} to its path before kombinat serve or install)`;
-    return {
+    return exitWith({
       status: 'failed',
       error: `${agent.name} binary not found at ${invocation.command}${hint}`,
-    };
+    });
   }
   if (routine.before !== null) {
     const result = await runHook({
@@ -115,9 +138,11 @@ async function runAgent({
       logFile: record.logFile,
     });
     const beforeError = getBeforeHookError(result, hookTimeoutMs);
-    if (beforeError !== null) return { status: 'failed', error: beforeError };
+    if (beforeError !== null) return exitWith({ status: 'failed', error: beforeError });
   }
 
+  const logStart = fs.existsSync(record.logFile) ? fs.statSync(record.logFile).size : 0;
+  const spawnedAt = Date.now();
   const child = spawn(invocation.command, invocation.args, {
     cwd: routine.cwd,
     env: invocation.env,
@@ -149,7 +174,7 @@ async function runAgent({
     }
   });
 
-  const killTimer = killAfter(child, routine.timeoutMinutes);
+  const killTimer = killAfter(child, timeoutMs);
 
   // A command that ignores the prompt can exit before it is written. Its exit code decides the run.
   child.stdin.on('error', () => undefined);
@@ -164,23 +189,108 @@ async function runAgent({
   });
   killTimer.clear();
   await new Promise<void>(resolve => log.end(resolve));
+  const workedMs = Date.now() - spawnedAt;
 
   if (killTimer.checkHasFired()) {
-    return {
-      status: 'timed_out',
-      exitCode,
-      error: `Killed after ${routine.timeoutMinutes} minutes`,
-    };
+    return exitWith(
+      { status: 'timed_out', exitCode, error: `Killed after ${routine.timeoutMinutes} minutes` },
+      workedMs,
+    );
   }
+  const usageLimitStop = agent.findUsageLimitStop(readRunEvents(record, logStart));
   if (exitCode !== 0) {
     const stderr = stderrChunks.join('').trim().slice(-2000);
     return {
-      status: 'failed',
-      exitCode,
-      error: record.error ?? (stderr || `exit code ${exitCode}`),
+      outcome: {
+        status: 'failed',
+        exitCode,
+        error: record.error ?? (stderr || `exit code ${exitCode}`),
+      },
+      usageLimitStop,
+      workedMs,
     };
   }
-  return { status: record.error === null ? 'succeeded' : 'failed', exitCode };
+  return {
+    outcome: { status: record.error === null ? 'succeeded' : 'failed', exitCode },
+    usageLimitStop,
+    workedMs,
+  };
+}
+
+function addSpend(before: number | null, after: number | null): number | null {
+  return before === null && after === null ? null : (before ?? 0) + (after ?? 0);
+}
+
+interface LimitedRun extends AgentRun {
+  context: RunContext;
+}
+
+// Each time a usage limit stops the agent, the run waits for the reset and continues the session.
+async function runWaitingOutLimits(run: LimitedRun): Promise<Partial<RunRecord>> {
+  const { routine, agent, record, context } = run;
+  let exit = await runAgent(run);
+  let workedMs = exit.workedMs;
+  for (;;) {
+    const stop = routine.onUsageLimit === 'wait' ? exit.usageLimitStop : null;
+    const wait = stop === null ? null : planUsageLimitWait(stop);
+    const invocation =
+      wait === null || record.sessionId === null
+        ? null
+        : agent.buildReplyInvocation(context, record.sessionId, {
+            text: CONTINUE_TEXT,
+            source: 'usage_limit',
+          });
+    if (wait === null || invocation === null) return exit.outcome;
+
+    appendUsageLimitEvent(record, { type: 'usage_limit_wait', ...wait });
+    writeRunRecord({
+      ...record,
+      status: 'waiting',
+      pid: process.pid,
+      resultText: null,
+      error: null,
+      usageLimit: wait,
+    });
+    const waitOutcome = await waitOutUsageLimit(record, wait);
+    appendUsageLimitEvent(record, {
+      type: 'usage_limit_end',
+      at: new Date().toISOString(),
+      outcome: waitOutcome,
+    });
+    if (isMatching('stopped', waitOutcome)) {
+      return {
+        ...exit.outcome,
+        status: 'failed',
+        error:
+          exit.outcome.error ??
+          record.error ??
+          `Stopped waiting for the ${getUsageLimitLabel(wait.limit)} to reset`,
+      };
+    }
+
+    const spent = {
+      costUsd: record.costUsd,
+      numTurns: record.numTurns,
+      durationMs: record.durationMs,
+    };
+    Object.assign(record, {
+      costUsd: null,
+      numTurns: null,
+      durationMs: null,
+      resultText: null,
+      error: null,
+    });
+    exit = await runAgent({
+      ...run,
+      routine: { ...routine, before: null },
+      invocation,
+      timeoutMs: routine.timeoutMinutes * 60_000 - workedMs,
+    });
+    workedMs += exit.workedMs;
+    record.costUsd = addSpend(spent.costUsd, record.costUsd);
+    record.numTurns = addSpend(spent.numTurns, record.numTurns);
+    record.durationMs = addSpend(spent.durationMs, record.durationMs);
+  }
 }
 
 export async function runRoutine(
@@ -214,19 +324,23 @@ export async function runRoutine(
     logFile: path.join(runsDir, `${id}.jsonl`),
     replyPid: null,
     conversation: options.conversation ?? null,
+    usageLimit: null,
   };
 
   const prompt = takePrompt(routine.name, id) ?? routine.prompt;
   const payload = takePayload(routine.name, id);
   const task = { ...routine, prompt: payload === null ? prompt : appendPayload(prompt, payload) };
-  const invocation = agent.buildInvocation({ routine: task, runId: id, trigger: options.trigger });
-  const outcome = await runAgent({
+  const context: RunContext = { routine: task, runId: id, trigger: options.trigger };
+  const invocation = agent.buildInvocation(context);
+  const outcome = await runWaitingOutLimits({
     routine,
     agent,
     invocation,
     record,
     hookTimeoutMs,
+    timeoutMs: routine.timeoutMinutes * 60_000,
     persist: writeRunRecord,
+    context,
   });
   const finished: RunRecord = { ...record, ...outcome, endedAt: new Date().toISOString() };
   try {
@@ -273,15 +387,18 @@ export async function replyToRun(routine: Routine, run: RunRecord): Promise<RunR
   const outcome: Partial<RunRecord> =
     invocation === null
       ? { status: 'failed', error: `This ${run.agent} run has no session to continue` }
-      : await runAgent({
-          routine: { ...routine, before: null },
-          agent,
-          invocation,
-          record: session,
-          hookTimeoutMs: HOOK_TIMEOUT_MS,
-          persist: ({ sessionId, resumeCommand }) =>
-            writeRunRecord({ ...replying, sessionId, resumeCommand }),
-        });
+      : (
+          await runAgent({
+            routine: { ...routine, before: null },
+            agent,
+            invocation,
+            record: session,
+            hookTimeoutMs: HOOK_TIMEOUT_MS,
+            timeoutMs: routine.timeoutMinutes * 60_000,
+            persist: ({ sessionId, resumeCommand }) =>
+              writeRunRecord({ ...replying, sessionId, resumeCommand }),
+          })
+        ).outcome;
   // An error the agent reported is in its own events already.
   if (!isMatching({ status: 'succeeded' }, outcome) && session.error === null) {
     appendChatEvent(run, { type: 'reply_error', error: outcome.error ?? 'The reply failed' });
@@ -348,7 +465,7 @@ export function startDetachedRun(routineName: RoutineName, options: RunOptions):
   }).unref();
 }
 
-export function startDetachedReply(run: RunRecord, message: ReplyMessage): void {
+export function startDetachedReply(run: RunRecord, message: ChatMessage): void {
   appendChatEvent(run, { type: 'message', ...message });
   const child = spawn(process.execPath, getCliArgs('reply', run.routine, run.id), {
     cwd: config.projectRoot,

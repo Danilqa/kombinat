@@ -1,3 +1,5 @@
+import { isMatching } from 'ts-pattern';
+
 import type { RoutineName } from 'domains/routine/ids';
 import type { SchedulerState, SkipReason } from 'domains/scheduler/types';
 import { cronRunsBetween } from 'utils/cron';
@@ -56,11 +58,14 @@ export function tick(now = new Date()): TickResult {
   const floor = new Date(now.getTime() - config.catchUpWindowDays * 86_400_000);
   const lastTick = new Date(state.lastTickAt);
   const routines = loadRoutines();
-  const runningNames = new Set([
-    ...getRunningRuns().map(r => r.routine),
-    ...routines.map(r => r.name).filter(name => checkIsStarting(name)),
-  ]);
-  let runningCount = runningNames.size;
+  const runningRuns = getRunningRuns();
+  const startingNames = routines.map(r => r.name).filter(name => checkIsStarting(name));
+  const runningNames = new Set([...runningRuns.map(r => r.routine), ...startingNames]);
+  // A run that waits for a usage limit to reset keeps its routine busy but takes no slot.
+  let runningCount = new Set([
+    ...runningRuns.filter(run => !isMatching({ status: 'waiting' }, run)).map(r => r.routine),
+    ...startingNames,
+  ]).size;
 
   for (const routine of routines) {
     if (!routine.schedule) continue;

@@ -84,6 +84,7 @@ function readAgentSettings(data: Frontmatter, agent: AgentName): AgentSettings {
     permissionMode: readString(data, 'permissionMode'),
     command: readString(data, 'command'),
     maxBudgetUsd: readNumber(data, 'maxBudgetUsd'),
+    onUsageLimit: readString(data, 'onUsageLimit'),
   });
 }
 
