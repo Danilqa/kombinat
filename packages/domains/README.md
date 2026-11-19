@@ -89,8 +89,8 @@ Invariants:
 A Claude run whose agent stops at the 5-hour or weekly limit of the plan waits for the reset and continues, unless its routine sets `onUsageLimit: fail`. In `usage-limit.ts`:
 
 1. The agent stopped at a limit when the last message of its process is the synthetic one that Claude Code marks `rate_limit` and its last `rate_limit_event` is `rejected` with a reset time. The reset must be in the future and at most 8 days away, and the run must have a session, or the run ends as it would have.
-2. The runner appends `{"type":"usage_limit_wait","limit":"session","stoppedAt":"…","continuesAt":"…"}` to the event log and writes the record as `waiting`, with its own pid and the wait in `usageLimit`. It continues 1 minute after the reset, which the server keeps by its own clock.
-3. It checks the clock every second, so a computer that slept still continues on time, and reads `<id>.wait` next to the record, which `POST /api/runs/<routine>/<id>/wait/continue` and `/wait/stop` write. Both answer 409 when the run is not `waiting`.
+2. The runner appends `{"type":"usage_limit_wait","limit":"session","stoppedAt":"…","continuesAt":"…"}` to the event log and writes the record as `waiting`, with its own pid and the wait in `usageLimit`. Its `continuesAt` is 1 minute after the reset, which the server keeps by its own clock.
+3. It reads `<id>.wait` next to the record every second. From `continuesAt`, the scheduler writes `continue` there at each tick while fewer runs are at work than the concurrency limit, counting the runs that started and have no record yet, oldest run first and after the routines that are due. `POST /api/runs/<routine>/<id>/wait/continue` and `/wait/stop` write it too, whatever the slots, and answer 409 when the run is not `waiting`.
 4. It appends `{"type":"usage_limit_end","at":"…","outcome":"continued"}`, or `"stopped"`. Continued, the run is `running` again and resumes the session with a note that the limit reset, without its before hook, for the time left of `timeoutMinutes`: the wait does not count. Its turns, cost and duration add up. Stopped, the run ends as `failed` with the agent's error.
 
 Invariants:

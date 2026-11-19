@@ -17,8 +17,8 @@ import type {
   UsageLimitWait,
 } from './types';
 
-// The runner continues a run within seconds of its reset when a slot is free.
-const CONTINUE_GRACE_MS = 10_000;
+// The scheduler, which ticks every 30 s, continues a run at its first tick after the reset.
+const CONTINUE_GRACE_MS = 60_000;
 
 export function createRunId(now = new Date()): RunId {
   const stamp = now

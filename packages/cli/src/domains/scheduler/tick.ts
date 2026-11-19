@@ -9,6 +9,7 @@ import { loadRoutines } from '../routine/storage';
 import type { Routine } from '../routine/types';
 import { checkIsStarting, startDetachedRun } from '../run/runner';
 import { getRunningRuns } from '../run/storage';
+import { checkIsWaitOver, requestWaitAction } from '../run/usage-limit';
 import { listQueuedRoutines, takeQueuedWebhook } from '../webhook/queue';
 import { startWebhook } from '../webhook/start';
 import { readSchedulerState, writeSchedulerState } from './storage';
@@ -47,12 +48,14 @@ function markScheduled(state: SchedulerState, routine: Routine, scheduledFor: Da
 
 export interface TickResult {
   started: RoutineName[];
+  continued: RoutineName[];
   skipped: string[];
 }
 
 export function tick(now = new Date()): TickResult {
   const state = loadState(now);
   const started: RoutineName[] = [];
+  const continued: RoutineName[] = [];
   const skipped: string[] = [];
   const floor = new Date(now.getTime() - config.catchUpWindowDays * 86_400_000);
   const lastTick = new Date(state.lastTickAt);
@@ -103,6 +106,14 @@ export function tick(now = new Date()): TickResult {
     started.push(routine.name);
   }
 
+  // After the schedules, so a run that waited out a usage limit never makes one skip.
+  for (const run of runningRuns.toReversed()) {
+    if (!checkIsWaitOver(run, now) || runningCount >= config.maxConcurrentRuns) continue;
+    requestWaitAction(run, 'continue');
+    runningCount += 1;
+    continued.push(run.routine);
+  }
+
   // After the schedules, so the queue never makes one skip.
   for (const name of listQueuedRoutines()) {
     const routine = routines.find(candidate => candidate.name === name);
@@ -118,14 +129,15 @@ export function tick(now = new Date()): TickResult {
 
   state.lastTickAt = now.toISOString();
   writeSchedulerState(state);
-  return { started, skipped };
+  return { started, continued, skipped };
 }
 
 export function startSchedulerLoop(log: (line: string) => void): () => void {
   const run = () => {
     try {
-      const { started, skipped } = tick();
+      const { started, continued, skipped } = tick();
       for (const name of started) log(`started ${name}`);
+      for (const name of continued) log(`continued ${name}`);
       for (const name of skipped) log(`skipped ${name}`);
     } catch (err) {
       log(`tick failed: ${getErrorMessage(err)}`);

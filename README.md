@@ -217,7 +217,7 @@ Changes apply on the next check, no restart needed. Write the prompt so the agen
 
 - `claude` runs `claude -p`. Anything that needs approval is denied.
 - `fallbackModel` is the model Claude switches to when `model` is not available, overloaded or fails, such as `claude-sonnet-5-5`. A comma-separated list is tried in order. The run's transcript says when it switched.
-- `onUsageLimit` says what a run does when it hits the 5-hour or weekly limit of the Claude plan. With `wait`, the run shows Waiting for limit, and a minute after the reset Kombinat continues its session where it stopped. The run's page has Continue now and Stop waiting, and its transcript marks the pause. With `fail`, the run fails at the limit.
+- `onUsageLimit` says what a run does when it hits the 5-hour or weekly limit of the Claude plan. With `wait`, the run shows Waiting for limit, and a minute after the reset, once a run slot is free, Kombinat continues its session where it stopped. The run's page has Continue now and Stop waiting, and its transcript marks the pause. With `fail`, the run fails at the limit.
 - `codex` runs `codex exec`. `permissionMode` sets its sandbox.
 - `command` runs any other CLI, for example `command: gemini --yolo`. It gets the prompt on stdin, and its output is the result.
 

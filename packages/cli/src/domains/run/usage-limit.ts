@@ -1,16 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { match } from 'ts-pattern';
+import { isMatching, match } from 'ts-pattern';
 
 import { usageLimitWaitActionSchema } from 'domains/run/schemas';
 import type { RunRecord, UsageLimitWait, UsageLimitWaitAction } from 'domains/run/types';
-import { checkIsRunAtWork } from 'domains/run/utils';
 import type { UsageLimitOutcome } from 'domains/transcript/types';
 
-import { config } from '../../config';
 import type { UsageLimitStop } from '../agent/types';
-import { getRunningRuns, getRunsDir } from './storage';
+import { getRunsDir } from './storage';
 
 // A limit resets on the server's clock, so a session continued on the second could be refused again.
 const RESET_GRACE_MS = 60_000;
@@ -48,37 +46,29 @@ function takeWaitAction(record: RunRecord): UsageLimitWaitAction | null {
   return action.success ? action.data : null;
 }
 
-function checkHasFreeSlot(): boolean {
-  return getRunningRuns().filter(checkIsRunAtWork).length < config.maxConcurrentRuns;
+// Only the daemon knows the runs that started and have no record yet, so its scheduler continues a run.
+export function checkIsWaitOver(run: RunRecord, now: Date): boolean {
+  return (
+    isMatching('waiting', run.status) &&
+    run.usageLimit !== null &&
+    now.getTime() >= new Date(run.usageLimit.continuesAt).getTime()
+  );
 }
 
-// Continue now skips the slot check, as Run now does, since someone asked for it.
-function readWaitOutcome(record: RunRecord, continuesAt: number): UsageLimitOutcome | null {
-  return match(takeWaitAction(record))
-    .with('stop', (): UsageLimitOutcome => 'stopped')
-    .with('continue', (): UsageLimitOutcome => 'continued')
-    .with(null, () => (Date.now() >= continuesAt && checkHasFreeSlot() ? 'continued' : null))
-    .exhaustive();
-}
-
-// Polls the wall clock instead of one long timer, which would run late after the computer sleeps.
-export function waitOutUsageLimit(
-  record: RunRecord,
-  wait: UsageLimitWait,
-): Promise<UsageLimitOutcome> {
+export function waitOutUsageLimit(record: RunRecord): Promise<UsageLimitOutcome> {
   // A click that came as an earlier wait ended must not end this one.
   takeWaitAction(record);
-  const continuesAt = new Date(wait.continuesAt).getTime();
   return new Promise(resolve => {
-    const poll = () => {
-      const outcome = readWaitOutcome(record, continuesAt);
-      if (outcome === null) {
-        // Runs that share a reset check at different moments, so two never take the last slot.
-        setTimeout(poll, POLL_MS * (0.5 + Math.random()));
-        return;
-      }
-      resolve(outcome);
-    };
-    setTimeout(poll, POLL_MS * Math.random());
+    const timer = setInterval(() => {
+      const action = takeWaitAction(record);
+      if (action === null) return;
+      clearInterval(timer);
+      resolve(
+        match(action)
+          .with('stop', (): UsageLimitOutcome => 'stopped')
+          .with('continue', (): UsageLimitOutcome => 'continued')
+          .exhaustive(),
+      );
+    }, POLL_MS);
   });
 }

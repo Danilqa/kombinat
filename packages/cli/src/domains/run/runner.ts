@@ -246,7 +246,7 @@ async function runWaitingOutLimits(run: LimitedRun): Promise<Partial<RunRecord>>
       error: null,
       usageLimit: wait,
     });
-    const waitOutcome = await waitOutUsageLimit(record, wait);
+    const waitOutcome = await waitOutUsageLimit(record);
     appendLogEvent(record, {
       type: 'usage_limit_end',
       at: new Date().toISOString(),
