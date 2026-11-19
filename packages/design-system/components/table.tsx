@@ -10,7 +10,7 @@ import { cn } from '../utils';
 
 const TABLE_CLASS_NAME = 'w-full caption-bottom text-body tabular-nums';
 const VIRTUAL_TABLE_OVERSCAN_PX = 600;
-const VIRTUAL_TABLE_ROW_HEIGHT_PX = 44;
+const VIRTUAL_TABLE_ROW_HEIGHT_PX = 53;
 const VIRTUAL_TABLE_FIRST_INDEX = 1_000_000_000;
 
 interface TableProps extends React.ComponentProps<'table'> {}

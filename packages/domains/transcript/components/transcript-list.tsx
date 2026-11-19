@@ -130,7 +130,7 @@ const ToolRow = memo(function ToolRow({ item, isPending, search }: ToolRowProps)
           aria-hidden="true"
           className="size-3.5 shrink-0 text-fg-faint transition-[rotate,color] duration-200 ease-out-quint group-hover:text-fg-muted group-data-[state=open]:rotate-90 group-data-[state=open]:text-fg-muted"
         />
-        <span className="shrink-0 font-medium text-fg-secondary transition-colors group-hover:text-fg">
+        <span className="min-w-0 font-medium wrap-anywhere text-fg-secondary transition-colors group-hover:text-fg">
           {item.name}
         </span>
         {/* Search skips this cut-off line and finds its text in the input, which it opens. */}
