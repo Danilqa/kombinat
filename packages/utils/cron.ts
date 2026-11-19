@@ -46,7 +46,9 @@ function parseField(field: string, min: number, max: number): Set<number> {
   for (const part of field.split(',')) {
     const [range = '', stepPart] = part.split('/');
     const step = stepPart === undefined ? 1 : Number(stepPart);
-    if (!Number.isInteger(step) || step < 1) throw new Error(`Invalid cron step "${part}"`);
+    if (!Number.isInteger(step) || step < 1) {
+      throw new Error(`Cron step in "${part}" must be a whole number of 1 or more`);
+    }
     const [start, end] = parseBounds(range, stepPart !== undefined, min, max);
     if (
       !Number.isInteger(start) ||
@@ -55,7 +57,9 @@ function parseField(field: string, min: number, max: number): Set<number> {
       end > max ||
       start > end
     ) {
-      throw new Error(`Invalid cron field "${field}" (allowed ${min}-${max})`);
+      throw new Error(
+        `Cron field "${field}" must use numbers from ${min} to ${max}, with ranges from low to high`,
+      );
     }
     for (let value = start; value <= end; value += step) values.add(value);
   }

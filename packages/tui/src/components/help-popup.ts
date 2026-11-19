@@ -11,7 +11,7 @@ export const HELP: Array<[string, string]> = [
   ['g  G', 'top / bottom (G follows a running run)'],
   ['ctrl-d  ctrl-u', 'half page down / up'],
   ['pgdn  pgup', 'page down / up'],
-  ['[  ]', 'routine tabs: runs, prompt, skipped'],
+  ['[  ]', 'previous / next routine tab'],
   ['{  }', 'previous / next transcript item'],
   ['e', 'expand or collapse every tool call'],
   ['r', 'run the selected routine now'],

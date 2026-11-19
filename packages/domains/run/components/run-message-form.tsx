@@ -82,7 +82,7 @@ export function RunMessageForm({ run, onSent }: RunMessageFormProps) {
           ) : (
             <ArrowUp aria-hidden="true" className="size-4" strokeWidth={2.5} />
           )}
-          <span className="sr-only">Send</span>
+          <span className="sr-only">Send message</span>
         </Button>
       </div>
       {error && (

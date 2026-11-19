@@ -103,7 +103,11 @@ test('rejects mismatching names and bad cron', () => {
   assert.throws(
     () =>
       buildRoutine('/tmp/demo.md', '---\nname: demo\nschedule: 99 * * * *\ncwd: /tmp\n---\nHello'),
-    /Invalid cron/,
+    /demo\.md: Cron field "99" must use numbers from 0 to 59/,
+  );
+  assert.throws(
+    () => buildRoutine('/tmp/demo.md', 'Hello'),
+    /demo\.md: must start with a frontmatter block/,
   );
   assert.throws(() => buildRoutine('/tmp/demo.md', '---\nname: demo\ncwd: /tmp\n---\n'), /empty/);
 });

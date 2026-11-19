@@ -787,7 +787,14 @@ export class TuiApp {
     const scroll = clamp(this.listScroll[list], Math.max(0, cursor - visible + 1), cursor);
     this.listScroll[list] = scroll;
     if (rows.length === 0) {
-      const empty = this.overview ? 'nothing here yet' : this.overviewError ? '' : 'loading…';
+      const empty = this.overview
+        ? match(list)
+            .with('routines', () => 'No routines yet.')
+            .with('runs', () => 'No runs yet.')
+            .exhaustive()
+        : this.overviewError
+          ? ''
+          : 'loading…';
       return box({
         title,
         width,
@@ -954,7 +961,7 @@ export class TuiApp {
         [
           'r',
           match(focus)
-            .with('runs', () => 'run again')
+            .with('runs', () => 'run now')
             .with('routines', () => 'run now')
             .exhaustive(),
         ],

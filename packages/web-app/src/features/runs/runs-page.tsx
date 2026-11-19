@@ -14,7 +14,11 @@ export function RunsPage() {
         title="Runs"
         aside={
           <div className="flex items-center gap-2">
-            {runs.data && <PageHeader.Aside>{runs.data.total} runs</PageHeader.Aside>}
+            {runs.data && (
+              <PageHeader.Aside>
+                {runs.data.total} {runs.data.total === 1 ? 'run' : 'runs'}
+              </PageHeader.Aside>
+            )}
             <RunsSettingsMenu />
           </div>
         }

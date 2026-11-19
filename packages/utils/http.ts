@@ -55,4 +55,6 @@ export function createHttpClient({
   };
 }
 
-export const sameOriginApi = createHttpClient();
+export const sameOriginApi = createHttpClient({
+  networkErrorMessage: "Can't reach the daemon. Check that it's running.",
+});

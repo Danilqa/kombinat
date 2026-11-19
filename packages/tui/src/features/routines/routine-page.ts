@@ -177,7 +177,7 @@ export function routinePage({
     }))
     .with('webhooks', (): PageContent => ({
       mode: 'scroll',
-      lines: [...header, ...buildWebhookCallsTable(detail.webhookCalls, width, now)],
+      lines: [...header, ...buildWebhookCallsTable(routine.name, detail.webhookCalls, width, now)],
     }))
     .exhaustive();
 }

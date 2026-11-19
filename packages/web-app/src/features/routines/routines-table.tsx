@@ -1,11 +1,14 @@
 import { Webhook } from 'lucide-react';
 import { Link } from 'react-router';
+import { useQuery } from '@tanstack/react-query';
 import { Badge, EmptyState, RelativeTime, Table, Tooltip } from 'design-system/components';
 import { cn } from 'design-system/utils';
+import { getDaemonStatus } from 'domains/daemon/requests';
 import { RunNowButton, WebhookQueueButton } from 'domains/routine/components';
 import type { RoutineSummary } from 'domains/routine/types';
 import { RunStatusBadge } from 'domains/run/components';
 import { getSkipReasonLabel } from 'domains/scheduler/utils';
+import { sameOriginApi } from 'utils/http';
 import { getRoutinePath, getRunPath } from '@web-app/constants/path';
 import { useRowLink } from '@web-app/hooks/use-row-link';
 import { ChangePromptMenuItem } from './change-prompt-menu-item';
@@ -77,13 +80,26 @@ function LastRunCell({ routine }: LastRunCellProps) {
   );
 }
 
+function NoRoutinesState() {
+  const { data } = useQuery({
+    queryKey: ['status'],
+    queryFn: () => getDaemonStatus(sameOriginApi),
+  });
+  return (
+    <EmptyState>
+      No routines yet. Add a markdown file to{' '}
+      <code className="font-mono">{data?.routinesDir ?? 'routines/'}</code> to create one.
+    </EmptyState>
+  );
+}
+
 interface RoutinesTableProps {
   routines: RoutineSummary[];
 }
 
 export function RoutinesTable({ routines }: RoutinesTableProps) {
   const getRowClickHandler = useRowLink();
-  if (routines.length === 0) return <EmptyState>No routines yet.</EmptyState>;
+  if (routines.length === 0) return <NoRoutinesState />;
   return (
     <Table.Root>
       <Table.Header>

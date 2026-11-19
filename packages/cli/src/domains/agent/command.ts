@@ -15,7 +15,9 @@ export const commandAgent: Agent = {
       ['model', 'fallbackModel', 'effort', 'permissionMode', 'maxBudgetUsd'],
       'command',
     );
-    if (raw.command === null) throw new Error('agent command needs a command');
+    if (raw.command === null) {
+      throw new Error('agent: command needs a command field with the shell command to run');
+    }
     return raw;
   },
 

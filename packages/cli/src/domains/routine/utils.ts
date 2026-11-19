@@ -32,12 +32,12 @@ function parseScalar(raw: string): FrontmatterValue {
 
 export function parseFrontmatter(source: string): ParsedFrontmatter {
   const found = /^---\r?\n(?<head>[\s\S]*?)\r?\n---\r?\n?(?<body>[\s\S]*)$/.exec(source);
-  if (!found?.groups) throw new Error('Routine file must start with a YAML frontmatter block');
+  if (!found?.groups) throw new Error('must start with a frontmatter block between --- lines');
   const data: Frontmatter = {};
   for (const line of (found.groups['head'] ?? '').split(/\r?\n/)) {
     if (!line.trim() || line.trim().startsWith('#')) continue;
     const separator = line.indexOf(':');
-    if (separator === -1) throw new Error(`Invalid frontmatter line: "${line}"`);
+    if (separator === -1) throw new Error(`frontmatter line "${line}" must look like key: value`);
     data[line.slice(0, separator).trim()] = parseScalar(line.slice(separator + 1));
   }
   return { data, body: (found.groups['body'] ?? '').trim() };
@@ -88,7 +88,7 @@ function readAgentSettings(data: Frontmatter, agent: AgentName): AgentSettings {
 }
 
 export function buildRoutine(file: string, source: string): Routine {
-  const { data, body } = parseFrontmatter(source);
+  const { data, body } = withFile(file, () => parseFrontmatter(source));
   const fileName = path.basename(file, '.md');
   const name = readString(data, 'name') ?? fileName;
   if (name !== fileName) {
@@ -98,10 +98,14 @@ export function buildRoutine(file: string, source: string): Routine {
     throw new Error(`${file}: name must be lowercase kebab-case`);
   }
   const schedule = readSchedule(data);
-  if (schedule !== null) parseCron(schedule);
+  if (schedule !== null) withFile(file, () => parseCron(schedule));
   const cwd = readString(data, 'cwd');
-  if (cwd === null) throw new Error(`${file}: cwd is required`);
-  if (!body) throw new Error(`${file}: prompt body is empty`);
+  if (cwd === null) {
+    throw new Error(`${file}: cwd is required, set it to the folder the agent works in`);
+  }
+  if (!body) {
+    throw new Error(`${file}: prompt body is empty, write the prompt below the frontmatter`);
+  }
   const agent = withFile(file, () => parseAgentName(readString(data, 'agent') ?? 'claude'));
   const webhook = withFile(file, () => readBoolean(data, 'webhook')) ?? false;
   const webhookGate = readString(data, 'webhookGate');

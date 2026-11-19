@@ -222,7 +222,9 @@ function toWebhookResponse(
       context.log(`webhookGate of ${name} timed out`);
       return fail(504, `webhookGate took longer than ${WEBHOOK_GATE_TIMEOUT_MS / 1000} s`);
     })
-    .with({ outcome: 'disabled' }, () => fail(409, `${name} is disabled`))
+    .with({ outcome: 'disabled' }, () =>
+      fail(409, `${name} is disabled, set enabled: true in its frontmatter`),
+    )
     .with({ outcome: 'queue_full' }, () =>
       fail(429, `${name} already has ${WEBHOOK_QUEUE_LIMIT} webhooks waiting`),
     )
@@ -350,7 +352,7 @@ function sendJson(res: http.ServerResponse, { status, body }: ApiResponse): void
 function serveStatic(res: http.ServerResponse, url: URL): void {
   if (!fs.existsSync(config.webAppDist)) {
     res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' });
-    res.end('kombinat API is up. Build the UI with `pnpm build` to get the dashboard here.\n');
+    res.end('kombinat API is up. Run `pnpm build` to get the dashboard here.\n');
     return;
   }
   const requested = path.normalize(decodeURIComponent(url.pathname));

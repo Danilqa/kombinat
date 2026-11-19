@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { P, match } from 'ts-pattern';
 
@@ -14,13 +15,22 @@ import { PlanUsageDetails } from './plan-usage-details';
 
 interface DaemonHealthAppearance {
   label: string;
+  hint: ReactNode;
   dotClassName: string;
 }
 
 const daemonHealthAppearances: Record<DaemonHealth, DaemonHealthAppearance> = {
-  healthy: { label: 'Scheduler is ticking', dotClassName: 'bg-positive' },
-  stale: { label: 'Scheduler has not ticked recently', dotClassName: 'bg-warning' },
-  unreachable: { label: 'Daemon is unreachable', dotClassName: 'bg-negative' },
+  healthy: { label: 'Scheduler is ticking', hint: null, dotClassName: 'bg-positive' },
+  stale: { label: 'Scheduler has not ticked recently', hint: null, dotClassName: 'bg-warning' },
+  unreachable: {
+    label: 'Daemon is unreachable',
+    hint: (
+      <>
+        Check it with <code className="font-mono">kombinat status</code> in your routines folder.
+      </>
+    ),
+    dotClassName: 'bg-negative',
+  },
 };
 
 const triggerClassName =
@@ -59,7 +69,7 @@ function DaemonStatusDetails({ status }: DaemonStatusDetailsProps) {
       <dd className="tabular-nums">
         {status.running} of {status.maxConcurrentRuns}
       </dd>
-      <dt className="text-fg-muted">Daemon pid</dt>
+      <dt className="text-fg-muted">Daemon PID</dt>
       <dd className="font-mono tabular-nums">{status.pid}</dd>
       <dt className="text-fg-muted">Last tick</dt>
       <dd className="tabular-nums">
@@ -134,6 +144,7 @@ export function DaemonStatusIndicator() {
         </Popover.Trigger>
         <Popover.Content side="bottom" align="end">
           <p className="mb-1.5 font-medium">{appearance.label}</p>
+          {appearance.hint && <p className="text-fg-muted">{appearance.hint}</p>}
           {data && <DaemonStatusDetails status={data} />}
           {data && <PlanUsageDetails status={data} className="mt-3 md:hidden" />}
         </Popover.Content>
