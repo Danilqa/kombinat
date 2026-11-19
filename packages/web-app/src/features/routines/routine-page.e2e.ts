@@ -68,6 +68,10 @@ test('logs the webhook calls of a routine with what each of them did', async ({
   ]);
   await calls.first().getByRole('link', { name: 'Started a run' }).click();
   await expect(page).toHaveURL(new RegExp(`/runs/triage-issue/${runId}$`));
+  // The daemon is shared, and a run that starts after the next test's reset would stay starting there.
+  await expect(page.getByRole('button', { name: /daemon status/ })).toHaveText(/0 of 3 running/, {
+    timeout: 25_000,
+  });
 });
 
 test('loads older runs page by page as you scroll a long history', async ({
