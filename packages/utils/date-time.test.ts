@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { formatDuration, formatRelative, formatRelativeCompact, formatSpan } from './date-time';
+import {
+  formatDayTime,
+  formatDuration,
+  formatRelative,
+  formatRelativeCompact,
+  formatSpan,
+} from './date-time';
 
 const now = Date.parse('2026-10-06T12:00:00Z');
 const offset = (ms: number) => new Date(now + ms).toISOString();
@@ -25,6 +31,10 @@ test('formatRelative counts whole units in the past, as a duration does, and rou
   assert.equal(formatRelative(offset(-110_000), now), '1 min. ago');
   assert.equal(formatRelative(offset(-(2 * 3_600_000 - 60_000)), now), '1 hr. ago');
   assert.equal(formatRelative(offset(110_000), now), 'in 2 min.');
+});
+
+test('formatDayTime gives the day and the clock without seconds', () => {
+  assert.equal(formatDayTime(new Date(2026, 10, 19, 8, 33, 12).toISOString()), '19 Nov, 08:33');
 });
 
 test('formatDuration matches the dashboard', () => {

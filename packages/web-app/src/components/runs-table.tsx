@@ -4,6 +4,7 @@ import { cn } from 'design-system/utils';
 import { RunDuration, RunStatusBadge } from 'domains/run/components';
 import type { RunRecord } from 'domains/run/types';
 import { getTriggerLabel } from 'domains/run/utils';
+import { formatDayTime } from 'utils/date-time';
 import { getRoutinePath, getRunPath } from '@web-app/constants/path';
 import { useRowLink } from '@web-app/hooks/use-row-link';
 
@@ -29,7 +30,7 @@ export function RunsTable({ runs, total, hasRoutineColumn, onEndReached }: RunsT
           <Table.Head className="w-[16%]">Status</Table.Head>
           <Table.Head className="w-[25%]">Run</Table.Head>
           <Table.Head className="w-[12%] max-sm:hidden">Trigger</Table.Head>
-          <Table.Head className="w-[13%]">Started</Table.Head>
+          <Table.Head className="w-[13%] max-sm:w-[16%]">Started</Table.Head>
           <Table.Head className="w-[11%] text-right">Duration</Table.Head>
           <Table.Head className="w-[8%] text-right">Turns</Table.Head>
         </Table.Row>
@@ -70,7 +71,10 @@ export function RunsTable({ runs, total, hasRoutineColumn, onEndReached }: RunsT
             {getTriggerLabel(run.trigger)}
           </Table.Cell>
           <Table.Cell className="text-fg-secondary">
-            <RelativeTime iso={run.startedAt} />
+            <RelativeTime iso={run.startedAt} className="block w-fit" />
+            <span aria-hidden="true" className="block text-body-sm text-fg-muted tabular-nums">
+              {formatDayTime(run.startedAt)}
+            </span>
           </Table.Cell>
           <Table.Cell className="text-right text-fg tabular-nums">
             <RunDuration run={run} />

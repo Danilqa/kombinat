@@ -16,6 +16,13 @@ const shortFormatter = new Intl.DateTimeFormat('en-GB', {
   second: '2-digit',
 });
 
+const dayTimeFormatter = new Intl.DateTimeFormat('en-GB', {
+  day: 'numeric',
+  month: 'short',
+  hour: '2-digit',
+  minute: '2-digit',
+});
+
 const timestampFormatter = new Intl.DateTimeFormat('en-GB', {
   weekday: 'short',
   day: 'numeric',
@@ -71,6 +78,10 @@ export function formatWeekday(date: Date): string {
 
 export function formatShort(iso: string): string {
   return shortFormatter.format(new Date(iso));
+}
+
+export function formatDayTime(iso: string): string {
+  return dayTimeFormatter.format(new Date(iso));
 }
 
 export function formatTimestamp(iso: string): string {

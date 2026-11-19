@@ -35,6 +35,17 @@ test('lists the latest runs of all routines and opens one', async ({ page, kombi
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('triage-sentry');
 });
 
+test('shows the date and time a run started next to how long ago it was', async ({
+  page,
+  kombinat,
+}) => {
+  kombinat.addRoutine({ name: 'triage-sentry' });
+  kombinat.addRun({ routine: 'triage-sentry', startedAt: '2026-03-04T06:05:09.000Z' });
+  await page.goto('/runs');
+
+  await expect(page.getByRole('row', { name: /^triage-sentry/ })).toContainText('4 Mar, 06:05');
+});
+
 test('keeps runs for the chosen time, and always the last run of each routine', async ({
   page,
   kombinat,

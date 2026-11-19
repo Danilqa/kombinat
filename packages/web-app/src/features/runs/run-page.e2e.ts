@@ -306,3 +306,52 @@ test('a run without an agent session cannot be continued', async ({ page, kombin
   await expect(page.getByText('This run has no agent session to continue.')).toBeVisible();
   await expect(page.getByRole('textbox', { name: 'Message' })).toHaveCount(0);
 });
+
+test.describe('on a phone', () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+
+  test('wraps a long tool name instead of scrolling the page sideways', async ({
+    page,
+    kombinat,
+    claude,
+  }) => {
+    const toolName = 'mcp__claude_ai_Linear__create_attachment_from_upload';
+    kombinat.addRoutine({ name: 'attach-demo' });
+    const run = kombinat.addRun({
+      routine: 'attach-demo',
+      events: [
+        claude.init(),
+        claude.toolUse('tool-1', toolName, { issue: 'KOM-1' }),
+        claude.toolResult('tool-1', 'Attached'),
+        claude.result(),
+      ],
+    });
+
+    await page.goto(`/runs/attach-demo/${run.id}`);
+    await page.getByRole('tab', { name: /Transcript & chat/ }).click();
+
+    await expect(page.getByRole('button', { name: new RegExp(`^${toolName}`) })).toBeVisible();
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow).toBe(0);
+  });
+
+  test('centers the send button in the message box', async ({ page, kombinat, claude }) => {
+    kombinat.addRoutine({ name: 'fix-e2e-tests' });
+    const run = kombinat.addRun({
+      routine: 'fix-e2e-tests',
+      sessionId: 'b5c1e2d4',
+      resumeCommand: 'claude --resume b5c1e2d4',
+      events: [claude.init(), claude.text('The checkout test is flaky.'), claude.result()],
+    });
+
+    await page.goto(`/runs/fix-e2e-tests/${run.id}`);
+    await page.getByRole('tab', { name: /Transcript & chat/ }).click();
+
+    const messageBox = await page.getByRole('textbox', { name: 'Message' }).boundingBox();
+    const sendBox = await page.getByRole('button', { name: 'Send' }).boundingBox();
+    const getMiddle = (box: typeof messageBox) => (box?.y ?? 0) + (box?.height ?? 0) / 2;
+    expect(getMiddle(sendBox)).toBeCloseTo(getMiddle(messageBox), 0);
+  });
+});

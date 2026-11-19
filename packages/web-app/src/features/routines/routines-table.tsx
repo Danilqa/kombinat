@@ -106,7 +106,7 @@ export function RoutinesTable({ routines }: RoutinesTableProps) {
             className="cursor-pointer"
             onClick={getRowClickHandler(getRoutinePath(routine.name))}
           >
-            <Table.Cell className="max-sm:whitespace-normal">
+            <Table.Cell className="max-sm:min-w-44 max-sm:whitespace-normal">
               <div className="flex items-center gap-2">
                 <Link
                   to={getRoutinePath(routine.name)}

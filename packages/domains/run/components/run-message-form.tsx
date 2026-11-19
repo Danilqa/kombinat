@@ -71,7 +71,12 @@ export function RunMessageForm({ run, onSent }: RunMessageFormProps) {
           onKeyDown={sendOnEnter}
           className="max-h-48 min-h-7 flex-1 resize-none bg-transparent px-2 py-1 text-body text-fg outline-none field-sizing-content placeholder:text-fg-muted focus-visible:shadow-none"
         />
-        <Button type="submit" size="icon-small" aria-disabled={isUnavailable || undefined}>
+        <Button
+          type="submit"
+          size="icon-small"
+          className="max-sm:size-8"
+          aria-disabled={isUnavailable || undefined}
+        >
           {isBusy ? (
             <Loader aria-hidden="true" className="spin-in-place size-3.5" />
           ) : (
