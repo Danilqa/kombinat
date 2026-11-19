@@ -39,7 +39,7 @@ export function statusLines(
         text(
           loadedAt
             ? `showing data from ${formatRelativeCompact(new Date(loadedAt).toISOString(), now)}`
-            : 'is it running? check with the status command',
+            : 'check it with kombinat status',
           S.dim,
         ),
       ],

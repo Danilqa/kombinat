@@ -31,7 +31,14 @@ function getSummaryEntries(run: RunRecord): DetailEntry[] {
     { label: 'Session', value: run.sessionId ?? '-', isMono: true, span: 'wide' },
     ...(run.resumeCommand === null
       ? []
-      : [{ label: 'Resume', value: run.resumeCommand, isMono: true, span: 'wide' as const }]),
+      : [
+          {
+            label: 'Resume command',
+            value: run.resumeCommand,
+            isMono: true,
+            span: 'wide' as const,
+          },
+        ]),
     { label: 'Exit code', value: run.exitCode ?? '-', isMono: true },
     { label: 'PID', value: run.pid ?? '-', isMono: true },
     { label: 'Log', value: run.logFile, isMono: true, span: 'full' },

@@ -89,10 +89,16 @@ async function runAgent({
   persist,
 }: AgentRun): Promise<Partial<RunRecord>> {
   if (!fs.existsSync(routine.cwd)) {
-    return { status: 'failed', error: `cwd does not exist: ${routine.cwd}` };
+    return {
+      status: 'failed',
+      error: `cwd does not exist: ${routine.cwd} (create it or change cwd in the routine)`,
+    };
   }
   if (!checkIsBinaryFound(invocation.command)) {
-    const hint = agent.binaryEnv === null ? '' : ` (set ${agent.binaryEnv})`;
+    const hint =
+      agent.binaryEnv === null
+        ? ''
+        : ` (set ${agent.binaryEnv} to its path before kombinat serve or install)`;
     return {
       status: 'failed',
       error: `${agent.name} binary not found at ${invocation.command}${hint}`,
@@ -266,7 +272,7 @@ export async function replyToRun(routine: Routine, run: RunRecord): Promise<RunR
   const session: RunRecord = { ...replying, error: null };
   const outcome: Partial<RunRecord> =
     invocation === null
-      ? { status: 'failed', error: `This run's ${run.agent} session cannot be continued` }
+      ? { status: 'failed', error: `This ${run.agent} run has no session to continue` }
       : await runAgent({
           routine: { ...routine, before: null },
           agent,

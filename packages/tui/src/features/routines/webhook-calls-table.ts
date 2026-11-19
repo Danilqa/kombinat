@@ -1,7 +1,12 @@
 import { match } from 'ts-pattern';
 
+import type { RoutineName } from 'domains/routine/ids';
 import type { WebhookCall, WebhookCallOutcome } from 'domains/webhook/types';
-import { formatPayloadSize, getWebhookCallOutcomeLabel } from 'domains/webhook/utils';
+import {
+  formatPayloadSize,
+  getWebhookCallOutcomeLabel,
+  getWebhookPath,
+} from 'domains/webhook/utils';
 import { formatRelativeCompact } from 'utils/date-time';
 
 import { columns, withStyle } from '../../components/columns';
@@ -23,11 +28,16 @@ function getOutcomeStyle(outcome: WebhookCallOutcome): string {
 }
 
 export function buildWebhookCallsTable(
+  routine: RoutineName,
   calls: WebhookCall[],
   width: number,
   now: number,
 ): ContentLine[] {
-  if (calls.length === 0) return [{ line: [text('No webhook calls yet.', S.dim)] }];
+  if (calls.length === 0) {
+    return toContent(
+      wrapLine([text(`Calls to POST ${getWebhookPath(routine)} show up here.`, S.dim)], width),
+    );
+  }
   const indent = text(' '.repeat(BODY_INDENT));
   const detailWidth = Math.max(8, width - BODY_INDENT);
   const header = withStyle(

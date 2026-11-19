@@ -258,7 +258,10 @@ test('a broken routine stops init before it writes anything', () => {
   const folder = makeFolder();
   fs.mkdirSync(path.join(folder, 'routines'));
   fs.writeFileSync(path.join(folder, 'routines', 'broken.md'), 'no frontmatter');
-  assert.throws(() => initFolder(folder, noInstall()), /YAML frontmatter/);
+  assert.throws(
+    () => initFolder(folder, noInstall()),
+    /broken\.md: must start with a frontmatter block/,
+  );
   assert.deepEqual(fs.readdirSync(folder), ['routines']);
 });
 

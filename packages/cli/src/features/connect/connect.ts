@@ -150,7 +150,7 @@ export async function connect({ destination, remotePort, tui }: ConnectOptions):
     tunnel.close();
     const reason = tunnel.getLastMessage() || getErrorMessage(failure);
     throw new Error(
-      `no kombinat daemon answers on port ${remotePort} of ${destination}: ${reason}`,
+      `no kombinat daemon answers on port ${remotePort} of ${destination}: ${reason}\ncheck that kombinat runs there, or pass its port with --port`,
       {
         cause: failure,
       },

@@ -46,10 +46,10 @@ const USAGE = `kombinat, run from the folder that holds routines/ (init, connect
   run <name>                run one routine now in the foreground (what the scheduler spawns)
   reply <name> <run id>     continue the run's agent session with the last message sent to it
                             from the dashboard or a webhook (what the daemon spawns)
-  serve                     run scheduler + web UI (what launchd or systemd runs); pulls the
-                            main branch every 5 min, installs deps and restarts when the
-                            lockfile changes; in a checkout of kombinat also builds the UI and
-                            restarts when packages/ change
+  serve                     run the scheduler and the dashboard (what launchd or systemd runs);
+                            pulls the main branch every 5 min, installs deps and restarts when
+                            the lockfile changes; in a checkout of kombinat also builds the
+                            dashboard and restarts when packages/ change
   pull                      git pull once, the way serve does it (ff-only, clean tree)
   dev                       take over from the daemon: scheduler + API from this checkout with no
                             auto-restart, plus the Vite dev server; Ctrl-C hands back to the daemon
@@ -106,7 +106,7 @@ function parseUrl(value: string): string {
 function parsePort(value: string): number {
   const port = Number(value);
   if (!Number.isInteger(port) || port < 1 || port > 65_535) {
-    throw new Error('--port must be a port number');
+    throw new Error('--port must be a number from 1 to 65535');
   }
   return port;
 }
@@ -250,7 +250,7 @@ function dev(options: CliOptions): void {
 
 function installDaemon(): void {
   const { file, hint } = daemonService.install();
-  console.log(`installed ${file}\nui: http://localhost:${config.port}`);
+  console.log(`installed ${file}\ndashboard: http://localhost:${config.port}`);
   if (hint !== null) console.log(hint);
 }
 
@@ -260,6 +260,7 @@ function showStatus(): void {
 }
 
 function showUsage(command: string | undefined): void {
+  if (command !== undefined) console.error(`unknown command "${command}"`);
   console.log(USAGE);
   process.exitCode = command === undefined ? 0 : 1;
 }

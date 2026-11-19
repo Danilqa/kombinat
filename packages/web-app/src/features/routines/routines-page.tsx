@@ -26,7 +26,13 @@ export function RoutinesPage() {
     <div>
       <PageHeader.Root
         title={routinesTitle}
-        aside={data && <PageHeader.Aside>{data.length} routines</PageHeader.Aside>}
+        aside={
+          data && (
+            <PageHeader.Aside>
+              {data.length} {data.length === 1 ? 'routine' : 'routines'}
+            </PageHeader.Aside>
+          )
+        }
       />
       {error && <ErrorState message={error.message} />}
       {isPending && <LoadingState />}

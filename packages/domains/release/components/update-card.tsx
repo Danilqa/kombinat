@@ -145,7 +145,7 @@ export function UpdateCard() {
       <footer className="flex flex-col gap-2 px-4 py-3">
         {data.updateCommand !== null && (
           <>
-            <p className="text-fg-muted">Run it in your routines folder to update:</p>
+            <p className="text-fg-muted">To update, run this in your routines folder:</p>
             <UpdateCommand command={data.updateCommand} />
           </>
         )}

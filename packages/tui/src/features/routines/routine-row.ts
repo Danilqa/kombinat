@@ -14,7 +14,7 @@ export function routineRow(routine: RoutineSummary, width: number, now: number):
       ? statusIcon(routine.lastRun.status, now)
       : text('·', S.dim);
   const next = !routine.enabled
-    ? 'off'
+    ? 'disabled'
     : routine.nextRunAt
       ? formatRelativeCompact(routine.nextRunAt, now)
       : 'manual';

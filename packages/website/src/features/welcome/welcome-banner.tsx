@@ -125,7 +125,7 @@ function RoutineFile() {
     <CodePanel title="routines/night-agent-tasks.md">
       <span className="text-fg-faint">---</span>
       {'\n'}
-      <span className="text-fg-muted">name:</span> night-agent-tasks{'\n'}
+      <span className="text-fg-muted">cwd:</span> ~/code/app{'\n'}
       <span className="text-fg-muted">schedule:</span> '0 2 * * *'{'\n'}
       <span className="text-fg-muted">agent:</span> claude{'\n'}
       <span className="text-fg-muted">model:</span> claude-opus-5-5{'\n'}
@@ -142,7 +142,7 @@ function WebhookRoutineFile() {
     <CodePanel title="routines/on-call-engineer.md">
       <span className="text-fg-faint">---</span>
       {'\n'}
-      <span className="text-fg-muted">name:</span> on-call-engineer{'\n'}
+      <span className="text-fg-muted">cwd:</span> ~/code/app{'\n'}
       <span className="text-fg-muted">schedule:</span> '0 9,13,17,21 * * *'{'\n'}
       <span className="text-fg-muted">webhook:</span> true{'\n'}
       <span className="text-fg-muted">webhookGate:</span> node scripts/verify-alert.ts{'\n'}

@@ -17,7 +17,9 @@ interface RunsTableProps {
 
 export function RunsTable({ runs, total, hasRoutineColumn, onEndReached }: RunsTableProps) {
   const getRowClickHandler = useRowLink();
-  if (runs.length === 0) return <EmptyState>No runs yet.</EmptyState>;
+  if (runs.length === 0) {
+    return <EmptyState>No runs yet. They show up here as soon as they start.</EmptyState>;
+  }
   return (
     <Table.VirtualRoot
       className="min-w-[760px]"

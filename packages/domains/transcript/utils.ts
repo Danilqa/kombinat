@@ -49,9 +49,9 @@ export function getModelFallbackReasonLabel(reason: string | null): string | nul
   if (reason === null) return null;
   return match(reason)
     .with('model_not_found', () => 'the model is not available')
-    .with('permission_denied', () => 'no access to the model')
+    .with('permission_denied', () => 'the account has no access to the model')
     .with('overloaded', () => 'the model is overloaded')
-    .with('server_error', () => 'server errors')
+    .with('server_error', () => 'the server returned errors')
     .with('model_blocked', () => 'the model is turned off')
     .with('last_resort', () => 'the model failed')
     .otherwise(() => reason);

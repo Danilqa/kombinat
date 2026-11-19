@@ -129,7 +129,7 @@ interface LegendItem {
 
 const legendItems: LegendItem[] = [
   { label: 'Planned', variant: 'planned' },
-  { label: 'Planned, default length', variant: 'plannedDefault' },
+  { label: 'Planned, no past runs', variant: 'plannedDefault' },
   { label: 'Succeeded', variant: 'succeeded' },
   { label: 'Failed', variant: 'failed' },
   { label: 'Timed out', variant: 'timed_out' },

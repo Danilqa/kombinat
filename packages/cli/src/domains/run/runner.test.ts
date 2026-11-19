@@ -494,7 +494,7 @@ test('a reply that cannot start logs why', async () => {
   assert.equal(finished.replyPid, null);
   assert.deepEqual(readLog(run).at(-1), {
     type: 'reply_error',
-    error: "This run's command session cannot be continued",
+    error: 'This command run has no session to continue',
   });
 });
 

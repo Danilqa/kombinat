@@ -32,7 +32,7 @@ test("shows a run's result, transcript and how to resume it", async ({
       - tab "Information" [selected]
       - tab "Transcript & chat 5"
     - tabpanel "Information":
-      - term: Resume
+      - term: Resume command
       - definition: claude --resume b5c1e2d4
       - text: Result
       - paragraph:
