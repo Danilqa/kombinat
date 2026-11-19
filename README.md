@@ -1,10 +1,12 @@
 <img src=".github/assets/banner.png" alt="Kombinat: routines in your repo, run by AI agents 24/7" width="100%" />
 
-> ✨ Run agents on a schedule or webhook, from markdown files in your repo. On any machine and the plan you already pay for.
+> ✨ Run agents on a schedule or webhook, so the work gets done without you at the keyboard. From markdown files in your repo, on any machine and the plan you already pay for.
 
-One routine is one markdown file, so anyone on the team can write one. Merge it and it is live: a Mac or Linux machine that stays on runs it with Claude Code, Codex or any other CLI agent. Open source (MIT).
+An agent does nothing until someone prompts it. A routine is that prompt in a markdown file with a schedule on top, so anyone on the team can write one. Merge it and it is live within 5 minutes: a Mac or Linux machine that stays on runs it with Claude Code, Codex or any other CLI agent, with your logins, skills and MCP servers.
 
-[Live demo](https://danilqa.github.io/kombinat/) · [80-second video](https://www.youtube.com/watch?v=P6f0QCEyr68) · [Quickstart](#-quickstart) · [What to run](#-what-to-run)
+Already tried cron, a CI workflow or Claude Code's own Routines? See [how Kombinat compares](#-how-it-compares). Open source (MIT).
+
+[See it work in the live demo](https://danilqa.github.io/kombinat/) · [80-second video](https://www.youtube.com/watch?v=P6f0QCEyr68) · [Quickstart](#-quickstart) · [What to run](#-what-to-run)
 
 ⭐ Support Kombinat with a [star on GitHub](https://github.com/Danilqa/kombinat) so more people can find it.
 

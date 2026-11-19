@@ -157,10 +157,9 @@ function WebhookRoutineFile() {
 function InstallCommands() {
   return (
     <CodePanel title="Terminal">
-      <span className="text-fg-faint">$ </span>pnpm add kombinat{'\n'}
-      <span className="text-fg-faint">$ </span>mkdir routines{'\n'}
-      <span className="text-fg-faint">$ </span>vim routines/night-agent-tasks.md{'\n'}
-      <span className="text-fg-faint">$ </span>pnpm kombinat serve{'\n'}
+      <span className="text-fg-faint">$ </span>npx kombinat init my-routines{'\n'}
+      <span className="text-fg-faint">$ </span>cd my-routines{'\n'}
+      <span className="text-fg-faint">$ </span>npx kombinat serve{'\n'}
       <span className="text-positive">ui at http://localhost:7433</span>
     </CodePanel>
   );
@@ -248,7 +247,7 @@ export function WelcomeBanner() {
           icon={WavingHand}
           iconClassName="origin-[70%_80%] group-data-active/slide:motion-safe:animate-hand-wave"
           glow="lavender"
-          title="Run agents on a schedule"
+          title="Agents that work while you sleep"
           aside={<RoutineFile />}
           actions={
             <>
@@ -266,27 +265,28 @@ export function WelcomeBanner() {
           }
         >
           <p>
-            One routine – one markdown file. Just merge it and it is live. Any Mac or Linux machine
-            then runs it with <strong>Claude Code</strong>, <strong>Codex</strong> or any shell
-            command, on the subscription you already pay for.
+            An agent does nothing until someone prompts it. Put the prompt in a markdown file, add a
+            schedule and merge it. Any Mac or Linux machine then runs it with{' '}
+            <strong>Claude Code</strong>, <strong>Codex</strong> or any shell command, on the
+            subscription you already pay for.
           </p>
         </WelcomeCard>
       ),
     },
     {
-      label: 'Why another tool?',
+      label: 'Why not cron?',
       content: (
         <WelcomeCard
           label="Why Kombinat"
           icon={Scale}
           iconClassName="group-data-active/slide:motion-safe:animate-scale-tip"
           glow="sky"
-          title="Why another tool?"
+          title="Why not cron or a CI workflow?"
           details={<ReasonList />}
         >
           <p>
-            A cron job, a CI workflow or a hosted agent platform can run a prompt too. Here is what
-            Kombinat does differently.
+            A cron job, a CI workflow or Claude Code's own Routines can run a prompt too. Here is
+            what you get with Kombinat that they leave to you.
           </p>
         </WelcomeCard>
       ),
@@ -299,7 +299,7 @@ export function WelcomeBanner() {
           icon={Webhook}
           iconClassName="group-data-active/slide:motion-safe:animate-webhook-spin"
           glow="mint"
-          title="Runs when something happens"
+          title="One POST request starts a run"
           aside={<WebhookRoutineFile />}
           actions={
             <>
@@ -323,8 +323,9 @@ export function WelcomeBanner() {
           <p>
             Add <strong>webhook: true</strong> and any app that can send a POST request starts the
             routine: an alert, a deploy or a form. The request body is added to the prompt, so the
-            agent knows what happened. Here a 3rd-party service calls{' '}
-            <strong>on-call-engineer</strong> on every alert.
+            agent knows what happened, and a <strong>webhookGate</strong> command can check each
+            request first. Here a 3rd-party service calls <strong>on-call-engineer</strong> on every
+            alert.
           </p>
         </WelcomeCard>
       ),
@@ -337,7 +338,7 @@ export function WelcomeBanner() {
           icon={SquareTerminal}
           iconClassName="group-data-active/slide:motion-safe:animate-icon-pop group-data-active/slide:[&>path:nth-of-type(2)]:animate-cursor-blink"
           glow="peach"
-          title="Running in a minute"
+          title="Three commands and it runs"
           aside={<InstallCommands />}
           actions={
             <>
@@ -351,10 +352,10 @@ export function WelcomeBanner() {
           }
         >
           <p>
-            Add the package to the repository that holds your routines, put a routine in{' '}
-            <strong>routines/</strong> and start it. The dashboard opens at{' '}
-            <strong>localhost:7433</strong>, and <strong>pnpm kombinat install</strong> keeps it
-            running in the background and after reboots, on macOS and Linux.
+            The first command creates a folder with example routines, the last one starts them. The
+            dashboard is at <strong>localhost:7433</strong>, and{' '}
+            <strong>npx kombinat install</strong> keeps it running in the background and after
+            reboots, on macOS and Linux.
           </p>
         </WelcomeCard>
       ),
@@ -367,11 +368,11 @@ export function WelcomeBanner() {
           icon={SandBucket}
           iconClassName="group-data-active/slide:motion-safe:animate-bucket-hop"
           glow="mint"
-          title="Make yourself at home"
+          title="Try it here first"
           aside={<ExploreLinks />}
         >
           <p>
-            Click around, open any run and press <strong>Run now</strong>: it finishes in 30
+            Open any run, read its transcript and press <strong>Run now</strong>: it finishes in 30
             seconds. Everything here is made up. The {demoRoutines.length} routines of an imaginary
             team and their runs, transcripts and calendar are generated in your browser, so nothing
             leaves this page.
