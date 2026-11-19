@@ -34,7 +34,7 @@ export function RunChat({
   return (
     <div className="space-y-6">
       {searchValue !== null && (
-        <div className="sticky top-[var(--app-header-height,0px)] z-20 flex justify-end bg-page py-2">
+        <div className="top-below-headers sticky z-20 flex justify-end bg-page py-2">
           <TranscriptSearch
             value={searchValue}
             matchCount={search === searchValue.trim() ? textSearch.count : null}

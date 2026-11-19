@@ -68,6 +68,10 @@ test('logs the webhook calls of a routine with what each of them did', async ({
   ]);
   await calls.first().getByRole('link', { name: 'Started a run' }).click();
   await expect(page).toHaveURL(new RegExp(`/runs/triage-issue/${runId}$`));
+  // The daemon is shared, and a run that starts after the next test's reset would stay starting there.
+  await expect(page.getByRole('button', { name: /daemon status/ })).toHaveText(/0 of 3 running/, {
+    timeout: 25_000,
+  });
 });
 
 test('loads older runs page by page as you scroll a long history', async ({
@@ -104,4 +108,29 @@ test('explains that a routine does not exist', async ({ page, kombinat }) => {
   await expect(page.getByRole('alert')).toHaveText('Unknown routine nightly-digest');
   const runs = await page.request.get('/api/runs?routine=nightly-digest%2F..%2Finbox-triage');
   expect(runs.status()).toBe(404);
+});
+
+test('keeps the breadcrumbs, the section and its table header stacked as the page scrolls', async ({
+  page,
+  kombinat,
+}) => {
+  kombinat.addRoutine({ name: 'inbox-triage', schedule: '*/5 * * * *' });
+  for (let index = 0; index < 30; index++) kombinat.addSkip('inbox-triage', 'concurrency_limit');
+  await page.goto('/routines/inbox-triage');
+  const section = page.getByRole('heading', { name: 'Skipped runs' });
+  await expect(section).toBeVisible();
+
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+
+  const breadcrumbs = page.getByRole('navigation', { name: 'Breadcrumb' });
+  await expect(breadcrumbs).toBeInViewport();
+  await expect(section).toBeInViewport();
+  const breadcrumbsBox = await breadcrumbs.boundingBox();
+  const sectionBox = await section.boundingBox();
+  expect(sectionBox?.y).toBeGreaterThan((breadcrumbsBox?.y ?? 0) + (breadcrumbsBox?.height ?? 0));
+  const sectionBottom = (sectionBox?.y ?? 0) + (sectionBox?.height ?? 0);
+  const headerTops = await page
+    .locator('th', { hasText: /^Skipped at$/ })
+    .evaluateAll(cells => cells.map(cell => cell.getBoundingClientRect().top));
+  expect(headerTops.filter(top => top > sectionBottom && top < sectionBottom + 32)).toHaveLength(1);
 });

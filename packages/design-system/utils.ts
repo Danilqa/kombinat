@@ -1,5 +1,5 @@
 import { clsx, type ClassValue } from 'clsx';
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useLayoutEffect, useState, useSyncExternalStore, type RefObject } from 'react';
 import { extendTailwindMerge } from 'tailwind-merge';
 
 const twMerge = extendTailwindMerge({
@@ -29,6 +29,31 @@ export function useDebouncedValue<Value>(value: Value, delayMs: number): Value {
     return () => clearTimeout(timeout);
   }, [value, delayMs]);
   return debounced;
+}
+
+function getRoot(): HTMLElement {
+  return document.documentElement;
+}
+
+// Sticky parts read the heights of the sticky headers above them from these custom properties.
+export function useHeightProperty(
+  ref: RefObject<HTMLElement | null>,
+  property: string,
+  getTarget: (element: HTMLElement) => HTMLElement | null = getRoot,
+) {
+  useLayoutEffect(() => {
+    const element = ref.current;
+    const target = element && getTarget(element);
+    if (!element || !target) return;
+    const update = () => target.style.setProperty(property, `${element.offsetHeight}px`);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+      target.style.removeProperty(property);
+    };
+  }, [ref, property, getTarget]);
 }
 
 export function checkPrefersReducedMotion(): boolean {

@@ -261,7 +261,7 @@
   html {
     font-size: 14px;
     min-height: 100%;
-    scroll-padding-top: var(--app-header-height, 0px);
+    scroll-padding-top: calc(var(--app-header-height, 0px) + var(--page-header-height, 0px));
     background-color: var(--page);
   }
   body {
@@ -384,6 +384,19 @@
     font-weight: 500;
     color: var(--fg-muted);
   }
+}
+
+/* The app header, the page header and a section's header stick one below the other, and the
+   sticky parts of the content stick below all of them. */
+@utility top-below-page-header {
+  top: calc(var(--app-header-height, 0px) + var(--page-header-height, 0px));
+}
+
+@utility top-below-headers {
+  top: calc(
+    var(--app-header-height, 0px) + var(--page-header-height, 0px) +
+      var(--section-header-height, 0px)
+  );
 }
 
 /* Turns the drawing inside the icon instead of the icon's box: a turning box that sits between

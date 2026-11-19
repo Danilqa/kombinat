@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router';
+import { PageHeader } from 'design-system/layouts';
 import { cn } from 'design-system/utils';
 
 interface Crumb {
@@ -48,24 +49,26 @@ interface BreadcrumbsProps {
 
 export function Breadcrumbs({ crumbs, aside }: BreadcrumbsProps) {
   return (
-    <div className="mb-6 flex min-h-8 flex-wrap items-center justify-between gap-x-6 gap-y-2">
-      <nav aria-label="Breadcrumb" className="min-w-0">
-        <ol className="flex min-w-0 items-center gap-2">
-          {crumbs.map((crumb, index) => (
-            <li key={crumb.label} className="flex min-w-0 items-center gap-2">
-              {index > 0 && (
-                <ChevronRight aria-hidden="true" className="size-3.5 shrink-0 text-fg-faint" />
-              )}
-              <CrumbLabel crumb={crumb} hasBackArrow={index === 0} />
-            </li>
-          ))}
-        </ol>
-      </nav>
-      {aside && (
-        <div className="ml-auto flex max-w-full min-w-0 items-center justify-end gap-3">
-          {aside}
-        </div>
-      )}
-    </div>
+    <PageHeader.Bar>
+      <div className="flex min-h-8 flex-wrap items-center justify-between gap-x-6 gap-y-2">
+        <nav aria-label="Breadcrumb" className="min-w-0">
+          <ol className="flex min-w-0 items-center gap-2">
+            {crumbs.map((crumb, index) => (
+              <li key={crumb.label} className="flex min-w-0 items-center gap-2">
+                {index > 0 && (
+                  <ChevronRight aria-hidden="true" className="size-3.5 shrink-0 text-fg-faint" />
+                )}
+                <CrumbLabel crumb={crumb} hasBackArrow={index === 0} />
+              </li>
+            ))}
+          </ol>
+        </nav>
+        {aside && (
+          <div className="ml-auto flex max-w-full min-w-0 items-center justify-end gap-3">
+            {aside}
+          </div>
+        )}
+      </div>
+    </PageHeader.Bar>
   );
 }
