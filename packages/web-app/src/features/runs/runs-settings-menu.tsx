@@ -69,7 +69,7 @@ export function RunsSettingsMenu() {
             ))}
           </DropdownMenu.RadioGroup>
           <p className="px-2.5 pt-1 pb-1.5 text-caption font-normal text-fg-muted">
-            Older runs are deleted, except the last run of each routine.
+            Older runs and webhook calls are deleted, except the last run of each routine.
           </p>
         </DropdownMenu.Content>
       </DropdownMenu.Root>

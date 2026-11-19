@@ -35,7 +35,7 @@ import type { Routine } from './domains/routine/types';
 import { describeSchedule, getNextRun } from './domains/routine/utils';
 import { buildRunTranscript, readRunEvents } from './domains/run/event-log';
 import { writePrompt } from './domains/run/payload';
-import { deleteExpiredRuns, startRunCleanup } from './domains/run/retention';
+import { deleteExpiredRuns, startCleanup } from './domains/run/retention';
 import {
   checkIsRunning,
   checkIsStarting,
@@ -45,6 +45,11 @@ import {
 import { getRunningRuns, listAllRuns, listRuns, readRunRecord } from './domains/run/storage';
 import { getSkips, readSchedulerState } from './domains/scheduler/storage';
 import { readSettings, writeSettings } from './domains/settings/storage';
+import {
+  deleteExpiredWebhookCalls,
+  listWebhookCalls,
+  logWebhookCall,
+} from './domains/webhook/call-log';
 import { WEBHOOK_GATE_TIMEOUT_MS } from './domains/webhook/gate';
 import type { WebhookRequest } from './domains/webhook/gate';
 import {
@@ -53,6 +58,7 @@ import {
   WEBHOOK_QUEUE_LIMIT,
 } from './domains/webhook/queue';
 import { receiveWebhook } from './domains/webhook/receive';
+import type { WebhookOutcome } from './domains/webhook/receive';
 import { startLiveUpdates } from './features/live-updates/live-updates';
 import {
   readCpuLoad,
@@ -165,6 +171,7 @@ function getRoutineDetail(routine: Routine): ApiResponse {
     prompt: routine.prompt,
     skips: getSkips(routine.name),
     queue: listQueuedWebhooks(routine.name),
+    webhookCalls: listWebhookCalls(routine.name),
   };
   return ok(detail);
 }
@@ -194,14 +201,18 @@ function sendMessage(routine: Routine, run: RunRecord, body: Buffer): ApiRespons
 }
 
 // Linear treats anything but 200 as a failed delivery.
-async function handleWebhook(routine: Routine, context: ApiContext): Promise<ApiResponse> {
-  const { name } = routine;
-  const outcome = await receiveWebhook(routine, context.request);
+function toWebhookResponse(
+  name: RoutineName,
+  outcome: WebhookOutcome,
+  context: ApiContext,
+): ApiResponse {
   return match(outcome)
     .with({ outcome: 'no_webhook' }, () =>
       fail(404, `${name} has no webhook, add webhook: true to its frontmatter`),
     )
-    .with({ outcome: P.union('started', 'queued') }, ({ runId }) => ok({ ok: true, runId }))
+    .with({ outcome: P.union('started', 'continued', 'queued') }, ({ runId }) =>
+      ok({ ok: true, runId }),
+    )
     .with({ outcome: 'ignored' }, ({ response }) => ok(response ?? { ok: true, runId: null }))
     .with({ outcome: 'rejected' }, ({ reason }) => {
       context.log(`webhookGate of ${name} ${reason}`);
@@ -216,6 +227,24 @@ async function handleWebhook(routine: Routine, context: ApiContext): Promise<Api
       fail(429, `${name} already has ${WEBHOOK_QUEUE_LIMIT} webhooks waiting`),
     )
     .exhaustive();
+}
+
+async function handleWebhook(routine: Routine, context: ApiContext): Promise<ApiResponse> {
+  const receivedAt = new Date();
+  const outcome = await receiveWebhook(routine, context.request);
+  const response = toWebhookResponse(routine.name, outcome, context);
+  // The run has started by now, so a sender that saw an error would send it again.
+  try {
+    logWebhookCall(routine.name, {
+      receivedAt,
+      outcome,
+      status: response.status,
+      body: context.request.body,
+    });
+  } catch (err) {
+    context.log(`logging a webhook call of ${routine.name} failed: ${getErrorMessage(err)}`);
+  }
+  return response;
 }
 
 function getCalendar(url: URL): ApiResponse {
@@ -248,6 +277,7 @@ function updateSettings(body: Buffer): ApiResponse {
   }
   writeSettings(settings.data);
   deleteExpiredRuns();
+  deleteExpiredWebhookCalls();
   return ok(settings.data);
 }
 
@@ -396,7 +426,13 @@ export function startServer(log: (line: string) => void): http.Server {
     });
   });
   server.on('close', startCpuSampling());
-  server.on('close', startRunCleanup(log));
+  server.on(
+    'close',
+    startCleanup(log, [
+      { items: 'runs', deleteExpired: deleteExpiredRuns },
+      { items: 'webhook calls', deleteExpired: deleteExpiredWebhookCalls },
+    ]),
+  );
   server.on('close', liveUpdates.stop);
   server.listen(config.port, '127.0.0.1', () => {
     log(`ui at http://localhost:${config.port}`);

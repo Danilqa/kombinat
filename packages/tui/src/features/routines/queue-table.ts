@@ -8,20 +8,20 @@ import type { ContentLine } from '../../page-content';
 import { S, sanitize, sliceLine, text, wrapLine } from '../../terminal/text';
 import type { Line } from '../../terminal/text';
 
-const QUEUE_BODY_LINES = 3;
+const BODY_LINES = 3;
 
 export function formatQueueLabel(count: number): string {
   return `${count} in queue`;
 }
 
 // Bodies from one sender often start alike.
-function wrapQueueBody(preview: string, width: number): Line[] {
+export function wrapWebhookBody(preview: string, width: number): Line[] {
   const body = sanitize(preview.replace(/\s+/g, ' ').trim());
   if (body === '') return [[text('empty body', S.dim)]];
   const lines = wrapLine([text(body)], width);
-  if (lines.length <= QUEUE_BODY_LINES) return lines;
-  const kept = lines.slice(0, QUEUE_BODY_LINES - 1);
-  const last = lines[QUEUE_BODY_LINES - 1] ?? [];
+  if (lines.length <= BODY_LINES) return lines;
+  const kept = lines.slice(0, BODY_LINES - 1);
+  const last = lines[BODY_LINES - 1] ?? [];
   return [...kept, [...sliceLine(last, 0, width - 1), text('…')]];
 }
 
@@ -39,7 +39,7 @@ export function buildQueueTable(queue: QueuedWebhook[], width: number, now: numb
     S.dim,
   );
   const rows = queue.flatMap((webhook, index): Line[] => {
-    const [first = [], ...rest] = wrapQueueBody(webhook.preview, bodyWidth);
+    const [first = [], ...rest] = wrapWebhookBody(webhook.preview, bodyWidth);
     const position = text(getQueuePositionLabel(index), index === 0 ? S.boldYellow : undefined);
     return [
       columns([

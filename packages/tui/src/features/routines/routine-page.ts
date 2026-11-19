@@ -16,8 +16,9 @@ import type { Line } from '../../terminal/text';
 import { buildQueueTable, formatQueueLabel } from './queue-table';
 import { runsTable } from './runs-table';
 import { skipsTable } from './skips-table';
+import { buildWebhookCallsTable } from './webhook-calls-table';
 
-export type RoutineTab = 'runs' | 'prompt' | 'skips' | 'queue';
+export type RoutineTab = 'runs' | 'prompt' | 'skips' | 'queue' | 'webhooks';
 
 interface Tab {
   id: RoutineTab;
@@ -25,7 +26,9 @@ interface Tab {
 }
 
 export function getRoutineTabs(routine: RoutineSummary): RoutineTab[] {
-  return routine.webhook ? ['runs', 'prompt', 'skips', 'queue'] : ['runs', 'prompt', 'skips'];
+  return routine.webhook
+    ? ['runs', 'prompt', 'skips', 'queue', 'webhooks']
+    : ['runs', 'prompt', 'skips'];
 }
 
 function getTabLabel(
@@ -40,6 +43,7 @@ function getTabLabel(
     .with('prompt', () => 'Prompt')
     .with('skips', () => `Skipped${formatCount(detail?.skips)}`)
     .with('queue', () => `Queue${formatCount(detail?.queue)}`)
+    .with('webhooks', () => `Webhooks${formatCount(detail?.webhookCalls)}`)
     .exhaustive();
 }
 
@@ -170,6 +174,10 @@ export function routinePage({
     .with('queue', (): PageContent => ({
       mode: 'scroll',
       lines: [...header, ...buildQueueTable(detail.queue, width, now)],
+    }))
+    .with('webhooks', (): PageContent => ({
+      mode: 'scroll',
+      lines: [...header, ...buildWebhookCallsTable(detail.webhookCalls, width, now)],
     }))
     .exhaustive();
 }

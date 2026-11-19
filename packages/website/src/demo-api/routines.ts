@@ -2,6 +2,7 @@ import type { AgentName } from 'domains/agent/types';
 import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
 import type { RunStatus } from 'domains/run/types';
 import type { SkipReason } from 'domains/scheduler/types';
+import type { WebhookCallOutcome } from 'domains/webhook/types';
 
 import { HOME } from './constants';
 import {
@@ -48,10 +49,21 @@ export interface DemoPin {
 export interface DemoStartedRun {
   minutesAgo: number;
   outcome: string;
+  // The body of the webhook that started it.
+  payload?: string;
 }
 
 export interface DemoQueuedWebhook {
   minutesAgo: number;
+  payload: string;
+}
+
+// A webhook call that started no run.
+export interface DemoWebhookCall {
+  minutesAgo: number;
+  outcome: WebhookCallOutcome;
+  status: number;
+  reason?: string;
   payload: string;
 }
 
@@ -79,6 +91,7 @@ export interface DemoRoutine {
   manualRuns?: DemoStartedRun[];
   webhookRuns?: DemoStartedRun[];
   queuedWebhooks?: DemoQueuedWebhook[];
+  webhookCalls?: DemoWebhookCall[];
 }
 
 const REPO = `${HOME}/Projects/acme-web`;
@@ -614,9 +627,47 @@ e9a4c70 Add archived_at to clients (#451)`,
     },
   ],
   webhookRuns: [
-    { minutesAgo: 6, outcome: 'fixed' },
-    { minutesAgo: 19 * 60 + 47, outcome: 'fixed' },
-    { minutesAgo: 2 * 24 * 60 + 5 * 60 + 13, outcome: 'not-ours' },
+    {
+      minutesAgo: 6,
+      outcome: 'fixed',
+      payload:
+        '{"alert":"invoice-worker error rate is 34%","severity":"P1","service":"invoice-worker","startedAt":"4 minutes ago"}',
+    },
+    {
+      minutesAgo: 19 * 60 + 47,
+      outcome: 'fixed',
+      payload:
+        '{"alert":"invoice-worker error rate is 28%","severity":"P1","service":"invoice-worker","startedAt":"3 minutes ago"}',
+    },
+    {
+      minutesAgo: 2 * 24 * 60 + 5 * 60 + 13,
+      outcome: 'not-ours',
+      payload:
+        '{"alert":"payments error rate is 12%","severity":"P2","service":"payments","startedAt":"6 minutes ago"}',
+    },
+  ],
+  webhookCalls: [
+    {
+      minutesAgo: 41,
+      outcome: 'ignored',
+      status: 200,
+      payload:
+        '{"alert":"api-gateway p95 latency is back to 190 ms","severity":"resolved","service":"api-gateway"}',
+    },
+    {
+      minutesAgo: 3 * 60 + 12,
+      outcome: 'rejected',
+      status: 401,
+      reason: 'exited with 1: the signature does not match the alerting secret',
+      payload: '{"alert":"disk usage is 97%","severity":"P1","service":"db-primary"}',
+    },
+    {
+      minutesAgo: 26 * 60 + 5,
+      outcome: 'ignored',
+      status: 200,
+      payload:
+        '{"alert":"search-indexer queue depth is 1,200","severity":"P4","service":"search-indexer"}',
+    },
   ],
   queuedWebhooks: [
     {

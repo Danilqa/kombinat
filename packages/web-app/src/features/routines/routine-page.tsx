@@ -20,6 +20,7 @@ import { ROUTINES_PATH } from '@web-app/constants/path';
 import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 import { useRuns } from '@web-app/hooks/use-runs';
 import { ChangePromptMenuItem } from './change-prompt-menu-item';
+import { WebhookCallsList } from './webhook-calls-list';
 
 function checkIsRoutineRunning(routine: RoutineDetail | undefined): boolean {
   return routine?.running === true;
@@ -63,6 +64,12 @@ function RoutineView({ routine }: RoutineViewProps) {
             {runs.data && <span className="text-fg-secondary tabular-nums">{runs.data.total}</span>}
           </Tabs.Trigger>
           <Tabs.Trigger value="prompt">Prompt</Tabs.Trigger>
+          {routine.webhook && (
+            <Tabs.Trigger value="webhooks">
+              Webhooks
+              <span className="text-fg-secondary tabular-nums">{routine.webhookCalls.length}</span>
+            </Tabs.Trigger>
+          )}
         </Tabs.List>
         <Tabs.Content value="runs" className="space-y-10">
           <RunsList runs={runs} hasRoutineColumn={false} />
@@ -84,6 +91,13 @@ function RoutineView({ routine }: RoutineViewProps) {
             <Markdown source={routine.prompt} minHeadingLevel={2} />
           </Card.Root>
         </Tabs.Content>
+        {routine.webhook && (
+          <Tabs.Content value="webhooks">
+            <Card.Root className="gap-0 py-0">
+              <WebhookCallsList routine={routine.name} calls={routine.webhookCalls} />
+            </Card.Root>
+          </Tabs.Content>
+        )}
       </Tabs.Root>
     </div>
   );

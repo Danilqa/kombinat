@@ -131,7 +131,7 @@ One row per file in [`example/routines/`](example/routines/). Put the same `rout
 - Each routine is a markdown file. The frontmatter sets the schedule and settings, the body is the prompt.
 - A small daemon checks every 30 seconds which routines are due and starts their agent. It also serves a dashboard at http://localhost:7433.
 - launchd on macOS or systemd on Linux keeps the daemon running and starts it again after a reboot. Runs only happen while the computer is awake and you are logged in. On Linux, [lingering](docs/linux.md#lingering) lets them run while you are logged out.
-- Logs and run history are stored in `~/.kombinat/`. Runs are kept forever by default. The settings menu of the Runs page, or `s` in the terminal dashboard, deletes runs older than a week, a month or 3 months, always keeping the last run of each routine.
+- Logs and run history are stored in `~/.kombinat/`. Runs are kept forever by default. The settings menu of the Runs page, or `s` in the terminal dashboard, deletes runs and [webhook calls](docs/webhook.md#call-log) older than a week, a month or 3 months, always keeping the last run of each routine.
 - Claude and Codex use your subscription login. API key variables are removed from their environment.
 
 ## 🔒 Security

@@ -24,13 +24,20 @@ import {
 import { DEFAULT_SETTINGS } from 'domains/settings/constants';
 import { settingsSchema } from 'domains/settings/schemas';
 import type { Settings } from 'domains/settings/types';
-import type { QueuedWebhook } from 'domains/webhook/types';
+import { webhookCallIdSchema } from 'domains/webhook/ids';
+import type { QueuedWebhook, WebhookCall } from 'domains/webhook/types';
+import { findExpiredWebhookCalls } from 'domains/webhook/utils';
 import type { Skip } from 'domains/scheduler/types';
 import { describeCron, nextCronRun } from 'utils/cron';
 
 import { HOME, STATE_DIR } from './constants';
 import { createDemoHistory } from './history';
-import { demoRoutines, type DemoQueuedWebhook, type DemoRoutine } from './routines';
+import {
+  demoRoutines,
+  type DemoQueuedWebhook,
+  type DemoRoutine,
+  type DemoWebhookCall,
+} from './routines';
 
 export interface ApiResponse {
   status: number;
@@ -79,6 +86,23 @@ function toQueuedWebhook(
     queuedAt: queuedAt.toISOString(),
     bytes: new TextEncoder().encode(payload).length,
     preview: payload,
+  };
+}
+
+function toWebhookCall(
+  receivedAt: Date,
+  call: Omit<DemoWebhookCall, 'minutesAgo'>,
+  runId: RunId | null,
+): WebhookCall {
+  return {
+    id: webhookCallIdSchema.parse(String(receivedAt.getTime()).padStart(15, '0')),
+    receivedAt: receivedAt.toISOString(),
+    outcome: call.outcome,
+    status: call.status,
+    runId,
+    reason: call.reason ?? null,
+    bytes: new TextEncoder().encode(call.payload).length,
+    preview: call.payload,
   };
 }
 
@@ -154,6 +178,37 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     return isRunning ? (queues.get(routine.name) ?? []) : [];
   }
 
+  function listWebhookCalls(routine: DemoRoutine, now: Date): WebhookCall[] {
+    const runs = listRoutineRuns(routine, now);
+    const started = (routine.webhookRuns ?? []).flatMap(({ minutesAgo, payload = '' }) => {
+      const receivedAt = new Date(loadedAt.getTime() - minutesAgo * MINUTE_MS);
+      const run = runs.find(candidate =>
+        match(candidate.trigger)
+          .with('webhook', () => candidate.startedAt === receivedAt.toISOString())
+          .otherwise(() => false),
+      );
+      return run === undefined
+        ? []
+        : [toWebhookCall(receivedAt, { outcome: 'started', status: 200, payload }, run.id)];
+    });
+    const queued = listQueue(routine, now).map(webhook =>
+      toWebhookCall(
+        new Date(webhook.queuedAt),
+        { outcome: 'queued', status: 200, payload: webhook.preview },
+        webhook.runId,
+      ),
+    );
+    const others = (routine.webhookCalls ?? []).map(({ minutesAgo, ...call }) =>
+      toWebhookCall(new Date(loadedAt.getTime() - minutesAgo * MINUTE_MS), call, null),
+    );
+    const calls = [...started, ...queued, ...others].sort((a, b) =>
+      b.receivedAt.localeCompare(a.receivedAt),
+    );
+    if (settings.runRetentionDays === null) return calls;
+    const expired = new Set(findExpiredWebhookCalls(calls, settings.runRetentionDays, now));
+    return calls.filter(call => !expired.has(call));
+  }
+
   function getSummary(routine: DemoRoutine, now: Date): RoutineSummary {
     return toRoutineSummary(
       routine,
@@ -202,6 +257,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
       prompt: routine.prompt,
       skips: history.listSkips(routine, now),
       queue: listQueue(routine, now),
+      webhookCalls: listWebhookCalls(routine, now),
     };
   }
 

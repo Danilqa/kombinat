@@ -10,6 +10,7 @@ import type { RunRecord } from 'domains/run/types';
 import type { Settings } from 'domains/settings/types';
 import { compareRunsByNewest, decodeRunsCursor, paginateRuns } from 'domains/run/utils';
 import type { Transcript } from 'domains/transcript/types';
+import { webhookCallIdSchema } from 'domains/webhook/ids';
 
 import { TuiApp } from './app';
 import type { DaemonClient, Overview } from './daemon-client';
@@ -149,6 +150,7 @@ interface FakeOptions {
   overview?: Overview;
   runsPageSize?: number;
   transcript?: Transcript;
+  webhookCalls?: RoutineDetail['webhookCalls'];
 }
 
 function makeClient(overview: Overview, options: FakeOptions) {
@@ -177,6 +179,7 @@ function makeClient(overview: Overview, options: FakeOptions) {
               index
             ] ?? '',
         })),
+        webhookCalls: options.webhookCalls ?? [],
       };
       return Promise.resolve(detail);
     },
@@ -561,7 +564,49 @@ test('the routines list and the queue tab show the webhooks that wait', async ()
   ] as const) {
     for (const line of app.render(width, height)) assert.equal(lineWidth(line), width);
   }
-  assert.match(await press(']'), /Runs 1/);
+  assert.match(await press(']', ']'), /Runs 1/);
+});
+
+test('the webhooks tab lists the calls of a routine with what each did', async () => {
+  const overview = makeOverview();
+  overview.routines = overview.routines.map(routine =>
+    routine.name === 'smoke-test' ? { ...routine, webhook: true } : routine,
+  );
+  const call = {
+    id: webhookCallIdSchema.parse('001791280000000'),
+    receivedAt: '2026-10-06T11:55:00Z',
+    outcome: 'started' as const,
+    status: 200,
+    runId: runIdSchema.parse('20261006T115500Z-wh01'),
+    reason: null,
+    bytes: 23,
+    preview: '{"alert":"api is slow"}',
+  };
+  const { press } = await makeApp({
+    overview,
+    webhookCalls: [
+      {
+        ...call,
+        id: webhookCallIdSchema.parse('001791280300000'),
+        receivedAt: '2026-10-06T11:58:00Z',
+        outcome: 'rejected',
+        status: 401,
+        runId: null,
+        reason: 'exited with 1: bad signature',
+        bytes: 0,
+        preview: '',
+      },
+      call,
+    ],
+  });
+  await press('j', 'enter');
+  const tab = await press('[');
+  assert.match(tab, /Webhooks 2/);
+  assert.match(
+    tab,
+    /2m ago\s+401\s+Rejected by the gate\s+0 B\s+▌\s+exited with 1: bad signature\s+▌\s+empty body/,
+  );
+  assert.match(tab, /5m ago\s+200\s+Started a run\s+23 B\s+▌\s+\{"alert":"api is slow"\}/);
 });
 
 test('routines without a webhook have no queue tab', async () => {

@@ -15,7 +15,7 @@ interface NoWebhookOutcome {
 }
 
 interface StartedOutcome {
-  outcome: 'started' | 'queued';
+  outcome: 'started' | 'continued' | 'queued';
   runId: RunId;
 }
 
@@ -49,7 +49,8 @@ function startOrQueueRun(
       ? { outcome: 'queued', runId }
       : { outcome: 'queue_full' };
   }
-  return { outcome: 'started', runId: startWebhook(routine.name, webhook) };
+  const runId = startWebhook(routine.name, webhook);
+  return { outcome: runId === webhook.runId ? 'started' : 'continued', runId };
 }
 
 export async function receiveWebhook(

@@ -3,7 +3,7 @@
 A domain is the top path of an API request, or a type that several domains share:
 
 - API paths: `/api/routines` is routine, `/api/runs` is run, `/api/calendar` is calendar, `/api/status` and `/api/events` are daemon, `/api/settings` is settings, `/api/releases` is release and `/api/inbox` is inbox.
-- Shared types: agent, transcript, scheduler (skips) and webhook (queued webhooks).
+- Shared types: agent, transcript, scheduler (skips) and webhook (queued webhooks and webhook calls).
 
 Each domain has up to two halves with the same name:
 
@@ -21,7 +21,7 @@ Each domain has up to two halves with the same name:
 | **routine**    | `RoutineName`, `RoutineSummary`, `RoutineDetail`, requests, `RunNowButton`, `RoutineBadges`, `RoutineDetailList`, `WebhookQueueButton`                                                                                  | file parsing, validation, defaults, loading, next run, schedule label, examples                     |
 | **calendar**   | `CalendarEntryId`, entry schemas and types, `getCalendar`, `buildCalendar`, planned lengths, entry title and overlap labels, overlap count                                                                              | none, `cli/src/server.ts` serves `buildCalendar`                                                    |
 | **daemon**     | status schema, `getDaemonStatus`, `watchDaemonChanges`, health rules, plan usage rules, `DaemonStatusIndicator`                                                                                                         | none, `cli/src/server.ts` builds the status                                                         |
-| **webhook**    | `QueuedWebhook`, webhook path, size and queue position labels, `WebhookQueueList`                                                                                                                                       | gate, queue, conversations, and receiving: start, continue, queue, ignore or reject                 |
+| **webhook**    | `QueuedWebhook`, `WebhookCall`, `WebhookCallId`, webhook path, size, queue position and outcome labels, expired calls, `WebhookQueueList`                                                                               | gate, queue, conversations, call log, and receiving: start, continue, queue, ignore or reject       |
 | **settings**   | `Settings`, defaults, retention options and labels, requests                                                                                                                                                            | `settings.json` storage                                                                             |
 | **release**    | `ReleaseVersion`, `ReleaseUpdate`, requests, newer releases, the offered release, `UpdateCard`                                                                                                                          | none, `cli/src/features/self-update/releases.ts` checks GitHub and skips                            |
 | **inbox**      | `InboxState`, requests, unread runs, marking runs read, groups and their labels, the summary line                                                                                                                       | `inbox.json` storage                                                                                |
@@ -120,7 +120,7 @@ A named, version-controlled unit of recurring agent work: one markdown file, `ro
 - `agent` defaults to `claude`, `enabled` to `true`, `webhook` to `false` and `timeoutMinutes` to 55. `webhook` must be `true` or `false`, and `webhookGate` needs `webhook: true`.
 - The schedule gives the routine its next run, `null` when it is manual or disabled, and its label: `Manual` or the cron in words.
 
-Clients see a routine as a summary (its definition plus next run, running, last run and last skip) or a detail (plus the prompt, skips and queued webhooks). Its runs come page by page from `/api/runs`. They can start it with Run now, which answers 409 while the routine is running, and can give that run a changed prompt, which only that run gets.
+Clients see a routine as a summary (its definition plus next run, running, last run and last skip) or a detail (plus the prompt, skips, queued webhooks and webhook calls). Its runs come page by page from `/api/runs`. They can start it with Run now, which answers 409 while the routine is running, and can give that run a changed prompt, which only that run gets.
 
 A routine with `webhook: true` also starts from a [webhook](#webhook).
 
@@ -142,9 +142,17 @@ A gate that exits with 79 prints `{"conversation":"<key>","message":"…"}`, wit
 2. With such a run, the message continues it as a dashboard message does, with `"source":"webhook"`. Without one, the message is the payload of a new webhook run that gets the key.
 3. While the routine runs or has webhooks waiting, the request is queued like any other, with the key in a `<time>-<run id>.conversation` file next to its payload, and 1 and 2 happen when the scheduler takes it. The answer's `runId` is the newest run with the key when it is active or has a resume command, else the run that is starting with the key, else the run that an earlier queued request with the key will start, else the request's own. A run at work counts before it reports its session, so the answer can miss when that run ends without one.
 
+#### Call log
+
+Each request that reaches a routine with `webhook: true` is logged as a call in `<state dir>/webhooks/<routine>/<id>.json`, in `call-log.ts`: when it came, its outcome (`started`, `continued`, `queued`, `ignored`, `rejected`, `timed_out`, `disabled` or `queue_full`), the status of the answer, the run it started, continued or will start, the gate's reason for a rejection and the whole body. The id is the time it came in milliseconds, strictly increasing, so the file names sort oldest first.
+
+- A routine keeps its newest 100 calls: logging a call deletes the older ones.
+- The routine detail serves them newest first, each with the size of its body and its first 500 characters instead of the body.
+- With a run retention set, the daemon deletes the calls that came longer ago than that, at the same times as it deletes runs. Unlike with runs, the newest call of a routine is not kept.
+
 ### settings
 
-How the daemon itself behaves, set from the dashboards, `GET` and `PUT /api/settings`, and kept in `<state dir>/settings.json`. `runRetentionDays` is how long runs are kept, `null` for forever, which is the default. The dashboards offer 1 week, 1 month, 3 months and forever.
+How the daemon itself behaves, set from the dashboards, `GET` and `PUT /api/settings`, and kept in `<state dir>/settings.json`. `runRetentionDays` is how long runs and [webhook calls](#call-log) are kept, `null` for forever, which is the default. The dashboards offer 1 week, 1 month, 3 months and forever.
 
 ### release
 
@@ -181,7 +189,7 @@ The running kombinat service as its clients see it through `GET /api/status`: ve
 - Claude Code's stream-json reports it in each `rate_limit_event` as the share used and the reset time of the 5-hour and the weekly limit. The runner writes the latest one to `<state dir>/plan-usage/claude.json` with the time it came, which the status serves.
 - A limit whose reset time has passed is left out, because what was used since is unknown until the next run reports it. The dashboard and the TUI show the share left of the most used limit next to the running count.
 
-`GET /api/events` is a stream of server-sent events with one `data: change` event, at most every 300 ms, after a routine file, a run record, the webhook queue, `inbox.json` or the skips and last scheduled times in `scheduler.json` change. Run logs and the tick time do not count: logs grow with every agent event, and clients poll the tick time with the status. A client refetches what it shows on each event and once after it reconnects. It reconnects 5 s after the stream breaks and stops when the answer is an error, such as from an older daemon or the website's demo. The dashboard follows the stream only while its tab is visible, since browsers allow 6 connections to a host across all tabs, and refetches when the tab shows again.
+`GET /api/events` is a stream of server-sent events with one `data: change` event, at most every 300 ms, after a routine file, a run record, the webhook queue, a webhook call, `inbox.json` or the skips and last scheduled times in `scheduler.json` change. Run logs and the tick time do not count: logs grow with every agent event, and clients poll the tick time with the status. A client refetches what it shows on each event and once after it reconnects. It reconnects 5 s after the stream breaks and stops when the answer is an error, such as from an older daemon or the website's demo. The dashboard follows the stream only while its tab is visible, since browsers allow 6 connections to a host across all tabs, and refetches when the tab shows again.
 
 Its health is `unreachable` when the request fails, `stale` when there has been no tick or the last tick is more than 5 minutes old, and `healthy` otherwise.
 
@@ -189,7 +197,7 @@ Its health is `unreachable` when the request fails, `stale` when there has been 
 
 A domain imports only the domains on the levels before its own, never one on its own level. There is one order of levels per half:
 
-- Shared: `agent`, `transcript`, `scheduler`, `daemon`, `webhook`, `settings` and `release`, then `run`, then `routine`, `calendar` and `inbox`. A run record holds its agent's name, a run's transcript request returns a transcript, a routine summary embeds its last run and last skip and a detail its queued webhooks, calendar entries carry run statuses and triggers, and the inbox lists runs.
+- Shared: `agent`, `transcript`, `scheduler`, `daemon`, `webhook`, `settings` and `release`, then `run`, then `routine`, `calendar` and `inbox`. A run record holds its agent's name, a run's transcript request returns a transcript, a routine summary embeds its last run and last skip and a detail its queued webhooks and webhook calls, calendar entries carry run statuses and triggers, and the inbox lists runs.
 - Daemon: `agent`, `settings` and `inbox`, then `routine`, then `run`, then `webhook`, then `scheduler`. A routine validates its agent's settings, a run's retention comes from the settings, a run starts a routine's agent, a webhook starts or queues a run, and the scheduler loads routines and starts runs and queued webhooks.
 
 The orders differ, because routine is below run in the daemon but above it in the shared half. Each half is acyclic on its own, and any daemon domain may import any shared domain. ESLint enforces both orders on static imports, tests included: the agent adapter tests build their task with `makeAgentTask` instead of importing routine code. It does not see `await import()`, which tests use to load modules after they set the environment, so check those imports by hand.
@@ -198,9 +206,9 @@ Besides its levels, a shared domain may import the `ids.ts` of any other, see [I
 
 ## Ids
 
-An id is a branded string: `RoutineName` is a routine's name, which is its id, `RunId` a run's id, `CalendarEntryId` a calendar entry's id and `SessionId` an agent's session. A plain `string` does not pass for an id, and one id does not pass for another. A string becomes an id only through its schema's `parse`, where it comes in: a routine file, a state folder, a URL, a CLI argument, an agent's output or a test. The brand exists only in types, so the JSON stays the same.
+An id is a branded string: `RoutineName` is a routine's name, which is its id, `RunId` a run's id, `CalendarEntryId` a calendar entry's id, `WebhookCallId` a webhook call's id and `SessionId` an agent's session. A plain `string` does not pass for an id, and one id does not pass for another. A string becomes an id only through its schema's `parse`, where it comes in: a routine file, a state folder, a URL, a CLI argument, an agent's output or a test. The brand exists only in types, so the JSON stays the same.
 
-Each id lives with its schema in the `ids.ts` of the domain it names: `routine/ids`, `run/ids`, `calendar/ids` and `agent/ids`. Ids cross the levels: a run record holds its routine's name and a queued webhook its run's id, while routine sits above run and run above webhook. So `ids.ts` imports only zod, which keeps it a leaf that any domain can import without a cycle. In `routine/schemas.ts`, the routine name would make one: that file imports the run schemas, which need the routine name as they load.
+Each id lives with its schema in the `ids.ts` of the domain it names: `routine/ids`, `run/ids`, `calendar/ids`, `webhook/ids` and `agent/ids`. Ids cross the levels: a run record holds its routine's name and a queued webhook its run's id, while routine sits above run and run above webhook. So `ids.ts` imports only zod, which keeps it a leaf that any domain can import without a cycle. In `routine/schemas.ts`, the routine name would make one: that file imports the run schemas, which need the routine name as they load.
 
 ## Files
 

@@ -1,3 +1,4 @@
+import { startedRunWithIdSchema } from 'domains/routine/schemas';
 import { expect, test } from 'e2e/web-app';
 
 test("shows a routine's settings, runs, skipped runs and prompt", async ({ page, kombinat }) => {
@@ -36,6 +37,37 @@ test("shows a routine's settings, runs, skipped runs and prompt", async ({ page,
   await expect(page.getByRole('row', { name: /concurrency limit/ })).toBeVisible();
   await page.getByRole('tab', { name: 'Prompt' }).click();
   await expect(page.getByRole('heading', { name: 'Steps' })).toBeVisible();
+});
+
+test('logs the webhook calls of a routine with what each of them did', async ({
+  page,
+  kombinat,
+}) => {
+  kombinat.addRoutine({
+    name: 'triage-issue',
+    agent: 'command',
+    command: 'cat',
+    webhook: true,
+    webhookGate:
+      'printenv KOMBINAT_WEBHOOK_HEADERS | grep -q s3cret || { echo bad signature >&2; exit 1; }; grep -q create || exit 78',
+  });
+  const url = '/api/routines/triage-issue/webhook';
+  const headers = { 'x-secret': 's3cret' };
+  await page.request.post(url, { data: { action: 'create' } });
+  await page.request.post(url, { headers, data: { action: 'update' } });
+  const created = await page.request.post(url, { headers, data: { action: 'create' } });
+  const { runId } = startedRunWithIdSchema.parse(await created.json());
+  await page.goto('/routines/triage-issue');
+
+  await page.getByRole('tab', { name: 'Webhooks 3' }).click();
+  const calls = page.getByRole('list', { name: 'Webhook calls' }).getByRole('listitem');
+  await expect(calls).toHaveText([
+    /^200Started a run.* · 19 B\{"action":"create"\}$/,
+    /^200Ignored by the gate.* · 19 B\{"action":"update"\}$/,
+    /^401Rejected by the gate.* · 19 Bexited with 1: bad signature\{"action":"create"\}$/,
+  ]);
+  await calls.first().getByRole('link', { name: 'Started a run' }).click();
+  await expect(page).toHaveURL(new RegExp(`/runs/triage-issue/${runId}$`));
 });
 
 test('loads older runs page by page as you scroll a long history', async ({
