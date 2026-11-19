@@ -3,34 +3,68 @@ import { findSearchMatches } from 'utils/search';
 
 const MATCH_HIGHLIGHT = 'search-match';
 const CURRENT_HIGHLIGHT = 'search-match-current';
-// Collapsibles that a new search opens or closes animate their height for 200ms, and scrolling to a
-// match inside one before it ends would scroll its clipped content instead of the page.
+// Collapsibles that a search opens animate their height for 200ms, and scrolling to a match inside
+// one before it ends would scroll its clipped content instead of the page.
 const SETTLE_MS = 250;
-const SKIPPED_TEXT_SELECTOR =
-  '.sr-only, [data-search-skip], [data-slot="collapsible-content"][data-state="closed"]';
+const SKIPPED_SELECTOR = '.sr-only, [data-search-skip]';
+const CLOSED_SELECTOR = '[data-slot="collapsible-content"][data-state="closed"]';
 
-function findTextRanges(container: HTMLElement, search: string): Range[] {
-  const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
-  const ranges: Range[] = [];
+// A match in a closed collapsible, which counts it in `data-search-matches` without showing it.
+interface HiddenMatch {
+  element: HTMLElement;
+}
+
+type TextMatch = Range | HiddenMatch;
+
+function findTextMatches(container: HTMLElement, search: string): TextMatch[] {
+  const matches: TextMatch[] = [];
+  const walker = document.createTreeWalker(
+    container,
+    NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
+    {
+      acceptNode: node => {
+        if (node instanceof Text) return NodeFilter.FILTER_ACCEPT;
+        if (!(node instanceof HTMLElement) || node.matches(SKIPPED_SELECTOR)) {
+          return NodeFilter.FILTER_REJECT;
+        }
+        if (!node.matches(CLOSED_SELECTOR)) return NodeFilter.FILTER_SKIP;
+        const hiddenMatch = { element: node };
+        const count = Number(node.dataset['searchMatches'] ?? 0);
+        for (let index = 0; index < count; index++) matches.push(hiddenMatch);
+        return NodeFilter.FILTER_REJECT;
+      },
+    },
+  );
   for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
-    if (node.parentElement?.closest(SKIPPED_TEXT_SELECTOR)) continue;
     for (const { start, end } of findSearchMatches(node.textContent ?? '', search)) {
       const range = new Range();
       range.setStart(node, start);
       range.setEnd(node, end);
-      ranges.push(range);
+      matches.push(range);
     }
   }
-  return ranges;
+  return matches;
 }
 
-function scrollToRange(range: Range | undefined) {
-  const element = range?.startContainer.parentElement;
-  if (!range || !element) return;
+// Opens only the collapsible of the current match, as a browser does with a closed <details>.
+function revealMatch(match: TextMatch | undefined) {
+  if (match === undefined || match instanceof Range || !match.element.matches(CLOSED_SELECTOR)) {
+    return;
+  }
+  match.element
+    .closest('[data-slot="collapsible"]')
+    ?.querySelector<HTMLElement>(':scope > [data-slot="collapsible-trigger"]')
+    ?.click();
+}
+
+function scrollToMatch(match: TextMatch | undefined) {
+  if (!(match instanceof Range)) return;
+  const element = match.startContainer.parentElement;
+  if (!element) return;
   element.scrollIntoView({ block: 'center' });
   // A long tool result scrolls in its own box, and scrollIntoView moves only the page to that box.
   if (element.scrollHeight > element.clientHeight) {
-    const offset = range.getBoundingClientRect().top - element.getBoundingClientRect().top;
+    const offset = match.getBoundingClientRect().top - element.getBoundingClientRect().top;
     element.scrollTop += offset - element.clientHeight / 2;
   }
 }
@@ -46,17 +80,31 @@ export function useTextSearch(
   containerRef: RefObject<HTMLElement | null>,
   search: string,
 ): TextSearch {
-  const [ranges, setRanges] = useState<Range[]>([]);
+  const [matches, setMatches] = useState<TextMatch[]>([]);
   const [current, setCurrent] = useState(0);
-  const rangesRef = useRef(ranges);
+  const matchesRef = useRef(matches);
   const settleTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const index = Math.min(current, Math.max(0, ranges.length - 1));
+  const index = Math.min(current, Math.max(0, matches.length - 1));
+
+  const showMatch = useCallback((matchIndex: number) => {
+    clearTimeout(settleTimeoutRef.current);
+    const match = matchesRef.current[matchIndex];
+    if (match instanceof Range) {
+      scrollToMatch(match);
+      return;
+    }
+    revealMatch(match);
+    settleTimeoutRef.current = setTimeout(
+      () => scrollToMatch(matchesRef.current[matchIndex]),
+      SETTLE_MS,
+    );
+  }, []);
 
   useEffect(() => {
     const container = containerRef.current;
     const update = () => {
-      rangesRef.current = container && search !== '' ? findTextRanges(container, search) : [];
-      setRanges(rangesRef.current);
+      matchesRef.current = container && search !== '' ? findTextMatches(container, search) : [];
+      setMatches(matchesRef.current);
     };
     update();
     setCurrent(0);
@@ -67,39 +115,40 @@ export function useTextSearch(
       subtree: true,
       childList: true,
       characterData: true,
-      attributeFilter: ['data-state'],
+      attributeFilter: ['data-state', 'data-search-matches'],
     });
-    settleTimeoutRef.current = setTimeout(() => scrollToRange(rangesRef.current[0]), SETTLE_MS);
+    showMatch(0);
     return () => {
       observer.disconnect();
       clearTimeout(settleTimeoutRef.current);
     };
-  }, [containerRef, search]);
+  }, [containerRef, search, showMatch]);
 
   useEffect(() => {
     if (!('highlights' in CSS)) return;
     // Spreading the ranges into the constructor overflows the call stack past about 100k matches.
     const highlight = new Highlight();
-    for (const range of ranges) highlight.add(range);
+    for (const match of matches) if (match instanceof Range) highlight.add(match);
     CSS.highlights.set(MATCH_HIGHLIGHT, highlight);
-    const currentRange = ranges[index];
-    if (currentRange) CSS.highlights.set(CURRENT_HIGHLIGHT, new Highlight(currentRange));
+    const currentMatch = matches[index];
+    if (currentMatch instanceof Range) {
+      CSS.highlights.set(CURRENT_HIGHLIGHT, new Highlight(currentMatch));
+    }
     return () => {
       CSS.highlights.delete(MATCH_HIGHLIGHT);
       CSS.highlights.delete(CURRENT_HIGHLIGHT);
     };
-  }, [ranges, index]);
+  }, [matches, index]);
 
   const move = useCallback(
     (step: 1 | -1) => {
-      if (ranges.length === 0) return;
-      clearTimeout(settleTimeoutRef.current);
-      const next = (index + step + ranges.length) % ranges.length;
+      if (matches.length === 0) return;
+      const next = (index + step + matches.length) % matches.length;
       setCurrent(next);
-      scrollToRange(ranges[next]);
+      showMatch(next);
     },
-    [ranges, index],
+    [matches.length, index, showMatch],
   );
 
-  return { count: ranges.length, current: index, move };
+  return { count: matches.length, current: index, move };
 }

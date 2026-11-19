@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { checkMatchesSearch, findSearchMatches, getSearchExcerpt } from './search';
+import {
+  checkMatchesSearch,
+  countSearchMatches,
+  findSearchMatches,
+  getSearchExcerpt,
+} from './search';
 
 test('checkMatchesSearch needs every word somewhere in the texts, in any case', () => {
   const texts = ['daily-digest', null, 'Posted the summary to Slack'];
@@ -34,4 +39,13 @@ test('findSearchMatches finds every place of the whole phrase, in any case', () 
 test('findSearchMatches takes the characters of a regular expression literally', () => {
   assert.deepEqual(findSearchMatches('cost $1.50 (estimated)', '$1.50 ('), [{ start: 5, end: 12 }]);
   assert.deepEqual(findSearchMatches('cost 1250', '1.5'), []);
+});
+
+test('countSearchMatches counts the places that findSearchMatches finds', () => {
+  const text = 'Ran pnpm test. PNPM Test passed, cost $1.50 (estimated)';
+
+  assert.equal(countSearchMatches(text, 'pnpm test'), 2);
+  assert.equal(countSearchMatches(text, '$1.50 ('), 1);
+  assert.equal(countSearchMatches(text, 'pnpm lint'), 0);
+  assert.equal(countSearchMatches(text, ''), 0);
 });

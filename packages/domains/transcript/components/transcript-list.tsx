@@ -1,5 +1,5 @@
 import { ChevronRight, CircleAlert, CircleCheck, Loader, X } from 'lucide-react';
-import { memo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { match } from 'ts-pattern';
 
 import { CodeBlock, Collapsible, EmptyState, Markdown } from 'design-system/components';
@@ -17,13 +17,14 @@ import type {
   TranscriptItem,
 } from '../types';
 import {
-  checkHasToolSearchMatch,
   checkIsSubagent,
+  countToolSearchMatches,
   formatToolInput,
   getHookLabel,
   getMessageSourceLabel,
   getModelFallbackReasonLabel,
   getTranscriptEmptyLabel,
+  getToolResultText,
   getTranscriptResultLabel,
   getTurnsLabel,
 } from '../utils';
@@ -121,15 +122,9 @@ interface ToolRowProps {
 
 const ToolRow = memo(function ToolRow({ item, isPending, search }: ToolRowProps) {
   const hasError = item.result?.isError === true;
-  const hasSearchMatch = checkHasToolSearchMatch(item, search);
-  const [isOpen, setIsOpen] = useState(false);
-  const [hadSearchMatch, setHadSearchMatch] = useState(false);
-  if (hasSearchMatch !== hadSearchMatch) {
-    setHadSearchMatch(hasSearchMatch);
-    setIsOpen(hasSearchMatch);
-  }
+  const searchMatchCount = useMemo(() => countToolSearchMatches(item, search), [item, search]);
   return (
-    <Collapsible.Root open={isOpen} onOpenChange={setIsOpen}>
+    <Collapsible.Root>
       <Collapsible.Trigger className="group flex min-h-7 w-full items-center gap-2 rounded-sm text-left font-mono text-body-sm text-fg-muted">
         <ChevronRight
           aria-hidden="true"
@@ -158,17 +153,22 @@ const ToolRow = memo(function ToolRow({ item, isPending, search }: ToolRowProps)
           </>
         )}
       </Collapsible.Trigger>
-      <Collapsible.Content>
+      {/* Search counts the matches of a closed tool call from here and opens it to show one. */}
+      <Collapsible.Content data-search-matches={searchMatchCount}>
         <div className="pt-1 pb-3">
           <div className="ml-[7px] space-y-3 border-l border-line-strong pl-4">
             <div>
-              <div className="eyebrow mb-1.5">Input</div>
+              <div data-search-skip className="eyebrow mb-1.5">
+                Input
+              </div>
               <CodeBlock label="Tool input" className="max-h-80">
                 {formatToolInput(item)}
               </CodeBlock>
             </div>
             <div>
-              <div className="eyebrow mb-1.5">{hasError ? 'Error' : 'Result'}</div>
+              <div data-search-skip className="eyebrow mb-1.5">
+                {hasError ? 'Error' : 'Result'}
+              </div>
               <CodeBlock
                 label={hasError ? 'Tool error' : 'Tool result'}
                 className={cn(
@@ -176,7 +176,7 @@ const ToolRow = memo(function ToolRow({ item, isPending, search }: ToolRowProps)
                   hasError && 'border-transparent bg-negative-soft text-negative',
                 )}
               >
-                {item.result ? item.result.content || '(empty)' : 'No result yet'}
+                {getToolResultText(item)}
               </CodeBlock>
             </div>
           </div>
@@ -250,7 +250,7 @@ function renderItem(item: TranscriptItem, isRunning: boolean, search: string) {
 interface TranscriptListProps {
   items: TranscriptItem[];
   isRunning: boolean;
-  // Opens the tool calls whose input or result has the search, so it can be found there too.
+  // Counts the matches inside closed tool calls, so the search can find them there too.
   search: string;
 }
 

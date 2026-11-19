@@ -126,9 +126,10 @@ test("finds text in a run's transcript, inside collapsed tool calls too", async 
   await expect(search.getByRole('textbox', { name: 'Search the transcript' })).toBeFocused();
   await page.keyboard.type('checkout');
   await expect(matchCount).toHaveText('1 of 2');
-  await expect(toolResult).toHaveText('Checkout passed');
+  await expect(toolResult).toBeHidden();
   await page.keyboard.press('Enter');
   await expect(matchCount).toHaveText('2 of 2');
+  await expect(toolResult).toHaveText('Checkout passed');
   await page.keyboard.press('Enter');
   await expect(matchCount).toHaveText('1 of 2');
   await search.getByRole('button', { name: 'Previous match' }).click();
@@ -136,13 +137,43 @@ test("finds text in a run's transcript, inside collapsed tool calls too", async 
 
   await search.getByRole('textbox').fill('checkout failed');
   await expect(matchCount).toHaveText('No matches');
-  await expect(toolResult).toBeHidden();
 
   await search.getByRole('textbox').press('Escape');
   await expect(search).toBeHidden();
   await expect(searchButton).toBeFocused();
   await searchButton.click();
   await expect(search.getByRole('textbox')).toHaveValue('');
+});
+
+test('opens only the tool call of the current match, one at a time', async ({
+  page,
+  kombinat,
+  claude,
+}) => {
+  kombinat.addRoutine({ name: 'fix-e2e-tests' });
+  const run = kombinat.addRun({
+    routine: 'fix-e2e-tests',
+    events: [
+      claude.toolUse('tool-1', 'Bash', { command: 'pnpm e2e checkout' }),
+      claude.toolResult('tool-1', 'Checkout failed'),
+      claude.toolUse('tool-2', 'Bash', { command: 'pnpm e2e cart' }),
+      claude.toolResult('tool-2', 'Cart failed'),
+      claude.result(),
+    ],
+  });
+
+  await page.goto(`/runs/fix-e2e-tests/${run.id}`);
+  await page.getByRole('tab', { name: /Transcript & chat/ }).click();
+  await page.getByRole('button', { name: 'Search the transcript' }).click();
+  await page.keyboard.type('failed');
+  const matchCount = page.getByRole('search').getByRole('status');
+  const toolResult = page.getByRole('region', { name: 'Tool result' });
+
+  await expect(matchCount).toHaveText('1 of 2');
+  await expect(toolResult).toHaveText(['Checkout failed']);
+  await page.keyboard.press('Enter');
+  await expect(matchCount).toHaveText('2 of 2');
+  await expect(toolResult).toHaveText(['Checkout failed', 'Cart failed']);
 });
 
 test('scrolls a long tool result to the match', async ({ page, kombinat, claude }) => {
