@@ -5,7 +5,9 @@ import { AppRoutes } from '@web-app/app-routes';
 import { AppFooter } from '@web-app/components/app-footer';
 import { AppHeader } from '@web-app/components/app-header';
 import { useCustomization, type Customization } from '@web-app/contexts';
+import { useAppBadge } from '@web-app/hooks/use-app-badge';
 import { useFocusMainOnNavigate } from '@web-app/hooks/use-focus-main-on-navigate';
+import { useInbox } from '@web-app/hooks/use-inbox';
 import { useLiveUpdates } from '@web-app/hooks/use-live-updates';
 
 const MAIN_ID = 'main';
@@ -14,9 +16,10 @@ function AppLayout() {
   const { announcement, banner, footer = <AppFooter /> } = useCustomization();
   useFocusMainOnNavigate(MAIN_ID);
   useLiveUpdates();
+  useAppBadge(useInbox().data?.runs.length);
   const { pathname } = useLocation();
   return (
-    <div className="flex min-h-dvh flex-col">
+    <div className="flex min-h-dvh flex-col pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]">
       <div className="flex-1 pb-20">
         <a href={`#${MAIN_ID}`} className="skip-link">
           Skip to content

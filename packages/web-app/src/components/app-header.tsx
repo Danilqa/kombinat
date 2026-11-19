@@ -63,7 +63,7 @@ export function AppHeader() {
   return (
     <header
       ref={headerRef}
-      className="sticky top-0 z-50 mb-6 bg-page supports-[backdrop-filter]:bg-page/70 supports-[backdrop-filter]:backdrop-blur-xl supports-[backdrop-filter]:backdrop-saturate-150"
+      className="sticky top-0 z-50 mb-6 bg-page pt-[env(safe-area-inset-top)] supports-[backdrop-filter]:bg-page/70 supports-[backdrop-filter]:backdrop-blur-xl supports-[backdrop-filter]:backdrop-saturate-150"
     >
       <div className="mx-auto flex max-w-[1180px] flex-wrap items-center gap-x-2 gap-y-2 px-4 pt-4 pb-3 sm:gap-y-3 sm:px-6 sm:pt-6 sm:pb-4">
         <Link

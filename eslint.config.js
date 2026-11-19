@@ -220,6 +220,10 @@ export default defineConfig(
     languageOptions: { globals: globals.node },
   },
   {
+    files: ['packages/web-app/public/sw.js'],
+    languageOptions: { globals: globals.serviceworker },
+  },
+  {
     files: ['**/*.{ts,tsx}'],
     extends: [tseslint.configs.strictTypeChecked],
     languageOptions: {

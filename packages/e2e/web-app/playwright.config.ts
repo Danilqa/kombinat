@@ -10,6 +10,8 @@ export default defineConfig({
   use: {
     timezoneId: 'UTC',
     trace: 'retain-on-failure',
+    // page.route misses the requests of a page that a service worker controls.
+    serviceWorkers: 'block',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
 });

@@ -19,7 +19,7 @@ function CommandDialog({ title, children, ...props }: CommandDialogProps) {
         <DialogPrimitive.Content
           data-slot="command-dialog"
           aria-describedby={undefined}
-          className="fixed top-[15vh] left-1/2 z-50 w-[min(40rem,calc(100%-1.5rem))] -translate-x-1/2 overflow-hidden rounded-xl border border-line bg-surface text-fg shadow-popover outline-none ease-out-quint data-[state=closed]:animate-out data-[state=closed]:duration-100 data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 max-sm:top-3"
+          className="fixed top-[15vh] left-1/2 z-50 w-[min(40rem,calc(100%-1.5rem))] -translate-x-1/2 overflow-hidden rounded-xl border border-line bg-surface text-fg shadow-popover outline-none ease-out-quint data-[state=closed]:animate-out data-[state=closed]:duration-100 data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 max-sm:top-[calc(--spacing(3)+env(safe-area-inset-top))]"
         >
           <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
           {children}

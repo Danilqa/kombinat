@@ -58,7 +58,7 @@ export function RunChat({
           {getAgentLabel(run.agent)} is replying
         </div>
       )}
-      <div className="sticky bottom-0 z-10 bg-linear-to-t from-page from-70% to-transparent pt-6 pb-4">
+      <div className="sticky bottom-0 z-10 bg-linear-to-t from-page from-70% to-transparent pt-6 pb-[calc(--spacing(4)+env(safe-area-inset-bottom))]">
         {checkCanContinueRun(run) ? (
           <RunMessageForm run={run} onSent={stickToBottom} />
         ) : (
