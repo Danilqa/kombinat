@@ -28,6 +28,7 @@ const { readSchedulerState, writeSchedulerState } = await import('./storage');
 const { writeRunRecord } = await import('../run/storage');
 const { startDetachedRun } = await import('../run/runner');
 const { countQueuedWebhooks, enqueueWebhook } = await import('../webhook/queue');
+const { readOneTimeRuns, writeOneTimeRuns } = await import('./one-time-runs');
 const { makeRunRecord } = await import('domains/run/mocks');
 const { sessionIdSchema } = await import('domains/agent/ids');
 
@@ -181,6 +182,76 @@ test('catch-up window never reaches back before the last tick', () => {
   tick(new Date('2026-10-02T10:00:00'));
   const skips = readSchedulerState()?.routines[everyMinute]?.skips ?? [];
   assert.equal(skips.at(-1)?.scheduledFor, new Date('2026-10-02T09:00:00').toISOString());
+});
+
+test('a due one-time run waits while its routine runs, and one of a disabled or deleted routine is dropped', () => {
+  writeRoutine('later', 'agent: command\ncommand: "true"');
+  writeRoutine('paused', 'enabled: false');
+  const later = routineNameSchema.parse('later');
+  const oneTimeRun = (routine: string, local: string) => ({
+    routine: routineNameSchema.parse(routine),
+    at: new Date(local).toISOString(),
+  });
+  const overdue = oneTimeRun('later', '2026-10-02T09:50:00');
+  const upcoming = oneTimeRun('later', '2026-10-02T10:30:00');
+  writeOneTimeRuns([
+    overdue,
+    oneTimeRun('gone', '2026-10-02T09:55:00'),
+    oneTimeRun('paused', '2026-10-02T09:58:00'),
+    upcoming,
+  ]);
+  const running = makeRunRecord({
+    id: runIdSchema.parse('l1'),
+    routine: later,
+    status: 'running',
+    pid: process.pid,
+  });
+  writeRunRecord(running);
+
+  assert.deepEqual(tick(new Date('2026-10-02T10:00:20')).started, []);
+  assert.deepEqual(readOneTimeRuns(), [overdue, upcoming]);
+  const pausedEntry = readSchedulerState()?.routines[paused];
+  assert.deepEqual(pausedEntry?.skips.at(-1), {
+    at: new Date('2026-10-02T10:00:20').toISOString(),
+    scheduledFor: new Date('2026-10-02T09:58:00').toISOString(),
+    reason: 'disabled',
+  });
+  assert.equal(pausedEntry.lastScheduledFor, null);
+
+  writeRunRecord({ ...running, status: 'succeeded' });
+  assert.deepEqual(tick(new Date('2026-10-02T10:00:40')).started, [later]);
+  assert.deepEqual(readOneTimeRuns(), [upcoming]);
+  writeOneTimeRuns([]);
+  fs.rmSync(path.join(routinesDir, 'later.md'));
+});
+
+test('after a sleep, the due one-time runs of a routine run once, within the catch-up window', () => {
+  writeRoutine('nightly', 'schedule: "0 2 * * *"\nagent: command\ncommand: "true"');
+  writeRoutine('manual', 'agent: command\ncommand: "true"');
+  const nightly = routineNameSchema.parse('nightly');
+  const manual = routineNameSchema.parse('manual');
+  const oneTimeRun = (routine: string, local: string) => ({
+    routine: routineNameSchema.parse(routine),
+    at: new Date(local).toISOString(),
+  });
+  const upcoming = oneTimeRun('nightly', '2026-10-03T09:00:00');
+  writeOneTimeRuns([
+    oneTimeRun('manual', '2026-09-24T09:00:00'),
+    oneTimeRun('manual', '2026-09-28T09:00:00'),
+    oneTimeRun('nightly', '2026-09-30T02:00:00'),
+    oneTimeRun('manual', '2026-10-01T09:00:00'),
+    oneTimeRun('nightly', '2026-10-01T09:00:00'),
+    upcoming,
+  ]);
+  const state = readSchedulerState();
+  assert.ok(state);
+  state.lastTickAt = new Date('2026-09-22T10:00:00').toISOString();
+  writeSchedulerState(state);
+
+  assert.deepEqual(tick(new Date('2026-10-02T10:00:50')).started, [nightly, manual]);
+  assert.deepEqual(readOneTimeRuns(), [upcoming]);
+  writeOneTimeRuns([]);
+  for (const name of ['nightly', 'manual']) fs.rmSync(path.join(routinesDir, `${name}.md`));
 });
 
 test('queued webhooks start one at a time once their routine is idle', () => {

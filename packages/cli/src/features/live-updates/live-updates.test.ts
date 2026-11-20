@@ -13,7 +13,7 @@ fs.mkdirSync(routinesDir);
 const { checkIsWatchedStateFile, trackSchedule } = await import('./live-updates');
 const { tick } = await import('../../domains/scheduler/tick');
 
-test('run records, queued webhooks, webhook calls, read runs and the scheduler state are changes clients see', () => {
+test('run records, queued webhooks, webhook calls, read runs, one-time runs and the scheduler state are changes clients see', () => {
   assert.equal(checkIsWatchedStateFile('runs/triage/20261006T115000Z-ab12.json'), true);
   assert.equal(
     checkIsWatchedStateFile('queue/triage/000001791000000-20261006T115000Z-ab12.payload'),
@@ -21,6 +21,7 @@ test('run records, queued webhooks, webhook calls, read runs and the scheduler s
   );
   assert.equal(checkIsWatchedStateFile('webhooks/triage/001791000000000.json'), true);
   assert.equal(checkIsWatchedStateFile('inbox.json'), true);
+  assert.equal(checkIsWatchedStateFile('one-time-runs.json'), true);
   assert.equal(checkIsWatchedStateFile('scheduler.json'), true);
 });
 

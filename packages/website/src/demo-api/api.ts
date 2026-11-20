@@ -7,6 +7,7 @@ import type { InboxState } from 'domains/inbox/types';
 import { addReadRuns, listUnreadRuns } from 'domains/inbox/utils';
 import type { ReleaseUpdate } from 'domains/release/types';
 import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
+import { oneTimeRunRequestSchema } from 'domains/routine/schemas';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import { RUNS_CURSOR_ERROR } from 'domains/run/constants';
 import { runIdSchema, type RunId } from 'domains/run/ids';
@@ -28,7 +29,15 @@ import type { Settings } from 'domains/settings/types';
 import { webhookCallIdSchema } from 'domains/webhook/ids';
 import type { QueuedWebhook, WebhookCall } from 'domains/webhook/types';
 import { findExpiredWebhookCalls } from 'domains/webhook/utils';
-import type { Skip } from 'domains/scheduler/types';
+import type { OneTimeRun, Skip } from 'domains/scheduler/types';
+import {
+  addOneTimeRun,
+  checkHasOneTimeRun,
+  getNextRunAt,
+  getOneTimeRunError,
+  listRoutineOneTimeRuns,
+  removeOneTimeRun,
+} from 'domains/scheduler/utils';
 import { describeCron, nextCronRun } from 'utils/cron';
 
 import { HOME, STATE_DIR } from './constants';
@@ -107,21 +116,29 @@ function toWebhookCall(
   };
 }
 
+function toOneTimeRun(routine: DemoRoutine, minutesAhead: number, loadedAt: Date): OneTimeRun {
+  const at = new Date(loadedAt.getTime() + minutesAhead * MINUTE_MS);
+  at.setSeconds(0, 0);
+  return { routine: routine.name, at: at.toISOString() };
+}
+
 function toRoutineSummary(
   routine: DemoRoutine,
   runs: RunRecord[],
   skips: Skip[],
   queue: QueuedWebhook[],
+  oneTimeRuns: OneTimeRun[],
   now: Date,
 ): RoutineSummary {
   const { schedule, enabled } = routine;
+  const nextCronRunAt =
+    schedule === null ? null : (nextCronRun(schedule, now)?.toISOString() ?? null);
   return {
     name: routine.name,
     description: routine.description,
     schedule,
     scheduleHuman: schedule === null ? 'Manual' : describeCron(schedule),
-    nextRunAt:
-      schedule === null || !enabled ? null : (nextCronRun(schedule, now)?.toISOString() ?? null),
+    nextRunAt: enabled ? getNextRunAt(nextCronRunAt, oneTimeRuns) : null,
     enabled,
     webhook: routine.webhook ?? false,
     webhookGate: routine.webhookGate ?? null,
@@ -152,6 +169,13 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     since: new Date(loadedAt.getTime() - LAST_LOOK_MS).toISOString(),
     readRuns: [],
   };
+  let oneTimeRuns = demoRoutines
+    .flatMap(routine =>
+      (routine.oneTimeRuns ?? []).map(({ minutesAhead }) =>
+        toOneTimeRun(routine, minutesAhead, loadedAt),
+      ),
+    )
+    .reduce((runs: OneTimeRun[], run) => addOneTimeRun(runs, run), []);
   const queues = new Map(
     demoRoutines.map(routine => [
       routine.name,
@@ -216,6 +240,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
       listRoutineRuns(routine, now),
       history.listSkips(routine, now),
       listQueue(routine, now),
+      listRoutineOneTimeRuns(oneTimeRuns, routine.name),
       now,
     );
   }
@@ -259,7 +284,55 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
       skips: history.listSkips(routine, now),
       queue: listQueue(routine, now),
       webhookCalls: listWebhookCalls(routine, now),
+      oneTimeRuns: listRoutineOneTimeRuns(oneTimeRuns, routine.name),
     };
+  }
+
+  // The daemon's tick, run on each request instead of every 30 s.
+  function startDueOneTimeRuns(now: Date): void {
+    for (const oneTimeRun of oneTimeRuns) {
+      const scheduledFor = new Date(oneTimeRun.at);
+      if (scheduledFor > now) continue;
+      const routine = demoRoutines.find(candidate => candidate.name === oneTimeRun.routine);
+      if (routine === undefined || !routine.enabled) {
+        oneTimeRuns = removeOneTimeRun(oneTimeRuns, oneTimeRun);
+        continue;
+      }
+      if (listRoutineRuns(routine, now).some(checkIsRunActive)) continue;
+      history.startRun(routine, now, scheduledFor);
+      oneTimeRuns = removeOneTimeRun(oneTimeRuns, oneTimeRun);
+    }
+  }
+
+  function parseOneTimeRun(routine: DemoRoutine, body: string): OneTimeRun | null {
+    const request = oneTimeRunRequestSchema.safeParse(parseJson(body));
+    if (!request.success) return null;
+    return { routine: routine.name, at: new Date(request.data.at).toISOString() };
+  }
+
+  function scheduleOneTimeRun(routine: DemoRoutine, body: string, now: Date): ApiResponse {
+    const oneTimeRun = parseOneTimeRun(routine, body);
+    if (oneTimeRun === null) return fail(400, 'The body must be JSON with an ISO time in at');
+    if (!routine.enabled) {
+      return fail(409, `${routine.name} is disabled, set enabled: true in its frontmatter`);
+    }
+    const error = getOneTimeRunError(oneTimeRuns, oneTimeRun, now);
+    if (error !== null) return fail(400, error);
+    oneTimeRuns = addOneTimeRun(oneTimeRuns, oneTimeRun);
+    return ok({ ok: true });
+  }
+
+  function cancelOneTimeRun(routine: DemoRoutine, body: string): ApiResponse {
+    const oneTimeRun = parseOneTimeRun(routine, body);
+    if (oneTimeRun === null) return fail(400, 'The body must be JSON with an ISO time in at');
+    if (!checkHasOneTimeRun(oneTimeRuns, oneTimeRun)) {
+      return fail(
+        404,
+        `${routine.name} has no run scheduled at that time, it may have started already`,
+      );
+    }
+    oneTimeRuns = removeOneTimeRun(oneTimeRuns, oneTimeRun);
+    return ok({ ok: true });
   }
 
   function startRun(routine: DemoRoutine, now: Date): ApiResponse {
@@ -312,7 +385,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     if (!isValid) {
       return fail(400, `from and to must be ISO dates spanning at most ${MAX_CALENDAR_DAYS} days`);
     }
-    return ok(buildCalendar(demoRoutines, listRuns(now), from, to, now));
+    return ok(buildCalendar(demoRoutines, listRuns(now), oneTimeRuns, from, to, now));
   }
 
   function updateSettings(body: string): ApiResponse {
@@ -340,6 +413,14 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
       )
       .with(['POST', ['routines', P.string, 'run']], ([, [, name]]) =>
         withRoutine(routineNameSchema.parse(name), routine => startRun(routine, now)),
+      )
+      .with(['POST', ['routines', P.string, 'one-time-runs']], ([, [, name]]) =>
+        withRoutine(routineNameSchema.parse(name), routine =>
+          scheduleOneTimeRun(routine, body, now),
+        ),
+      )
+      .with(['POST', ['routines', P.string, 'one-time-runs', 'cancel']], ([, [, name]]) =>
+        withRoutine(routineNameSchema.parse(name), routine => cancelOneTimeRun(routine, body)),
       )
       .with(['GET', ['calendar']], () => getCalendar(url, now))
       .with(['GET', ['inbox']], () => ok({ runs: listUnreadRuns(listRuns(now), inbox) }))
@@ -377,6 +458,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
   return {
     respond(method, url, body, now = new Date()) {
       const segments = url.pathname.split('/').filter(Boolean).slice(1).map(decodeURIComponent);
+      startDueOneTimeRuns(now);
       return routeApi([method, segments], url, body, now);
     },
   };

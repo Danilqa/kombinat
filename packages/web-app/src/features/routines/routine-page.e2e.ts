@@ -55,26 +55,93 @@ test('keeps the open tab in the URL', async ({ page, kombinat }) => {
   await expect(page.getByRole('tab', { name: /^Runs/ })).toHaveAttribute('aria-selected', 'true');
 });
 
-test('blocks both halves of the run button while the routine runs', async ({ page, kombinat }) => {
-  kombinat.addRoutine({ name: 'triage-sentry' });
+// The browser runs in UTC, so the time input takes UTC times.
+function toTimeInputValue(date: Date): string {
+  return date.toISOString().slice(0, 16);
+}
+
+test('blocks Run now while the routine runs but still schedules a run once later', async ({
+  page,
+  kombinat,
+}) => {
+  kombinat.addRoutine({ name: 'write-release-notes' });
   kombinat.addRun({
-    routine: 'triage-sentry',
+    routine: 'write-release-notes',
     status: 'running',
     endedAt: null,
     exitCode: null,
     pid: process.pid,
   });
-  await page.goto('/routines/triage-sentry');
+  await page.goto('/routines/write-release-notes');
 
-  await expect(page.getByRole('button', { name: 'Running triage-sentry' })).toHaveAttribute(
+  await expect(page.getByRole('button', { name: 'Running write-release-notes' })).toHaveAttribute(
     'aria-disabled',
     'true',
   );
-  const menu = page.getByRole('button', { name: 'More ways to run triage-sentry' });
-  await expect(menu).toHaveAttribute('aria-disabled', 'true');
-  await menu.click({ force: true });
-  await menu.press('Enter');
-  await expect(page.getByRole('menu')).toBeHidden();
+  await expect(page.getByRole('main')).toMatchAriaSnapshot(`
+    - term: Next run
+    - definition: "-"
+  `);
+  await page.getByRole('button', { name: 'More ways to run write-release-notes' }).click();
+  await page.getByRole('menuitem', { name: /^Tonight at 02:00/ }).click();
+
+  await expect(page.getByRole('heading', { name: 'Scheduled once' })).toBeVisible();
+  await expect(page.getByText('1 run, kept on this machine, not in git')).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Cancel the run at .+, 02:00$/ })).toBeVisible();
+  await expect(page.getByRole('main')).toMatchAriaSnapshot(`
+    - term: Next run
+    - definition:
+      - time: /^in /
+  `);
+});
+
+test('schedules a run at a picked time and cancels runs scheduled once', async ({
+  page,
+  kombinat,
+}) => {
+  kombinat.addRoutine({ name: 'write-release-notes' });
+  await page.goto('/routines/write-release-notes');
+  const openMenu = () =>
+    page.getByRole('button', { name: 'More ways to run write-release-notes' }).click();
+
+  await openMenu();
+  await page.getByRole('menuitem', { name: 'Pick a time…' }).click();
+  const time = page.getByLabel('Run write-release-notes once at');
+  await expect(time).toBeFocused();
+  await time.fill(toTimeInputValue(new Date(Date.now() - 60 * 60_000)));
+  await page.getByRole('button', { name: 'Schedule run' }).click();
+  await expect(page.getByRole('alert')).toHaveText('Choose a time in the future');
+
+  const inTwoDays = new Date(Date.now() + 2 * 24 * 60 * 60_000);
+  inTwoDays.setUTCHours(10, 30, 0, 0);
+  await time.fill(toTimeInputValue(inTwoDays));
+  await page.getByRole('button', { name: 'Schedule run' }).click();
+  await expect(time).toBeHidden();
+  await openMenu();
+  await page.getByRole('menuitem', { name: /^In 1 hour/ }).click();
+
+  const cancelButtons = page.getByRole('button', { name: /^Cancel the run at / });
+  await expect(cancelButtons).toHaveCount(2);
+  await expect(page.getByText('2 runs, kept on this machine, not in git')).toBeVisible();
+  await expect(cancelButtons.last()).toHaveAccessibleName(/, 10:30$/);
+  await expect(page.getByRole('main')).toMatchAriaSnapshot(`
+    - term: Next run
+    - definition:
+      - time: /^in 1 hr\\./
+  `);
+
+  await cancelButtons.first().focus();
+  await page.keyboard.press('Enter');
+  await expect(cancelButtons).toHaveCount(1);
+  await expect(cancelButtons.first()).toBeFocused();
+  await expect(page.getByRole('main')).toMatchAriaSnapshot(`
+    - term: Next run
+    - definition:
+      - time: /^(in [23] days|tomorrow) /
+  `);
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('heading', { name: 'Scheduled once' })).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Run now write-release-notes' })).toBeFocused();
 });
 
 test('logs the webhook calls of a routine with what each of them did', async ({

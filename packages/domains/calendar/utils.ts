@@ -5,6 +5,7 @@ import { formatClock, formatDayMonth, formatWeekday } from 'utils/date-time';
 
 import type { RoutineName } from '../routine/ids';
 import type { RunRecord } from '../run/types';
+import type { OneTimeRun } from '../scheduler/types';
 import { getRunStatusLabel } from '../run/utils';
 import { calendarEntryIdSchema, type CalendarEntryId } from './ids';
 import type {
@@ -120,9 +121,30 @@ function markOverlaps(entries: CalendarEntry[]): CalendarEntry[] {
   return sorted;
 }
 
+function toPlannedEntry(
+  idPrefix: string,
+  routine: ScheduledRoutine,
+  start: Date,
+  { minutes, estimated }: PlannedLength,
+): PlannedCalendarEntry {
+  return {
+    id: calendarEntryIdSchema.parse(`${idPrefix}:${routine.name}:${start.toISOString()}`),
+    routine: routine.name,
+    start: start.toISOString(),
+    end: new Date(start.getTime() + minutes * 60_000).toISOString(),
+    kind: 'planned',
+    status: null,
+    runId: null,
+    trigger: null,
+    estimated,
+    overlaps: [],
+  };
+}
+
 export function buildCalendar(
   routines: ScheduledRoutine[],
   runs: RunRecord[],
+  oneTimeRuns: OneTimeRun[],
   from: Date,
   to: Date,
   now = new Date(),
@@ -132,20 +154,19 @@ export function buildCalendar(
     .map(r => toRunEntry(r, now));
   const plannedFrom = new Date(Math.max(from.getTime(), now.getTime()));
   const plannedEntries = routines.flatMap((routine): PlannedCalendarEntry[] => {
-    if (!routine.enabled || routine.schedule === null || plannedFrom >= to) return [];
-    const { minutes, estimated } = estimatePlannedMinutes(routine, runs);
-    return cronRunsBetween(routine.schedule, plannedFrom, to).map(start => ({
-      id: calendarEntryIdSchema.parse(`planned:${routine.name}:${start.toISOString()}`),
-      routine: routine.name,
-      start: start.toISOString(),
-      end: new Date(start.getTime() + minutes * 60_000).toISOString(),
-      kind: 'planned',
-      status: null,
-      runId: null,
-      trigger: null,
-      estimated,
-      overlaps: [],
-    }));
+    if (!routine.enabled || plannedFrom >= to) return [];
+    const scheduled =
+      routine.schedule === null ? [] : cronRunsBetween(routine.schedule, plannedFrom, to);
+    const once = oneTimeRuns.flatMap(({ routine: name, at }) => {
+      const start = new Date(at);
+      return name === routine.name && start >= plannedFrom && start < to ? [start] : [];
+    });
+    if (scheduled.length === 0 && once.length === 0) return [];
+    const length = estimatePlannedMinutes(routine, runs);
+    return [
+      ...scheduled.map(start => toPlannedEntry('planned', routine, start, length)),
+      ...once.map(start => toPlannedEntry('once', routine, start, length)),
+    ];
   });
   return markOverlaps([...runEntries, ...plannedEntries]);
 }

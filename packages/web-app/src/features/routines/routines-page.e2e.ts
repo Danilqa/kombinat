@@ -117,6 +117,22 @@ test('keeps counting the time since the last run', async ({ page, kombinat, time
   await expect(row).toContainText('6 min. ago');
 });
 
+test('schedules a run once later from the list without opening the routine', async ({
+  page,
+  kombinat,
+}) => {
+  kombinat.addRoutine({ name: 'write-release-notes' });
+  await page.goto('/');
+  const row = page.getByRole('row', { name: /write-release-notes/ });
+
+  await row.getByRole('button', { name: 'More ways to run write-release-notes' }).click();
+  await page.getByRole('menuitem', { name: /^In 1 hour/ }).click();
+
+  await expect(row).toContainText('in 1 hr.');
+  await expect(page.getByRole('tooltip')).toHaveText(/^Runs once at .+/);
+  await expect(page).toHaveURL(/\/$/);
+});
+
 test('runs a routine on demand and shows its output', async ({ page, kombinat }) => {
   test.slow();
   kombinat.addRoutine({ name: 'say-hello', agent: 'command', command: 'echo Hello from Kombinat' });

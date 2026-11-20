@@ -55,6 +55,10 @@ export interface DemoPin {
   skip?: SkipReason;
 }
 
+export interface DemoOneTimeRun {
+  minutesAhead: number;
+}
+
 export interface DemoStartedRun {
   minutesAgo: number;
   outcome: string;
@@ -101,6 +105,7 @@ export interface DemoRoutine {
   webhookRuns?: DemoStartedRun[];
   queuedWebhooks?: DemoQueuedWebhook[];
   webhookCalls?: DemoWebhookCall[];
+  oneTimeRuns?: DemoOneTimeRun[];
 }
 
 const REPO = `${HOME}/Projects/acme-web`;
@@ -1060,6 +1065,7 @@ src/utils/format.ts: formatLegacyDate, padCents
     },
   ],
   pins: [{ slotsAgo: 1, outcome: 'one-flag' }],
+  oneTimeRuns: [{ minutesAhead: 3 * 60 }],
 };
 
 const supportSignals: DemoRoutine = {

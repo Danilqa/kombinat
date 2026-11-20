@@ -3,11 +3,19 @@ import type http from 'node:http';
 import path from 'node:path';
 
 import { config } from '../../config';
+import { ONE_TIME_RUNS_FILE } from '../../domains/scheduler/one-time-runs';
 import { readSchedulerState } from '../../domains/scheduler/storage';
 
 const NOTIFY_DELAY_MS = 300;
 const SCHEDULER_FILE = 'scheduler.json';
-const STATE_ENTRIES = ['runs', 'queue', 'webhooks', 'inbox.json', SCHEDULER_FILE];
+const STATE_ENTRIES = [
+  'runs',
+  'queue',
+  'webhooks',
+  'inbox.json',
+  ONE_TIME_RUNS_FILE,
+  SCHEDULER_FILE,
+];
 
 export interface LiveUpdates {
   follow: (req: http.IncomingMessage, res: http.ServerResponse) => void;

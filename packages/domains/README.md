@@ -17,7 +17,7 @@ Each domain has up to two halves with the same name:
 | **agent**      | `AgentName`, `SessionId`, agent label                                                                                                                                                                                                     | claude, codex and command adapters, registry, settings validation, `AgentTask`, plan usage storage                     |
 | **transcript** | item schemas and types, message source, usage limit kinds, preview rule, subagent check, tool input, result and search match count, empty, result, hook, message source and usage limit labels, `TranscriptList`                          | none                                                                                                                   |
 | **run**        | `RunRecord`, `RunId`, status and trigger, requests, labels, new ids, duration, cursor pages, active and continue rules, expired runs, `makeRunRecord`, `RunStatusBadge`, `RunDetailList`, `RunOutput`, `RunMessageForm`, `UsageLimitCard` | runner, replies, hooks, usage limit waits, record storage with orphan reconciliation, event log, transcript, retention |
-| **scheduler**  | `Skip`, `SkipReason`, `SchedulerState`, skip label, `SkipsTable`                                                                                                                                                                          | tick loop, `scheduler.json` storage                                                                                    |
+| **scheduler**  | `Skip`, `SkipReason`, `SchedulerState`, `OneTimeRun`, skip label, run later presets, one-time run rules, next run, `SkipsTable`                                                                                                           | tick loop, `scheduler.json` and `one-time-runs.json` storage                                                           |
 | **routine**    | `RoutineName`, `RoutineSummary`, `RoutineDetail`, requests, `RunNowButton`, `RoutineBadges`, `RoutineDetailList`, `WebhookQueueButton`                                                                                                    | file parsing, validation, defaults, loading, next run, schedule label, examples                                        |
 | **calendar**   | `CalendarEntryId`, entry schemas and types, `getCalendar`, `buildCalendar`, planned lengths, entry title and overlap labels, overlap count                                                                                                | none, `cli/src/server.ts` serves `buildCalendar`                                                                       |
 | **daemon**     | status schema, `getDaemonStatus`, `watchDaemonChanges`, health rules, plan usage rules, `DaemonStatusIndicator`                                                                                                                           | none, `cli/src/server.ts` builds the status                                                                            |
@@ -125,6 +125,16 @@ The daemon's decision of when routines start. Every `KOMBINAT_TICK_SECONDS` (def
 - After the scheduled times, each enabled routine with `webhook: true` that is idle starts its oldest queued webhook, within the same limit.
 - `scheduler.json` holds `lastTickAt` and, for each routine, its last scheduled time and its last 50 skips.
 
+#### One-time runs
+
+A routine can also run once at a time the user picks, such as tonight at 02:00, without a change to its file: `POST /api/routines/<name>/one-time-runs` with `{ "at": "<ISO time>" }`, and `POST /api/routines/<name>/one-time-runs/cancel` with the same body. `<state dir>/one-time-runs.json` keeps them as `{ "runs": [{ "routine": "…", "at": "…" }] }`, oldest first.
+
+- The time must be in the future and at most a year away, a routine holds at most 20 of them, and the same time is kept once. A disabled routine answers 409, and cancelling a time it does not have 404.
+- From its time, the tick starts it after the scheduled times, with the trigger `schedule`, or `catch_up` when it is late as a scheduled time would be, and `scheduledFor` set to the time. Unlike a scheduled time, it waits while its routine runs or at the concurrency limit instead of being skipped, since it was asked for once.
+- Like missed scheduled times, the due one-time runs of a routine make one run: the tick keeps only the latest, drops the ones more than 7 days old, and drops the late ones of a routine whose missed scheduled time it starts in the same tick.
+- A one-time run of a routine that is disabled by its time gets a `disabled` skip, without a change to the last scheduled time, and one of a deleted routine is dropped.
+- The routine's next run is the earliest of its cron time and its one-time runs, the detail lists them in `oneTimeRuns`, and the calendar shows them as planned blocks.
+
 ### routine
 
 A named, version-controlled unit of recurring agent work: one markdown file, `routines/<name>.md`. Its frontmatter holds scalar values only and sets `name`, `description`, `schedule`, `cwd`, `agent` and its settings, `enabled`, `webhook` with an optional `webhookGate`, `timeoutMinutes` and optional `before` and `after` hooks. The body is the prompt.
@@ -136,7 +146,7 @@ A named, version-controlled unit of recurring agent work: one markdown file, `ro
 - `agent` defaults to `claude`, `enabled` to `true`, `webhook` to `false` and `timeoutMinutes` to 55. `webhook` must be `true` or `false`, and `webhookGate` needs `webhook: true`.
 - The schedule gives the routine its next run, `null` when it is manual or disabled, and its label: `Manual` or the cron in words.
 
-Clients see a routine as a summary (its definition plus next run, running, last run and last skip) or a detail (plus the prompt, skips, queued webhooks and webhook calls). Its runs come page by page from `/api/runs`. They can start it with Run now, which answers 409 while the routine is running, and can give that run a changed prompt, which only that run gets.
+Clients see a routine as a summary (its definition plus next run, running, last run and last skip) or a detail (plus the prompt, skips, queued webhooks, webhook calls and [one-time runs](#one-time-runs)). Its runs come page by page from `/api/runs`. They can start it with Run now, which answers 409 while the routine is running, and can give that run a changed prompt, which only that run gets.
 
 A routine with `webhook: true` also starts from a [webhook](#webhook).
 
@@ -192,7 +202,7 @@ The runs that ended since the user last looked, `GET /api/inbox`, so that a fail
 The week view's read model, `GET /api/calendar?from&to` for a range of at most 32 days.
 
 - Run blocks are the runs that overlap the range. A block is at least 10 minutes long, and a running run extends to now.
-- Planned blocks are the future cron times of enabled, scheduled routines, from the later of `from` and now.
+- Planned blocks are the future cron times and [one-time runs](#one-time-runs) of enabled routines, from the later of `from` and now.
 - A planned block is as long as the median of the routine's 5 newest finished, non-aborted runs, rounded up, at most the timeout and at least 10 minutes, and marked estimated. Without such runs it is 20 minutes, or the timeout when that is shorter.
 - Blocks of different routines that overlap list each other's ids.
 
@@ -207,7 +217,7 @@ The running kombinat service as its clients see it through `GET /api/status`: ve
 - Claude Code's stream-json reports it in each `rate_limit_event` as the share used and the reset time of the 5-hour and the weekly limit. The runner writes the latest one to `<state dir>/plan-usage/claude.json` with the time it came, which the status serves.
 - A limit whose reset time has passed is left out, because what was used since is unknown until the next run reports it. The dashboard and the TUI show the share left of the most used limit next to the running count.
 
-`GET /api/events` is a stream of server-sent events with one `data: change` event, at most every 300 ms, after a routine file, a run record, the webhook queue, a webhook call, `inbox.json` or the skips and last scheduled times in `scheduler.json` change. Run logs and the tick time do not count: logs grow with every agent event, and clients poll the tick time with the status. A client refetches what it shows on each event and once after it reconnects. It reconnects 5 s after the stream breaks and stops when the answer is an error, such as from an older daemon or the website's demo. The dashboard follows the stream only while its tab is visible, since browsers allow 6 connections to a host across all tabs, and refetches when the tab shows again.
+`GET /api/events` is a stream of server-sent events with one `data: change` event, at most every 300 ms, after a routine file, a run record, the webhook queue, a webhook call, `inbox.json`, `one-time-runs.json` or the skips and last scheduled times in `scheduler.json` change. Run logs and the tick time do not count: logs grow with every agent event, and clients poll the tick time with the status. A client refetches what it shows on each event and once after it reconnects. It reconnects 5 s after the stream breaks and stops when the answer is an error, such as from an older daemon or the website's demo. The dashboard follows the stream only while its tab is visible, since browsers allow 6 connections to a host across all tabs, and refetches when the tab shows again.
 
 Its health is `unreachable` when the request fails, `stale` when there has been no tick or the last tick is more than 5 minutes old, and `healthy` otherwise.
 

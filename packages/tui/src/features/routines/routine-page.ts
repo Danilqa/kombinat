@@ -3,7 +3,7 @@ import { match } from 'ts-pattern';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import type { RunsPage } from 'domains/run/types';
 import { getSkipReasonLabel } from 'domains/scheduler/utils';
-import { formatRelativeCompact } from 'utils/date-time';
+import { formatDayTime, formatRelativeCompact } from 'utils/date-time';
 
 import { detailRows, timeValue } from '../../components/detail-rows';
 import type { DetailPair } from '../../components/detail-rows';
@@ -99,6 +99,15 @@ export function routinePage({
       : [{ label: 'command', value: [text(routine.command, S.cyan)], isWide: true }]),
     { label: 'file', value: [text(routine.file)], isWide: true },
     { label: 'next run', value: timeValue(routine.nextRunAt, now), isWide: true },
+    ...(detail === undefined || detail.oneTimeRuns.length === 0
+      ? []
+      : [
+          {
+            label: 'run once',
+            value: [text(detail.oneTimeRuns.map(({ at }) => formatDayTime(at)).join(' · '))],
+            isWide: true,
+          },
+        ]),
     {
       label: 'last run',
       value: lastRun

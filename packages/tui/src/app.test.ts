@@ -156,6 +156,7 @@ interface FakeOptions {
 
 function makeClient(overview: Overview, options: FakeOptions) {
   const started: string[] = [];
+  const scheduled: string[] = [];
   const savedSettings: Settings[] = [];
   const readRuns: string[] = [];
   const client: DaemonClient = {
@@ -181,6 +182,10 @@ function makeClient(overview: Overview, options: FakeOptions) {
             ] ?? '',
         })),
         webhookCalls: options.webhookCalls ?? [],
+        oneTimeRuns: scheduled.flatMap(entry => {
+          const [routine, at] = entry.split(' ');
+          return routine === name && at !== undefined ? [{ routine: name, at }] : [];
+        }),
       };
       return Promise.resolve(detail);
     },
@@ -206,18 +211,22 @@ function makeClient(overview: Overview, options: FakeOptions) {
       started.push(name);
       return Promise.resolve();
     },
+    scheduleOneTimeRun(name, at) {
+      scheduled.push(`${name} ${at.toISOString()}`);
+      return Promise.resolve();
+    },
     updateSettings(settings) {
       savedSettings.push(settings);
       return Promise.resolve();
     },
     watchChanges: () => Promise.resolve(),
   };
-  return { client, started, savedSettings, readRuns };
+  return { client, started, scheduled, savedSettings, readRuns };
 }
 
 async function makeApp(options: FakeOptions = {}) {
   const overview = options.overview ?? makeOverview();
-  const { client, started, savedSettings, readRuns } = makeClient(overview, options);
+  const { client, started, scheduled, savedSettings, readRuns } = makeClient(overview, options);
   const app = new TuiApp({ client, now: () => NOW, pageLoadDelayMs: null });
   await app.refresh();
   const screen = () => app.render(WIDTH, HEIGHT).map(plain).join('\n');
@@ -232,7 +241,17 @@ async function makeApp(options: FakeOptions = {}) {
     for (const key of keys) await pressChunk([key]);
     return screen();
   };
-  return { app, overview, started, savedSettings, readRuns, screen, press, pressChunk };
+  return {
+    app,
+    overview,
+    started,
+    scheduled,
+    savedSettings,
+    readRuns,
+    screen,
+    press,
+    pressChunk,
+  };
 }
 
 test('fills the terminal exactly, with the status, routines, runs and detail panels', async () => {
@@ -408,6 +427,26 @@ test('r asks before starting a routine and only y starts it through the daemon',
   assert.deepEqual(started, []);
   await press('j', 'r', 'y');
   assert.deepEqual(started, ['smoke-test']);
+});
+
+test('L offers times to run a routine once later and a number key schedules it', async () => {
+  const { scheduled, press } = await makeApp();
+  const tomorrowMorning = new Date(NOW);
+  tomorrowMorning.setDate(tomorrowMorning.getDate() + 1);
+  tomorrowMorning.setHours(9, 0, 0, 0);
+  assert.match(await press('L'), /Run on-call-monitoring once at[\s\S]*3 {2}Tomorrow at 09:00/);
+  assert.doesNotMatch(await press('x'), /once at/);
+  assert.deepEqual(scheduled, []);
+  await press('L', '3');
+  assert.deepEqual(scheduled, [`on-call-monitoring ${tomorrowMorning.toISOString()}`]);
+  const routineScreen = await press('enter');
+  const time = new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(tomorrowMorning);
+  assert.match(routineScreen, new RegExp(`run once\\s+${time}`));
 });
 
 test('s shows how long runs are kept and a number key changes it', async () => {

@@ -18,3 +18,10 @@ export const schedulerStateSchema = z.object({
     z.object({ lastScheduledFor: z.string().nullable(), skips: z.array(skipSchema) }),
   ),
 });
+
+export const oneTimeRunSchema = z.object({
+  routine: routineNameSchema,
+  at: z.string(),
+});
+
+export const oneTimeRunsFileSchema = z.object({ runs: z.array(oneTimeRunSchema) });

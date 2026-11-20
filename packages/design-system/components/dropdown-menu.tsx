@@ -43,6 +43,26 @@ function DropdownMenuContent({
   );
 }
 
+interface DropdownMenuGroupProps extends React.ComponentProps<typeof DropdownMenuPrimitive.Group> {}
+
+function DropdownMenuGroup({ ...props }: DropdownMenuGroupProps) {
+  return <DropdownMenuPrimitive.Group data-slot="dropdown-menu-group" {...props} />;
+}
+
+interface DropdownMenuSeparatorProps extends React.ComponentProps<
+  typeof DropdownMenuPrimitive.Separator
+> {}
+
+function DropdownMenuSeparator({ className, ...props }: DropdownMenuSeparatorProps) {
+  return (
+    <DropdownMenuPrimitive.Separator
+      data-slot="dropdown-menu-separator"
+      className={cn('-mx-1 my-1 h-px bg-line', className)}
+      {...props}
+    />
+  );
+}
+
 interface DropdownMenuItemProps extends React.ComponentProps<typeof DropdownMenuPrimitive.Item> {}
 
 function DropdownMenuItem({ className, ...props }: DropdownMenuItemProps) {
@@ -140,6 +160,8 @@ export {
   DropdownMenu as Root,
   DropdownMenuTrigger as Trigger,
   DropdownMenuContent as Content,
+  DropdownMenuGroup as Group,
+  DropdownMenuSeparator as Separator,
   DropdownMenuItem as Item,
   DropdownMenuCheckboxItem as CheckboxItem,
   DropdownMenuLabel as Label,

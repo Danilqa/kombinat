@@ -11,7 +11,7 @@ import { calendarEntryIdSchema } from './ids';
 import type { ScheduledRoutine } from './types';
 import { buildCalendar, countOverlapPairs, estimatePlannedMinutes } from './utils';
 
-const routine = (name: string, schedule: string, timeoutMinutes = 55): ScheduledRoutine => ({
+const routine = (name: string, schedule: string | null, timeoutMinutes = 55): ScheduledRoutine => ({
   name: routineNameSchema.parse(name),
   schedule,
   enabled: true,
@@ -63,7 +63,7 @@ test('calendar has past runs and future planned occurrences only after now', () 
   const from = new Date('2026-09-28T00:00:00');
   const to = new Date('2026-10-05T00:00:00');
   const runs = [run('a', '2026-09-29T09:00:12', '2026-09-29T09:20:00')];
-  const entries = buildCalendar([routine('a', '0 9 * * *')], runs, from, to, now);
+  const entries = buildCalendar([routine('a', '0 9 * * *')], runs, [], from, to, now);
   assert.equal(entries.filter(isMatching({ kind: 'run' })).length, 1);
   const planned = entries.filter(isMatching({ kind: 'planned' }));
   assert.equal(planned.length, 4);
@@ -77,6 +77,7 @@ test('overlaps between different routines are marked both ways', () => {
   const now = new Date('2026-09-30T00:00:00');
   const entries = buildCalendar(
     [routine('hourly', '10 * * * *'), routine('daily', '20 9 * * *')],
+    [],
     [],
     new Date('2026-09-30T00:00:00'),
     new Date('2026-09-30T23:59:00'),
@@ -98,9 +99,43 @@ test('a running run extends to now', () => {
   const entries = buildCalendar(
     [],
     [run('a', '2026-09-30T12:00:00Z', null, 'running')],
+    [],
     new Date('2026-09-30T00:00:00Z'),
     new Date('2026-10-01T00:00:00Z'),
     now,
   );
   assert.equal(entries[0]?.end, now.toISOString());
+});
+
+test('one-time runs are planned blocks too, but only ahead of now and for enabled routines', () => {
+  const now = new Date('2026-09-30T12:00:00');
+  const oneTimeRun = (name: string, local: string) => ({
+    routine: routineNameSchema.parse(name),
+    at: new Date(local).toISOString(),
+  });
+  const entries = buildCalendar(
+    [routine('manual', null, 15), { ...routine('paused', null), enabled: false }],
+    [],
+    [
+      oneTimeRun('manual', '2026-09-30T11:00:00'),
+      oneTimeRun('manual', '2026-10-01T02:00:00'),
+      oneTimeRun('paused', '2026-10-01T03:00:00'),
+    ],
+    new Date('2026-09-28T00:00:00'),
+    new Date('2026-10-05T00:00:00'),
+    now,
+  );
+  assert.deepEqual(
+    entries.map(({ id, kind, start, end }) => ({ id, kind, start, end })),
+    [
+      {
+        id: calendarEntryIdSchema.parse(
+          `once:manual:${new Date('2026-10-01T02:00:00').toISOString()}`,
+        ),
+        kind: 'planned',
+        start: new Date('2026-10-01T02:00:00').toISOString(),
+        end: new Date('2026-10-01T02:15:00').toISOString(),
+      },
+    ],
+  );
 });

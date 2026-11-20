@@ -5,12 +5,13 @@ import type { HttpClient } from 'utils/http';
 import type { RunId } from '../run/ids';
 import type { RoutineName } from './ids';
 import {
+  changedOneTimeRunsSchema,
   routineDetailSchema,
   routineSummarySchema,
   startedRunSchema,
   startedRunWithIdSchema,
 } from './schemas';
-import type { RoutineDetail, RoutineSummary, StartRunRequest } from './types';
+import type { OneTimeRunRequest, RoutineDetail, RoutineSummary, StartRunRequest } from './types';
 
 export async function getRoutines(http: HttpClient): Promise<RoutineSummary[]> {
   return http.request('/api/routines', z.array(routineSummarySchema));
@@ -38,4 +39,33 @@ export async function startRoutineRunWithPrompt(
     { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) },
   );
   return runId;
+}
+
+async function sendOneTimeRunRequest(http: HttpClient, path: string, at: string): Promise<void> {
+  const body: OneTimeRunRequest = { at };
+  await http.request(path, changedOneTimeRunsSchema, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
+export async function scheduleOneTimeRun(
+  http: HttpClient,
+  name: RoutineName,
+  at: string,
+): Promise<void> {
+  await sendOneTimeRunRequest(http, `/api/routines/${encodeURIComponent(name)}/one-time-runs`, at);
+}
+
+export async function cancelOneTimeRun(
+  http: HttpClient,
+  name: RoutineName,
+  at: string,
+): Promise<void> {
+  await sendOneTimeRunRequest(
+    http,
+    `/api/routines/${encodeURIComponent(name)}/one-time-runs/cancel`,
+    at,
+  );
 }
