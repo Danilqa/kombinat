@@ -14,7 +14,7 @@
 - **Waits out limits.** A run that hits a Claude usage limit continues after the reset.
 - **Inbox.** Unread runs, with failures and findings first.
 - **Full transcripts.** Search them, and chat to continue any run.
-- **Everywhere.** Dashboard in the browser, the terminal or as an app on your phone.
+- **Everywhere.** Dashboard in the browser, the terminal or as a PWA on your phone and computer.
 - **Guardrails.** Timeouts, a budget cap, no overlapping runs and catch-up after sleep.
 - **Small.** One command, two dependencies, no cloud, no database, no telemetry.
 
@@ -25,6 +25,8 @@ A routine can be basically any automation, for your team or at home. Teams use t
 See example routines in the [live demo](https://danilqa.github.io/kombinat/).
 
 ## 🚀 Quickstart
+
+You need Node 24 and Claude Code or Codex, logged in. On Linux, see [docs/linux.md](docs/linux.md).
 
 1. Create a folder with example routines.
 
@@ -58,10 +60,6 @@ The daemon serves a dashboard at http://localhost:7433.
 - **Daemon status.**
 - **Search.**
 
-### As an app
-
-The dashboard installs as an app with its own window and icon: Install in the address bar of Chrome or Edge, File → Add to Dock in Safari on a Mac, or Share → Add to Home Screen on an iPhone. Install it from http://localhost:7433 or from a [Tailscale Serve](docs/remote-access.md#with-tailscale-serve) address, which stay the same, unlike the local port of `kombinat connect`. In Chrome and Edge, the icon counts the unread runs of the Inbox. When the daemon can't be reached, the app says so and opens the dashboard by itself once it answers.
-
 ### In the terminal
 
 <img src=".github/assets/tui.png" alt="Kombinat in the terminal: routines, recent runs and a routine's run history" width="100%" />
@@ -72,20 +70,6 @@ The dashboard installs as an app with its own window and icon: Install in the ad
 
 To open the dashboard from your laptop or phone, connect over SSH with `npx kombinat connect`, or share it in your tailnet with Tailscale Serve. See [docs/remote-access.md](docs/remote-access.md).
 
-## 📚 Example routines
-
-One row per file in [`example/routines/`](example/routines/). Put the same `routines:start` and `routines:end` comments in your own README, and `pnpm kombinat readme` keeps a table like this one up to date.
-
-<!-- prettier-ignore-start -->
-<!-- routines:start -->
-| Routine | When | What it does |
-| - | - | - |
-| [weather-example-routine](example/routines/weather-example-routine.md) | Weekdays at 08:00 | Says if you need an umbrella today |
-| [hello-example-routine](example/routines/hello-example-routine.md) | Manual | Says hello, to check that your setup works |
-| [weather-webhook-example-routine](example/routines/weather-webhook-example-routine.md) | On webhook | Says if you need an umbrella in the city from the request |
-<!-- routines:end -->
-<!-- prettier-ignore-end -->
-
 ## 🧩 How it works
 
 A small daemon starts the agents of due routines, serves the dashboard and keeps the run history. See [docs/how-it-works.md](docs/how-it-works.md).
@@ -94,20 +78,9 @@ A small daemon starts the agents of due routines, serves the dashboard and keeps
 
 The dashboard has no login, and agents can do whatever their routine's permissions allow. Read [docs/security.md](docs/security.md) before you open the dashboard to other people or let a routine read issues, chats or webhooks.
 
-## 📦 Setup
-
-You need Node 24 and the agents your routines use, logged in: Claude Code (`claude auth status`) and Codex (`codex login`). From the folder with `routines/` and `package.json`:
-
-```bash
-pnpm add kombinat
-pnpm kombinat install
-```
-
-This starts the daemon in that folder, under launchd on macOS or as a systemd user service on Linux, see [docs/linux.md](docs/linux.md). Open http://localhost:7433. There is one daemon per user, so running `install` in another folder moves it there.
-
 ## 💻 Commands
 
-Run them from the same folder. With npm, use `npx kombinat` instead of `pnpm kombinat`, with Yarn `yarn kombinat`.
+Run them from the folder with `routines/`. With npm, use `npx kombinat` instead of `pnpm kombinat`, with Yarn `yarn kombinat`.
 
 ```bash
 pnpm kombinat init [folder]  # add the missing package.json, example routines, README and .gitignore
