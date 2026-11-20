@@ -130,15 +130,18 @@ test('schedules a run at a picked time and cancels runs scheduled once', async (
       - time: /^in 1 hr\\./
   `);
 
-  await cancelButtons.first().click();
+  await cancelButtons.first().focus();
+  await page.keyboard.press('Enter');
   await expect(cancelButtons).toHaveCount(1);
+  await expect(cancelButtons.first()).toBeFocused();
   await expect(page.getByRole('main')).toMatchAriaSnapshot(`
     - term: Next run
     - definition:
       - time: /^(in [23] days|tomorrow) /
   `);
-  await cancelButtons.first().click();
+  await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { name: 'Scheduled once' })).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Run now write-release-notes' })).toBeFocused();
 });
 
 test('logs the webhook calls of a routine with what each of them did', async ({

@@ -236,7 +236,10 @@ function cancelOneTimeRun(routine: Routine, body: Buffer): ApiResponse {
   if (oneTimeRun === null) return fail(400, 'The body must be JSON with an ISO time in at');
   const runs = readOneTimeRuns();
   if (!checkHasOneTimeRun(runs, oneTimeRun)) {
-    return fail(404, `${routine.name} has no one-time run at that time`);
+    return fail(
+      404,
+      `${routine.name} has no run scheduled at that time, it may have started already`,
+    );
   }
   writeOneTimeRuns(removeOneTimeRun(runs, oneTimeRun));
   return ok({ ok: true });

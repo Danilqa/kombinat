@@ -131,6 +131,7 @@ A routine can also run once at a time the user picks, such as tonight at 02:00, 
 
 - The time must be in the future and at most a year away, a routine holds at most 20 of them, and the same time is kept once. A disabled routine answers 409, and cancelling a time it does not have 404.
 - From its time, the tick starts it after the scheduled times, with the trigger `schedule`, or `catch_up` when it is late as a scheduled time would be, and `scheduledFor` set to the time. Unlike a scheduled time, it waits while its routine runs or at the concurrency limit instead of being skipped, since it was asked for once.
+- Like missed scheduled times, the due one-time runs of a routine make one run: the tick keeps only the latest, drops the ones more than 7 days old, and drops the late ones of a routine whose missed scheduled time it starts in the same tick.
 - A one-time run of a routine that is disabled by its time gets a `disabled` skip, without a change to the last scheduled time, and one of a deleted routine is dropped.
 - The routine's next run is the earliest of its cron time and its one-time runs, the detail lists them in `oneTimeRuns`, and the calendar shows them as planned blocks.
 

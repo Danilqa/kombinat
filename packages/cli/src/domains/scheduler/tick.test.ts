@@ -225,6 +225,35 @@ test('a due one-time run waits while its routine runs, and one of a disabled or 
   fs.rmSync(path.join(routinesDir, 'later.md'));
 });
 
+test('after a sleep, the due one-time runs of a routine run once, within the catch-up window', () => {
+  writeRoutine('nightly', 'schedule: "0 2 * * *"\nagent: command\ncommand: "true"');
+  writeRoutine('manual', 'agent: command\ncommand: "true"');
+  const nightly = routineNameSchema.parse('nightly');
+  const manual = routineNameSchema.parse('manual');
+  const oneTimeRun = (routine: string, local: string) => ({
+    routine: routineNameSchema.parse(routine),
+    at: new Date(local).toISOString(),
+  });
+  const upcoming = oneTimeRun('nightly', '2026-10-03T09:00:00');
+  writeOneTimeRuns([
+    oneTimeRun('manual', '2026-09-24T09:00:00'),
+    oneTimeRun('manual', '2026-09-28T09:00:00'),
+    oneTimeRun('nightly', '2026-09-30T02:00:00'),
+    oneTimeRun('manual', '2026-10-01T09:00:00'),
+    oneTimeRun('nightly', '2026-10-01T09:00:00'),
+    upcoming,
+  ]);
+  const state = readSchedulerState();
+  assert.ok(state);
+  state.lastTickAt = new Date('2026-09-22T10:00:00').toISOString();
+  writeSchedulerState(state);
+
+  assert.deepEqual(tick(new Date('2026-10-02T10:00:50')).started, [nightly, manual]);
+  assert.deepEqual(readOneTimeRuns(), [upcoming]);
+  writeOneTimeRuns([]);
+  for (const name of ['nightly', 'manual']) fs.rmSync(path.join(routinesDir, `${name}.md`));
+});
+
 test('queued webhooks start one at a time once their routine is idle', () => {
   writeRoutine('triage', 'webhook: true\nagent: command\ncommand: "true"');
   enqueueWebhook(triage, makeWebhook('20261109T120000Z-aaaa', '{"n":1}'));

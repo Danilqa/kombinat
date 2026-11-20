@@ -1,3 +1,4 @@
+import { useRef, type RefObject } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { X } from 'lucide-react';
 import { Button, RelativeTime, Table } from 'design-system/components';
@@ -11,12 +12,22 @@ import { sameOriginApi } from 'utils/http';
 interface OneTimeRunsTableProps {
   routine: RoutineName;
   oneTimeRuns: OneTimeRun[];
+  runNowRef: RefObject<HTMLButtonElement | null>;
 }
 
-export function OneTimeRunsTable({ routine, oneTimeRuns }: OneTimeRunsTableProps) {
+export function OneTimeRunsTable({ routine, oneTimeRuns, runNowRef }: OneTimeRunsTableProps) {
   const queryClient = useQueryClient();
+  const cancelButtons = useRef(new Map<string, HTMLButtonElement>());
   const cancel = useMutation({
     mutationFn: (at: string) => cancelOneTimeRun(sameOriginApi, routine, at),
+    // The cancelled row unmounts, so the focus moves on before it would drop to the page.
+    onSuccess: (_, at) => {
+      if (document.activeElement !== cancelButtons.current.get(at)) return;
+      const index = oneTimeRuns.findIndex(run => run.at === at);
+      const rest = oneTimeRuns.filter(run => run.at !== at);
+      const next = rest[Math.min(index, rest.length - 1)];
+      (next === undefined ? runNowRef.current : cancelButtons.current.get(next.at))?.focus();
+    },
     onSettled: () =>
       Promise.all(
         QUERY_KEYS_CHANGED_BY_ONE_TIME_RUNS.map(queryKey =>
@@ -48,6 +59,12 @@ export function OneTimeRunsTable({ routine, oneTimeRuns }: OneTimeRunsTableProps
                 <Table.Cell className="w-full text-fg-secondary">{time}</Table.Cell>
                 <Table.Cell className="text-right">
                   <Button
+                    ref={button => {
+                      if (button !== null) cancelButtons.current.set(at, button);
+                      return () => {
+                        cancelButtons.current.delete(at);
+                      };
+                    }}
                     variant="tertiary"
                     size="small"
                     className="max-sm:h-9"

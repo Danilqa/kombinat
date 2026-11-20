@@ -74,7 +74,7 @@ export function getOneTimeRunError(
   }
   const isNew = !checkHasOneTimeRun(runs, { routine, at });
   if (isNew && listRoutineOneTimeRuns(runs, routine).length >= ONE_TIME_RUNS_LIMIT) {
-    return `${routine} already has ${ONE_TIME_RUNS_LIMIT} one-time runs, cancel one first`;
+    return `${routine} already has ${ONE_TIME_RUNS_LIMIT} runs scheduled once, cancel one first`;
   }
   return null;
 }

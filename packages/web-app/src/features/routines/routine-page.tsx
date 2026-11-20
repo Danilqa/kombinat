@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useRef, type RefObject } from 'react';
 import { useParams } from 'react-router';
 import { Card, ErrorState, LoadingState, Markdown, Tabs } from 'design-system/components';
 import { PageHeader, SectionHeader } from 'design-system/layouts';
@@ -65,9 +66,10 @@ function RoutineHeader({ name, routine }: RoutineHeaderProps) {
 
 interface RoutineViewProps {
   routine: RoutineDetail;
+  runNowRef: RefObject<HTMLButtonElement | null>;
 }
 
-function RoutineView({ routine }: RoutineViewProps) {
+function RoutineView({ routine, runNowRef }: RoutineViewProps) {
   const runs = useRuns(routine.name, routine.lastRun);
   const [tab, setTab] = useTabSearchParam(
     routine.webhook ? ['runs', 'prompt', 'webhooks'] : ['runs', 'prompt'],
@@ -98,7 +100,11 @@ function RoutineView({ routine }: RoutineViewProps) {
                 Scheduled once
               </SectionHeader.Root>
               <Card.Root className="gap-0 overflow-visible py-0">
-                <OneTimeRunsTable routine={routine.name} oneTimeRuns={routine.oneTimeRuns} />
+                <OneTimeRunsTable
+                  routine={routine.name}
+                  oneTimeRuns={routine.oneTimeRuns}
+                  runNowRef={runNowRef}
+                />
               </Card.Root>
             </section>
           )}
@@ -136,6 +142,7 @@ function RoutineView({ routine }: RoutineViewProps) {
 export function RoutinePage() {
   const name = routineNameSchema.parse(useParams<'name'>().name ?? '');
   useDocumentTitle(name);
+  const runNowRef = useRef<HTMLButtonElement>(null);
   const { data, error, isPending } = useQuery({
     queryKey: ['routines', name],
     queryFn: () => getRoutine(sameOriginApi, name),
@@ -151,6 +158,7 @@ export function RoutinePage() {
             <div className="flex min-w-0 items-center gap-2">
               <WebhookQueueButton routine={data.name} count={data.queuedWebhooks} />
               <RunNowButton
+                ref={runNowRef}
                 routine={data.name}
                 isRunning={data.running}
                 menu={<ChangePromptMenuItem routine={data.name} />}
@@ -162,7 +170,7 @@ export function RoutinePage() {
       <RoutineHeader name={name} routine={data} />
       {error && <ErrorState message={error.message} />}
       {isPending && <LoadingState />}
-      {data && <RoutineView routine={data} />}
+      {data && <RoutineView routine={data} runNowRef={runNowRef} />}
     </div>
   );
 }

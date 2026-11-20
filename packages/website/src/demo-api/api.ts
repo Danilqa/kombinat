@@ -326,7 +326,10 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     const oneTimeRun = parseOneTimeRun(routine, body);
     if (oneTimeRun === null) return fail(400, 'The body must be JSON with an ISO time in at');
     if (!checkHasOneTimeRun(oneTimeRuns, oneTimeRun)) {
-      return fail(404, `${routine.name} has no one-time run at that time`);
+      return fail(
+        404,
+        `${routine.name} has no run scheduled at that time, it may have started already`,
+      );
     }
     oneTimeRuns = removeOneTimeRun(oneTimeRuns, oneTimeRun);
     return ok({ ok: true });

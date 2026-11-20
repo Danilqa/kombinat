@@ -129,6 +129,7 @@ test('schedules a run once later from the list without opening the routine', asy
   await page.getByRole('menuitem', { name: /^In 1 hour/ }).click();
 
   await expect(row).toContainText('in 1 hr.');
+  await expect(page.getByRole('tooltip')).toHaveText(/^Runs once at .+/);
   await expect(page).toHaveURL(/\/$/);
 });
 

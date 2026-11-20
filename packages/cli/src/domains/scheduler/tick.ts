@@ -78,6 +78,7 @@ export function tick(now = new Date()): TickResult {
   const runningRuns = getRunningRuns();
   const startingNames = routines.map(r => r.name).filter(name => checkIsStarting(name));
   const runningNames = new Set([...runningRuns.map(r => r.routine), ...startingNames]);
+  const caughtUpNames = new Set<RoutineName>();
   // A run that waits for a usage limit to reset keeps its routine busy but takes no slot.
   let runningCount = new Set([
     ...runningRuns.filter(checkIsRunAtWork).map(r => r.routine),
@@ -114,6 +115,7 @@ export function tick(now = new Date()): TickResult {
       scheduledFor: scheduledFor.toISOString(),
     });
     markScheduled(state, routine, scheduledFor);
+    if (isCatchUp) caughtUpNames.add(routine.name);
     runningCount += 1;
     runningNames.add(routine.name);
     started.push(routine.name);
@@ -121,10 +123,26 @@ export function tick(now = new Date()): TickResult {
 
   // Unlike a scheduled time, a one-time run waits while its routine runs instead of being skipped.
   const oneTimeRuns = readOneTimeRuns();
+  const latestDueTimes = new Map<RoutineName, number>();
+  for (const { routine, at } of oneTimeRuns) {
+    const time = new Date(at).getTime();
+    if (time > now.getTime()) continue;
+    latestDueTimes.set(routine, Math.max(time, latestDueTimes.get(routine) ?? 0));
+  }
   const doneOneTimeRuns = new Set<OneTimeRun>();
   for (const oneTimeRun of oneTimeRuns) {
     const scheduledFor = new Date(oneTimeRun.at);
     if (scheduledFor > now) continue;
+    const isLate = checkIsLate(scheduledFor, now);
+    // Like missed scheduled times, the due ones of a routine run once, within the catch-up window.
+    const isCollapsed =
+      scheduledFor < floor ||
+      scheduledFor.getTime() < (latestDueTimes.get(oneTimeRun.routine) ?? 0) ||
+      (isLate && caughtUpNames.has(oneTimeRun.routine));
+    if (isCollapsed) {
+      doneOneTimeRuns.add(oneTimeRun);
+      continue;
+    }
     const routine = routines.find(candidate => candidate.name === oneTimeRun.routine);
     if (routine === undefined) {
       doneOneTimeRuns.add(oneTimeRun);
@@ -141,7 +159,7 @@ export function tick(now = new Date()): TickResult {
       continue;
     }
     startDetachedRun(routine.name, {
-      trigger: checkIsLate(scheduledFor, now) ? 'catch_up' : 'schedule',
+      trigger: isLate ? 'catch_up' : 'schedule',
       scheduledFor: oneTimeRun.at,
     });
     doneOneTimeRuns.add(oneTimeRun);
