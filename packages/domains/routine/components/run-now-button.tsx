@@ -1,14 +1,17 @@
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, Loader, Play } from 'lucide-react';
 
-import { Button, DropdownMenu } from 'design-system/components';
+import { Button, DropdownMenu, Popover } from 'design-system/components';
 import { cn } from 'design-system/utils';
+import { formatDayTime } from 'utils/date-time';
 import { sameOriginApi } from 'utils/http';
 
-import { QUERY_KEYS_CHANGED_BY_RUN } from '../constants';
+import { QUERY_KEYS_CHANGED_BY_ONE_TIME_RUNS, QUERY_KEYS_CHANGED_BY_RUN } from '../constants';
 import type { RoutineName } from '../ids';
-import { startRoutineRun } from '../requests';
+import { scheduleOneTimeRun, startRoutineRun } from '../requests';
+import { RunLaterForm } from './run-later-form';
+import { RunLaterMenuItems } from './run-later-menu-items';
 
 type RunNowVariant = 'primary' | 'secondary';
 
@@ -26,27 +29,48 @@ interface RunNowButtonProps {
 
 export function RunNowButton({ routine, isRunning, variant = 'primary', menu }: RunNowButtonProps) {
   const queryClient = useQueryClient();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { mutate, isPending, isSuccess, error } = useMutation({
+  const [isPickingTime, setIsPickingTime] = useState(false);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
+  const invalidate = (queryKeys: string[][]) =>
+    Promise.all(queryKeys.map(queryKey => queryClient.invalidateQueries({ queryKey })));
+  const startRun = useMutation({
     mutationFn: () => startRoutineRun(sameOriginApi, routine),
-    onSuccess: () =>
-      Promise.all(
-        QUERY_KEYS_CHANGED_BY_RUN.map(queryKey => queryClient.invalidateQueries({ queryKey })),
-      ),
+    onSuccess: () => invalidate(QUERY_KEYS_CHANGED_BY_RUN),
+  });
+  const scheduleRun = useMutation({
+    mutationFn: (at: Date) => scheduleOneTimeRun(sameOriginApi, routine, at.toISOString()),
+    onSuccess: () => {
+      setIsPickingTime(false);
+      return invalidate(QUERY_KEYS_CHANGED_BY_ONE_TIME_RUNS);
+    },
   });
   // aria-disabled instead of disabled keeps keyboard focus on the button after it is pressed.
-  const isUnavailable = isRunning || isPending;
-  // Closed when a run starts, so the menu does not open again by itself once the run ends.
-  if (isUnavailable && isMenuOpen) setIsMenuOpen(false);
+  const isUnavailable = isRunning || startRun.isPending;
+  const error = startRun.error ?? (isPickingTime ? null : scheduleRun.error);
 
-  function startRun() {
-    if (!isUnavailable) mutate();
+  function runNow() {
+    if (isUnavailable) return;
+    scheduleRun.reset();
+    startRun.mutate();
+  }
+
+  function runLater(at: Date) {
+    startRun.reset();
+    scheduleRun.mutate(at);
+  }
+
+  function togglePicker(isOpen: boolean) {
+    startRun.reset();
+    scheduleRun.reset();
+    setIsPickingTime(isOpen);
   }
 
   return (
     <div className="flex min-w-0 items-center justify-end gap-2">
       <span role="status" className="sr-only">
-        {isSuccess && `Started a run of ${routine}`}
+        {startRun.isSuccess && `Started a run of ${routine}`}
+        {scheduleRun.isSuccess &&
+          `Scheduled a run of ${routine} for ${formatDayTime(scheduleRun.variables.toISOString())}`}
       </span>
       {error && (
         <span
@@ -57,51 +81,81 @@ export function RunNowButton({ routine, isRunning, variant = 'primary', menu }: 
           {error.message}
         </span>
       )}
-      <div className="flex">
-        <Button
-          variant={variant}
-          size="small"
-          aria-disabled={isUnavailable || undefined}
-          className={cn(menu && 'rounded-r-none pr-2.5 interactive:active:scale-100')}
-          onClick={startRun}
-        >
-          {isUnavailable ? (
-            <Loader aria-hidden="true" className="spin-in-place size-3.5" />
-          ) : (
-            <Play
-              aria-hidden="true"
-              className="size-3.5 fill-current transition-transform duration-200 ease-out-quint group-hover/button:translate-x-0.5"
-            />
-          )}
-          {isRunning ? 'Running' : 'Run now'}
-          <span className="sr-only"> {routine}</span>
-        </Button>
-        {menu && (
-          <DropdownMenu.Root
-            open={isMenuOpen}
-            onOpenChange={isOpen => setIsMenuOpen(isOpen && !isUnavailable)}
-          >
-            <DropdownMenu.Trigger asChild>
-              <Button
-                variant={variant}
-                size="small"
-                aria-label={`More ways to run ${routine}`}
-                aria-disabled={isUnavailable || undefined}
-                className={cn(
-                  'rounded-l-none pr-2 pl-1.5 interactive:active:scale-100',
-                  MENU_TRIGGER_CLASS_NAMES[variant],
-                )}
-              >
-                <ChevronDown
+      <Popover.Root open={isPickingTime} onOpenChange={togglePicker}>
+        <Popover.Anchor asChild>
+          <div className="flex">
+            <Button
+              variant={variant}
+              size="small"
+              aria-disabled={isUnavailable || undefined}
+              className={cn(menu && 'rounded-r-none pr-2.5 interactive:active:scale-100')}
+              onClick={runNow}
+            >
+              {isUnavailable ? (
+                <Loader aria-hidden="true" className="spin-in-place size-3.5" />
+              ) : (
+                <Play
                   aria-hidden="true"
-                  className="transition-transform duration-200 ease-out-quint group-data-[state=open]/button:rotate-180"
+                  className="size-3.5 fill-current transition-transform duration-200 ease-out-quint group-hover/button:translate-x-0.5"
                 />
-              </Button>
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Content>{menu}</DropdownMenu.Content>
-          </DropdownMenu.Root>
-        )}
-      </div>
+              )}
+              {isRunning ? 'Running' : 'Run now'}
+              <span className="sr-only"> {routine}</span>
+            </Button>
+            {menu && (
+              <DropdownMenu.Root>
+                <DropdownMenu.Trigger asChild>
+                  <Button
+                    ref={menuTriggerRef}
+                    variant={variant}
+                    size="small"
+                    aria-label={`More ways to run ${routine}`}
+                    className={cn(
+                      'rounded-l-none pr-2 pl-1.5 interactive:active:scale-100',
+                      MENU_TRIGGER_CLASS_NAMES[variant],
+                    )}
+                  >
+                    <ChevronDown
+                      aria-hidden="true"
+                      className="transition-transform duration-200 ease-out-quint group-data-[state=open]/button:rotate-180"
+                    />
+                  </Button>
+                </DropdownMenu.Trigger>
+                {/* Portaled clicks still bubble to the row link. */}
+                <DropdownMenu.Content
+                  onClick={event => event.stopPropagation()}
+                  // The time picker takes the focus, so the closing menu must not return it.
+                  onCloseAutoFocus={event => {
+                    if (isPickingTime) event.preventDefault();
+                  }}
+                >
+                  {menu}
+                  <DropdownMenu.Separator />
+                  <RunLaterMenuItems onSchedule={runLater} onPickTime={() => togglePicker(true)} />
+                </DropdownMenu.Content>
+              </DropdownMenu.Root>
+            )}
+          </div>
+        </Popover.Anchor>
+        <Popover.Content
+          align="end"
+          aria-label={`Run ${routine} once later`}
+          onClick={event => event.stopPropagation()}
+          // It opens from the menu, which has no trigger of its own to return the focus to.
+          onCloseAutoFocus={event => {
+            event.preventDefault();
+            menuTriggerRef.current?.focus();
+          }}
+        >
+          <RunLaterForm
+            routine={routine}
+            isPending={scheduleRun.isPending}
+            error={scheduleRun.error?.message ?? null}
+            onSubmit={runLater}
+            onCancel={() => togglePicker(false)}
+          />
+        </Popover.Content>
+      </Popover.Root>
     </div>
   );
 }

@@ -6,17 +6,20 @@ import type { RoutineDetail } from 'domains/routine/types';
 import type { RunId } from 'domains/run/ids';
 import type { RunRecord, RunsPage, RunWithTranscript } from 'domains/run/types';
 import { checkIsRunActive } from 'domains/run/utils';
+import type { RunLaterPreset } from 'domains/scheduler/types';
+import { getRunLaterPresets } from 'domains/scheduler/utils';
 import { RUN_RETENTION_DAYS_OPTIONS } from 'domains/settings/constants';
 import type { Settings } from 'domains/settings/types';
 import { getRunRetentionLabel } from 'domains/settings/utils';
 import type { TranscriptItem } from 'domains/transcript/types';
-import { formatRelativeCompact } from 'utils/date-time';
+import { formatDayTime, formatRelativeCompact } from 'utils/date-time';
 import { getErrorMessage } from 'utils/error';
 
 import { box, overlayOnto } from './components/box';
 import { confirmPopup } from './components/confirm-popup';
 import { helpPopup } from './components/help-popup';
 import { hintsBar } from './components/hints-bar';
+import { runLaterPopup } from './components/run-later-popup';
 import { settingsPopup } from './components/settings-popup';
 import { formatCopyright, statusLines } from './components/status-panel';
 import type { DaemonClient, Overview } from './daemon-client';
@@ -76,7 +79,13 @@ interface SettingsOverlay {
   settings: Settings;
 }
 
-type Overlay = HelpOverlay | ConfirmRunOverlay | SettingsOverlay;
+interface RunLaterOverlay {
+  kind: 'run-later';
+  routine: RoutineName;
+  presets: RunLaterPreset[];
+}
+
+type Overlay = HelpOverlay | ConfirmRunOverlay | RunLaterOverlay | SettingsOverlay;
 
 interface Message {
   text: string;
@@ -496,6 +505,7 @@ export class TuiApp {
       .with('2', () => this.focusList('runs'))
       .with('0', () => this.focusDetail())
       .with('r', () => this.askToRun())
+      .with('L', () => this.askToRunLater())
       .with('s', () => this.openSettings())
       .with(P.union('R', 'C-r'), () => void this.refresh())
       .otherwise(() =>
@@ -511,6 +521,11 @@ export class TuiApp {
     this.overlay = null;
     if (key === 'y' && isMatching({ kind: 'confirm-run' }, overlay))
       void this.startRun(overlay.routine);
+    const preset = isMatching({ kind: 'run-later' }, overlay)
+      ? overlay.presets[Number(key) - 1]
+      : undefined;
+    if (isMatching({ kind: 'run-later' }, overlay) && preset !== undefined)
+      void this.scheduleRun(overlay.routine, preset.at);
     const runRetentionDays = RUN_RETENTION_DAYS_OPTIONS[Number(key) - 1];
     if (isMatching({ kind: 'settings' }, overlay) && runRetentionDays !== undefined)
       void this.updateSettings({ ...overlay.settings, runRetentionDays });
@@ -705,6 +720,26 @@ export class TuiApp {
     await this.reload();
   }
 
+  private askToRunLater(): void {
+    const name = this.contextRoutine();
+    if (!name) return;
+    this.overlay = {
+      kind: 'run-later',
+      routine: name,
+      presets: getRunLaterPresets(new Date(this.now())),
+    };
+  }
+
+  private async scheduleRun(name: RoutineName, at: Date): Promise<void> {
+    try {
+      await this.client.scheduleOneTimeRun(name, at);
+      this.flash(`${name} runs once at ${formatDayTime(at.toISOString())}`, 'ok');
+    } catch (err) {
+      this.flash(getErrorMessage(err), 'error');
+    }
+    await this.reload();
+  }
+
   private openSettings(): void {
     if (this.overview) this.overlay = { kind: 'settings', settings: this.overview.settings };
   }
@@ -769,6 +804,7 @@ export class TuiApp {
     const popup = match(this.overlay)
       .with({ kind: 'help' }, () => helpPopup(width, height))
       .with({ kind: 'confirm-run' }, ({ routine }) => confirmPopup(routine, width))
+      .with({ kind: 'run-later' }, ({ routine, presets }) => runLaterPopup(routine, presets, width))
       .with({ kind: 'settings' }, ({ settings }) => settingsPopup(settings, width))
       .exhaustive();
     return overlayOnto(frame, popup, width);
@@ -965,6 +1001,7 @@ export class TuiApp {
             .with('routines', () => 'run now')
             .exhaustive(),
         ],
+        ['L', 'run later'],
         ['tab', 'panels'],
         ['R', 'refresh'],
         ...tail,
@@ -977,6 +1014,7 @@ export class TuiApp {
         ['G', 'follow'],
         ['esc', 'back'],
         ['r', 'run now'],
+        ['L', 'run later'],
         ...tail,
       ])
       .with({ page: { kind: 'routine', tab: 'runs' } }, (): Hint[] => [
@@ -985,6 +1023,7 @@ export class TuiApp {
         ['[ ]', 'tabs'],
         ['esc', 'back'],
         ['r', 'run now'],
+        ['L', 'run later'],
         ...tail,
       ])
       .otherwise((): Hint[] => [
@@ -992,6 +1031,7 @@ export class TuiApp {
         ['[ ]', 'tabs'],
         ['esc', 'back'],
         ['r', 'run now'],
+        ['L', 'run later'],
         ...tail,
       ]);
   }

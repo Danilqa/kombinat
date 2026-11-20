@@ -1,6 +1,6 @@
 import type { RoutineName } from 'domains/routine/ids';
 import { checkIsRunAtWork } from 'domains/run/utils';
-import type { SchedulerState, SkipReason } from 'domains/scheduler/types';
+import type { OneTimeRun, SchedulerState, SkipReason } from 'domains/scheduler/types';
 import { cronRunsBetween } from 'utils/cron';
 import { getErrorMessage } from 'utils/error';
 
@@ -12,6 +12,7 @@ import { getRunningRuns } from '../run/storage';
 import { checkIsWaitOver, requestWaitAction } from '../run/usage-limit';
 import { listQueuedRoutines, takeQueuedWebhook } from '../webhook/queue';
 import { startWebhook } from '../webhook/start';
+import { readOneTimeRuns, writeOneTimeRuns } from './one-time-runs';
 import { readSchedulerState, writeSchedulerState } from './storage';
 
 function loadState(now: Date): SchedulerState {
@@ -24,7 +25,7 @@ function loadState(now: Date): SchedulerState {
   );
 }
 
-function recordSkip(
+function addSkip(
   state: SchedulerState,
   routine: Routine,
   scheduledFor: Date,
@@ -36,14 +37,28 @@ function recordSkip(
     ...entry.skips.slice(-49),
     { at: now.toISOString(), scheduledFor: scheduledFor.toISOString(), reason },
   ];
-  entry.lastScheduledFor = scheduledFor.toISOString();
   state.routines[routine.name] = entry;
+}
+
+function checkIsLate(scheduledFor: Date, now: Date): boolean {
+  return now.getTime() - scheduledFor.getTime() > 2 * config.tickSeconds * 1000 + 60_000;
 }
 
 function markScheduled(state: SchedulerState, routine: Routine, scheduledFor: Date): void {
   const entry = state.routines[routine.name] ?? { lastScheduledFor: null, skips: [] };
   entry.lastScheduledFor = scheduledFor.toISOString();
   state.routines[routine.name] = entry;
+}
+
+function recordSkip(
+  state: SchedulerState,
+  routine: Routine,
+  scheduledFor: Date,
+  reason: SkipReason,
+  now: Date,
+): void {
+  addSkip(state, routine, scheduledFor, reason, now);
+  markScheduled(state, routine, scheduledFor);
 }
 
 export interface TickResult {
@@ -79,9 +94,7 @@ export function tick(now = new Date()): TickResult {
     const due = cronRunsBetween(routine.schedule, after, now);
     const scheduledFor = due.at(-1);
     if (scheduledFor === undefined) continue;
-    const isCatchUp =
-      due.length > 1 ||
-      now.getTime() - scheduledFor.getTime() > 2 * config.tickSeconds * 1000 + 60_000;
+    const isCatchUp = due.length > 1 || checkIsLate(scheduledFor, now);
 
     if (!routine.enabled) {
       recordSkip(state, routine, scheduledFor, 'disabled', now);
@@ -104,6 +117,40 @@ export function tick(now = new Date()): TickResult {
     runningCount += 1;
     runningNames.add(routine.name);
     started.push(routine.name);
+  }
+
+  // Unlike a scheduled time, a one-time run waits while its routine runs instead of being skipped.
+  const oneTimeRuns = readOneTimeRuns();
+  const doneOneTimeRuns = new Set<OneTimeRun>();
+  for (const oneTimeRun of oneTimeRuns) {
+    const scheduledFor = new Date(oneTimeRun.at);
+    if (scheduledFor > now) continue;
+    const routine = routines.find(candidate => candidate.name === oneTimeRun.routine);
+    if (routine === undefined) {
+      doneOneTimeRuns.add(oneTimeRun);
+      continue;
+    }
+    if (!routine.enabled) {
+      addSkip(state, routine, scheduledFor, 'disabled', now);
+      doneOneTimeRuns.add(oneTimeRun);
+      continue;
+    }
+    if (runningNames.has(routine.name)) continue;
+    if (runningCount >= config.maxConcurrentRuns) {
+      skipped.push(`${routine.name} (concurrency limit, will retry)`);
+      continue;
+    }
+    startDetachedRun(routine.name, {
+      trigger: checkIsLate(scheduledFor, now) ? 'catch_up' : 'schedule',
+      scheduledFor: oneTimeRun.at,
+    });
+    doneOneTimeRuns.add(oneTimeRun);
+    runningCount += 1;
+    runningNames.add(routine.name);
+    started.push(routine.name);
+  }
+  if (doneOneTimeRuns.size > 0) {
+    writeOneTimeRuns(oneTimeRuns.filter(oneTimeRun => !doneOneTimeRuns.has(oneTimeRun)));
   }
 
   // After the schedules, so a run that waited out a usage limit never makes one skip.

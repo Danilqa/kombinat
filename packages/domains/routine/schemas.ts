@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { agentNameSchema } from '../agent/schemas';
 import { runIdSchema } from '../run/ids';
 import { runRecordSchema } from '../run/schemas';
-import { skipSchema } from '../scheduler/schemas';
+import { oneTimeRunSchema, skipSchema } from '../scheduler/schemas';
 import { queuedWebhookSchema, webhookCallSchema } from '../webhook/schemas';
 import { routineNameSchema } from './ids';
 
@@ -39,6 +39,8 @@ export const routineDetailSchema = routineSummarySchema.extend({
   queue: z.array(queuedWebhookSchema),
   // Older daemons do not send it, and tui --url may talk to one.
   webhookCalls: z.array(webhookCallSchema).default([]),
+  // Older daemons do not send it, and tui --url may talk to one.
+  oneTimeRuns: z.array(oneTimeRunSchema).default([]),
 });
 
 export const startedRunSchema = z.object({ ok: z.literal(true) });
@@ -46,3 +48,7 @@ export const startedRunSchema = z.object({ ok: z.literal(true) });
 export const startedRunWithIdSchema = startedRunSchema.extend({ runId: runIdSchema });
 
 export const startRunRequestSchema = z.object({ prompt: z.string().regex(/\S/) });
+
+export const oneTimeRunRequestSchema = z.object({ at: z.iso.datetime({ offset: true }) });
+
+export const changedOneTimeRunsSchema = z.object({ ok: z.literal(true) });

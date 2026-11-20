@@ -69,7 +69,8 @@ export interface DemoHistory {
   listRuns(now: Date): RunRecord[];
   listSkips(routine: DemoRoutine, now: Date): Skip[];
   getTranscript(routine: RoutineName, id: RunId, now: Date): Transcript | null;
-  startRun(routine: DemoRoutine, now: Date): RunId;
+  // A one-time run passes the time it was scheduled for.
+  startRun(routine: DemoRoutine, now: Date, scheduledFor?: Date): RunId;
   sendMessage(routine: RoutineName, id: RunId, text: string, now: Date): void;
   sendWaitAction(routine: RoutineName, id: RunId, action: UsageLimitWaitAction, now: Date): void;
 }
@@ -495,10 +496,11 @@ export function createDemoHistory(routines: DemoRoutine[], loadedAt: Date): Demo
         ? null
         : buildTranscript(run, now, getMessages(routine, id), findPause(run));
     },
-    startRun(routine, now) {
+    startRun(routine, now, scheduledFor) {
       const random = createRandom(`${routine.name}:run-now:${now.toISOString()}`);
       const outcome = { ...pickOutcome(routine, random), minutes: RUN_NOW_MINUTES };
-      const run = createRun(routine, outcome, 'manual', null, now, random);
+      const trigger = scheduledFor === undefined ? 'manual' : 'schedule';
+      const run = createRun(routine, outcome, trigger, scheduledFor ?? null, now, random);
       startedRuns.push(run);
       return run.id;
     },

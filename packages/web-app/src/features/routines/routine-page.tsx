@@ -21,7 +21,23 @@ import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 import { useRuns } from '@web-app/hooks/use-runs';
 import { useTabSearchParam } from '@web-app/hooks/use-tab-search-param';
 import { ChangePromptMenuItem } from './change-prompt-menu-item';
+import { OneTimeRunsTable } from './one-time-runs-table';
 import { WebhookCallsList } from './webhook-calls-list';
+
+interface OneTimeRunsNoteProps {
+  count: number;
+}
+
+// Phones drop the middle, so the note stays on the heading's line.
+function OneTimeRunsNote({ count }: OneTimeRunsNoteProps) {
+  return (
+    <SectionHeader.Aside>
+      {count} {count === 1 ? 'run' : 'runs'},{' '}
+      <span className="max-sm:hidden">kept on this machine, </span>
+      not in git
+    </SectionHeader.Aside>
+  );
+}
 
 function checkIsRoutineRunning(routine: RoutineDetail | undefined): boolean {
   return routine?.running === true;
@@ -76,6 +92,16 @@ function RoutineView({ routine }: RoutineViewProps) {
           )}
         </Tabs.List>
         <Tabs.Content value="runs" className="space-y-10">
+          {routine.oneTimeRuns.length > 0 && (
+            <section>
+              <SectionHeader.Root aside={<OneTimeRunsNote count={routine.oneTimeRuns.length} />}>
+                Scheduled once
+              </SectionHeader.Root>
+              <Card.Root className="gap-0 overflow-visible py-0">
+                <OneTimeRunsTable routine={routine.name} oneTimeRuns={routine.oneTimeRuns} />
+              </Card.Root>
+            </section>
+          )}
           <RunsList runs={runs} hasRoutineColumn={false} />
           {routine.skips.length > 0 && (
             <section>

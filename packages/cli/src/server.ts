@@ -10,7 +10,7 @@ import { markReadRequestSchema } from 'domains/inbox/schemas';
 import { addReadRuns, listUnreadRuns } from 'domains/inbox/utils';
 import { releaseVersionSchema } from 'domains/release/ids';
 import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
-import { startRunRequestSchema } from 'domains/routine/schemas';
+import { oneTimeRunRequestSchema, startRunRequestSchema } from 'domains/routine/schemas';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import { RUNS_CURSOR_ERROR } from 'domains/run/constants';
 import { runIdSchema, type RunId } from 'domains/run/ids';
@@ -25,6 +25,15 @@ import {
   paginateRuns,
   parseRunsPageQuery,
 } from 'domains/run/utils';
+import type { OneTimeRun } from 'domains/scheduler/types';
+import {
+  addOneTimeRun,
+  checkHasOneTimeRun,
+  getNextRunAt,
+  getOneTimeRunError,
+  listRoutineOneTimeRuns,
+  removeOneTimeRun,
+} from 'domains/scheduler/utils';
 import { settingsSchema } from 'domains/settings/schemas';
 import { getErrorMessage } from 'utils/error';
 
@@ -51,6 +60,7 @@ import {
   readRunRecord,
 } from './domains/run/storage';
 import { requestWaitAction } from './domains/run/usage-limit';
+import { readOneTimeRuns, writeOneTimeRuns } from './domains/scheduler/one-time-runs';
 import { getSkips, readSchedulerState } from './domains/scheduler/storage';
 import { readSettings, writeSettings } from './domains/settings/storage';
 import {
@@ -108,13 +118,17 @@ const MAX_BODY_KB = 256;
 const ok = (body: unknown): ApiResponse => ({ status: 200, body });
 const fail = (status: number, error: string): ApiResponse => ({ status, body: { error } });
 
-function toRoutineSummary(routine: Routine, runs: RunRecord[]): RoutineSummary {
+function toRoutineSummary(
+  routine: Routine,
+  runs: RunRecord[],
+  oneTimeRuns: OneTimeRun[],
+): RoutineSummary {
   return {
     name: routine.name,
     description: routine.description,
     schedule: routine.schedule,
     scheduleHuman: describeSchedule(routine),
-    nextRunAt: getNextRun(routine),
+    nextRunAt: getNextRunAt(getNextRun(routine), routine.enabled ? oneTimeRuns : []),
     enabled: routine.enabled,
     webhook: routine.webhook,
     webhookGate: routine.webhookGate,
@@ -174,15 +188,58 @@ function withRun(
   return record === null ? fail(404, 'Run not found') : respond(record);
 }
 
+function getRoutineSummaries(): RoutineSummary[] {
+  const oneTimeRuns = readOneTimeRuns();
+  return loadRoutines().map(routine =>
+    toRoutineSummary(
+      routine,
+      listRuns(routine.name),
+      listRoutineOneTimeRuns(oneTimeRuns, routine.name),
+    ),
+  );
+}
+
 function getRoutineDetail(routine: Routine): ApiResponse {
+  const oneTimeRuns = listRoutineOneTimeRuns(readOneTimeRuns(), routine.name);
   const detail: RoutineDetail = {
-    ...toRoutineSummary(routine, listRuns(routine.name)),
+    ...toRoutineSummary(routine, listRuns(routine.name), oneTimeRuns),
     prompt: routine.prompt,
     skips: getSkips(routine.name),
     queue: listQueuedWebhooks(routine.name),
     webhookCalls: listWebhookCalls(routine.name),
+    oneTimeRuns,
   };
   return ok(detail);
+}
+
+function parseOneTimeRun(routine: Routine, body: Buffer): OneTimeRun | null {
+  const request = oneTimeRunRequestSchema.safeParse(parseJson(body.toString('utf8')));
+  if (!request.success) return null;
+  return { routine: routine.name, at: new Date(request.data.at).toISOString() };
+}
+
+function scheduleOneTimeRun(routine: Routine, body: Buffer): ApiResponse {
+  const oneTimeRun = parseOneTimeRun(routine, body);
+  if (oneTimeRun === null) return fail(400, 'The body must be JSON with an ISO time in at');
+  if (!routine.enabled) {
+    return fail(409, `${routine.name} is disabled, set enabled: true in its frontmatter`);
+  }
+  const runs = readOneTimeRuns();
+  const error = getOneTimeRunError(runs, oneTimeRun, new Date());
+  if (error !== null) return fail(400, error);
+  writeOneTimeRuns(addOneTimeRun(runs, oneTimeRun));
+  return ok({ ok: true });
+}
+
+function cancelOneTimeRun(routine: Routine, body: Buffer): ApiResponse {
+  const oneTimeRun = parseOneTimeRun(routine, body);
+  if (oneTimeRun === null) return fail(400, 'The body must be JSON with an ISO time in at');
+  const runs = readOneTimeRuns();
+  if (!checkHasOneTimeRun(runs, oneTimeRun)) {
+    return fail(404, `${routine.name} has no one-time run at that time`);
+  }
+  writeOneTimeRuns(removeOneTimeRun(runs, oneTimeRun));
+  return ok({ ok: true });
 }
 
 function startRun(routine: Routine, body: Buffer): ApiResponse {
@@ -279,7 +336,7 @@ function getCalendar(url: URL): ApiResponse {
   if (!isValid) {
     return fail(400, `from and to must be ISO dates spanning at most ${MAX_CALENDAR_DAYS} days`);
   }
-  return ok(buildCalendar(loadRoutines(), listAllRuns(), from, to));
+  return ok(buildCalendar(loadRoutines(), listAllRuns(), readOneTimeRuns(), from, to));
 }
 
 function getRunsPage(url: URL): ApiResponse {
@@ -315,15 +372,23 @@ function routeApi(request: ApiRequest, context: ApiContext): ApiResponse | Promi
   const { url, startedAt } = context;
   return match(request)
     .with(['GET', ['status']], () => ok(getStatus(startedAt)))
-    .with(['GET', ['routines']], () =>
-      ok(loadRoutines().map(routine => toRoutineSummary(routine, listRuns(routine.name)))),
-    )
+    .with(['GET', ['routines']], () => ok(getRoutineSummaries()))
     .with(['GET', ['routines', P.string]], ([, [, name]]) =>
       withRoutine(routineNameSchema.parse(name), getRoutineDetail),
     )
     .with(['POST', ['routines', P.string, 'run']], ([, [, name]]) =>
       withRoutine(routineNameSchema.parse(name), routine =>
         startRun(routine, context.request.body),
+      ),
+    )
+    .with(['POST', ['routines', P.string, 'one-time-runs']], ([, [, name]]) =>
+      withRoutine(routineNameSchema.parse(name), routine =>
+        scheduleOneTimeRun(routine, context.request.body),
+      ),
+    )
+    .with(['POST', ['routines', P.string, 'one-time-runs', 'cancel']], ([, [, name]]) =>
+      withRoutine(routineNameSchema.parse(name), routine =>
+        cancelOneTimeRun(routine, context.request.body),
       ),
     )
     .with(['POST', ['routines', P.string, 'webhook']], ([, [, name]]) =>

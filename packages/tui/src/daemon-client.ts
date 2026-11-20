@@ -4,7 +4,12 @@ import { markRunsRead } from 'domains/inbox/requests';
 import { getReleaseUpdate } from 'domains/release/requests';
 import type { ReleaseUpdate } from 'domains/release/types';
 import type { RoutineName } from 'domains/routine/ids';
-import { getRoutine, getRoutines, startRoutineRun } from 'domains/routine/requests';
+import {
+  getRoutine,
+  getRoutines,
+  scheduleOneTimeRun,
+  startRoutineRun,
+} from 'domains/routine/requests';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import type { RunId } from 'domains/run/ids';
 import { getRunsPage, getRunWithTranscript } from 'domains/run/requests';
@@ -30,6 +35,7 @@ export interface DaemonClient {
   getRun(routine: RoutineName, id: RunId): Promise<RunWithTranscript>;
   markRunRead(routine: RoutineName, id: RunId): Promise<void>;
   startRun(name: RoutineName): Promise<void>;
+  scheduleOneTimeRun(name: RoutineName, at: Date): Promise<void>;
   updateSettings(settings: Settings): Promise<void>;
   watchChanges(onChange: () => void, signal: AbortSignal): Promise<void>;
 }
@@ -60,6 +66,7 @@ export function createDaemonClient(baseUrl: string): DaemonClient {
     async startRun(name) {
       await startRoutineRun(http, name);
     },
+    scheduleOneTimeRun: async (name, at) => scheduleOneTimeRun(http, name, at.toISOString()),
     async updateSettings(settings) {
       await updateSettings(http, settings);
     },
