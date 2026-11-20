@@ -26,7 +26,7 @@ See example routines in the [live demo](https://danilqa.github.io/kombinat/).
 
 ## 😄 Fun fact
 
-Kombinat runs as a software factory that improves and promotes itself, with a human reviewing every step. See for yourself in the [closed issues](https://github.com/Danilqa/kombinat/issues?q=is%3Aissue%20state%3Aclosed).
+Kombinat runs as a **software factory** that improves and promotes itself, with a human reviewing every step. See for yourself in the [closed issues](https://github.com/Danilqa/kombinat/issues?q=is%3Aissue%20state%3Aclosed).
 
 ## 🚀 Quickstart
 
