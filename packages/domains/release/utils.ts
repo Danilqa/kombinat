@@ -16,7 +16,8 @@ const FULL_CHANGELOG_LINE = /^\*\*Full Changelog\*\*.*$/m;
 const HTML_LINE = /^[ \t]*(?:<[^>\n]+>[ \t]*)+$/gm;
 
 const IMG_TAG = /<img\b[^>]*>/g;
-const CODE_SPAN = /(`[^`\n]*`)/;
+// A fence without its closing line runs to the end of the notes, as in CommonMark.
+const CODE_SPAN = /(```[\s\S]*?(?:```|$)|`[^`\n]*`)/;
 const PULL_REFERENCE = /(?<![\w[/&])#(\d+)\b/g;
 
 function compareVersions(left: ReleaseVersion, right: ReleaseVersion): number {

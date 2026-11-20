@@ -111,6 +111,16 @@ test('pull request numbers link to GitHub, except in code, links and urls', () =
   );
   const untouched = '`exit #1` and [#2](https://example.com) and https://example.com/a#3 and a#4';
   assert.equal(linkPullRequests(untouched), untouched);
+  const fenced = '```\n$ kombinat run triage\nopened #12\n```\nFixed #5';
+  assert.equal(
+    linkPullRequests(fenced),
+    '```\n$ kombinat run triage\nopened #12\n```\nFixed [#5](https://github.com/Danilqa/kombinat/pull/5)',
+  );
+  const unclosed = 'Fixed #5\n```\nopened #12';
+  assert.equal(
+    linkPullRequests(unclosed),
+    'Fixed [#5](https://github.com/Danilqa/kombinat/pull/5)\n```\nopened #12',
+  );
 });
 
 test('the changelog lists every release newest first, with linked notes and images', () => {
