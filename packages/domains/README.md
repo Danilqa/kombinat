@@ -84,6 +84,14 @@ Invariants:
 - With a run retention set, the daemon deletes the record and event log of each run that is not active and started longer ago than that, except the newest run of each routine. It does so when it starts, every hour and when the retention changes.
 - `GET /api/runs` answers a page of runs, newest first by `startedAt`, then routine and id, with `nextCursor` and `total`. `routine` limits it to one routine and answers 404 when there is no such routine, a page holds 50 runs, and `cursor` is an opaque token for the run a page ends with, so the next page starts right after that run even when new runs arrive above it.
 
+#### Tokens
+
+A run's `tokens` are the input, output, cache write and cache read tokens its agent reported, `null` for a command, a run that has not reported them yet and the records written before runs saved them.
+
+- Claude reports them in the result of each process, in `modelUsage` for every model of the session, subagents included, or in `usage` for the main one. Codex reports the session's total so far with each `turn.completed`, its cached input counted inside its input, so the latest one counts and the cache read is taken out of the input.
+- The turns of a session that continued after a usage limit add up, like its cost. Replies keep the run's tokens, as they keep its cost.
+- A routine's `tokenUsage` sums its runs that started today or in the 6 days before, in the daemon's time zone, and reported tokens: their count, the counts, the total of each day and the routine's share of the total of all routines. It is `null` without such runs.
+
 #### Waiting out a usage limit
 
 A Claude run whose agent stops at the 5-hour or weekly limit of the plan waits for the reset and continues, unless its routine sets `onUsageLimit: fail`. In `usage-limit.ts`:
@@ -146,7 +154,7 @@ A named, version-controlled unit of recurring agent work: one markdown file, `ro
 - `agent` defaults to `claude`, `enabled` to `true`, `webhook` to `false` and `timeoutMinutes` to 55. `webhook` must be `true` or `false`, and `webhookGate` needs `webhook: true`.
 - The schedule gives the routine its next run, `null` when it is manual or disabled, and its label: `Manual` or the cron in words.
 
-Clients see a routine as a summary (its definition plus next run, running, last run and last skip) or a detail (plus the prompt, skips, queued webhooks, webhook calls and [one-time runs](#one-time-runs)). Its runs come page by page from `/api/runs`. They can start it with Run now, which answers 409 while the routine is running, and can give that run a changed prompt, which only that run gets.
+Clients see a routine as a summary (its definition plus next run, running, last run, last skip and [tokens](#tokens) of the last 7 days) or a detail (plus the prompt, skips, queued webhooks, webhook calls and [one-time runs](#one-time-runs)). Its runs come page by page from `/api/runs`. They can start it with Run now, which answers 409 while the routine is running, and can give that run a changed prompt, which only that run gets.
 
 A routine with `webhook: true` also starts from a [webhook](#webhook).
 

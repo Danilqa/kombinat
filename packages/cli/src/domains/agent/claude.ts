@@ -3,6 +3,8 @@ import { z } from 'zod';
 
 import { sessionIdSchema } from 'domains/agent/ids';
 import type { PlanLimits, UsageLimit } from 'domains/daemon/types';
+import type { TokenCounts } from 'domains/run/types';
+import { addTokenCounts } from 'domains/run/utils';
 import type { ToolResult, TranscriptItem, UsageLimitKind } from 'domains/transcript/types';
 import { toPreview } from 'domains/transcript/utils';
 
@@ -85,6 +87,20 @@ const rateLimitInfoSchema = z.object({
     .optional(),
 });
 
+const resultUsageSchema = z.object({
+  input_tokens: z.number().optional(),
+  output_tokens: z.number().optional(),
+  cache_creation_input_tokens: z.number().optional(),
+  cache_read_input_tokens: z.number().optional(),
+});
+
+const modelUsageSchema = z.object({
+  inputTokens: z.number().optional(),
+  outputTokens: z.number().optional(),
+  cacheCreationInputTokens: z.number().optional(),
+  cacheReadInputTokens: z.number().optional(),
+});
+
 const claudeEventSchema = z.object({
   type: z.string().optional(),
   subtype: z.string().optional(),
@@ -105,6 +121,8 @@ const claudeEventSchema = z.object({
   duration_ms: z.number().optional(),
   rate_limit_info: rateLimitInfoSchema.optional(),
   error: z.string().optional(),
+  usage: resultUsageSchema.optional(),
+  modelUsage: z.record(z.string(), modelUsageSchema).optional(),
 });
 type ClaudeEvent = z.infer<typeof claudeEventSchema>;
 
@@ -236,12 +254,35 @@ function toItems(
     .otherwise(() => []);
 }
 
+// modelUsage counts every model of the session, subagents included. usage counts only the main one.
+function readTokens({ usage, modelUsage }: ClaudeEvent): TokenCounts | null {
+  const models = Object.values(modelUsage ?? {});
+  if (models.length > 0) {
+    return models
+      .map((model): TokenCounts => ({
+        input: model.inputTokens ?? 0,
+        output: model.outputTokens ?? 0,
+        cacheWrite: model.cacheCreationInputTokens ?? 0,
+        cacheRead: model.cacheReadInputTokens ?? 0,
+      }))
+      .reduce((sum, counts) => addTokenCounts(sum, counts) ?? counts);
+  }
+  if (usage === undefined) return null;
+  return {
+    input: usage.input_tokens ?? 0,
+    output: usage.output_tokens ?? 0,
+    cacheWrite: usage.cache_creation_input_tokens ?? 0,
+    cacheRead: usage.cache_read_input_tokens ?? 0,
+  };
+}
+
 function readResult(event: ClaudeEvent): RunUpdate {
   const update: RunUpdate = {
     resultText: event.result ?? null,
     costUsd: event.total_cost_usd ?? null,
     numTurns: event.num_turns ?? null,
     durationMs: event.duration_ms ?? null,
+    tokens: readTokens(event),
   };
   if (event.is_error === true) update.error = event.result ?? 'Claude reported an error result';
   return update;

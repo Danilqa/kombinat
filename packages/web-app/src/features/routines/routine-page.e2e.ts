@@ -39,6 +39,50 @@ test("shows a routine's settings, runs, skipped runs and prompt", async ({ page,
   await expect(page.getByRole('heading', { name: 'Steps' })).toBeVisible();
 });
 
+test('shows the tokens each routine used in the last 7 days', async ({ page, kombinat, time }) => {
+  const tokens = (scale: number) => ({
+    input: 1000 * scale,
+    output: 9000 * scale,
+    cacheWrite: 90_000 * scale,
+    cacheRead: 900_000 * scale,
+  });
+  kombinat.addRoutine({ name: 'night-agent-tasks' });
+  kombinat.addRoutine({ name: 'release-notes' });
+  kombinat.addRoutine({ name: 'disk-cleanup', agent: 'command', command: 'echo done' });
+  kombinat.addRun({
+    routine: 'night-agent-tasks',
+    startedAt: time.minutesAgo(60),
+    tokens: tokens(2),
+  });
+  kombinat.addRun({
+    routine: 'night-agent-tasks',
+    startedAt: time.minutesAgo(90),
+    tokens: tokens(1),
+  });
+  kombinat.addRun({
+    routine: 'night-agent-tasks',
+    startedAt: time.minutesAgo(8 * 24 * 60),
+    tokens: tokens(5),
+  });
+  kombinat.addRun({ routine: 'release-notes', startedAt: time.minutesAgo(30), tokens: tokens(1) });
+  kombinat.addRun({ routine: 'disk-cleanup', startedAt: time.minutesAgo(30) });
+  await page.goto('/');
+
+  await expect(page.getByText('All routines used 4M tokens in the last 7 days')).toBeVisible();
+  await expect(page.getByRole('row', { name: /release-notes/ })).toContainText(
+    '1M tokens in 7 days',
+  );
+  await expect(page.getByRole('row', { name: /disk-cleanup/ })).not.toContainText('tokens');
+  await page.getByRole('link', { name: 'night-agent-tasks' }).click();
+
+  const usage = page.locator('section', { hasText: 'Tokens, last 7 days' });
+  await expect(usage).toContainText('Used3M2 runs');
+  await expect(usage).toContainText('Per run1.5Mon average');
+  await expect(usage).toContainText('Share75%of all routines');
+  await expect(usage).toContainText('Input3KOutput27KCache write270KCache read2.7M');
+  await expect(page.getByRole('row', { name: /2M$/ })).toHaveCount(1);
+});
+
 test('keeps the open tab in the URL', async ({ page, kombinat }) => {
   kombinat.addRoutine({ name: 'triage-sentry', prompt: '## Steps\n\nFix the top issue.' });
   await page.goto('/routines/triage-sentry');
@@ -238,4 +282,30 @@ test('keeps the breadcrumbs, the section and its table header stacked as the pag
     .locator('th', { hasText: /^Skipped at$/ })
     .evaluateAll(cells => cells.map(cell => cell.getBoundingClientRect().top));
   expect(headerTops.filter(top => top > sectionBottom && top < sectionBottom + 32)).toHaveLength(1);
+});
+
+test.describe('on a phone', () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+
+  test("shows a day's tokens when you tap its bar", async ({ page, kombinat, time }) => {
+    kombinat.addRoutine({ name: 'night-agent-tasks' });
+    kombinat.addRun({
+      routine: 'night-agent-tasks',
+      startedAt: time.minutesAgo(1),
+      tokens: { input: 1000, output: 9000, cacheWrite: 90_000, cacheRead: 900_000 },
+    });
+    await page.goto('/routines/night-agent-tasks');
+
+    const bar = page.getByRole('img', { name: /: 1M tokens$/ });
+    // A tap's focus opens Radix's tooltip and its click closes it. Check it after the click.
+    const clicked = bar.evaluate(
+      element => new Promise(resolve => element.addEventListener('click', resolve, { once: true })),
+    );
+    await bar.tap();
+    await clicked;
+    await expect(bar).toHaveAttribute('data-state', /open/);
+    await expect(page.getByRole('tooltip')).toContainText('1M tokens');
+    await page.getByRole('heading', { name: 'Tokens, last 7 days' }).tap();
+    await expect(page.getByRole('tooltip')).toHaveCount(0);
+  });
 });

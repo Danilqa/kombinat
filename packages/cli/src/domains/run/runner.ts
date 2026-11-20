@@ -9,7 +9,7 @@ import { isMatching, match } from 'ts-pattern';
 import type { RoutineName } from 'domains/routine/ids';
 import type { RunId } from 'domains/run/ids';
 import type { RunRecord, RunTrigger } from 'domains/run/types';
-import { checkIsRunActive, createRunId } from 'domains/run/utils';
+import { addTokenCounts, checkIsRunActive, createRunId } from 'domains/run/utils';
 import { getUsageLimitLabel } from 'domains/transcript/utils';
 
 import { config, getCliArgs } from '../../config';
@@ -267,11 +267,13 @@ async function runWaitingOutLimits(run: LimitedRun): Promise<Partial<RunRecord>>
       costUsd: record.costUsd,
       numTurns: record.numTurns,
       durationMs: record.durationMs,
+      tokens: record.tokens,
     };
     Object.assign(record, {
       costUsd: null,
       numTurns: null,
       durationMs: null,
+      tokens: null,
       resultText: null,
       error: null,
     });
@@ -285,6 +287,7 @@ async function runWaitingOutLimits(run: LimitedRun): Promise<Partial<RunRecord>>
     record.costUsd = addSpend(spent.costUsd, record.costUsd);
     record.numTurns = addSpend(spent.numTurns, record.numTurns);
     record.durationMs = addSpend(spent.durationMs, record.durationMs);
+    record.tokens = addTokenCounts(spent.tokens, record.tokens);
   }
 }
 
@@ -320,6 +323,7 @@ export async function runRoutine(
     replyPid: null,
     conversation: options.conversation ?? null,
     usageLimit: null,
+    tokens: null,
   };
 
   const prompt = takePrompt(routine.name, id) ?? routine.prompt;

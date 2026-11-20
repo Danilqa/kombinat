@@ -29,7 +29,7 @@ It runs in the routine's `cwd`, or in the folder with `routines/` when `cwd` doe
 | `KOMBINAT_RUN_STATUS` | `succeeded`, `failed` or `timed_out`          |
 | `KOMBINAT_REPO`       | The folder with `routines/`                   |
 
-On stdin it gets the finished run as one line of JSON, the same object that `kombinat run` prints: `status`, `error`, `resultText`, `exitCode`, `costUsd`, `durationMs`, `startedAt`, `endedAt` and the rest.
+On stdin it gets the finished run as one line of JSON, the same object that `kombinat run` prints: `status`, `error`, `resultText`, `exitCode`, `costUsd`, `tokens`, `durationMs`, `startedAt`, `endedAt` and the rest.
 
 The run counts as running until the hook ends, so the routine does not start again in the meantime. A hook that takes more than 3 minutes is killed. Its exit code and output never change the run's status. They show as the last item of the run's transcript, "After hook", in the dashboard and in the terminal.
 

@@ -84,9 +84,56 @@ test('reads the session and the result into the run record', () => {
       { type: 'result', result: 'nope', is_error: true, total_cost_usd: 0.5 },
       record,
     ),
-    { resultText: 'nope', costUsd: 0.5, numTurns: null, durationMs: null, error: 'nope' },
+    {
+      resultText: 'nope',
+      costUsd: 0.5,
+      numTurns: null,
+      durationMs: null,
+      tokens: null,
+      error: 'nope',
+    },
   );
   assert.equal(claudeAgent.getResumeCommand(sessionIdSchema.parse('s1')), 'claude --resume s1');
+});
+
+test('counts the tokens of every model in the result, subagents included', () => {
+  const result = {
+    type: 'result',
+    usage: { input_tokens: 9, output_tokens: 100, cache_read_input_tokens: 1000 },
+    modelUsage: {
+      'claude-opus-5-5': {
+        inputTokens: 9,
+        outputTokens: 100,
+        cacheCreationInputTokens: 500,
+        cacheReadInputTokens: 1000,
+      },
+      'claude-haiku-4-5': { inputTokens: 1, outputTokens: 20, cacheReadInputTokens: 300 },
+    },
+  };
+  assert.deepEqual(claudeAgent.readEvent(result, makeRunRecord()).tokens, {
+    input: 10,
+    output: 120,
+    cacheWrite: 500,
+    cacheRead: 1300,
+  });
+});
+
+test('falls back to the usage of the result without modelUsage', () => {
+  const result = {
+    type: 'result',
+    usage: {
+      input_tokens: 9,
+      output_tokens: 100,
+      cache_creation_input_tokens: 50,
+      cache_read_input_tokens: 1000,
+    },
+  };
+  assert.deepEqual(claudeAgent.readEvent(result, makeRunRecord()).tokens, {
+    input: 9,
+    output: 100,
+    cacheWrite: 50,
+    cacheRead: 1000,
+  });
 });
 
 test('reads the plan limits that a rate limit event reports', () => {

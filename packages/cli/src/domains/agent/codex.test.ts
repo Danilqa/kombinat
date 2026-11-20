@@ -53,7 +53,10 @@ const events = [
     item: { id: 'item_4', type: 'todo_list', items: [{ text: 'Fix', completed: true }] },
   },
   { type: 'item.completed', item: { id: 'item_5', type: 'agent_message', text: 'Done' } },
-  { type: 'turn.completed', usage: { input_tokens: 10, output_tokens: 5 } },
+  {
+    type: 'turn.completed',
+    usage: { input_tokens: 1000, cached_input_tokens: 800, output_tokens: 5 },
+  },
 ];
 
 test('builds transcript items from codex exec --json events', () => {
@@ -97,7 +100,10 @@ test('reads the thread, the last message, turns and failures into the run record
   const record = makeRunRecord();
   assert.deepEqual(codexAgent.readEvent(events[0], record), { sessionId: 'thread-1' });
   assert.deepEqual(codexAgent.readEvent(events[8], record), { resultText: 'Done' });
-  assert.deepEqual(codexAgent.readEvent(events[9], record), { numTurns: 1 });
+  assert.deepEqual(codexAgent.readEvent(events[9], record), {
+    numTurns: 1,
+    tokens: { input: 200, output: 5, cacheWrite: 0, cacheRead: 800 },
+  });
   assert.deepEqual(codexAgent.readEvent({ type: 'turn.failed', error: { message: 'x' } }, record), {
     error: 'x',
   });

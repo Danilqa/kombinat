@@ -12,8 +12,9 @@ import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import { RUNS_CURSOR_ERROR } from 'domains/run/constants';
 import { runIdSchema, type RunId } from 'domains/run/ids';
 import { runMessageSchema, usageLimitWaitActionSchema } from 'domains/run/schemas';
-import type { RunRecord } from 'domains/run/types';
+import type { RunRecord, TokenUsage } from 'domains/run/types';
 import {
+  buildTokenUsages,
   checkCanContinueRun,
   checkIsRunActive,
   checkIsRunAtWork,
@@ -128,6 +129,7 @@ function toRoutineSummary(
   skips: Skip[],
   queue: QueuedWebhook[],
   oneTimeRuns: OneTimeRun[],
+  tokenUsage: TokenUsage | null,
   now: Date,
 ): RoutineSummary {
   const { schedule, enabled } = routine;
@@ -156,6 +158,7 @@ function toRoutineSummary(
     running: runs.some(checkIsRunActive),
     lastRun: runs[0] ?? null,
     lastSkip: skips.at(-1) ?? null,
+    tokenUsage,
   };
 }
 
@@ -234,13 +237,27 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     return calls.filter(call => !expired.has(call));
   }
 
-  function getSummary(routine: DemoRoutine, now: Date): RoutineSummary {
+  function getTokenUsages(now: Date): Map<RoutineName, TokenUsage | null> {
+    const runs = listRuns(now);
+    const usages = buildTokenUsages(
+      demoRoutines.map(routine => runs.filter(run => run.routine === routine.name)),
+      now,
+    );
+    return new Map(demoRoutines.map((routine, index) => [routine.name, usages[index] ?? null]));
+  }
+
+  function getSummary(
+    routine: DemoRoutine,
+    now: Date,
+    tokenUsages = getTokenUsages(now),
+  ): RoutineSummary {
     return toRoutineSummary(
       routine,
       listRoutineRuns(routine, now),
       history.listSkips(routine, now),
       listQueue(routine, now),
       listRoutineOneTimeRuns(oneTimeRuns, routine.name),
+      tokenUsages.get(routine.name) ?? null,
       now,
     );
   }
@@ -407,7 +424,10 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
   function routeApi(request: ApiRequest, url: URL, body: string, now: Date): ApiResponse {
     return match(request)
       .with(['GET', ['status']], () => ok(getStatus(now)))
-      .with(['GET', ['routines']], () => ok(demoRoutines.map(routine => getSummary(routine, now))))
+      .with(['GET', ['routines']], () => {
+        const tokenUsages = getTokenUsages(now);
+        return ok(demoRoutines.map(routine => getSummary(routine, now, tokenUsages)));
+      })
       .with(['GET', ['routines', P.string]], ([, [, name]]) =>
         withRoutine(routineNameSchema.parse(name), routine => ok(getRoutineDetail(routine, now))),
       )

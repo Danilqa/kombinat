@@ -21,6 +21,13 @@ export const usageLimitWaitSchema = z.object({
   continuesAt: z.string(),
 });
 
+export const tokenCountsSchema = z.object({
+  input: z.number(),
+  output: z.number(),
+  cacheWrite: z.number(),
+  cacheRead: z.number(),
+});
+
 export const runTriggerSchema = z.enum(['schedule', 'manual', 'catch_up', 'webhook']);
 
 export const runRecordSchema = z.object({
@@ -49,6 +56,17 @@ export const runRecordSchema = z.object({
   conversation: z.string().nullable().default(null),
   // Set while the run waits for a usage limit to reset. Older records have none.
   usageLimit: usageLimitWaitSchema.nullable().default(null),
+  // Records written before runs saved their tokens have none.
+  tokens: tokenCountsSchema.nullable().default(null),
+});
+
+export const tokenDaySchema = z.object({ date: z.string(), total: z.number() });
+
+export const tokenUsageSchema = z.object({
+  runs: z.number(),
+  counts: tokenCountsSchema,
+  days: z.array(tokenDaySchema),
+  share: z.number(),
 });
 
 export const runMessageSchema = z.object({ text: z.string().trim().min(1) });

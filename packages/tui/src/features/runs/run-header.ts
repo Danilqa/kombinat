@@ -1,5 +1,11 @@
 import type { RunRecord } from 'domains/run/types';
-import { checkIsWaitingForSlot, getRunDurationMs, getTriggerLabel } from 'domains/run/utils';
+import {
+  checkIsWaitingForSlot,
+  formatTokens,
+  getRunDurationMs,
+  getTokenTotal,
+  getTriggerLabel,
+} from 'domains/run/utils';
 import { getUsageLimitLabel } from 'domains/transcript/utils';
 import { formatDuration } from 'utils/date-time';
 
@@ -46,6 +52,10 @@ export function runHeaderLines(
     { label: 'ended', value: timeValue(run.endedAt, now) },
     { label: 'duration', value: [text(formatDuration(getRunDurationMs(run, now)), S.magenta)] },
     { label: 'turns', value: [text(String(run.numTurns ?? '-'))] },
+    {
+      label: 'tokens',
+      value: [text(run.tokens === null ? '-' : formatTokens(getTokenTotal(run.tokens)))],
+    },
     { label: 'agent', value: [text(run.agent, S.cyan)] },
     { label: 'model', value: [text(run.model ?? '-', S.blue)] },
     { label: 'exit code', value: [text(String(run.exitCode ?? '-'))] },

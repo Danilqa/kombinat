@@ -4,7 +4,13 @@ import { sessionIdSchema, type SessionId } from 'domains/agent/ids';
 import type { AgentName } from 'domains/agent/types';
 import type { RoutineName } from 'domains/routine/ids';
 import { runIdSchema, type RunId } from 'domains/run/ids';
-import type { RunRecord, RunStatus, RunTrigger, UsageLimitWaitAction } from 'domains/run/types';
+import type {
+  RunRecord,
+  RunStatus,
+  RunTrigger,
+  TokenCounts,
+  UsageLimitWaitAction,
+} from 'domains/run/types';
 import { compareRunsByNewest } from 'domains/run/utils';
 import type { Skip, SkipReason } from 'domains/scheduler/types';
 import type {
@@ -183,6 +189,31 @@ function getResumeCommand(agent: AgentName, sessionId: SessionId): string | null
     .exhaustive();
 }
 
+// About what a Claude Code session reads from its cache each minute, so a long run uses millions.
+const TOKENS_PER_MINUTE = 78_000;
+
+function getTokens(run: DemoRun): TokenCounts | null {
+  const { routine, outcome } = run;
+  if (outcome.numTurns === undefined) return null;
+  const random = createRandom(`${routine.name}:${run.id}:tokens`);
+  const total = outcome.minutes * TOKENS_PER_MINUTE * (0.8 + random() * 0.4);
+  return match(routine.agent)
+    .with('claude', (): TokenCounts => ({
+      input: Math.round(total * 0.0035),
+      output: Math.round(total * 0.0073),
+      cacheWrite: Math.round(total * 0.031),
+      cacheRead: Math.round(total * 0.9582),
+    }))
+    .with('codex', (): TokenCounts => ({
+      input: Math.round(total * 0.1),
+      output: Math.round(total * 0.02),
+      cacheWrite: 0,
+      cacheRead: Math.round(total * 0.88),
+    }))
+    .with('command', () => null)
+    .exhaustive();
+}
+
 function buildSteps(run: DemoRun): TranscriptItem[] {
   return run.outcome.steps.map((step, index) => step(String(index)));
 }
@@ -246,6 +277,7 @@ function toRunRecord(
             continuesAt: pause.continuesAt.toISOString(),
           }
         : null,
+    tokens: isFinished ? getTokens(run) : null,
   };
 }
 

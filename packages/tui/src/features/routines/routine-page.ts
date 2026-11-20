@@ -1,7 +1,8 @@
 import { match } from 'ts-pattern';
 
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
-import type { RunsPage } from 'domains/run/types';
+import type { RunsPage, TokenUsage } from 'domains/run/types';
+import { formatTokens, formatTokenShare, getTokenTotal } from 'domains/run/utils';
 import { getSkipReasonLabel } from 'domains/scheduler/utils';
 import { formatDayTime, formatRelativeCompact } from 'utils/date-time';
 
@@ -54,6 +55,16 @@ function tabBar(tabs: Tab[], active: RoutineTab): Line {
       text(' '),
     ]),
     text('  [ ] switch', S.grey),
+  ];
+}
+
+function tokenUsageValue(usage: TokenUsage): Line {
+  return [
+    text(formatTokens(getTokenTotal(usage.counts)), S.magenta),
+    text(
+      ` in 7 days · ${usage.runs} ${usage.runs === 1 ? 'run' : 'runs'} · ${formatTokenShare(usage.share)} of all routines`,
+      S.dim,
+    ),
   ];
 }
 
@@ -130,6 +141,9 @@ export function routinePage({
           },
         ]
       : []),
+    ...(routine.tokenUsage === null
+      ? []
+      : [{ label: 'tokens', value: tokenUsageValue(routine.tokenUsage), isWide: true }]),
     { label: 'timeout', value: [text(`${routine.timeoutMinutes} min`)] },
     {
       label: 'budget',

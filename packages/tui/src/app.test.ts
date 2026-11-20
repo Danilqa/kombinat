@@ -44,6 +44,7 @@ function makeRun(routine: string, id: string, overrides: Partial<RunRecord> = {}
     replyPid: null,
     conversation: null,
     usageLimit: null,
+    tokens: null,
     ...overrides,
   };
 }
@@ -71,6 +72,7 @@ function makeRoutine(name: string, overrides: Partial<RoutineSummary> = {}): Rou
     running: false,
     lastRun: null,
     lastSkip: null,
+    tokenUsage: null,
     ...overrides,
   };
 }
@@ -578,6 +580,29 @@ test('every row fits exactly in narrow and wide terminals, on every page', async
   check('run expanded');
   await press('?');
   check('help');
+});
+
+test('the routine page and its runs show the tokens they used', async () => {
+  const overview = makeOverview();
+  const tokens = { input: 90_200, output: 189_300, cacheWrite: 793_400, cacheRead: 24_827_100 };
+  overview.runs = overview.runs.map(run => ({ ...run, tokens }));
+  overview.routines = overview.routines.map(routine => ({
+    ...routine,
+    tokenUsage: { runs: 7, counts: tokens, days: [], share: 0.334 },
+  }));
+  const { app, press } = await makeApp({ overview });
+  const routineScreen = await press('enter');
+  assert.match(routineScreen, /tokens {4}25\.9M in 7 days · 7 runs · 33% of all routines/);
+  assert.match(routineScreen, /TURNS\s+TOKENS/);
+  assert.match(routineScreen, /20261006T110000Z-abcd\s+Scheduled\s+1h ago\s+1m 23s\s+7\s+25\.9M/);
+  for (const [width, height] of [
+    [60, 16],
+    [100, 30],
+    [200, 50],
+  ] as const) {
+    for (const line of app.render(width, height)) assert.equal(lineWidth(line), width);
+  }
+  assert.match(await press('enter'), /tokens {4}25\.9M/);
 });
 
 test('the routines list and the queue tab show the webhooks that wait', async () => {

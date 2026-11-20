@@ -23,6 +23,7 @@ import { useRuns } from '@web-app/hooks/use-runs';
 import { useTabSearchParam } from '@web-app/hooks/use-tab-search-param';
 import { ChangePromptMenuItem } from './change-prompt-menu-item';
 import { OneTimeRunsTable } from './one-time-runs-table';
+import { TokenUsageSection } from './token-usage-section';
 import { WebhookCallsList } from './webhook-calls-list';
 
 interface OneTimeRunsNoteProps {
@@ -79,6 +80,7 @@ function RoutineView({ routine, runNowRef }: RoutineViewProps) {
       <Card.Root className="gap-0 py-0">
         <RoutineDetailList routine={routine} />
       </Card.Root>
+      {routine.tokenUsage && <TokenUsageSection usage={routine.tokenUsage} />}
       <Tabs.Root value={tab} onValueChange={setTab} className="gap-4">
         <Tabs.List>
           <Tabs.Trigger value="runs">

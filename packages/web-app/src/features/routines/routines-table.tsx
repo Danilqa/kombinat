@@ -7,6 +7,8 @@ import { getDaemonStatus } from 'domains/daemon/requests';
 import { RunNowButton, WebhookQueueButton } from 'domains/routine/components';
 import type { RoutineSummary } from 'domains/routine/types';
 import { RunStatusBadge } from 'domains/run/components';
+import type { TokenUsage } from 'domains/run/types';
+import { formatTokens, getTokenTotal } from 'domains/run/utils';
 import { getSkipReasonLabel } from 'domains/scheduler/utils';
 import { sameOriginApi } from 'utils/http';
 import { getRoutinePath, getRunPath } from '@web-app/constants/path';
@@ -80,6 +82,23 @@ function LastRunCell({ routine }: LastRunCellProps) {
   );
 }
 
+interface RoutineTokensProps {
+  usage: TokenUsage;
+  maxTotal: number;
+}
+
+// A line under the name, since the table has no room for another column beside Run now.
+function RoutineTokens({ usage, maxTotal }: RoutineTokensProps) {
+  const total = getTokenTotal(usage.counts);
+  const isTop = total > 0 && total === maxTotal;
+  return (
+    <div className="text-body-sm text-fg-muted tabular-nums">
+      <span className={cn(isTop && 'text-warning')}>{formatTokens(total)}</span> tokens in 7 days
+      {isTop && <span className="sr-only">, the most of all routines</span>}
+    </div>
+  );
+}
+
 function NoRoutinesState() {
   const { data } = useQuery({
     queryKey: ['status'],
@@ -100,6 +119,10 @@ interface RoutinesTableProps {
 export function RoutinesTable({ routines }: RoutinesTableProps) {
   const getRowClickHandler = useRowLink();
   if (routines.length === 0) return <NoRoutinesState />;
+  const maxTokenTotal = Math.max(
+    0,
+    ...routines.map(({ tokenUsage }) => (tokenUsage ? getTokenTotal(tokenUsage.counts) : 0)),
+  );
   return (
     <Table.Root>
       <Table.Header>
@@ -139,6 +162,9 @@ export function RoutinesTable({ routines }: RoutinesTableProps) {
                   </Badge>
                 )}
               </div>
+              {routine.tokenUsage && (
+                <RoutineTokens usage={routine.tokenUsage} maxTotal={maxTokenTotal} />
+              )}
             </Table.Cell>
             <Table.Cell className="w-full min-w-48 whitespace-normal text-fg-secondary max-md:hidden">
               <div className="line-clamp-2" title={routine.description}>

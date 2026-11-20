@@ -56,7 +56,14 @@ export interface Invocation {
 export type RunUpdate = Partial<
   Pick<
     RunRecord,
-    'sessionId' | 'model' | 'resultText' | 'costUsd' | 'numTurns' | 'durationMs' | 'error'
+    | 'sessionId'
+    | 'model'
+    | 'resultText'
+    | 'costUsd'
+    | 'numTurns'
+    | 'durationMs'
+    | 'tokens'
+    | 'error'
   >
 >;
 

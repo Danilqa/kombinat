@@ -1,6 +1,6 @@
 import type { RoutineName } from 'domains/routine/ids';
 import type { RunsPage } from 'domains/run/types';
-import { getRunDurationMs, getTriggerLabel } from 'domains/run/utils';
+import { formatTokens, getRunDurationMs, getTokenTotal, getTriggerLabel } from 'domains/run/utils';
 import { formatDuration, formatRelativeCompact } from 'utils/date-time';
 
 import { columns, withStyle } from '../../components/columns';
@@ -18,6 +18,7 @@ export function runsTable(
 ): ContentLine[] {
   if (runs.length === 0) return [{ line: [text('No runs yet.', S.dim)] }];
   const isWide = width >= 78;
+  const hasTokens = width >= 86;
   const header: Column[] = isWide
     ? [
         { line: [text('STATUS')], width: 12 },
@@ -26,6 +27,7 @@ export function runsTable(
         { line: [text('STARTED')], width: 10, align: 'right' },
         { line: [text('DURATION')], width: 8, align: 'right' },
         { line: [text('TURNS')], width: 5, align: 'right' },
+        ...(hasTokens ? [{ line: [text('TOKENS')], width: 6, align: 'right' as const }] : []),
       ]
     : [
         { line: [text(' ')], width: 1 },
@@ -45,6 +47,15 @@ export function runsTable(
           { line: started, width: 10, align: 'right' },
           { line: duration, width: 8, align: 'right' },
           { line: [text(String(run.numTurns ?? '-'))], width: 5, align: 'right' },
+          ...(hasTokens
+            ? [
+                {
+                  line: [text(run.tokens === null ? '-' : formatTokens(getTokenTotal(run.tokens)))],
+                  width: 6,
+                  align: 'right' as const,
+                },
+              ]
+            : []),
         ]
       : [
           { line: [statusIcon(run.status, now)], width: 1 },
