@@ -49,16 +49,16 @@ You need Node 24 and Claude Code or Codex, logged in. On Linux, see [docs/linux.
 
 ## 📊 Monitoring
 
-<img src=".github/assets/dashboard.png" alt="Kombinat dashboard: routines list, week calendar and a run transcript" width="100%" />
+<img src=".github/assets/dashboard.gif" alt="A tour of the Kombinat dashboard: routines, calendar, runs, inbox, daemon status, search and a run transcript" width="100%" />
 
 The daemon serves a dashboard at http://localhost:7433.
 
-- **Routines.**
-- **Calendar.**
-- **Runs.**
-- **Inbox.**
-- **Daemon status.**
-- **Search.**
+- Routines
+- Calendar
+- Runs
+- Inbox
+- Daemon status
+- Search
 
 ### In the terminal
 

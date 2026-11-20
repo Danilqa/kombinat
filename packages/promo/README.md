@@ -13,6 +13,7 @@ pnpm --filter promo record                    # record every segment and render 
 pnpm --filter promo record webhook tour       # record only these, reuse the frames of the rest
 pnpm --filter promo voice                     # turn the voiceover takes into clips at one pace
 pnpm --filter promo thumbnail                 # render the YouTube thumbnail to out/thumbnail.png
+pnpm --filter promo readme-gif                # record the dashboard GIF of the root README
 ```
 
 `record` builds the website and the scenes, then writes to `out/`, which git ignores:
@@ -23,6 +24,8 @@ pnpm --filter promo thumbnail                 # render the YouTube thumbnail to 
 - `clips/`: each segment as its own video.
 
 `thumbnail` renders `src/stills/thumbnail-still.tsx`, which shows the same routine file as the video next to a run of it.
+
+`readme-gif` builds the website, clicks through its dashboard with the steps in `scripts/readme-tour.ts` and writes `.github/assets/dashboard.gif`, which the root README shows under Monitoring. Run it again when the dashboard changes, and commit the GIF.
 
 ## How it works
 

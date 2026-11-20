@@ -10,6 +10,7 @@
     "record": "pnpm --filter website build && vite build && tsx scripts/record.ts",
     "snapshot": "vite build && tsx scripts/snapshot.ts",
     "thumbnail": "vite build && tsx scripts/thumbnail.ts",
+    "readme-gif": "pnpm --filter website build && tsx scripts/readme-gif.ts",
     "test": "tsx --test 'src/**/*.test.ts'",
     "typecheck": "tsc -p tsconfig.json"
   },
