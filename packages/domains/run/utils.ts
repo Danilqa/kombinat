@@ -211,11 +211,14 @@ function toLocalDate(date: Date): string {
 }
 
 // Today and the days before it, oldest first, in the local time zone.
+export function getTokenUsageStart(now: Date): Date {
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate() - TOKEN_USAGE_DAYS + 1);
+}
+
 export function getTokenUsageDates(now: Date): string[] {
+  const start = getTokenUsageStart(now);
   return Array.from({ length: TOKEN_USAGE_DAYS }, (_, index) =>
-    toLocalDate(
-      new Date(now.getFullYear(), now.getMonth(), now.getDate() - TOKEN_USAGE_DAYS + 1 + index),
-    ),
+    toLocalDate(new Date(start.getFullYear(), start.getMonth(), start.getDate() + index)),
   );
 }
 

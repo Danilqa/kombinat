@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Card, Tooltip } from 'design-system/components';
 import { SectionHeader } from 'design-system/layouts';
 import { cn } from 'design-system/utils';
@@ -34,10 +35,18 @@ function TokenDayBar({ day, maxTotal, isToday }: TokenDayBarProps) {
   const label = `${formatWeekday(date)} ${formatDayMonth(date)}: ${formatTokens(day.total)} tokens`;
   const height = maxTotal === 0 ? 0 : (day.total / maxTotal) * 100;
   const barColor = day.total === 0 ? 'bg-line-strong' : isToday ? 'bg-fg' : 'bg-fg-faint';
+  const [isOpen, setIsOpen] = useState(false);
   return (
     <li className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
-      <Tooltip.Root>
-        <Tooltip.Trigger asChild>
+      <Tooltip.Root open={isOpen} onOpenChange={setIsOpen}>
+        {/* Radix closes a tooltip on click and ignores taps. Here a click or tap opens it. */}
+        <Tooltip.Trigger
+          asChild
+          onClick={event => {
+            event.preventDefault();
+            setIsOpen(true);
+          }}
+        >
           <div
             role="img"
             aria-label={label}
@@ -75,14 +84,7 @@ export function TokenUsageSection({ usage }: TokenUsageSectionProps) {
   const maxDayTotal = Math.max(...usage.days.map(day => day.total));
   return (
     <section>
-      <SectionHeader.Root
-        aside={
-          <SectionHeader.Aside>
-            <span className="max-sm:hidden">From each run&apos;s result, cache</span>
-            <span className="sm:hidden">Cache</span> reads included
-          </SectionHeader.Aside>
-        }
-      >
+      <SectionHeader.Root aside={<SectionHeader.Aside>Includes cache reads</SectionHeader.Aside>}>
         Tokens, last 7 days
       </SectionHeader.Root>
       <Card.Root className="gap-0 py-0">

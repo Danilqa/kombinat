@@ -65,20 +65,32 @@ function reconcileRecord(record: RunRecord): RunRecord {
   return reconciled;
 }
 
-function readRuns(routine: RoutineName): RunRecord[] {
+function readRuns(routine: RoutineName, since: Date | null = null): RunRecord[] {
   const dir = getRunsDir(routine);
   if (!fs.existsSync(dir)) return [];
   return fs
     .readdirSync(dir)
     .filter(entry => entry.endsWith('.json'))
     .flatMap(entry => {
-      const record = readJsonFile(path.join(dir, entry), runRecordSchema);
+      const file = path.join(dir, entry);
+      if (since !== null && checkIsWrittenBefore(file, since)) return [];
+      const record = readJsonFile(file, runRecordSchema);
       return record === null ? [] : [reconcileRecord(record)];
     });
 }
 
+// A record is first written when its run starts, so an older file holds a run that started earlier.
+function checkIsWrittenBefore(file: string, since: Date): boolean {
+  const mtimeMs = fs.statSync(file, { throwIfNoEntry: false })?.mtimeMs ?? 0;
+  return mtimeMs < since.getTime();
+}
+
 export function listRuns(routine: RoutineName): RunRecord[] {
   return readRuns(routine).sort(compareRunsByNewest);
+}
+
+export function listRunsSince(routine: RoutineName, since: Date): RunRecord[] {
+  return readRuns(routine, since).sort(compareRunsByNewest);
 }
 
 export function listAllRuns(): RunRecord[] {

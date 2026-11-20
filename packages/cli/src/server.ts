@@ -23,6 +23,7 @@ import {
   checkIsRunAtWork,
   createRunId,
   filterRuns,
+  getTokenUsageStart,
   paginateRuns,
   parseRunsPageQuery,
 } from 'domains/run/utils';
@@ -58,6 +59,7 @@ import {
   getRunningRuns,
   listAllRuns,
   listRuns,
+  listRunsSince,
   readRunRecord,
 } from './domains/run/storage';
 import { requestWaitAction } from './domains/run/usage-limit';
@@ -209,11 +211,13 @@ function getRoutineSummaries(): RoutineSummary[] {
 function getRoutineDetail(routine: Routine): ApiResponse {
   const oneTimeRuns = listRoutineOneTimeRuns(readOneTimeRuns(), routine.name);
   const runs = listRuns(routine.name);
+  const now = new Date();
+  const since = getTokenUsageStart(now);
   // The share needs the tokens of every other routine too.
   const otherRuns = loadRoutines()
     .filter(other => other.name !== routine.name)
-    .map(other => listRuns(other.name));
-  const [tokenUsage = null] = buildTokenUsages([runs, ...otherRuns], new Date());
+    .map(other => listRunsSince(other.name, since));
+  const [tokenUsage = null] = buildTokenUsages([runs, ...otherRuns], now);
   const detail: RoutineDetail = {
     ...toRoutineSummary(routine, runs, oneTimeRuns, tokenUsage),
     prompt: routine.prompt,

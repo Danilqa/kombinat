@@ -283,3 +283,29 @@ test('keeps the breadcrumbs, the section and its table header stacked as the pag
     .evaluateAll(cells => cells.map(cell => cell.getBoundingClientRect().top));
   expect(headerTops.filter(top => top > sectionBottom && top < sectionBottom + 32)).toHaveLength(1);
 });
+
+test.describe('on a phone', () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+
+  test("shows a day's tokens when you tap its bar", async ({ page, kombinat, time }) => {
+    kombinat.addRoutine({ name: 'night-agent-tasks' });
+    kombinat.addRun({
+      routine: 'night-agent-tasks',
+      startedAt: time.minutesAgo(1),
+      tokens: { input: 1000, output: 9000, cacheWrite: 90_000, cacheRead: 900_000 },
+    });
+    await page.goto('/routines/night-agent-tasks');
+
+    const bar = page.getByRole('img', { name: /: 1M tokens$/ });
+    // A tap's focus opens Radix's tooltip and its click closes it. Check it after the click.
+    const clicked = bar.evaluate(
+      element => new Promise(resolve => element.addEventListener('click', resolve, { once: true })),
+    );
+    await bar.tap();
+    await clicked;
+    await expect(bar).toHaveAttribute('data-state', /open/);
+    await expect(page.getByRole('tooltip')).toContainText('1M tokens');
+    await page.getByRole('heading', { name: 'Tokens, last 7 days' }).tap();
+    await expect(page.getByRole('tooltip')).toHaveCount(0);
+  });
+});
