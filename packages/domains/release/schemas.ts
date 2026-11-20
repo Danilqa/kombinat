@@ -17,3 +17,14 @@ export const releaseUpdateSchema = z.object({
 });
 
 export const skippedReleaseSchema = z.object({ ok: z.literal(true) });
+
+export const githubReleaseSchema = z.object({
+  tag_name: z.string(),
+  html_url: z.string(),
+  body: z.string().nullable(),
+  published_at: z.string().nullable(),
+  draft: z.boolean(),
+  prerelease: z.boolean(),
+});
+
+export const githubReleasesSchema = z.array(githubReleaseSchema);
