@@ -2,9 +2,9 @@ import { isMatching, match, P } from 'ts-pattern';
 
 import { buildCalendar } from 'domains/calendar/utils';
 import type { DaemonStatus } from 'domains/daemon/types';
-import { markReadRequestSchema } from 'domains/inbox/schemas';
-import type { InboxState } from 'domains/inbox/types';
-import { addReadRuns, listUnreadRuns } from 'domains/inbox/utils';
+import { markReadRequestSchema, notifyRequestSchema } from 'domains/inbox/schemas';
+import type { InboxState, NotifyLevels } from 'domains/inbox/types';
+import { addReadRuns, changeNotifyLevel, listUnreadRuns } from 'domains/inbox/utils';
 import type { ReleaseUpdate } from 'domains/release/types';
 import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
 import { oneTimeRunRequestSchema } from 'domains/routine/schemas';
@@ -172,6 +172,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     since: new Date(loadedAt.getTime() - LAST_LOOK_MS).toISOString(),
     readRuns: [],
   };
+  let notify: NotifyLevels = {};
   let oneTimeRuns = demoRoutines
     .flatMap(routine =>
       (routine.oneTimeRuns ?? []).map(({ minutesAhead }) =>
@@ -421,6 +422,15 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     return ok({ ok: true });
   }
 
+  function setNotifyLevel(routine: DemoRoutine, body: string): ApiResponse {
+    const request = notifyRequestSchema.safeParse(parseJson(body));
+    if (!request.success) {
+      return fail(400, 'level must be failures_and_findings, failures, every_run or never');
+    }
+    notify = changeNotifyLevel(notify, routine.name, request.data.level);
+    return ok({ ok: true });
+  }
+
   function routeApi(request: ApiRequest, url: URL, body: string, now: Date): ApiResponse {
     return match(request)
       .with(['GET', ['status']], () => ok(getStatus(now)))
@@ -443,8 +453,11 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
         withRoutine(routineNameSchema.parse(name), routine => cancelOneTimeRun(routine, body)),
       )
       .with(['GET', ['calendar']], () => getCalendar(url, now))
-      .with(['GET', ['inbox']], () => ok({ runs: listUnreadRuns(listRuns(now), inbox) }))
+      .with(['GET', ['inbox']], () => ok({ runs: listUnreadRuns(listRuns(now), inbox), notify }))
       .with(['POST', ['inbox', 'read']], () => markRunsRead(body, now))
+      .with(['PUT', ['inbox', 'notify', P.string]], ([, [, , name]]) =>
+        withRoutine(routineNameSchema.parse(name), routine => setNotifyLevel(routine, body)),
+      )
       .with(['GET', ['settings']], () => ok(settings))
       .with(['PUT', ['settings']], () => updateSettings(body))
       .with(['GET', ['releases']], () => ok(RELEASE_UPDATE))

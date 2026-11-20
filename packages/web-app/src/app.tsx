@@ -9,6 +9,7 @@ import { useAppBadge } from '@web-app/hooks/use-app-badge';
 import { useFocusMainOnNavigate } from '@web-app/hooks/use-focus-main-on-navigate';
 import { useInbox } from '@web-app/hooks/use-inbox';
 import { useLiveUpdates } from '@web-app/hooks/use-live-updates';
+import { useRunNotifications } from '@web-app/hooks/use-run-notifications';
 
 const MAIN_ID = 'main';
 
@@ -17,6 +18,7 @@ function AppLayout() {
   useFocusMainOnNavigate(MAIN_ID);
   useLiveUpdates();
   useAppBadge(useInbox().data?.runs.length);
+  useRunNotifications();
   const { pathname } = useLocation();
   return (
     <div className="flex min-h-dvh flex-col pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]">

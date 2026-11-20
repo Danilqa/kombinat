@@ -22,6 +22,7 @@ import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 import { useRuns } from '@web-app/hooks/use-runs';
 import { useTabSearchParam } from '@web-app/hooks/use-tab-search-param';
 import { ChangePromptMenuItem } from './change-prompt-menu-item';
+import { NotifyMenu } from './notify-menu';
 import { OneTimeRunsTable } from './one-time-runs-table';
 import { TokenUsageSection } from './token-usage-section';
 import { WebhookCallsList } from './webhook-calls-list';
@@ -159,6 +160,7 @@ export function RoutinePage() {
           data && (
             <div className="flex min-w-0 items-center gap-2">
               <WebhookQueueButton routine={data.name} count={data.queuedWebhooks} />
+              <NotifyMenu routine={data.name} />
               <RunNowButton
                 ref={runNowRef}
                 routine={data.name}

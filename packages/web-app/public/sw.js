@@ -39,3 +39,17 @@ self.addEventListener('fetch', event => {
     })(),
   );
 });
+
+// A run's notification opens the run in a window of the dashboard, or in a new one.
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const url = event.notification.data?.url ?? self.registration.scope;
+  event.waitUntil(
+    (async () => {
+      const [client] = await self.clients.matchAll({ type: 'window' });
+      if (client === undefined) return self.clients.openWindow(url);
+      await client.focus();
+      return client.navigate(url);
+    })(),
+  );
+});

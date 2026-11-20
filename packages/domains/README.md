@@ -24,7 +24,7 @@ Each domain has up to two halves with the same name:
 | **webhook**    | `QueuedWebhook`, `WebhookCall`, `WebhookCallId`, webhook path, size, queue position and outcome labels, expired calls, `WebhookQueueList`                                                                                                 | gate, queue, conversations, call log, and receiving: start, continue, queue, ignore or reject                          |
 | **settings**   | `Settings`, defaults, retention options and labels, requests                                                                                                                                                                              | `settings.json` storage                                                                                                |
 | **release**    | `ReleaseVersion`, `ReleaseUpdate`, requests, GitHub releases and the changelog with their images, newer releases, the offered release, `UpdateCard`                                                                                       | none, `cli/src/features/self-update/releases.ts` checks GitHub and skips                                               |
-| **inbox**      | `InboxState`, requests, unread runs, marking runs read, groups and their labels, the summary line                                                                                                                                         | `inbox.json` storage                                                                                                   |
+| **inbox**      | `InboxState`, `NotifyLevel`, requests, unread runs, marking runs read, groups and their labels, the summary line, notify levels and the runs they notify of, notification texts                                                           | `inbox.json` and `notifications.json` storage                                                                          |
 
 Not domains:
 
@@ -207,6 +207,14 @@ The runs that ended since the user last looked, `GET /api/inbox`, so that a fail
 - The dashboard marks a run read when its page shows it finished, the TUI when it opens it, and Mark all as read sends the runs on screen, so a run that ends meanwhile stays unread.
 - Unread runs are grouped: Needs a look for every status but succeeded, Nothing to report for a succeeded run whose result is empty or starts with the word "No" or "Nothing", and Has findings for the rest.
 
+#### Notifications
+
+Each routine can notify of the runs that come into the inbox: `failures_and_findings` of Needs a look and Has findings, `failures` of Needs a look, `every_run` or `never`, the default. `<state dir>/notifications.json` keeps them as `{ "routines": { "<name>": "<level>" } }`, without the routines that never notify. `GET /api/inbox` serves them in `notify` next to the runs, and `PUT /api/inbox/notify/<name>` with `{ "level": "…" }` changes one.
+
+- The dashboard shows them with the browser's notifications, so nothing leaves the machine and they come only while a tab or the installed app is open. It polls the inbox in the background while a routine notifies and the browser allows it.
+- A run notifies once it comes into the inbox while the dashboard is open, so the runs that were unread when it opened stay quiet. A run whose page is on screen does not notify.
+- A notification names the routine and its group, with the summary line, and opens the run. More than 3 runs at once, such as after the computer slept, make one that counts them by group and opens the Inbox.
+
 ### calendar
 
 The week view's read model, `GET /api/calendar?from&to` for a range of at most 32 days.
@@ -227,7 +235,7 @@ The running kombinat service as its clients see it through `GET /api/status`: ve
 - Claude Code's stream-json reports it in each `rate_limit_event` as the share used and the reset time of the 5-hour and the weekly limit. The runner writes the latest one to `<state dir>/plan-usage/claude.json` with the time it came, which the status serves.
 - A limit whose reset time has passed is left out, because what was used since is unknown until the next run reports it. The dashboard and the TUI show the share left of the most used limit next to the running count.
 
-`GET /api/events` is a stream of server-sent events with one `data: change` event, at most every 300 ms, after a routine file, a run record, the webhook queue, a webhook call, `inbox.json`, `one-time-runs.json` or the skips and last scheduled times in `scheduler.json` change. Run logs and the tick time do not count: logs grow with every agent event, and clients poll the tick time with the status. A client refetches what it shows on each event and once after it reconnects. It reconnects 5 s after the stream breaks and stops when the answer is an error, such as from an older daemon or the website's demo. The dashboard follows the stream only while its tab is visible, since browsers allow 6 connections to a host across all tabs, and refetches when the tab shows again.
+`GET /api/events` is a stream of server-sent events with one `data: change` event, at most every 300 ms, after a routine file, a run record, the webhook queue, a webhook call, `inbox.json`, `notifications.json`, `one-time-runs.json` or the skips and last scheduled times in `scheduler.json` change. Run logs and the tick time do not count: logs grow with every agent event, and clients poll the tick time with the status. A client refetches what it shows on each event and once after it reconnects. It reconnects 5 s after the stream breaks and stops when the answer is an error, such as from an older daemon or the website's demo. The dashboard follows the stream only while its tab is visible, since browsers allow 6 connections to a host across all tabs, and refetches when the tab shows again.
 
 Its health is `unreachable` when the request fails, `stale` when there has been no tick or the last tick is more than 5 minutes old, and `healthy` otherwise.
 
