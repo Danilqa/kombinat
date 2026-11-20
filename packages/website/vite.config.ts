@@ -7,8 +7,6 @@ const websiteRoot = import.meta.dirname;
 
 export default defineConfig({
   root: websiteRoot,
-  // GitHub Pages serves the site at https://danilqa.github.io/kombinat/.
-  base: '/kombinat/',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
