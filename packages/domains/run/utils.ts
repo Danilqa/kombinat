@@ -210,11 +210,11 @@ function toLocalDate(date: Date): string {
   return `${date.getFullYear()}-${month}-${day}`;
 }
 
-// Today and the days before it, oldest first, in the local time zone.
 export function getTokenUsageStart(now: Date): Date {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate() - TOKEN_USAGE_DAYS + 1);
 }
 
+// Today and the days before it, oldest first, in the local time zone.
 export function getTokenUsageDates(now: Date): string[] {
   const start = getTokenUsageStart(now);
   return Array.from({ length: TOKEN_USAGE_DAYS }, (_, index) =>
