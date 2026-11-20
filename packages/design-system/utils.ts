@@ -87,7 +87,11 @@ function getClockNow(): number {
   return clockTimer === undefined ? Date.now() : clockNow;
 }
 
-// The clock ticks every second, but a component re-renders only when its text changes.
+// The clock ticks every second, but a component re-renders only when its value changes.
+export function useLiveValue<T extends string | boolean>(read: (now: number) => T): T {
+  return useSyncExternalStore(subscribeToClock, () => read(getClockNow()));
+}
+
 export function useLiveText(format: (now: number) => string): string {
-  return useSyncExternalStore(subscribeToClock, () => format(getClockNow()));
+  return useLiveValue(format);
 }

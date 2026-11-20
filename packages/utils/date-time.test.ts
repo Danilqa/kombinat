@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
+  formatClockOrDayTime,
   formatDayTime,
   formatDuration,
   formatRelative,
@@ -35,6 +36,15 @@ test('formatRelative counts whole units in the past, as a duration does, and rou
 
 test('formatDayTime gives the day and the clock without seconds', () => {
   assert.equal(formatDayTime(new Date(2026, 10, 19, 8, 33, 12).toISOString()), '19 Nov, 08:33');
+});
+
+test('formatClockOrDayTime gives the day only for times on another day', () => {
+  const morning = new Date(2026, 10, 19, 8, 10).getTime();
+  assert.equal(formatClockOrDayTime(new Date(2026, 10, 19, 13, 5).toISOString(), morning), '13:05');
+  assert.equal(
+    formatClockOrDayTime(new Date(2026, 10, 24, 13, 5).toISOString(), morning),
+    '24 Nov, 13:05',
+  );
 });
 
 test('formatDuration matches the dashboard', () => {

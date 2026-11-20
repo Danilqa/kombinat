@@ -29,7 +29,10 @@ export function RunsTable({ runs, total, hasRoutineColumn, onEndReached }: RunsT
       header={
         <Table.Row>
           {hasRoutineColumn && <Table.Head>Routine</Table.Head>}
-          <Table.Head className="w-[16%]">Status</Table.Head>
+          {/* Room for the longest status, Waiting for limit, beside the routine on a phone. */}
+          <Table.Head className={cn('w-[16%]', hasRoutineColumn && 'max-sm:w-[20%]')}>
+            Status
+          </Table.Head>
           <Table.Head className="w-[25%]">Run</Table.Head>
           <Table.Head className="w-[12%] max-sm:hidden">Trigger</Table.Head>
           <Table.Head className="w-[13%] max-sm:w-[16%]">Started</Table.Head>

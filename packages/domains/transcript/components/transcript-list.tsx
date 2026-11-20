@@ -15,6 +15,7 @@ import type {
   TextItem,
   ToolItem,
   TranscriptItem,
+  UsageLimitItem,
 } from '../types';
 import {
   checkIsSubagent,
@@ -27,6 +28,8 @@ import {
   getToolResultText,
   getTranscriptResultLabel,
   getTurnsLabel,
+  getUsageLimitLabel,
+  getUsageLimitPauseLabel,
 } from '../utils';
 
 interface HookRowProps {
@@ -85,6 +88,21 @@ function ModelFallbackRow({ item }: ModelFallbackRowProps) {
         {item.from} → <span className="text-fg">{item.to}</span>
       </span>
       {reason !== null && <span>because {reason}</span>}
+    </div>
+  );
+}
+
+interface UsageLimitRowProps {
+  item: UsageLimitItem;
+}
+
+function UsageLimitRow({ item }: UsageLimitRowProps) {
+  return (
+    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-body-sm text-fg-muted">
+      <span className="text-body font-medium text-info">
+        Paused at the {getUsageLimitLabel(item.limit)}
+      </span>
+      <span className="tabular-nums">{getUsageLimitPauseLabel(item)}</span>
     </div>
   );
 }
@@ -244,6 +262,7 @@ function renderItem(item: TranscriptItem, isRunning: boolean, search: string) {
     .with({ kind: 'tool' }, tool => <ToolRow item={tool} isPending={isRunning} search={search} />)
     .with({ kind: 'result', isError: true }, result => <FailedRow item={result} />)
     .with({ kind: 'result', isError: false }, result => <FinishedRow item={result} />)
+    .with({ kind: 'usage-limit' }, usageLimit => <UsageLimitRow item={usageLimit} />)
     .exhaustive();
 }
 

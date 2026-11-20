@@ -1,4 +1,5 @@
 import type { RoutineName } from 'domains/routine/ids';
+import { checkIsRunAtWork } from 'domains/run/utils';
 import type { SchedulerState, SkipReason } from 'domains/scheduler/types';
 import { cronRunsBetween } from 'utils/cron';
 import { getErrorMessage } from 'utils/error';
@@ -8,6 +9,7 @@ import { loadRoutines } from '../routine/storage';
 import type { Routine } from '../routine/types';
 import { checkIsStarting, startDetachedRun } from '../run/runner';
 import { getRunningRuns } from '../run/storage';
+import { checkIsWaitOver, requestWaitAction } from '../run/usage-limit';
 import { listQueuedRoutines, takeQueuedWebhook } from '../webhook/queue';
 import { startWebhook } from '../webhook/start';
 import { readSchedulerState, writeSchedulerState } from './storage';
@@ -46,21 +48,26 @@ function markScheduled(state: SchedulerState, routine: Routine, scheduledFor: Da
 
 export interface TickResult {
   started: RoutineName[];
+  continued: RoutineName[];
   skipped: string[];
 }
 
 export function tick(now = new Date()): TickResult {
   const state = loadState(now);
   const started: RoutineName[] = [];
+  const continued: RoutineName[] = [];
   const skipped: string[] = [];
   const floor = new Date(now.getTime() - config.catchUpWindowDays * 86_400_000);
   const lastTick = new Date(state.lastTickAt);
   const routines = loadRoutines();
-  const runningNames = new Set([
-    ...getRunningRuns().map(r => r.routine),
-    ...routines.map(r => r.name).filter(name => checkIsStarting(name)),
-  ]);
-  let runningCount = runningNames.size;
+  const runningRuns = getRunningRuns();
+  const startingNames = routines.map(r => r.name).filter(name => checkIsStarting(name));
+  const runningNames = new Set([...runningRuns.map(r => r.routine), ...startingNames]);
+  // A run that waits for a usage limit to reset keeps its routine busy but takes no slot.
+  let runningCount = new Set([
+    ...runningRuns.filter(checkIsRunAtWork).map(r => r.routine),
+    ...startingNames,
+  ]).size;
 
   for (const routine of routines) {
     if (!routine.schedule) continue;
@@ -99,6 +106,14 @@ export function tick(now = new Date()): TickResult {
     started.push(routine.name);
   }
 
+  // After the schedules, so a run that waited out a usage limit never makes one skip.
+  for (const run of runningRuns.toReversed()) {
+    if (!checkIsWaitOver(run, now) || runningCount >= config.maxConcurrentRuns) continue;
+    requestWaitAction(run, 'continue');
+    runningCount += 1;
+    continued.push(run.routine);
+  }
+
   // After the schedules, so the queue never makes one skip.
   for (const name of listQueuedRoutines()) {
     const routine = routines.find(candidate => candidate.name === name);
@@ -114,14 +129,15 @@ export function tick(now = new Date()): TickResult {
 
   state.lastTickAt = now.toISOString();
   writeSchedulerState(state);
-  return { started, skipped };
+  return { started, continued, skipped };
 }
 
 export function startSchedulerLoop(log: (line: string) => void): () => void {
   const run = () => {
     try {
-      const { started, skipped } = tick();
+      const { started, continued, skipped } = tick();
       for (const name of started) log(`started ${name}`);
+      for (const name of continued) log(`continued ${name}`);
       for (const name of skipped) log(`skipped ${name}`);
     } catch (err) {
       log(`tick failed: ${getErrorMessage(err)}`);

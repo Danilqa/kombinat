@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { sessionIdSchema } from 'domains/agent/ids';
 import type { PlanLimits, UsageLimit } from 'domains/daemon/types';
-import type { ToolResult, TranscriptItem } from 'domains/transcript/types';
+import type { ToolResult, TranscriptItem, UsageLimitKind } from 'domains/transcript/types';
 import { toPreview } from 'domains/transcript/utils';
 
 import { config } from '../../config';
@@ -22,6 +22,7 @@ const DEFAULT_MODEL = 'claude-opus-5-5';
 const DEFAULT_EFFORT = 'high';
 const DEFAULT_PERMISSION_MODE = 'auto';
 const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
+const USAGE_LIMIT_POLICIES = ['wait', 'fail'] as const;
 const PERMISSION_MODES = [
   'auto',
   'acceptEdits',
@@ -73,6 +74,9 @@ const usageWindowSchema = z.object({ utilization: z.number(), resetsAt: z.number
 type UsageWindow = z.infer<typeof usageWindowSchema>;
 
 const rateLimitInfoSchema = z.object({
+  status: z.string().optional(),
+  resetsAt: z.number().optional(),
+  rateLimitType: z.string().optional(),
   unifiedWindows: z
     .object({
       five_hour: usageWindowSchema.optional(),
@@ -100,6 +104,7 @@ const claudeEventSchema = z.object({
   num_turns: z.number().optional(),
   duration_ms: z.number().optional(),
   rate_limit_info: rateLimitInfoSchema.optional(),
+  error: z.string().optional(),
 });
 type ClaudeEvent = z.infer<typeof claudeEventSchema>;
 
@@ -250,6 +255,13 @@ function toUsageLimit(window: UsageWindow | undefined): UsageLimit | null {
   };
 }
 
+function toUsageLimitKind(rateLimitType: string | undefined): UsageLimitKind {
+  return match(rateLimitType)
+    .with('five_hour', (): UsageLimitKind => 'session')
+    .with(P.string.startsWith('seven_day'), (): UsageLimitKind => 'week')
+    .otherwise(() => 'other');
+}
+
 function buildArgs(context: RunContext, note: string): string[] {
   const { routine } = context;
   const fallbackModels = splitModels(routine.fallbackModel);
@@ -292,6 +304,8 @@ export const claudeAgent: Agent = {
       permissionMode:
         pickOne(raw.permissionMode, PERMISSION_MODES, 'permissionMode', 'claude') ??
         DEFAULT_PERMISSION_MODE,
+      onUsageLimit:
+        pickOne(raw.onUsageLimit, USAGE_LIMIT_POLICIES, 'onUsageLimit', 'claude') ?? 'wait',
     };
   },
 
@@ -340,6 +354,20 @@ export const claudeAgent: Agent = {
       week: toUsageLimit(windows?.seven_day),
     };
     return limits.session === null && limits.week === null ? null : limits;
+  },
+
+  // A turn cut short by a limit ends with a synthetic message marked rate_limit. The reset comes
+  // from the latest rate limit event, which says rejected once the plan has no usage left.
+  findUsageLimitStop(events) {
+    const claudeEvents = toClaudeEvents(events);
+    const lastMessage = claudeEvents.findLast(event => event.type === 'assistant');
+    const info = claudeEvents.findLast(event => event.type === 'rate_limit_event')?.rate_limit_info;
+    if (lastMessage?.error !== 'rate_limit' || info?.status !== 'rejected') return null;
+    if (info.resetsAt === undefined) return null;
+    return {
+      limit: toUsageLimitKind(info.rateLimitType),
+      resetsAt: new Date(info.resetsAt * 1000).toISOString(),
+    };
   },
 
   buildTranscript(events) {

@@ -10,7 +10,17 @@ import {
 } from 'react';
 import { flushSync } from 'react-dom';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { Ban, Check, ChevronLeft, ChevronRight, Clock, Ellipsis, Loader, X } from 'lucide-react';
+import {
+  Ban,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Ellipsis,
+  Hourglass,
+  Loader,
+  X,
+} from 'lucide-react';
 import { Link } from 'react-router';
 import { match } from 'ts-pattern';
 import { Button, DropdownMenu, ErrorState } from 'design-system/components';
@@ -77,6 +87,7 @@ const blockSurfaceClassNames: Record<BlockVariant, string> = {
   timed_out: 'bg-negative-tint shadow-[inset_2px_0_0_var(--negative)]',
   aborted: 'bg-neutral-tint shadow-[inset_2px_0_0_var(--fg-faint)]',
   running: 'bg-warning-tint shadow-[inset_2px_0_0_var(--warning)]',
+  waiting: 'bg-info-tint shadow-[inset_2px_0_0_var(--info)]',
 };
 
 // The icon repeats the outcome that the tint shows, so it does not depend on colour alone.
@@ -86,6 +97,7 @@ const blockIcons: Record<RunStatus, BlockIcon> = {
   timed_out: { component: Clock, className: 'text-negative' },
   aborted: { component: Ban, className: 'text-fg-muted' },
   running: { component: Loader, className: 'text-warning' },
+  waiting: { component: Hourglass, className: 'text-info' },
 };
 
 const outlinedBlockClassName = 'hover:border-fg-faint';
@@ -120,6 +132,10 @@ const blockStyles: Record<BlockVariant, BlockStyle> = {
     icon: blockIcons.running,
     iconMotionClassName: 'spin-in-place [--spin-duration:2s]',
   },
+  waiting: {
+    className: cn(blockSurfaceClassNames.waiting, tintedBlockClassName),
+    icon: blockIcons.waiting,
+  },
 };
 
 interface LegendItem {
@@ -135,6 +151,7 @@ const legendItems: LegendItem[] = [
   { label: 'Timed out', variant: 'timed_out' },
   { label: 'Aborted', variant: 'aborted' },
   { label: 'Running', variant: 'running' },
+  { label: 'Waiting for limit', variant: 'waiting' },
 ];
 
 function getBlockVariant(entry: CalendarEntry): BlockVariant {

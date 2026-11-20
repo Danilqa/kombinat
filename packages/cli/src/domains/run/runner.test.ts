@@ -25,19 +25,32 @@ fs.writeFileSync(
   bigResultFile,
   `${JSON.stringify({ type: 'result', result: 'x'.repeat(250_000), is_error: false, num_turns: 1 })}\n`,
 );
+// In a folder with limited.jsonl, it stops at a usage limit and its resumed session finishes.
 const fakeClaude = path.join(tmp, 'fake-claude');
-fs.writeFileSync(fakeClaude, `#!/bin/sh\ncat > /dev/null\ncat '${bigResultFile}'\n`, {
-  mode: 0o755,
-});
+fs.writeFileSync(
+  fakeClaude,
+  `#!/bin/sh
+cat > /dev/null
+if [ -f limited.jsonl ]; then
+  echo "$@" >> args.txt
+  case "$*" in *--resume*) cat resumed.jsonl; exit 0 ;; esac
+  cat limited.jsonl
+  exit 1
+fi
+cat '${bigResultFile}'
+`,
+  { mode: 0o755 },
+);
 process.env['CLAUDE_BIN'] = fakeClaude;
 
 const { config } = await import('../../config');
 const { buildRoutine } = await import('../routine/utils');
-const { appendChatEvent } = await import('./event-log');
+const { appendLogEvent } = await import('./event-log');
 const { writePayload, writePrompt } = await import('./payload');
 const { checkIsRunning, checkIsStarting, replyToRun, runRoutine, startDetachedRun } =
   await import('./runner');
 const { checkIsProcessAlive, listRuns, readRunRecord, writeRunRecord } = await import('./storage');
+const { requestWaitAction } = await import('./usage-limit');
 const { makeRunRecord } = await import('domains/run/mocks');
 
 function makeRoutine(name: string, frontmatter: string) {
@@ -479,7 +492,7 @@ function makeFinishedRun(
 test('a reply resumes the session with the last message and leaves the outcome of the run alone', async () => {
   const routine = buildRoutine(path.join(tmp, 'chat.md'), `---\ncwd: ${tmp}\n---\nFind the bug.`);
   const run = makeFinishedRun('chat', '20261117T090000Z-chat');
-  appendChatEvent(run, { type: 'message', text: 'Open a PR with the fix', source: 'dashboard' });
+  appendLogEvent(run, { type: 'message', text: 'Open a PR with the fix', source: 'dashboard' });
   const finished = await replyToRun(routine, run);
   assert.deepEqual(finished, run);
   assert.deepEqual(readRunRecord(run.routine, run.id), run);
@@ -489,7 +502,7 @@ test('a reply resumes the session with the last message and leaves the outcome o
 test('a reply that cannot start logs why', async () => {
   const routine = makeRoutine('chat-command', '');
   const run = makeFinishedRun('chat-command', '20261117T090000Z-cmnd', { agent: 'command' });
-  appendChatEvent(run, { type: 'message', text: 'Again', source: 'dashboard' });
+  appendLogEvent(run, { type: 'message', text: 'Again', source: 'dashboard' });
   const finished = await replyToRun(routine, run);
   assert.equal(finished.replyPid, null);
   assert.deepEqual(readLog(run).at(-1), {
@@ -505,4 +518,125 @@ test('a replying run keeps its routine running until its reply process is gone',
   assert.equal(checkIsRunning(run.routine), false);
   assert.equal(listRuns(run.routine)[0]?.replyPid, null);
   assert.deepEqual(readLog(run), [{ type: 'reply_error', error: 'Reply process disappeared' }]);
+});
+
+const LIMIT_MESSAGE = "You've hit your limit · resets 8pm";
+
+// A routine whose claude stops at the 5-hour limit, which resets in an hour.
+function makeLimitedRoutine(name: string, frontmatter = '') {
+  const cwd = path.join(tmp, name);
+  fs.mkdirSync(cwd, { recursive: true });
+  const toLines = (events: unknown[]) => events.map(event => JSON.stringify(event)).join('\n');
+  fs.writeFileSync(
+    path.join(cwd, 'limited.jsonl'),
+    toLines([
+      { type: 'system', subtype: 'init', session_id: 's1' },
+      { type: 'assistant', message: { content: [{ type: 'text', text: 'Found the race' }] } },
+      {
+        type: 'rate_limit_event',
+        rate_limit_info: {
+          status: 'rejected',
+          resetsAt: Math.floor(Date.now() / 1000) + 3600,
+          rateLimitType: 'five_hour',
+        },
+      },
+      {
+        type: 'assistant',
+        error: 'rate_limit',
+        message: { content: [{ type: 'text', text: LIMIT_MESSAGE }] },
+      },
+      { type: 'result', result: LIMIT_MESSAGE, is_error: true, num_turns: 3, total_cost_usd: 0.5 },
+    ]),
+  );
+  fs.writeFileSync(
+    path.join(cwd, 'resumed.jsonl'),
+    toLines([
+      { type: 'system', subtype: 'init', session_id: 's1' },
+      { type: 'result', result: 'Fixed it', is_error: false, num_turns: 2, total_cost_usd: 0.25 },
+    ]),
+  );
+  return buildRoutine(
+    path.join(tmp, `${name}.md`),
+    `---\ncwd: ${cwd}\n${frontmatter}\n---\nFix it.`,
+  );
+}
+
+async function waitForStatus(routine: string, id: RunId, status: RunRecord['status']) {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const record = readRunRecord(routineNameSchema.parse(routine), id);
+    if (record?.status === status) return record;
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+  return assert.fail(`${routine} never became ${status}`);
+}
+
+test('a run stopped by a usage limit waits for the reset and continues its session', async () => {
+  const runId = runIdSchema.parse('20261119T070000Z-wait');
+  const finishing = runRoutine(makeLimitedRoutine('limited'), { trigger: 'manual', runId });
+  const waiting = await waitForStatus('limited', runId, 'waiting');
+  assert.equal(waiting.pid, process.pid);
+  assert.equal(waiting.error, null);
+  assert.equal(waiting.usageLimit?.limit, 'session');
+  assert.equal(checkIsRunning(waiting.routine), true);
+  requestWaitAction(waiting, 'continue');
+
+  const finished = await finishing;
+  assert.equal(finished.status, 'succeeded');
+  assert.equal(finished.resultText, 'Fixed it');
+  assert.equal(finished.numTurns, 5);
+  assert.equal(finished.costUsd, 0.75);
+  assert.equal(finished.usageLimit, null);
+  const args = fs
+    .readFileSync(path.join(tmp, 'limited', 'args.txt'), 'utf8')
+    .trim()
+    .split('\n');
+  assert.equal(args.length, 2);
+  assert.match(args[1] ?? '', /after your usage limit reset.* --resume s1$/);
+  assert.deepEqual(
+    readLogTypes(finished).filter(type => type.startsWith('usage_limit')),
+    ['usage_limit_wait', 'usage_limit_end'],
+  );
+});
+
+test('a run that stops waiting for a usage limit fails with the limit, and the after hook runs', async () => {
+  const runId = runIdSchema.parse('20261119T070000Z-stop');
+  const finishing = runRoutine(makeLimitedRoutine('limited-stop', 'after: echo after'), {
+    trigger: 'manual',
+    runId,
+  });
+  requestWaitAction(await waitForStatus('limited-stop', runId, 'waiting'), 'stop');
+
+  const finished = await finishing;
+  assert.equal(finished.status, 'failed');
+  assert.equal(finished.error, LIMIT_MESSAGE);
+  assert.equal(finished.usageLimit, null);
+  const log = readLog(finished);
+  assert.ok(isMatching({ type: 'usage_limit_end', outcome: 'stopped' }, log.at(-2)));
+  assert.ok(isMatching({ type: 'after_hook', exitCode: 0 }, log.at(-1)));
+});
+
+test('a routine with onUsageLimit: fail fails at the limit without waiting', async () => {
+  const finished = await runRoutine(makeLimitedRoutine('limited-fail', 'onUsageLimit: fail'), {
+    trigger: 'manual',
+  });
+  assert.equal(finished.status, 'failed');
+  assert.equal(finished.error, LIMIT_MESSAGE);
+  assert.equal(readLogTypes(finished).includes('usage_limit_wait'), false);
+});
+
+test('a waiting run whose runner is gone is aborted and its wait ends', () => {
+  const run = makeFinishedRun('limited-gone', '20261119T070000Z-gone', {
+    status: 'waiting',
+    endedAt: null,
+    pid: spawnSync('true').pid,
+    usageLimit: {
+      limit: 'session',
+      stoppedAt: '2026-11-19T07:06:00Z',
+      continuesAt: '2026-11-19T08:11:00Z',
+    },
+  });
+  const [reconciled] = listRuns(run.routine);
+  assert.equal(reconciled?.status, 'aborted');
+  assert.equal(reconciled.usageLimit, null);
+  assert.ok(isMatching([{ type: 'usage_limit_end', outcome: 'stopped' }], readLog(run)));
 });

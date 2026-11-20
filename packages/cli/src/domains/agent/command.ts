@@ -12,7 +12,7 @@ export const commandAgent: Agent = {
   resolveSettings(raw) {
     rejectUnsupported(
       raw,
-      ['model', 'fallbackModel', 'effort', 'permissionMode', 'maxBudgetUsd'],
+      ['model', 'fallbackModel', 'effort', 'permissionMode', 'maxBudgetUsd', 'onUsageLimit'],
       'command',
     );
     if (raw.command === null) {
@@ -46,6 +46,7 @@ export const commandAgent: Agent = {
   },
 
   readPlanLimits: () => null,
+  findUsageLimitStop: () => null,
 
   buildTranscript(events) {
     const text = events

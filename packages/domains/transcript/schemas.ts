@@ -67,6 +67,21 @@ export const resultItemSchema = z.object({
   durationMs: z.number().nullable(),
 });
 
+export const usageLimitKindSchema = z.enum(['session', 'week', 'other']);
+
+export const usageLimitOutcomeSchema = z.enum(['continued', 'stopped']);
+
+export const usageLimitEndSchema = z.object({ at: z.string(), outcome: usageLimitOutcomeSchema });
+
+export const usageLimitItemSchema = z.object({
+  kind: z.literal('usage-limit'),
+  key: z.string(),
+  limit: usageLimitKindSchema,
+  stoppedAt: z.string(),
+  continuesAt: z.string(),
+  end: usageLimitEndSchema.nullable(),
+});
+
 export const transcriptItemSchema = z.discriminatedUnion('kind', [
   hookItemSchema,
   initItemSchema,
@@ -75,6 +90,7 @@ export const transcriptItemSchema = z.discriminatedUnion('kind', [
   messageItemSchema,
   toolItemSchema,
   resultItemSchema,
+  usageLimitItemSchema,
 ]);
 
 export const transcriptSchema = z.object({

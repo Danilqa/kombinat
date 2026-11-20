@@ -1,9 +1,8 @@
 import { match } from 'ts-pattern';
 
 import type { AgentName } from 'domains/agent/types';
-import type { MessageSource } from 'domains/transcript/types';
 
-import type { AgentSettings, RunContext } from './types';
+import type { AgentSettings, ReplySource, RunContext } from './types';
 
 export function pickOne<T extends string>(
   value: string | null,
@@ -46,13 +45,14 @@ export function getUnattendedNote({ routine, runId, trigger }: RunContext): stri
   ].join(' ');
 }
 
-export function getReplyNote({ routine, runId }: RunContext, source: MessageSource): string {
-  const sender = match(source)
-    .with('dashboard', () => 'the dashboard')
-    .with('webhook', () => 'a webhook')
+export function getReplyNote({ routine, runId }: RunContext, source: ReplySource): string {
+  const reason = match(source)
+    .with('dashboard', () => 'with a message from the dashboard')
+    .with('webhook', () => 'with a message from a webhook')
+    .with('usage_limit', () => 'after your usage limit reset')
     .exhaustive();
   return [
-    `This session continues run ${runId} of the kombinat routine "${routine.name}" with a message from ${sender}.`,
+    `This session continues run ${runId} of the kombinat routine "${routine.name}" ${reason}.`,
     'Nobody can answer questions while you work, so make sensible calls, record them, and finish on your own.',
   ].join(' ');
 }

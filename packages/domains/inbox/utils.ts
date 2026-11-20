@@ -49,7 +49,7 @@ export function getInboxGroup(run: Pick<RunRecord, 'status' | 'resultText'>): In
     .with('succeeded', (): InboxGroup =>
       checkHasNothingToReport(run.resultText) ? 'quiet' : 'findings',
     )
-    .with('running', 'failed', 'timed_out', 'aborted', (): InboxGroup => 'needs_look')
+    .with('running', 'waiting', 'failed', 'timed_out', 'aborted', (): InboxGroup => 'needs_look')
     .exhaustive();
 }
 

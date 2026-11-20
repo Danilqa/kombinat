@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 
-import { match, P } from 'ts-pattern';
+import { isMatching, match, P } from 'ts-pattern';
 
 import { buildCalendar } from 'domains/calendar/utils';
 import type { DaemonStatus } from 'domains/daemon/types';
@@ -14,11 +14,12 @@ import { startRunRequestSchema } from 'domains/routine/schemas';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import { RUNS_CURSOR_ERROR } from 'domains/run/constants';
 import { runIdSchema, type RunId } from 'domains/run/ids';
-import { runMessageSchema } from 'domains/run/schemas';
+import { runMessageSchema, usageLimitWaitActionSchema } from 'domains/run/schemas';
 import type { RunRecord } from 'domains/run/types';
 import {
   checkCanContinueRun,
   checkIsRunActive,
+  checkIsRunAtWork,
   createRunId,
   filterRuns,
   paginateRuns,
@@ -42,7 +43,14 @@ import {
   startDetachedReply,
   startDetachedRun,
 } from './domains/run/runner';
-import { getRunningRuns, listAllRuns, listRuns, readRunRecord } from './domains/run/storage';
+import {
+  checkIsProcessAlive,
+  getRunningRuns,
+  listAllRuns,
+  listRuns,
+  readRunRecord,
+} from './domains/run/storage';
+import { requestWaitAction } from './domains/run/usage-limit';
 import { getSkips, readSchedulerState } from './domains/scheduler/storage';
 import { readSettings, writeSettings } from './domains/settings/storage';
 import {
@@ -139,7 +147,7 @@ function getStatus(startedAt: Date): DaemonStatus {
     codexBin: config.codexBin,
     maxConcurrentRuns: config.maxConcurrentRuns,
     running:
-      getRunningRuns().length +
+      getRunningRuns().filter(checkIsRunAtWork).length +
       loadRoutines().filter(routine => checkIsStarting(routine.name)).length,
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     now: new Date().toISOString(),
@@ -198,6 +206,16 @@ function sendMessage(routine: Routine, run: RunRecord, body: Buffer): ApiRespons
     return fail(409, `${routine.name} is running, send the message once it is done`);
   }
   startDetachedReply(run, { text: message.data.text, source: 'dashboard' });
+  return { status: 202, body: { ok: true } };
+}
+
+function sendWaitAction(run: RunRecord, action: string): ApiResponse {
+  const parsed = usageLimitWaitActionSchema.safeParse(action);
+  if (!parsed.success) return fail(404, 'Not found');
+  if (!isMatching({ status: 'waiting' }, run) || !checkIsProcessAlive(run.pid)) {
+    return fail(409, 'This run is not waiting for a usage limit');
+  }
+  requestWaitAction(run, parsed.data);
   return { status: 202, body: { ok: true } };
 }
 
@@ -333,6 +351,13 @@ function routeApi(request: ApiRequest, context: ApiContext): ApiResponse | Promi
           sendMessage(found, run, context.request.body),
         ),
       ),
+    )
+    .with(
+      ['POST', ['runs', P.string, P.string, 'wait', P.string]],
+      ([, [, routine, id, , action]]) =>
+        withRun(routineNameSchema.parse(routine), runIdSchema.parse(id), run =>
+          sendWaitAction(run, action),
+        ),
     )
     .with(['GET', ['runs', P.string, P.string, 'transcript']], ([, [, routine, id]]) =>
       withRun(routineNameSchema.parse(routine), runIdSchema.parse(id), record =>

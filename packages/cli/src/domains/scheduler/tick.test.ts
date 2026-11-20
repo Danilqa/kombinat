@@ -6,12 +6,14 @@ import { test } from 'node:test';
 
 import { routineNameSchema } from 'domains/routine/ids';
 import { runIdSchema } from 'domains/run/ids';
+import type { RunRecord } from 'domains/run/types';
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kombinat-test-'));
 const routinesDir = path.join(tmp, 'routines');
 const stateDir = path.join(tmp, 'state');
 process.env['KOMBINAT_ROUTINES_DIR'] = routinesDir;
 process.env['KOMBINAT_STATE_DIR'] = stateDir;
+process.env['KOMBINAT_MAX_CONCURRENT'] = '3';
 // Replies that the ticks start fail at once instead of running a real claude.
 process.env['CLAUDE_BIN'] = path.join(tmp, 'missing-claude');
 fs.mkdirSync(routinesDir);
@@ -24,6 +26,7 @@ const chat = routineNameSchema.parse('chat');
 const { tick } = await import('./tick');
 const { readSchedulerState, writeSchedulerState } = await import('./storage');
 const { writeRunRecord } = await import('../run/storage');
+const { startDetachedRun } = await import('../run/runner');
 const { countQueuedWebhooks, enqueueWebhook } = await import('../webhook/queue');
 const { makeRunRecord } = await import('domains/run/mocks');
 const { sessionIdSchema } = await import('domains/agent/ids');
@@ -54,7 +57,7 @@ test('first tick only records the tick time', () => {
   writeRoutine('every-minute', 'schedule: "* * * * *"\nenabled: false');
   const now = new Date('2026-09-30T10:00:30');
   const result = tick(now);
-  assert.deepEqual(result, { started: [], skipped: [] });
+  assert.deepEqual(result, { started: [], continued: [], skipped: [] });
   assert.equal(readSchedulerState()?.lastTickAt, now.toISOString());
 });
 
@@ -90,6 +93,7 @@ test('a routine that is still running is skipped and not started twice', () => {
     logFile: path.join(tmp, 'r1.jsonl'),
     replyPid: null,
     conversation: null,
+    usageLimit: null,
   });
   const result = tick(new Date('2026-09-30T10:02:30'));
   assert.deepEqual(result.started, []);
@@ -98,6 +102,73 @@ test('a routine that is still running is skipped and not started twice', () => {
     readSchedulerState()?.routines[everyMinute]?.skips.at(-1)?.reason,
     'already_running',
   );
+});
+
+test('runs past their usage limit reset continue, oldest first, only into slots that no run takes', () => {
+  const now = new Date('2026-09-30T10:02:40');
+  const minutesAgo = (minutes: number) => new Date(now.getTime() - minutes * 60_000).toISOString();
+  const writeWaitingRun = (name: string, startedAgo: number, continuesAgo: number) => {
+    const run = makeRunRecord({
+      id: runIdSchema.parse(`${name}-1`),
+      routine: routineNameSchema.parse(name),
+      status: 'waiting',
+      startedAt: minutesAgo(startedAgo),
+      endedAt: null,
+      pid: process.pid,
+      logFile: path.join(tmp, `${name}-1.jsonl`),
+      usageLimit: {
+        limit: 'session',
+        stoppedAt: minutesAgo(60),
+        continuesAt: minutesAgo(continuesAgo),
+      },
+    });
+    writeRunRecord(run);
+    return run;
+  };
+  const first = writeWaitingRun('reset-first', 300, 2);
+  const second = writeWaitingRun('reset-second', 200, 1);
+  const later = writeWaitingRun('reset-later', 400, -5);
+  // Its before hook keeps it from writing a record, so only the daemon knows it started.
+  writeRoutine('hooked', 'before: sleep 1\nagent: command\ncommand: "true"');
+  startDetachedRun(routineNameSchema.parse('hooked'), { trigger: 'manual' });
+
+  assert.deepEqual(tick(now).continued, ['reset-first']);
+  const getActionFile = (run: RunRecord) =>
+    path.join(stateDir, 'runs', run.routine, `${run.id}.wait`);
+  assert.equal(fs.readFileSync(getActionFile(first), 'utf8'), 'continue');
+  assert.equal(fs.existsSync(getActionFile(second)), false);
+  assert.equal(fs.existsSync(getActionFile(later)), false);
+  for (const run of [first, second, later]) {
+    writeRunRecord({ ...run, status: 'succeeded', usageLimit: null });
+  }
+  fs.rmSync(path.join(routinesDir, 'hooked.md'));
+});
+
+test('a run that waits for a usage limit keeps its routine busy but takes no slot', () => {
+  const waitingNames = ['wait-a', 'wait-b', 'wait-c'];
+  for (const name of waitingNames) {
+    writeRoutine(name, 'schedule: "* * * * *"');
+    writeRunRecord(
+      makeRunRecord({
+        id: runIdSchema.parse(`${name}-1`),
+        routine: routineNameSchema.parse(name),
+        status: 'waiting',
+        pid: process.pid,
+        logFile: path.join(tmp, `${name}-1.jsonl`),
+        usageLimit: {
+          limit: 'session',
+          stoppedAt: '2026-09-30T10:00:00Z',
+          continuesAt: '2026-09-30T11:01:00Z',
+        },
+      }),
+    );
+  }
+  writeRoutine('free', 'schedule: "* * * * *"\nagent: command\ncommand: "true"');
+
+  const result = tick(new Date('2026-09-30T10:03:30'));
+  assert.deepEqual(result.started, ['free']);
+  for (const name of waitingNames) assert.ok(result.skipped.includes(`${name} (already running)`));
+  for (const name of [...waitingNames, 'free']) fs.rmSync(path.join(routinesDir, `${name}.md`));
 });
 
 test('catch-up window never reaches back before the last tick', () => {

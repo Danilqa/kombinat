@@ -1,4 +1,4 @@
-import { match, P } from 'ts-pattern';
+import { isMatching, match, P } from 'ts-pattern';
 
 import { buildCalendar } from 'domains/calendar/utils';
 import type { DaemonStatus } from 'domains/daemon/types';
@@ -10,11 +10,12 @@ import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import { RUNS_CURSOR_ERROR } from 'domains/run/constants';
 import { runIdSchema, type RunId } from 'domains/run/ids';
-import { runMessageSchema } from 'domains/run/schemas';
+import { runMessageSchema, usageLimitWaitActionSchema } from 'domains/run/schemas';
 import type { RunRecord } from 'domains/run/types';
 import {
   checkCanContinueRun,
   checkIsRunActive,
+  checkIsRunAtWork,
   createRunId,
   filterRuns,
   findExpiredRuns,
@@ -228,7 +229,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
   }
 
   function getStatus(now: Date): DaemonStatus {
-    const running = listRuns(now).filter(checkIsRunActive).length;
+    const running = listRuns(now).filter(checkIsRunAtWork).length;
     return {
       pid: 48213,
       startedAt: daemonStartedAt.toISOString(),
@@ -278,6 +279,16 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
       return fail(409, `${routine.name} is running, send the message once it is done`);
     }
     history.sendMessage(routine.name, run.id, message.data.text, now);
+    return { status: 202, body: { ok: true } };
+  }
+
+  function sendWaitAction(run: RunRecord, action: string, now: Date): ApiResponse {
+    const parsed = usageLimitWaitActionSchema.safeParse(action);
+    if (!parsed.success) return fail(404, 'Not found');
+    if (!isMatching({ status: 'waiting' }, run)) {
+      return fail(409, 'This run is not waiting for a usage limit');
+    }
+    history.sendWaitAction(run.routine, run.id, parsed.data, now);
     return { status: 202, body: { ok: true } };
   }
 
@@ -346,6 +357,14 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
           const run = findRun(routine.name, runIdSchema.parse(id), now);
           return run === null ? fail(404, 'Run not found') : sendMessage(routine, run, body, now);
         }),
+      )
+      .with(
+        ['POST', ['runs', P.string, P.string, 'wait', P.string]],
+        ([, [, name, id, , action]]) =>
+          withRoutine(routineNameSchema.parse(name), routine => {
+            const run = findRun(routine.name, runIdSchema.parse(id), now);
+            return run === null ? fail(404, 'Run not found') : sendWaitAction(run, action, now);
+          }),
       )
       .with(['GET', ['runs', P.string, P.string, 'transcript']], ([, [, routine, id]]) => {
         const run = findRun(routineNameSchema.parse(routine), runIdSchema.parse(id), now);

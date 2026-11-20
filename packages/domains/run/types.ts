@@ -9,6 +9,8 @@ import type {
   runsPageSchema,
   runStatusSchema,
   runTriggerSchema,
+  usageLimitWaitActionSchema,
+  usageLimitWaitSchema,
 } from './schemas';
 
 export type RunStatus = z.infer<typeof runStatusSchema>;
@@ -17,6 +19,8 @@ export type RunRecord = z.infer<typeof runRecordSchema>;
 export type RunsCursor = z.infer<typeof runsCursorSchema>;
 export type RunsCursorKey = z.infer<typeof runsCursorKeySchema>;
 export type RunsPage = z.infer<typeof runsPageSchema>;
+export type UsageLimitWait = z.infer<typeof usageLimitWaitSchema>;
+export type UsageLimitWaitAction = z.infer<typeof usageLimitWaitActionSchema>;
 
 export interface RunsPageQuery {
   routine: RoutineName | null;

@@ -15,7 +15,7 @@ Both run with `/bin/sh -c` and have 3 minutes, after which they are killed toget
 
 ## After
 
-`after` runs once the run has ended, for example to send its result or its failure somewhere. It runs after every run that ends as `succeeded`, `failed` or `timed_out`. A failed run includes one that never started its agent: the `cwd` is missing, the agent binary is not found or `before` failed.
+`after` runs once the run has ended, for example to send its result or its failure somewhere. It runs after every run that ends as `succeeded`, `failed` or `timed_out`. A failed run includes one that never started its agent: the `cwd` is missing, the agent binary is not found or `before` failed. A run that waits for a usage limit to reset runs it once, when it ends after it continued or stopped waiting.
 
 It does not run when the run is `aborted`, which means the runner itself stopped, for example when the Mac restarted. A schedule time that was skipped has no run, so nothing runs either.
 

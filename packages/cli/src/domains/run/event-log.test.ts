@@ -8,7 +8,7 @@ import { match } from 'ts-pattern';
 
 import { makeRunRecord } from 'domains/run/mocks';
 
-import { appendChatEvent, buildRunTranscript, readLastMessage, readRunEvents } from './event-log';
+import { appendLogEvent, buildRunTranscript, readLastMessage, readRunEvents } from './event-log';
 
 test('the before hook comes first and every logged event is counted', () => {
   const events = [
@@ -140,12 +140,71 @@ test('each message is followed by its reply, after the after hook of the run', (
   });
 });
 
+test('a usage limit wait replaces the result it cut short, and the continued session follows it', () => {
+  const wait = {
+    limit: 'session',
+    stoppedAt: '2026-11-19T07:06:00Z',
+    continuesAt: '2026-11-19T08:11:00Z',
+  } as const;
+  const events = [
+    { type: 'system', subtype: 'init', model: 'claude-opus-5-5', cwd: '/repo' },
+    { type: 'assistant', message: { content: [{ type: 'text', text: 'Found the race' }] } },
+    { type: 'result', result: "You've hit your limit", is_error: true, num_turns: 3 },
+    { type: 'usage_limit_wait', ...wait },
+    { type: 'usage_limit_end', at: '2026-11-19T07:30:00Z', outcome: 'continued' },
+    { type: 'system', subtype: 'init', model: 'claude-opus-5-5', cwd: '/repo' },
+    { type: 'assistant', message: { content: [{ type: 'text', text: 'Fixed it' }] } },
+    { type: 'result', result: 'Fixed it', is_error: false, num_turns: 2 },
+    { type: 'after_hook', command: 'notify-slack', exitCode: 0, output: '' },
+  ];
+  const { eventCount, items } = buildRunTranscript('claude', events);
+  assert.equal(eventCount, events.length);
+  assert.deepEqual(
+    items.map(item => [item.kind, item.key]),
+    [
+      ['init', 'init-0'],
+      ['text', '1-0'],
+      ['usage-limit', 'usage-limit-0'],
+      ['text', 'resume-1-1-0'],
+      ['result', 'resume-1-result-2'],
+      ['hook', 'hook-0'],
+    ],
+  );
+  assert.deepEqual(items[2], {
+    kind: 'usage-limit',
+    key: 'usage-limit-0',
+    ...wait,
+    end: { at: '2026-11-19T07:30:00Z', outcome: 'continued' },
+  });
+});
+
+test('a usage limit that is still being waited out has no end', () => {
+  const events = [
+    { type: 'system', subtype: 'init', model: 'claude-opus-5-5', cwd: '/repo' },
+    { type: 'result', result: "You've hit your limit", is_error: true, num_turns: 3 },
+    {
+      type: 'usage_limit_wait',
+      limit: 'week',
+      stoppedAt: '2026-11-19T07:06:00Z',
+      continuesAt: '2026-11-24T08:01:00Z',
+    },
+  ];
+  assert.deepEqual(
+    buildRunTranscript('claude', events).items.map(item =>
+      match(item)
+        .with({ kind: 'usage-limit' }, ({ limit, end }) => [item.kind, limit, end])
+        .otherwise(() => [item.kind]),
+    ),
+    [['init'], ['usage-limit', 'week', null]],
+  );
+});
+
 test('reads the last message sent to a run', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kombinat-event-log-'));
   const record = makeRunRecord({ logFile: path.join(dir, 'run.jsonl') });
   assert.equal(readLastMessage(record), null);
-  appendChatEvent(record, { type: 'message', text: 'Open a PR', source: 'dashboard' });
-  appendChatEvent(record, { type: 'reply_error', error: 'failed' });
-  appendChatEvent(record, { type: 'message', text: 'Try again', source: 'webhook' });
+  appendLogEvent(record, { type: 'message', text: 'Open a PR', source: 'dashboard' });
+  appendLogEvent(record, { type: 'reply_error', error: 'failed' });
+  appendLogEvent(record, { type: 'message', text: 'Try again', source: 'webhook' });
   assert.deepEqual(readLastMessage(record), { text: 'Try again', source: 'webhook' });
 });

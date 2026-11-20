@@ -25,6 +25,7 @@ export function makeRunRecord(overrides: Partial<RunRecord> = {}): RunRecord {
     logFile: '/tmp/run-1.jsonl',
     replyPid: null,
     conversation: null,
+    usageLimit: null,
     ...overrides,
   };
 }

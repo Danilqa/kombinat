@@ -43,6 +43,7 @@ function makeRun(routine: string, id: string, overrides: Partial<RunRecord> = {}
     logFile: `/state/runs/${routine}/${id}.jsonl`,
     replyPid: null,
     conversation: null,
+    usageLimit: null,
     ...overrides,
   };
 }

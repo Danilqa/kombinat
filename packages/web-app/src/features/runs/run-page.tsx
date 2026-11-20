@@ -6,7 +6,7 @@ import { isMatching } from 'ts-pattern';
 import { Button, Card, ErrorState, LoadingState, Separator, Tabs } from 'design-system/components';
 import { PageHeader } from 'design-system/layouts';
 import { routineNameSchema } from 'domains/routine/ids';
-import { RunDetailList, RunOutput, RunStatusBadge } from 'domains/run/components';
+import { RunDetailList, RunOutput, RunStatusBadge, UsageLimitCard } from 'domains/run/components';
 import { runIdSchema } from 'domains/run/ids';
 import { getRunWithTranscript } from 'domains/run/requests';
 import type { RunWithTranscript } from 'domains/run/types';
@@ -128,6 +128,13 @@ export function RunPage() {
       </header>
       {error && <ErrorState message={error.message} />}
       {isPending && <LoadingState />}
+      {data && data.run.usageLimit !== null && (
+        <UsageLimitCard
+          key={data.run.usageLimit.stoppedAt}
+          run={data.run}
+          wait={data.run.usageLimit}
+        />
+      )}
       {data && <RunView run={data.run} transcript={data.transcript} />}
     </div>
   );

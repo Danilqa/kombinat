@@ -42,6 +42,7 @@
   --positive-tint: color-mix(in srgb, var(--positive) 13%, var(--surface));
   --negative-tint: color-mix(in srgb, var(--negative) 13%, var(--surface));
   --warning-tint: color-mix(in srgb, var(--warning) 13%, var(--surface));
+  --info-tint: color-mix(in srgb, var(--info) 14%, var(--surface));
   --neutral-tint: color-mix(in srgb, #fff 6%, var(--surface));
 
   --font-size-title-lg: 22px;
@@ -133,6 +134,7 @@
   --color-positive-tint: var(--positive-tint);
   --color-negative-tint: var(--negative-tint);
   --color-warning-tint: var(--warning-tint);
+  --color-info-tint: var(--info-tint);
   --color-neutral-tint: var(--neutral-tint);
 
   --color-background: var(--background);
