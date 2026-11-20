@@ -8,42 +8,25 @@ One routine is one markdown file, so anyone on the team can write one. Merge it 
 
 ⭐ Support Kombinat with a [star on GitHub](https://github.com/Danilqa/kombinat) so more people can find it.
 
-## 💡 Why
+## 💡 Features
 
-- **Merging is the deploy.** A routine goes through review like code and is live within 5 minutes.
-- **Your setup, as is.** Agents run with your logins, skills, MCP servers, browser control and `CLAUDE.md`.
-- **No API bill.** Claude Code and Codex use the subscription you already pay for.
-- **Every run on record.** Full transcripts in the browser, in the terminal and on your phone, with a chat to continue any run.
-- **It stops when it should.** Timeouts, an optional budget cap and no overlapping runs.
-- **It starts on events too.** Linear, GitHub or any other app starts a routine with a webhook.
-- **Small.** One command, two dependencies, no cloud and no database.
+- **Routines in git.** One markdown file each, live within 5 minutes of the merge.
+- **Schedule or webhook.** Cron, or a request from Linear, GitHub or any other app.
+- **Any agent.** Claude Code, Codex or any other CLI.
+- **Your setup.** Your logins, skills, MCP servers, browser and `CLAUDE.md`.
+- **No API bill.** Runs on your subscription and shows how much of the Claude plan is left.
+- **Waits out limits.** A run that hits a Claude usage limit continues after the reset.
+- **Inbox.** Unread runs, with failures and findings first.
+- **Full transcripts.** Search them, and chat to continue any run.
+- **Everywhere.** Dashboard in the browser, the terminal or as an app on your phone.
+- **Guardrails.** Timeouts, a budget cap, no overlapping runs and catch-up after sleep.
+- **Small.** One command, two dependencies, no cloud, no database, no telemetry.
 
 ## 🤖 What to run
 
-Example routines from the [live demo](https://danilqa.github.io/kombinat/).
+A routine can be basically any automation, for your team or at home. Teams use them to work through issues overnight, fix bugs and flaky tests, remove dead code, watch production and draft release notes. At home, routines can look for discounts, book appointments, check the weather or tell you when a website changes.
 
-| Routine                                                                                        | When                                                  | What it does                                                   |
-| ---------------------------------------------------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------- |
-| [night-agent-tasks](https://danilqa.github.io/kombinat/routines/night-agent-tasks)             | Daily at 02:00                                        | Works through the issues labelled agent while I sleep          |
-| [bug-fix-pickup](https://danilqa.github.io/kombinat/routines/bug-fix-pickup)                   | Daily at 11:30 and 14:30                              | Fixes the oldest unassigned bug and opens a pull request       |
-| [flaky-e2e-fixer](https://danilqa.github.io/kombinat/routines/flaky-e2e-fixer)                 | Weekdays at 07:00                                     | Finds flaky end-to-end tests in CI and fixes them              |
-| [dead-code-cleanup](https://danilqa.github.io/kombinat/routines/dead-code-cleanup)             | Weekly on Monday at 10:00                             | Removes dead code and feature flags that are on for everyone   |
-| [on-call-engineer](https://danilqa.github.io/kombinat/routines/on-call-engineer)               | Daily at 09:00, 13:00, 17:00 and 21:00 and on webhook | Checks for production incidents and proposes fixes             |
-| [post-release-monitoring](https://danilqa.github.io/kombinat/routines/post-release-monitoring) | Daily at 10:00 and 16:00                              | Watches what shipped in the last 3 days and fixes regressions  |
-| [design-ux-issues](https://danilqa.github.io/kombinat/routines/design-ux-issues)               | Daily at 03:30                                        | Clicks through the app at night and files design and UX issues |
-| [support-signals](https://danilqa.github.io/kombinat/routines/support-signals)                 | Daily at 18:00                                        | Turns the day's support chats into product signals             |
-| [write-release-notes](https://danilqa.github.io/kombinat/routines/write-release-notes)         | Manual                                                | Drafts release notes from what was merged since the last tag   |
-
-It is not only for work. On a Mac at home, routines can look for discounts, book appointments, check the weather or tell you when a website changes.
-
-## 🆚 How it compares
-
-| Instead of                        | Kombinat gives you                                                                                                                             |
-| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Running Claude Code by hand       | The work happens on schedule, and nobody has to remember it.                                                                                   |
-| Claude Code's own Routines        | Routines that live in git and go through review, run on a machine you control with your local setup, and can use Codex or any other CLI agent. |
-| A cron job that calls `claude -p` | Run history, transcripts, timeouts, no overlapping runs, catch-up after sleep, a dashboard and webhooks, without building them.                |
-| A scheduled CI workflow           | Agents that run where your logins, skills and MCP servers already are, on your subscription login.                                             |
+See example routines in the [live demo](https://danilqa.github.io/kombinat/).
 
 ## 🚀 Quickstart
 
@@ -81,7 +64,7 @@ The daemon serves a dashboard at http://localhost:7433.
 
 ### As an app
 
-The dashboard installs as an app with its own window and icon: Install in the address bar of Chrome or Edge, File → Add to Dock in Safari on a Mac, or Share → Add to Home Screen on an iPhone. Install it from http://localhost:7433 or from a [Tailscale Serve](#with-tailscale-serve) address, which stay the same, unlike the local port of `kombinat connect`. In Chrome and Edge, the icon counts the unread runs of the Inbox. When the daemon can't be reached, the app says so and opens the dashboard by itself once it answers.
+The dashboard installs as an app with its own window and icon: Install in the address bar of Chrome or Edge, File → Add to Dock in Safari on a Mac, or Share → Add to Home Screen on an iPhone. Install it from http://localhost:7433 or from a [Tailscale Serve](docs/remote-access.md#with-tailscale-serve) address, which stay the same, unlike the local port of `kombinat connect`. In Chrome and Edge, the icon counts the unread runs of the Inbox. When the daemon can't be reached, the app says so and opens the dashboard by itself once it answers.
 
 ### In the terminal
 
@@ -91,30 +74,7 @@ The dashboard installs as an app with its own window and icon: Install in the ad
 
 ## 🌐 Remote access
 
-### Over SSH
-
-Turn on Remote Login on the Mac that runs Kombinat, in System Settings → General → Sharing. Then, on your laptop:
-
-```bash
-npx kombinat connect admin@mac-mini         # dashboard in the browser
-npx kombinat connect admin@mac-mini --tui   # dashboard in the terminal
-```
-
-It opens an SSH tunnel to the daemon, then the dashboard. SSH asks for the password if you have no key set up. Ctrl-C disconnects. Instead of `admin@mac-mini`, use anything `ssh` accepts: a host from `~/.ssh/config`, an IP address or a Tailscale machine name. If the daemon there uses another `KOMBINAT_PORT`, add `--port`.
-
-You can also ssh in and run `pnpm kombinat tui` in the folder Kombinat runs in.
-
-### With Tailscale Serve
-
-To open the dashboard from any device in your tailnet, your phone included, run this on the Mac that runs Kombinat:
-
-```bash
-tailscale serve --bg 7433
-```
-
-The dashboard is then at `https://mac-mini.<your-tailnet>.ts.net`, and `npx kombinat tui --url https://mac-mini.<your-tailnet>.ts.net` shows it in the terminal. Serve needs HTTPS certificates in your tailnet, the command asks to turn them on. They put the machine name in public certificate logs. It stays on after a reboot, `tailscale serve --https=443 off` turns it off. If the Mac has no `tailscale` command, see [Using the Tailscale CLI](https://tailscale.com/kb/1080/cli).
-
-Everyone who can reach the Mac in your tailnet can then read transcripts, start routines, message their agents and run any prompt they write with a routine's agent, folder and permissions. To limit that, allow only some people to reach port 443 of the Mac in your [Tailscale access rules](https://tailscale.com/kb/1018/acls).
+To open the dashboard from your laptop or phone, connect over SSH with `npx kombinat connect`, or share it in your tailnet with Tailscale Serve. See [docs/remote-access.md](docs/remote-access.md).
 
 ## 📚 Example routines
 
@@ -132,20 +92,11 @@ One row per file in [`example/routines/`](example/routines/). Put the same `rout
 
 ## 🧩 How it works
 
-- Each routine is a markdown file. The frontmatter sets the schedule and settings, the body is the prompt.
-- A small daemon checks every 30 seconds which routines are due and starts their agent. It also serves a dashboard at http://localhost:7433.
-- launchd on macOS or systemd on Linux keeps the daemon running and starts it again after a reboot. Runs only happen while the computer is awake and you are logged in. On Linux, [lingering](docs/linux.md#lingering) lets them run while you are logged out.
-- Logs and run history are stored in `~/.kombinat/`. Runs are kept forever by default. The settings menu of the Runs page, or `s` in the terminal dashboard, deletes runs and [webhook calls](docs/webhook.md#call-log) older than a week, a month or 3 months, always keeping the last run of each routine.
-- Claude and Codex use your subscription login. API key variables are removed from their environment.
+A small daemon starts the agents of due routines, serves the dashboard and keeps the run history. See [docs/how-it-works.md](docs/how-it-works.md).
 
 ## 🔒 Security
 
-- The dashboard listens on localhost only and has no login, so other users of the machine can reach it. Whoever reaches it can message the agent of a finished run or run a routine with any prompt they write, and the agent then works with the routine's folder and permissions. Web pages from other sites cannot start runs or send messages through it. To open it from another machine, use SSH or Tailscale Serve and limit who can reach it, see [Remote access](#-remote-access).
-- Each routine sets its own permission mode, see [Agents](#agents). By default Claude Code is denied anything that needs approval, and Codex writes only in its workspace. `bypassPermissions` and `danger-full-access` let the agent do anything your user can.
-- A routine that reads outside text, such as issues, support chats or a webhook body, can be steered by that text. Give it the narrowest permissions, let it open pull requests but not merge them, and check webhook requests with a [`webhookGate`](docs/webhook.md#gate).
-- The daemon runs `git pull` every 5 minutes and installs dependencies when the lockfile changes, so protect `main` with review.
-- No telemetry. The daemon makes no network calls of its own, only what it starts does: git, your package manager, the agents and your routines' commands. The dashboard loads its fonts from Google Fonts.
-- Check the terms of your plan before a team shares one subscription login.
+The dashboard has no login, and agents can do whatever their routine's permissions allow. Read [docs/security.md](docs/security.md) before you open the dashboard to other people or let a routine read issues, chats or webhooks.
 
 ## 📦 Setup
 
