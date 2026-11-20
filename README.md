@@ -24,6 +24,10 @@ A routine can be basically any automation, for your team or at home. Teams use t
 
 See example routines in the [live demo](https://danilqa.github.io/kombinat/).
 
+## 😄 Fun fact
+
+Kombinat runs as a software factory that improves and promotes itself, with a human reviewing every step. See for yourself in the [closed issues](https://github.com/Danilqa/kombinat/issues?q=is%3Aissue%20state%3Aclosed).
+
 ## 🚀 Quickstart
 
 You need Node 24 and Claude Code or Codex, logged in. On Linux, see [docs/linux.md](docs/linux.md).
