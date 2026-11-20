@@ -284,6 +284,72 @@ test('keeps the breadcrumbs, the section and its table header stacked as the pag
   expect(headerTops.filter(top => top > sectionBottom && top < sectionBottom + 32)).toHaveLength(1);
 });
 
+// The browser asks for the permission in a prompt that Playwright cannot answer.
+const FAKE_NOTIFICATIONS = `
+  window.shownNotifications = [];
+  window.Notification = class extends EventTarget {
+    static permission = 'default';
+    static async requestPermission() {
+      Notification.permission = 'granted';
+      return 'granted';
+    }
+    constructor(title, options) {
+      super();
+      shownNotifications.push(this);
+      reportNotification(title, options.body);
+    }
+    close() {}
+  };
+`;
+
+test('notifies of the failures and findings of a routine and opens the run on a click', async ({
+  page,
+  kombinat,
+  time,
+}) => {
+  const notifications: string[] = [];
+  await page.exposeFunction('reportNotification', (title: string, body: string) => {
+    notifications.push(`${title}: ${body}`);
+  });
+  await page.addInitScript({ content: FAKE_NOTIFICATIONS });
+  kombinat.addRoutine({ name: 'watch-incidents' });
+  kombinat.addRoutine({ name: 'triage-sentry' });
+  kombinat.lookAtInbox(time.minutesAgo(120));
+  kombinat.addRun({ routine: 'watch-incidents', status: 'failed', startedAt: time.minutesAgo(90) });
+  await page.goto('/routines/watch-incidents');
+
+  await page.getByRole('button', { name: 'Notify: Off for watch-incidents' }).click();
+  await page.getByRole('menuitemradio', { name: 'Failures and findings' }).click();
+
+  const notify = page.getByRole('button', {
+    name: 'Notify: Failures + findings for watch-incidents',
+  });
+  await expect(notify).toBeVisible();
+  kombinat.addRun({
+    routine: 'watch-incidents',
+    resultText: 'No open incidents.',
+    startedAt: time.minutesAgo(30),
+  });
+  kombinat.addRun({ routine: 'triage-sentry', status: 'failed', startedAt: time.minutesAgo(20) });
+  const found = kombinat.addRun({
+    routine: 'watch-incidents',
+    resultText: '## The 5xx rate is 4%\n\nThe checkout API fails.',
+    startedAt: time.minutesAgo(10),
+  });
+  await expect(
+    page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: /Inbox/ }),
+  ).toHaveAccessibleName('Inbox 4 unread');
+  await expect
+    .poll(() => notifications)
+    .toEqual(['watch-incidents has findings: The 5xx rate is 4%']);
+
+  await page.evaluate("shownNotifications[0].dispatchEvent(new Event('click'))");
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(found.id);
+
+  await page.goto('/routines/watch-incidents');
+  await expect(notify).toBeVisible();
+});
+
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 

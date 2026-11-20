@@ -12,7 +12,7 @@
 - **Your setup.** Your logins, skills, MCP servers, browser and `CLAUDE.md`.
 - **No API bill.** Runs on your subscription and shows how much of the Claude plan is left.
 - **Waits out limits.** A run that hits a Claude usage limit continues after the reset.
-- **Inbox.** Unread runs, with failures and findings first.
+- **Inbox.** Unread runs, with failures and findings first, and a notification for the ones you pick.
 - **Full transcripts.** Search them, and chat to continue any run.
 - **Everywhere.** Dashboard in the browser, the terminal or as a PWA on your phone and computer.
 - **Guardrails.** Timeouts, a budget cap, no overlapping runs and catch-up after sleep.

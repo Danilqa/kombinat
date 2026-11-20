@@ -1,9 +1,20 @@
-import { match } from 'ts-pattern';
+import { isMatching, match } from 'ts-pattern';
 
+import type { RoutineName } from '../routine/ids';
 import type { RunRecord } from '../run/types';
-import { checkIsRunActive } from '../run/utils';
-import { INBOX_GROUPS } from './constants';
-import type { InboxGroup, InboxRunKey, InboxSection, InboxState } from './types';
+import { checkIsRunActive, getRunStatusLabel } from '../run/utils';
+import { DEFAULT_NOTIFY_LEVEL, INBOX_GROUPS, MAX_RUN_NOTIFICATIONS } from './constants';
+import { notifyLevelsSchema } from './schemas';
+import type {
+  Inbox,
+  InboxGroup,
+  InboxRunKey,
+  InboxSection,
+  InboxState,
+  NotifyLevel,
+  NotifyLevels,
+  RunNotification,
+} from './types';
 
 const NOTHING_TO_REPORT = /^[\s#*_>`-]*(no|nothing)\b/i;
 
@@ -72,4 +83,104 @@ export function getInboxRunSummary(run: Pick<RunRecord, 'error' | 'resultText'>)
   const text = run.error ?? run.resultText ?? '';
   const line = text.split('\n').find(candidate => candidate.trim() !== '') ?? '';
   return line.replace(/^\s*#+\s*/, '').trim();
+}
+
+export function getNotifyLevelLabel(level: NotifyLevel): string {
+  return match(level)
+    .with('failures_and_findings', () => 'Failures and findings')
+    .with('failures', () => 'Failures only')
+    .with('every_run', () => 'Every run')
+    .with('never', () => 'Never')
+    .exhaustive();
+}
+
+export function getNotifyLevelShortLabel(level: NotifyLevel): string {
+  return match(level)
+    .with('failures_and_findings', () => 'Failures + findings')
+    .with('failures', () => 'Failures only')
+    .with('every_run', () => 'Every run')
+    .with('never', () => 'Off')
+    .exhaustive();
+}
+
+// A routine that never notifies is left out, so only the routines that notify are kept.
+export function changeNotifyLevel(
+  levels: NotifyLevels,
+  routine: RoutineName,
+  level: NotifyLevel,
+): NotifyLevels {
+  const others = Object.entries(levels).filter(([name]) => name !== routine);
+  const kept = isMatching(DEFAULT_NOTIFY_LEVEL, level) ? others : [...others, [routine, level]];
+  return notifyLevelsSchema.parse(Object.fromEntries(kept));
+}
+
+// A renamed or deleted routine keeps its level in the file, but it can no longer notify.
+export function keepNotifyLevelsOf(levels: NotifyLevels, routines: RoutineName[]): NotifyLevels {
+  const names = new Set<string>(routines);
+  return notifyLevelsSchema.parse(
+    Object.fromEntries(Object.entries(levels).filter(([name]) => names.has(name))),
+  );
+}
+
+export function checkIsRunNotified(
+  run: Pick<RunRecord, 'status' | 'resultText'>,
+  level: NotifyLevel,
+): boolean {
+  const group = getInboxGroup(run);
+  return match(level)
+    .with('failures_and_findings', () => !isMatching('quiet', group))
+    .with('failures', () => isMatching('needs_look', group))
+    .with('every_run', () => true)
+    .with('never', () => false)
+    .exhaustive();
+}
+
+// Only runs that came into the inbox since the last look notify, so opening the dashboard is quiet.
+export function listRunsToNotify(previousRuns: RunRecord[], inbox: Inbox): RunRecord[] {
+  const previousKeys = new Set(previousRuns.map(toReadKey));
+  return inbox.runs.filter(
+    run =>
+      !previousKeys.has(toReadKey(run)) &&
+      checkIsRunNotified(run, inbox.notify[run.routine] ?? DEFAULT_NOTIFY_LEVEL),
+  );
+}
+
+function getRunNotificationTitle(run: RunRecord): string {
+  return match(getInboxGroup(run))
+    .with('needs_look', () => `${run.routine} needs a look`)
+    .with('findings', () => `${run.routine} has findings`)
+    .with('quiet', () => `${run.routine} has nothing to report`)
+    .exhaustive();
+}
+
+function getRunNotificationBody(run: RunRecord): string {
+  const summary = getInboxRunSummary(run);
+  const status = getRunStatusLabel(run.status);
+  if (summary === '') return status;
+  return match(getInboxGroup(run))
+    .with('needs_look', () => `${status}: ${summary}`)
+    .otherwise(() => summary);
+}
+
+function countRunsInGroup(count: number, group: InboxGroup): string {
+  const isOne = count === 1;
+  return match(group)
+    .with('needs_look', () => `${count} ${isOne ? 'needs' : 'need'} a look`)
+    .with('findings', () => `${count} ${isOne ? 'has' : 'have'} findings`)
+    .with('quiet', () => `${count} ${isOne ? 'has' : 'have'} nothing to report`)
+    .exhaustive();
+}
+
+export function buildRunNotifications(runs: RunRecord[]): RunNotification[] {
+  if (runs.length <= MAX_RUN_NOTIFICATIONS) {
+    return runs.map(run => ({
+      title: getRunNotificationTitle(run),
+      body: getRunNotificationBody(run),
+      run,
+    }));
+  }
+  const counts = groupInboxRuns(runs).map(({ group, runs: grouped }) =>
+    countRunsInGroup(grouped.length, group),
+  );
+  return [{ title: `${runs.length} runs finished`, body: `${counts.join(', ')}.`, run: null }];
 }

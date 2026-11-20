@@ -6,8 +6,14 @@ import { isMatching, match, P } from 'ts-pattern';
 
 import { buildCalendar } from 'domains/calendar/utils';
 import type { DaemonStatus } from 'domains/daemon/types';
-import { markReadRequestSchema } from 'domains/inbox/schemas';
-import { addReadRuns, listUnreadRuns } from 'domains/inbox/utils';
+import { NOTIFY_LEVELS } from 'domains/inbox/constants';
+import { markReadRequestSchema, notifyRequestSchema } from 'domains/inbox/schemas';
+import {
+  addReadRuns,
+  changeNotifyLevel,
+  keepNotifyLevelsOf,
+  listUnreadRuns,
+} from 'domains/inbox/utils';
 import { releaseVersionSchema } from 'domains/release/ids';
 import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
 import { oneTimeRunRequestSchema, startRunRequestSchema } from 'domains/routine/schemas';
@@ -41,6 +47,7 @@ import { getErrorMessage } from 'utils/error';
 
 import { config } from './config';
 import { readPlanUsage } from './domains/agent/storage';
+import { readNotifyLevels, writeNotifyLevels } from './domains/inbox/notifications';
 import { readInboxState, writeInboxState } from './domains/inbox/storage';
 import { loadRoutines } from './domains/routine/storage';
 import type { Routine } from './domains/routine/types';
@@ -388,6 +395,23 @@ function markRunsRead(body: Buffer): ApiResponse {
   return ok({ ok: true });
 }
 
+function getInbox(): ApiResponse {
+  const routines = loadRoutines().map(routine => routine.name);
+  return ok({
+    runs: listUnreadRuns(listAllRuns(), readInboxState()),
+    notify: keepNotifyLevelsOf(readNotifyLevels(), routines),
+  });
+}
+
+function setNotifyLevel(routine: Routine, body: Buffer): ApiResponse {
+  const request = notifyRequestSchema.safeParse(parseJson(body.toString('utf8')));
+  if (!request.success) {
+    return fail(400, `level must be one of ${NOTIFY_LEVELS.join(', ')}`);
+  }
+  writeNotifyLevels(changeNotifyLevel(readNotifyLevels(), routine.name, request.data.level));
+  return ok({ ok: true });
+}
+
 function routeApi(request: ApiRequest, context: ApiContext): ApiResponse | Promise<ApiResponse> {
   const { url, startedAt } = context;
   return match(request)
@@ -415,8 +439,13 @@ function routeApi(request: ApiRequest, context: ApiContext): ApiResponse | Promi
       withRoutine(routineNameSchema.parse(name), routine => handleWebhook(routine, context)),
     )
     .with(['GET', ['calendar']], () => getCalendar(url))
-    .with(['GET', ['inbox']], () => ok({ runs: listUnreadRuns(listAllRuns(), readInboxState()) }))
+    .with(['GET', ['inbox']], () => getInbox())
     .with(['POST', ['inbox', 'read']], () => markRunsRead(context.request.body))
+    .with(['PUT', ['inbox', 'notify', P.string]], ([, [, , name]]) =>
+      withRoutine(routineNameSchema.parse(name), routine =>
+        setNotifyLevel(routine, context.request.body),
+      ),
+    )
     .with(['GET', ['settings']], () => ok(readSettings()))
     .with(['PUT', ['settings']], () => updateSettings(context.request.body))
     .with(['GET', ['releases']], async () => ok(await getReleaseUpdate()))
