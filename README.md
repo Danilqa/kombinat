@@ -1,12 +1,8 @@
 <img src=".github/assets/banner.png" alt="Kombinat: routines in your repo, run by AI agents 24/7" width="100%" />
 
-> ✨ Run agents on a schedule or webhook, from markdown files in your repo. On any machine and the plan you already pay for.
+> ✨ Run AI agents on a schedule or webhook, from markdown files in your repo. On your Mac or Linux machine, with the plan you already pay for.
 
-One routine is one markdown file, so anyone on the team can write one. Merge it and it is live: a Mac or Linux machine that stays on runs it with Claude Code, Codex or any other CLI agent. Open source (MIT).
-
-[Live demo](https://danilqa.github.io/kombinat/) · [80-second video](https://www.youtube.com/watch?v=P6f0QCEyr68) · [Quickstart](#-quickstart) · [What to run](#-what-to-run)
-
-⭐ Support Kombinat with a [star on GitHub](https://github.com/Danilqa/kombinat) so more people can find it.
+[Live demo](https://danilqa.github.io/kombinat/) · [80-second video](https://www.youtube.com/watch?v=P6f0QCEyr68) · [Quickstart](#-quickstart) · ⭐ [Star on GitHub](https://github.com/Danilqa/kombinat)
 
 ## 💡 Features
 
