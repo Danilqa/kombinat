@@ -156,13 +156,7 @@ A routine with `webhook: true` also runs when another app, such as Linear or Git
 
 ## 🔄 Updating
 
-The daemon runs `git pull` in the folder every 5 minutes, so merged changes go live on their own. It only pulls when the checkout is on `main` with no local changes.
-
-To update Kombinat, bump `kombinat` in `package.json`, for example with a Renovate or Dependabot PR. When the lockfile changes, the daemon installs dependencies with pnpm, npm or Yarn and restarts. Running routines are not interrupted.
-
-When a new version is out, the dashboard shows it in a card in the bottom left corner, with its changelog and the command that updates, and the terminal dashboard says so in its bottom bar. Closing the card skips that version until a newer one comes out.
-
-Up to 0.2.2, Kombinat was published as `@danilqa/kombinat`. To move to `kombinat`, replace the dependency in `package.json`, install it and run `pnpm kombinat install` again. Until then the launchd job of the daemon points into the old package folder, which the install removes, so the daemon does not pick up the new version or start again after a reboot.
+Merged changes to your routines go live within 5 minutes. To update Kombinat, bump `kombinat` in `package.json`, and the daemon installs it and restarts. See [docs/updating.md](docs/updating.md).
 
 ## 🔧 Configuration
 
