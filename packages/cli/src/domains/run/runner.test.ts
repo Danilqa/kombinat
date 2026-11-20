@@ -545,14 +545,28 @@ function makeLimitedRoutine(name: string, frontmatter = '') {
         error: 'rate_limit',
         message: { content: [{ type: 'text', text: LIMIT_MESSAGE }] },
       },
-      { type: 'result', result: LIMIT_MESSAGE, is_error: true, num_turns: 3, total_cost_usd: 0.5 },
+      {
+        type: 'result',
+        result: LIMIT_MESSAGE,
+        is_error: true,
+        num_turns: 3,
+        total_cost_usd: 0.5,
+        usage: { input_tokens: 10, output_tokens: 200, cache_read_input_tokens: 3000 },
+      },
     ]),
   );
   fs.writeFileSync(
     path.join(cwd, 'resumed.jsonl'),
     toLines([
       { type: 'system', subtype: 'init', session_id: 's1' },
-      { type: 'result', result: 'Fixed it', is_error: false, num_turns: 2, total_cost_usd: 0.25 },
+      {
+        type: 'result',
+        result: 'Fixed it',
+        is_error: false,
+        num_turns: 2,
+        total_cost_usd: 0.25,
+        usage: { input_tokens: 5, output_tokens: 100, cache_creation_input_tokens: 400 },
+      },
     ]),
   );
   return buildRoutine(
@@ -585,6 +599,7 @@ test('a run stopped by a usage limit waits for the reset and continues its sessi
   assert.equal(finished.resultText, 'Fixed it');
   assert.equal(finished.numTurns, 5);
   assert.equal(finished.costUsd, 0.75);
+  assert.deepEqual(finished.tokens, { input: 15, output: 300, cacheWrite: 400, cacheRead: 3000 });
   assert.equal(finished.usageLimit, null);
   const args = fs
     .readFileSync(path.join(tmp, 'limited', 'args.txt'), 'utf8')

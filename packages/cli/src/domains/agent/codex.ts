@@ -2,6 +2,7 @@ import { match, P } from 'ts-pattern';
 import { z } from 'zod';
 
 import { sessionIdSchema } from 'domains/agent/ids';
+import type { TokenCounts } from 'domains/run/types';
 import type { ToolResult, TranscriptItem } from 'domains/transcript/types';
 import { toPreview } from 'domains/transcript/utils';
 
@@ -48,8 +49,17 @@ const codexItemSchema = z.object({
 type CodexItem = z.infer<typeof codexItemSchema>;
 type TodoEntry = NonNullable<CodexItem['items']>[number];
 
+const codexUsageSchema = z.object({
+  input_tokens: z.number().optional(),
+  cached_input_tokens: z.number().optional(),
+  cache_write_input_tokens: z.number().optional(),
+  output_tokens: z.number().optional(),
+});
+type CodexUsage = z.infer<typeof codexUsageSchema>;
+
 const codexEventSchema = z.object({
   type: z.string().optional(),
+  usage: codexUsageSchema.optional(),
   thread_id: sessionIdSchema.optional(),
   item: codexItemSchema.optional(),
   error: codexErrorSchema.optional(),
@@ -169,6 +179,18 @@ function toItem(item: CodexItem, index: number): TranscriptItem | null {
     .otherwise(() => null);
 }
 
+// input_tokens counts the cached input too, and exec reports the session's total so far.
+function toTokens(usage: CodexUsage): TokenCounts {
+  const cacheRead = usage.cached_input_tokens ?? 0;
+  const cacheWrite = usage.cache_write_input_tokens ?? 0;
+  return {
+    input: Math.max(0, (usage.input_tokens ?? 0) - cacheRead - cacheWrite),
+    output: usage.output_tokens ?? 0,
+    cacheWrite,
+    cacheRead,
+  };
+}
+
 function toResult(index: number, numTurns: number, error: string | null): TranscriptItem {
   return {
     kind: 'result',
@@ -241,7 +263,10 @@ export const codexAgent: Agent = {
         { type: 'item.completed', item: { type: 'agent_message', text: P.string } },
         ({ item }): RunUpdate => ({ resultText: item.text }),
       )
-      .with({ type: 'turn.completed' }, (): RunUpdate => ({ numTurns: (record.numTurns ?? 0) + 1 }))
+      .with({ type: 'turn.completed' }, ({ usage }): RunUpdate => ({
+        numTurns: (record.numTurns ?? 0) + 1,
+        ...(usage === undefined ? {} : { tokens: toTokens(usage) }),
+      }))
       .with({ type: 'turn.failed' }, ({ error }): RunUpdate => ({
         error: error?.message ?? 'Codex reported a failed turn',
       }))

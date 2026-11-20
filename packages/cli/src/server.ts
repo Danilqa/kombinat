@@ -15,8 +15,9 @@ import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import { RUNS_CURSOR_ERROR } from 'domains/run/constants';
 import { runIdSchema, type RunId } from 'domains/run/ids';
 import { runMessageSchema, usageLimitWaitActionSchema } from 'domains/run/schemas';
-import type { RunRecord } from 'domains/run/types';
+import type { RunRecord, TokenUsage } from 'domains/run/types';
 import {
+  buildTokenUsages,
   checkCanContinueRun,
   checkIsRunActive,
   checkIsRunAtWork,
@@ -122,6 +123,7 @@ function toRoutineSummary(
   routine: Routine,
   runs: RunRecord[],
   oneTimeRuns: OneTimeRun[],
+  tokenUsage: TokenUsage | null,
 ): RoutineSummary {
   return {
     name: routine.name,
@@ -146,6 +148,7 @@ function toRoutineSummary(
     running: checkIsStarting(routine.name) || runs.some(checkIsRunActive),
     lastRun: runs[0] ?? null,
     lastSkip: getSkips(routine.name).at(-1) ?? null,
+    tokenUsage,
   };
 }
 
@@ -190,19 +193,29 @@ function withRun(
 
 function getRoutineSummaries(): RoutineSummary[] {
   const oneTimeRuns = readOneTimeRuns();
-  return loadRoutines().map(routine =>
+  const routines = loadRoutines();
+  const runsByRoutine = routines.map(routine => listRuns(routine.name));
+  const tokenUsages = buildTokenUsages(runsByRoutine, new Date());
+  return routines.map((routine, index) =>
     toRoutineSummary(
       routine,
-      listRuns(routine.name),
+      runsByRoutine[index] ?? [],
       listRoutineOneTimeRuns(oneTimeRuns, routine.name),
+      tokenUsages[index] ?? null,
     ),
   );
 }
 
 function getRoutineDetail(routine: Routine): ApiResponse {
   const oneTimeRuns = listRoutineOneTimeRuns(readOneTimeRuns(), routine.name);
+  const runs = listRuns(routine.name);
+  // The share needs the tokens of every other routine too.
+  const otherRuns = loadRoutines()
+    .filter(other => other.name !== routine.name)
+    .map(other => listRuns(other.name));
+  const [tokenUsage = null] = buildTokenUsages([runs, ...otherRuns], new Date());
   const detail: RoutineDetail = {
-    ...toRoutineSummary(routine, listRuns(routine.name), oneTimeRuns),
+    ...toRoutineSummary(routine, runs, oneTimeRuns, tokenUsage),
     prompt: routine.prompt,
     skips: getSkips(routine.name),
     queue: listQueuedWebhooks(routine.name),

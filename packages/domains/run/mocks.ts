@@ -26,6 +26,7 @@ export function makeRunRecord(overrides: Partial<RunRecord> = {}): RunRecord {
     replyPid: null,
     conversation: null,
     usageLimit: null,
+    tokens: null,
     ...overrides,
   };
 }

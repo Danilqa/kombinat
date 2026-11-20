@@ -9,6 +9,9 @@ import type {
   runsPageSchema,
   runStatusSchema,
   runTriggerSchema,
+  tokenCountsSchema,
+  tokenDaySchema,
+  tokenUsageSchema,
   usageLimitWaitActionSchema,
   usageLimitWaitSchema,
 } from './schemas';
@@ -19,6 +22,9 @@ export type RunRecord = z.infer<typeof runRecordSchema>;
 export type RunsCursor = z.infer<typeof runsCursorSchema>;
 export type RunsCursorKey = z.infer<typeof runsCursorKeySchema>;
 export type RunsPage = z.infer<typeof runsPageSchema>;
+export type TokenCounts = z.infer<typeof tokenCountsSchema>;
+export type TokenDay = z.infer<typeof tokenDaySchema>;
+export type TokenUsage = z.infer<typeof tokenUsageSchema>;
 export type UsageLimitWait = z.infer<typeof usageLimitWaitSchema>;
 export type UsageLimitWaitAction = z.infer<typeof usageLimitWaitActionSchema>;
 

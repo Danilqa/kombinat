@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 import { agentNameSchema } from '../agent/schemas';
 import { runIdSchema } from '../run/ids';
-import { runRecordSchema } from '../run/schemas';
+import { runRecordSchema, tokenUsageSchema } from '../run/schemas';
 import { oneTimeRunSchema, skipSchema } from '../scheduler/schemas';
 import { queuedWebhookSchema, webhookCallSchema } from '../webhook/schemas';
 import { routineNameSchema } from './ids';
@@ -31,6 +31,8 @@ export const routineSummarySchema = z.object({
   running: z.boolean(),
   lastRun: runRecordSchema.nullable(),
   lastSkip: skipSchema.nullable(),
+  // The last days' tokens. Older daemons do not send it, and tui --url may talk to one.
+  tokenUsage: tokenUsageSchema.nullable().default(null),
 });
 
 export const routineDetailSchema = routineSummarySchema.extend({

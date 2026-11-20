@@ -3,7 +3,7 @@ import { isMatching, match, P } from 'ts-pattern';
 import { checkMatchesSearch } from 'utils/search';
 
 import { routineNameSchema, type RoutineName } from '../routine/ids';
-import { RUNS_PAGE_SIZE } from './constants';
+import { RUNS_PAGE_SIZE, TOKEN_USAGE_DAYS } from './constants';
 import { runIdSchema, type RunId } from './ids';
 import { runsCursorKeySchema, runsCursorSchema } from './schemas';
 import type {
@@ -14,8 +14,17 @@ import type {
   RunsPageQuery,
   RunStatus,
   RunTrigger,
+  TokenCounts,
+  TokenUsage,
   UsageLimitWait,
 } from './types';
+
+const tokenFormatter = new Intl.NumberFormat('en', {
+  notation: 'compact',
+  maximumFractionDigits: 1,
+});
+
+const shareFormatter = new Intl.NumberFormat('en', { style: 'percent', maximumFractionDigits: 0 });
 
 // The scheduler, which ticks every 30 s, continues a run at its first tick after the reset.
 const CONTINUE_GRACE_MS = 60_000;
@@ -167,5 +176,87 @@ export function findExpiredRuns(runs: RunRecord[], retentionDays: number, now: D
       !checkIsRunActive(run) &&
       new Date(run.startedAt).getTime() < cutoff &&
       newest.get(run.routine) !== run,
+  );
+}
+
+export function formatTokens(tokens: number): string {
+  return tokenFormatter.format(tokens);
+}
+
+export function formatTokenShare(share: number): string {
+  return share > 0 && share < 0.01 ? '<1%' : shareFormatter.format(share);
+}
+
+export function getTokenTotal(counts: TokenCounts): number {
+  return counts.input + counts.output + counts.cacheWrite + counts.cacheRead;
+}
+
+export function addTokenCounts(
+  before: TokenCounts | null,
+  after: TokenCounts | null,
+): TokenCounts | null {
+  if (before === null || after === null) return before ?? after;
+  return {
+    input: before.input + after.input,
+    output: before.output + after.output,
+    cacheWrite: before.cacheWrite + after.cacheWrite,
+    cacheRead: before.cacheRead + after.cacheRead,
+  };
+}
+
+function toLocalDate(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+// Today and the days before it, oldest first, in the local time zone.
+export function getTokenUsageDates(now: Date): string[] {
+  return Array.from({ length: TOKEN_USAGE_DAYS }, (_, index) =>
+    toLocalDate(
+      new Date(now.getFullYear(), now.getMonth(), now.getDate() - TOKEN_USAGE_DAYS + 1 + index),
+    ),
+  );
+}
+
+export function parseLocalDate(date: string): Date {
+  const [year = 0, month = 1, day = 1] = date.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
+type RoutineTokens = Omit<TokenUsage, 'share'>;
+
+function sumRoutineTokens(runs: RunRecord[], dates: string[]): RoutineTokens | null {
+  const dayIndexes = new Map(dates.map((date, index) => [date, index]));
+  const totals = dates.map(() => 0);
+  let counts: TokenCounts | null = null;
+  let runCount = 0;
+  for (const run of runs) {
+    const dayIndex = dayIndexes.get(toLocalDate(new Date(run.startedAt)));
+    if (run.tokens === null || dayIndex === undefined) continue;
+    counts = addTokenCounts(counts, run.tokens);
+    runCount += 1;
+    totals[dayIndex] = (totals[dayIndex] ?? 0) + getTokenTotal(run.tokens);
+  }
+  if (counts === null) return null;
+  return {
+    runs: runCount,
+    counts,
+    days: dates.map((date, index) => ({ date, total: totals[index] ?? 0 })),
+  };
+}
+
+// The runs of each routine that started in the last days and reported tokens, and each one's share of all.
+export function buildTokenUsages(runsByRoutine: RunRecord[][], now: Date): (TokenUsage | null)[] {
+  const dates = getTokenUsageDates(now);
+  const usages = runsByRoutine.map(runs => sumRoutineTokens(runs, dates));
+  const allTotal = usages.reduce(
+    (sum, usage) => sum + (usage === null ? 0 : getTokenTotal(usage.counts)),
+    0,
+  );
+  return usages.map(usage =>
+    usage === null
+      ? null
+      : { ...usage, share: allTotal === 0 ? 0 : getTokenTotal(usage.counts) / allTotal },
   );
 }

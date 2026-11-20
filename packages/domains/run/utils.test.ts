@@ -6,6 +6,7 @@ import { runIdSchema } from './ids';
 import { makeRunRecord } from './mocks';
 import type { RunRecord, RunsPage } from './types';
 import {
+  buildTokenUsages,
   checkIsRunActive,
   checkIsRunAtWork,
   decodeRunsCursor,
@@ -13,6 +14,7 @@ import {
   filterRuns,
   findExpiredRuns,
   getRunDurationMs,
+  getTokenUsageDates,
   paginateRuns,
   parseRunsPageQuery,
 } from './utils';
@@ -132,4 +134,43 @@ test('expires runs older than the retention but keeps active runs and the newest
   ];
 
   assert.deepEqual(toIds(findExpiredRuns(runs, 7, now)), ['a/run-8', 'b/run-30']);
+});
+
+const tokens = (cacheRead: number) => ({ input: 1, output: 2, cacheWrite: 3, cacheRead });
+
+const runOn = (day: number, cacheRead: number | null, hour = 12): RunRecord =>
+  makeRunRecord({
+    startedAt: new Date(2026, 10, day, hour).toISOString(),
+    tokens: cacheRead === null ? null : tokens(cacheRead),
+  });
+
+test("sums the tokens of the last 7 days by local day, with each routine's share", () => {
+  const now = new Date(2026, 10, 20, 15);
+  const [night, release, shell] = buildTokenUsages(
+    [
+      [runOn(20, 94), runOn(20, 194, 0), runOn(14, 44), runOn(13, 9994, 23), runOn(19, null)],
+      [runOn(17, 1044)],
+      [runOn(18, null)],
+    ],
+    now,
+  );
+
+  const dates = getTokenUsageDates(now);
+  assert.deepEqual(dates, [
+    '2026-11-14',
+    '2026-11-15',
+    '2026-11-16',
+    '2026-11-17',
+    '2026-11-18',
+    '2026-11-19',
+    '2026-11-20',
+  ]);
+  assert.deepEqual(night, {
+    runs: 3,
+    counts: { input: 3, output: 6, cacheWrite: 9, cacheRead: 332 },
+    days: [50, 0, 0, 0, 0, 0, 300].map((total, index) => ({ date: dates[index], total })),
+    share: 0.25,
+  });
+  assert.equal(release?.share, 0.75);
+  assert.equal(shell, null);
 });
