@@ -12,7 +12,7 @@ export interface Site {
 export const PROMO_SITE: Site = { origin: 'http://promo.test', base: '/', dist: PROMO_DIST };
 export const WEBSITE_SITE: Site = {
   origin: 'http://kombinat.test',
-  base: '/kombinat/',
+  base: '/',
   dist: WEBSITE_DIST,
 };
 

@@ -9,7 +9,7 @@ Kombinat runs routines, markdown files in `routines/`, with AI agents on a sched
 | `cli`           | `kombinat`, the only published package: CLI commands and the daemon                                                                                                                  |
 | `web-app`       | Browser dashboard (React, Vite, Tailwind), built into `packages/cli/dist/web-app`                                                                                                    |
 | `tui`           | Terminal dashboard, an HTTP client of the daemon. Bundled into `cli`                                                                                                                 |
-| `website`       | Demo of the browser dashboard with sample data, deployed to GitHub Pages at https://danilqa.github.io/kombinat/                                                                      |
+| `website`       | Demo of the browser dashboard with sample data, deployed to GitHub Pages at https://kombinat.tech/                                                                                   |
 | `domains`       | Shared domain layer: schemas, types, requests, labels, mocks and router-free components, see [its README](packages/domains/README.md)                                                |
 | `design-system` | Tailwind tokens and styles, shadcn/radix components and generic layout pieces                                                                                                        |
 | `utils`         | Business-agnostic helpers that more than one package uses: http, error, date-time, polling, cron and search                                                                          |
@@ -31,7 +31,7 @@ pnpm validate                      # format check, lint, typecheck and unit test
 pnpm test:e2e                      # Playwright against a real daemon from this checkout
 pnpm --filter e2e run web-app:ui   # the same in Playwright's UI mode
 pnpm cli <command>                 # the CLI from source, with example/routines as the routines folder
-pnpm --filter website dev          # the demo site at http://localhost:5174/kombinat/
+pnpm --filter website dev          # the demo site at http://localhost:5174/
 pnpm --filter promo record          # the promo video in packages/promo/out, see its README
 ```
 
@@ -95,7 +95,7 @@ The domain map, definitions and invariants are in [packages/domains/README.md](p
 
 ### website
 
-- `src/main.tsx` renders the web-app's `App`, exported as `web-app/app`, with this `customization`: the star bar of `src/layout/` as the `announcement` above the header, the swipeable cards of `src/features/welcome/` as the `banner` under the header of the routines page, the copyright as the `footer`, and "Demo routines" as the `routinesTitle` heading of that page. Vite builds it with the base `/kombinat/`, which the router takes as its basename, and the build copies `index.html` to `404.html` so that GitHub Pages opens deep links.
+- `src/main.tsx` renders the web-app's `App`, exported as `web-app/app`, with this `customization`: the star bar of `src/layout/` as the `announcement` above the header, the swipeable cards of `src/features/welcome/` as the `banner` under the header of the routines page, the copyright as the `footer`, and "Demo routines" as the `routinesTitle` heading of that page. The build copies `index.html` to `404.html` so that GitHub Pages opens deep links.
 - `src/demo-api/` answers the dashboard's `/api` requests in the browser, as `cli/src/server.ts` does: `routines.ts` holds the sample routines with their run outcomes and transcripts, and `history.ts` builds runs and skips from their schedules relative to now.
 - `public/og-image.gif` is the link preview image. `index.html` names it by its full URL in the Open Graph tags, since apps that unfurl links do not resolve relative paths.
 - `.github/workflows/website.yml` deploys it on every push to `main`.

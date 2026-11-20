@@ -2,7 +2,7 @@
 
 > ✨ Run AI agents on a schedule or webhook, from markdown files in your repo. On your Mac or Linux machine, with the plan you already pay for.
 
-[Live demo](https://danilqa.github.io/kombinat/) · [80-second video](https://www.youtube.com/watch?v=P6f0QCEyr68) · [Quickstart](#-quickstart) · ⭐ [Star on GitHub](https://github.com/Danilqa/kombinat)
+[Live demo](https://kombinat.tech/) · [80-second video](https://www.youtube.com/watch?v=P6f0QCEyr68) · [Quickstart](#-quickstart) · ⭐ [Star on GitHub](https://github.com/Danilqa/kombinat)
 
 ## 💡 Features
 
@@ -22,7 +22,7 @@
 
 A routine can be basically any automation, for your team or at home. Teams use them to work through issues overnight, fix bugs and flaky tests, remove dead code, watch production and draft release notes. At home, routines can look for discounts, book appointments, check the weather or tell you when a website changes.
 
-See example routines in the [live demo](https://danilqa.github.io/kombinat/).
+See example routines in the [live demo](https://kombinat.tech/).
 
 ## 😄 Fun fact
 
