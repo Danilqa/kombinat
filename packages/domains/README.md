@@ -23,7 +23,7 @@ Each domain has up to two halves with the same name:
 | **daemon**     | status schema, `getDaemonStatus`, `watchDaemonChanges`, health rules, plan usage rules, `DaemonStatusIndicator`                                                                                                                           | none, `cli/src/server.ts` builds the status                                                                            |
 | **webhook**    | `QueuedWebhook`, `WebhookCall`, `WebhookCallId`, webhook path, size, queue position and outcome labels, expired calls, `WebhookQueueList`                                                                                                 | gate, queue, conversations, call log, and receiving: start, continue, queue, ignore or reject                          |
 | **settings**   | `Settings`, defaults, retention options and labels, requests                                                                                                                                                                              | `settings.json` storage                                                                                                |
-| **release**    | `ReleaseVersion`, `ReleaseUpdate`, requests, newer releases, the offered release, `UpdateCard`                                                                                                                                            | none, `cli/src/features/self-update/releases.ts` checks GitHub and skips                                               |
+| **release**    | `ReleaseVersion`, `ReleaseUpdate`, requests, GitHub releases and the changelog with their images, newer releases, the offered release, `UpdateCard`                                                                                       | none, `cli/src/features/self-update/releases.ts` checks GitHub and skips                                               |
 | **inbox**      | `InboxState`, requests, unread runs, marking runs read, groups and their labels, the summary line                                                                                                                                         | `inbox.json` storage                                                                                                   |
 
 Not domains:
@@ -185,6 +185,8 @@ How the daemon itself behaves, set from the dashboards, `GET` and `PUT /api/sett
 A published version of Kombinat, `GET /api/releases`: the installed version, the releases newer than it, newest first, with their notes from GitHub, the skipped version and the command that updates the project, such as `pnpm add --save-exact kombinat@0.6.0`.
 
 Only a package installed from npm looks for releases, at most once an hour, and a failed check keeps the list of the last one. A checkout updates with `git pull`, so it reports none. Drafts, prereleases and tags that are not `x.y.z` are left out.
+
+The website's changelog reads the newest 100 releases from the GitHub API, newest first, with the screenshots of their notes as images and `#88` as a link to the pull request.
 
 `POST /api/releases/<version>/skip` stores the version in `<state dir>/releases.json`. The newest release is offered until it is skipped, and a newer one is offered again.
 

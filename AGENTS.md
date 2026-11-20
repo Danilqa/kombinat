@@ -95,9 +95,10 @@ The domain map, definitions and invariants are in [packages/domains/README.md](p
 
 ### website
 
-- `src/main.tsx` renders the web-app's `App`, exported as `web-app/app`, with this `customization`: the star bar of `src/layout/` as the `announcement` above the header, the swipeable cards of `src/features/welcome/` as the `banner` under the header of the routines page, the copyright as the `footer`, and "Demo routines" as the `routinesTitle` heading of that page. The build copies `index.html` to `404.html` so that GitHub Pages opens deep links.
+- `src/main.tsx` renders the web-app's `App`, exported as `web-app/app`, with this `customization`: the star bar of `src/layout/` as the `announcement` above the header, the swipeable cards of `src/features/welcome/` as the `banner` under the header of the routines page, the copyright with a link to the changelog as the `footer`, the changelog page of `src/features/changelog/` in `routes`, and "Demo routines" as the `routinesTitle` heading of that page. The build copies `index.html` to `404.html` so that GitHub Pages opens deep links.
 - `src/demo-api/` answers the dashboard's `/api` requests in the browser, as `cli/src/server.ts` does: `routines.ts` holds the sample routines with their run outcomes and transcripts, and `history.ts` builds runs and skips from their schedules relative to now.
 - `public/og-image.gif` is the link preview image. `index.html` names it by its full URL in the Open Graph tags, since apps that unfurl links do not resolve relative paths.
+- The changelog page reads the releases from the GitHub API in the browser, so a new release shows there without a deploy. Only the website has it: the dashboard shows newer releases in its update card.
 - `.github/workflows/website.yml` deploys it on every push to `main`.
 
 ### promo

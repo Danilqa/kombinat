@@ -8,6 +8,7 @@ import {
   RUNS_PATH,
   RUN_PATH,
 } from '@web-app/constants/path';
+import { useCustomization } from '@web-app/contexts';
 import { CalendarPage } from '@web-app/features/calendar/calendar-page';
 import { InboxPage } from '@web-app/features/inbox/inbox-page';
 import { NotFoundPage } from '@web-app/features/not-found/not-found-page';
@@ -18,6 +19,7 @@ import { RunPage } from '@web-app/features/runs/run-page';
 import { RunsPage } from '@web-app/features/runs/runs-page';
 
 export function AppRoutes() {
+  const { routes = [] } = useCustomization();
   return (
     <Routes>
       <Route path={ROUTINES_PATH} element={<RoutinesPage />} />
@@ -27,6 +29,9 @@ export function AppRoutes() {
       <Route path={ROUTINE_PATH} element={<RoutinePage />} />
       <Route path={ROUTINE_RUN_PATH} element={<ChangePromptPage />} />
       <Route path={RUN_PATH} element={<RunPage />} />
+      {routes.map(({ path, element }) => (
+        <Route key={path} path={path} element={element} />
+      ))}
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );

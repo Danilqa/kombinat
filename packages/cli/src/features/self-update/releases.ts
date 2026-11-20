@@ -2,9 +2,10 @@ import path from 'node:path';
 
 import { z } from 'zod';
 
+import { GITHUB_RELEASES_PATH } from 'domains/release/constants';
 import { releaseVersionSchema, type ReleaseVersion } from 'domains/release/ids';
 import type { Release, ReleaseUpdate } from 'domains/release/types';
-import { listNewerReleases } from 'domains/release/utils';
+import { listNewerReleases, parseGithubReleases } from 'domains/release/utils';
 import { createHttpClient } from 'utils/http';
 
 import { config, PACKAGE_NAME } from '../../config';
@@ -16,45 +17,13 @@ const CHECK_INTERVAL_MS = 60 * 60_000;
 
 const github = createHttpClient({ baseUrl: 'https://api.github.com', timeoutMs: 10_000 });
 
-const githubReleaseSchema = z.object({
-  tag_name: z.string(),
-  html_url: z.string(),
-  body: z.string().nullable(),
-  published_at: z.string().nullable(),
-  draft: z.boolean(),
-  prerelease: z.boolean(),
-});
-
 const skippedReleaseFileSchema = z.object({ skippedVersion: releaseVersionSchema });
-
-const FULL_CHANGELOG_LINE = /^\*\*Full Changelog\*\*.*$/m;
-
-// The dashboard renders markdown without HTML, so a screenshot's <img> would show as text.
-// Only whole lines go, since inline text such as `kombinat run <name>` looks like a tag too.
-const HTML_LINE = /^\s*<[^>]+>\s*$/gm;
 
 const skippedReleaseFile = () => path.join(config.stateDir, 'releases.json');
 
-export function parseGithubReleases(body: unknown): Release[] {
-  return z
-    .array(githubReleaseSchema)
-    .parse(body)
-    .flatMap(release => {
-      const version = releaseVersionSchema.safeParse(release.tag_name.replace(/^v/, ''));
-      const { draft, prerelease, published_at: publishedAt } = release;
-      if (draft || prerelease || publishedAt === null || !version.success) return [];
-      return {
-        version: version.data,
-        notes: (release.body ?? '').replace(FULL_CHANGELOG_LINE, '').replace(HTML_LINE, '').trim(),
-        url: release.html_url,
-        publishedAt,
-      };
-    });
-}
-
 async function fetchReleases(): Promise<Release[]> {
   return parseGithubReleases(
-    await github.request('/repos/Danilqa/kombinat/releases?per_page=30', z.unknown()),
+    await github.request(`${GITHUB_RELEASES_PATH}?per_page=30`, z.unknown()),
   );
 }
 

@@ -8,6 +8,7 @@
     "./components/app-footer": "./src/components/app-footer.tsx",
     "./constants/links": "./src/constants/links.ts",
     "./constants/path": "./src/constants/path.ts",
+    "./hooks/use-document-title": "./src/hooks/use-document-title.ts",
     "./hooks/use-stored-boolean": "./src/hooks/use-stored-boolean.ts",
     "./index.css": "./src/index.css"
   },

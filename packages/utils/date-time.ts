@@ -32,6 +32,12 @@ const timestampFormatter = new Intl.DateTimeFormat('en-GB', {
   second: '2-digit',
 });
 
+const dateFormatter = new Intl.DateTimeFormat('en-GB', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+});
+
 const clockFormatter = new Intl.DateTimeFormat('en-GB', {
   hour: '2-digit',
   minute: '2-digit',
@@ -70,6 +76,10 @@ export function formatClock(date: Date): string {
 
 export function formatDayMonth(date: Date): string {
   return `${date.getDate()} ${monthFormatter.format(date)}`;
+}
+
+export function formatDate(iso: string): string {
+  return dateFormatter.format(new Date(iso));
 }
 
 export function formatWeekday(date: Date): string {

@@ -286,6 +286,9 @@ importers:
 
   packages/website:
     dependencies:
+      '@tanstack/react-query':
+        specifier: 'catalog:'
+        version: 5.107.1(@types/react@19.3.0)(react@19.3.0)
       design-system:
         specifier: workspace:*
         version: link:../design-system
