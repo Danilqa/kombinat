@@ -209,7 +209,7 @@ The runs that ended since the user last looked, `GET /api/inbox`, so that a fail
 
 #### Notifications
 
-Each routine can notify of the runs that come into the inbox: `failures_and_findings` of Needs a look and Has findings, `failures` of Needs a look, `every_run` or `never`, the default. `<state dir>/notifications.json` keeps them as `{ "routines": { "<name>": "<level>" } }`, without the routines that never notify. `GET /api/inbox` serves them in `notify` next to the runs, and `PUT /api/inbox/notify/<name>` with `{ "level": "…" }` changes one.
+Each routine can notify of the runs that come into the inbox: `failures_and_findings` of Needs a look and Has findings, `failures` of Needs a look, `every_run` or `never`, the default. `<state dir>/notifications.json` keeps them as `{ "routines": { "<name>": "<level>" } }`, without the routines that never notify. `GET /api/inbox` serves the levels of the routines that still exist in `notify` next to the runs, and `PUT /api/inbox/notify/<name>` with `{ "level": "…" }` changes one.
 
 - The dashboard shows them with the browser's notifications, so nothing leaves the machine and they come only while a tab or the installed app is open. It polls the inbox in the background while a routine notifies and the browser allows it.
 - A run notifies once it comes into the inbox while the dashboard is open, so the runs that were unread when it opened stay quiet. A run whose page is on screen does not notify.

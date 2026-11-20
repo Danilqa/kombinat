@@ -96,8 +96,8 @@ export function getNotifyLevelLabel(level: NotifyLevel): string {
 
 export function getNotifyLevelShortLabel(level: NotifyLevel): string {
   return match(level)
-    .with('failures_and_findings', () => 'Findings')
-    .with('failures', () => 'Failures')
+    .with('failures_and_findings', () => 'Failures + findings')
+    .with('failures', () => 'Failures only')
     .with('every_run', () => 'Every run')
     .with('never', () => 'Off')
     .exhaustive();
@@ -112,6 +112,14 @@ export function changeNotifyLevel(
   const others = Object.entries(levels).filter(([name]) => name !== routine);
   const kept = isMatching(DEFAULT_NOTIFY_LEVEL, level) ? others : [...others, [routine, level]];
   return notifyLevelsSchema.parse(Object.fromEntries(kept));
+}
+
+// A renamed or deleted routine keeps its level in the file, but it can no longer notify.
+export function keepNotifyLevelsOf(levels: NotifyLevels, routines: RoutineName[]): NotifyLevels {
+  const names = new Set<string>(routines);
+  return notifyLevelsSchema.parse(
+    Object.fromEntries(Object.entries(levels).filter(([name]) => names.has(name))),
+  );
 }
 
 export function checkIsRunNotified(

@@ -2,6 +2,7 @@ import { isMatching, match, P } from 'ts-pattern';
 
 import { buildCalendar } from 'domains/calendar/utils';
 import type { DaemonStatus } from 'domains/daemon/types';
+import { NOTIFY_LEVELS } from 'domains/inbox/constants';
 import { markReadRequestSchema, notifyRequestSchema } from 'domains/inbox/schemas';
 import type { InboxState, NotifyLevels } from 'domains/inbox/types';
 import { addReadRuns, changeNotifyLevel, listUnreadRuns } from 'domains/inbox/utils';
@@ -425,7 +426,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
   function setNotifyLevel(routine: DemoRoutine, body: string): ApiResponse {
     const request = notifyRequestSchema.safeParse(parseJson(body));
     if (!request.success) {
-      return fail(400, 'level must be failures_and_findings, failures, every_run or never');
+      return fail(400, `level must be one of ${NOTIFY_LEVELS.join(', ')}`);
     }
     notify = changeNotifyLevel(notify, routine.name, request.data.level);
     return ok({ ok: true });

@@ -321,7 +321,9 @@ test('notifies of the failures and findings of a routine and opens the run on a 
   await page.getByRole('button', { name: 'Notify: Off for watch-incidents' }).click();
   await page.getByRole('menuitemradio', { name: 'Failures and findings' }).click();
 
-  const notify = page.getByRole('button', { name: 'Notify: Findings for watch-incidents' });
+  const notify = page.getByRole('button', {
+    name: 'Notify: Failures + findings for watch-incidents',
+  });
   await expect(notify).toBeVisible();
   kombinat.addRun({
     routine: 'watch-incidents',

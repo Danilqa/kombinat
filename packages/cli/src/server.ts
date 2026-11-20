@@ -6,8 +6,14 @@ import { isMatching, match, P } from 'ts-pattern';
 
 import { buildCalendar } from 'domains/calendar/utils';
 import type { DaemonStatus } from 'domains/daemon/types';
+import { NOTIFY_LEVELS } from 'domains/inbox/constants';
 import { markReadRequestSchema, notifyRequestSchema } from 'domains/inbox/schemas';
-import { addReadRuns, changeNotifyLevel, listUnreadRuns } from 'domains/inbox/utils';
+import {
+  addReadRuns,
+  changeNotifyLevel,
+  keepNotifyLevelsOf,
+  listUnreadRuns,
+} from 'domains/inbox/utils';
 import { releaseVersionSchema } from 'domains/release/ids';
 import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
 import { oneTimeRunRequestSchema, startRunRequestSchema } from 'domains/routine/schemas';
@@ -389,10 +395,18 @@ function markRunsRead(body: Buffer): ApiResponse {
   return ok({ ok: true });
 }
 
+function getInbox(): ApiResponse {
+  const routines = loadRoutines().map(routine => routine.name);
+  return ok({
+    runs: listUnreadRuns(listAllRuns(), readInboxState()),
+    notify: keepNotifyLevelsOf(readNotifyLevels(), routines),
+  });
+}
+
 function setNotifyLevel(routine: Routine, body: Buffer): ApiResponse {
   const request = notifyRequestSchema.safeParse(parseJson(body.toString('utf8')));
   if (!request.success) {
-    return fail(400, 'level must be failures_and_findings, failures, every_run or never');
+    return fail(400, `level must be one of ${NOTIFY_LEVELS.join(', ')}`);
   }
   writeNotifyLevels(changeNotifyLevel(readNotifyLevels(), routine.name, request.data.level));
   return ok({ ok: true });
@@ -425,9 +439,7 @@ function routeApi(request: ApiRequest, context: ApiContext): ApiResponse | Promi
       withRoutine(routineNameSchema.parse(name), routine => handleWebhook(routine, context)),
     )
     .with(['GET', ['calendar']], () => getCalendar(url))
-    .with(['GET', ['inbox']], () =>
-      ok({ runs: listUnreadRuns(listAllRuns(), readInboxState()), notify: readNotifyLevels() }),
-    )
+    .with(['GET', ['inbox']], () => getInbox())
     .with(['POST', ['inbox', 'read']], () => markRunsRead(context.request.body))
     .with(['PUT', ['inbox', 'notify', P.string]], ([, [, , name]]) =>
       withRoutine(routineNameSchema.parse(name), routine =>

@@ -12,6 +12,7 @@ import {
   changeNotifyLevel,
   checkHasNothingToReport,
   groupInboxRuns,
+  keepNotifyLevelsOf,
   listRunsToNotify,
   listUnreadRuns,
 } from './utils';
@@ -170,4 +171,12 @@ test('changing a routine to never notify drops it, so only the routines that not
     [triage]: 'failures',
   });
   assert.deepEqual(changeNotifyLevel(levels, deploy, 'never'), { [triage]: 'every_run' });
+});
+
+test('a renamed or deleted routine loses its level, so no tab keeps polling for it', () => {
+  const triage = routineNameSchema.parse('triage');
+  const deleted = routineNameSchema.parse('deleted');
+  const levels: NotifyLevels = { [triage]: 'failures', [deleted]: 'every_run' };
+
+  assert.deepEqual(keepNotifyLevelsOf(levels, [triage]), { [triage]: 'failures' });
 });

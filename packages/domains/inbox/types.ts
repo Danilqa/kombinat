@@ -5,7 +5,6 @@ import type {
   inboxRunKeySchema,
   inboxSchema,
   inboxStateSchema,
-  notificationsStateSchema,
   notifyLevelSchema,
   notifyLevelsSchema,
 } from './schemas';
@@ -15,7 +14,6 @@ export type InboxState = z.infer<typeof inboxStateSchema>;
 export type Inbox = z.infer<typeof inboxSchema>;
 export type NotifyLevel = z.infer<typeof notifyLevelSchema>;
 export type NotifyLevels = z.infer<typeof notifyLevelsSchema>;
-export type NotificationsState = z.infer<typeof notificationsStateSchema>;
 
 export type InboxGroup = 'needs_look' | 'findings' | 'quiet';
 

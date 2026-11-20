@@ -1,13 +1,9 @@
+import { notifyLevelSchema } from './schemas';
 import type { InboxGroup, NotifyLevel } from './types';
 
 export const INBOX_GROUPS: InboxGroup[] = ['needs_look', 'findings', 'quiet'];
 
-export const NOTIFY_LEVELS: NotifyLevel[] = [
-  'failures_and_findings',
-  'failures',
-  'every_run',
-  'never',
-];
+export const NOTIFY_LEVELS = notifyLevelSchema.options;
 
 export const DEFAULT_NOTIFY_LEVEL: NotifyLevel = 'never';
 
