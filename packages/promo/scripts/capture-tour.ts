@@ -8,6 +8,8 @@ import type { TourMark } from './voiceover';
 
 export const TOUR_MARKS_FILE = 'marks.json';
 
+export type TourSteps = (page: Page, markCaption: (caption: string) => void) => Promise<void>;
+
 interface Point {
   x: number;
   y: number;
@@ -34,7 +36,7 @@ function easeInOutCubic(progress: number) {
 }
 
 // Drives the mouse in real time with an eased path, so the screencast shows a smooth cursor.
-function createPointer(page: Page) {
+export function createPointer(page: Page) {
   let mouse: Point = { x: VIEWPORT.width / 2, y: VIEWPORT.height / 2 };
 
   async function glide(target: Point, ms = 550) {
@@ -88,7 +90,7 @@ function createPointer(page: Page) {
   return { glide, moveTo, click, scroll, place };
 }
 
-async function showCaption(page: Page, text: string | null) {
+export async function showCaption(page: Page, text: string | null) {
   await page.evaluate(caption => {
     const element = document.getElementById('tour-caption');
     if (element === null) return;
@@ -101,7 +103,7 @@ async function showCaption(page: Page, text: string | null) {
   }, text);
 }
 
-async function typeSlowly(page: Page, text: string) {
+export async function typeSlowly(page: Page, text: string) {
   for (const character of text) {
     await page.keyboard.type(character);
     await page.waitForTimeout(85);
@@ -175,7 +177,11 @@ async function playTour(page: Page, markCaption: (caption: string) => void) {
 }
 
 // Records the tour through the CDP screencast: lossless frames with the time each one was painted.
-export async function captureTour(context: BrowserContext, folder: string): Promise<number> {
+export async function captureTour(
+  context: BrowserContext,
+  folder: string,
+  playSteps: TourSteps = playTour,
+): Promise<number> {
   fs.rmSync(folder, { recursive: true, force: true });
   fs.mkdirSync(folder, { recursive: true });
   await context.addInitScript(TOUR_OVERLAY);
@@ -201,7 +207,7 @@ export async function captureTour(context: BrowserContext, folder: string): Prom
   });
 
   const captionFrames: CaptionFrame[] = [];
-  await playTour(page, caption => {
+  await playSteps(page, caption => {
     captionFrames.push({ caption, frame: frames.length });
   });
 

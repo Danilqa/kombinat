@@ -4,17 +4,17 @@ Kombinat runs routines, markdown files in `routines/`, with AI agents on a sched
 
 ## Packages
 
-| Package         | Description                                                                                                                                            |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `cli`           | `kombinat`, the only published package: CLI commands and the daemon                                                                                    |
-| `web-app`       | Browser dashboard (React, Vite, Tailwind), built into `packages/cli/dist/web-app`                                                                      |
-| `tui`           | Terminal dashboard, an HTTP client of the daemon. Bundled into `cli`                                                                                   |
-| `website`       | Demo of the browser dashboard with sample data, deployed to GitHub Pages at https://danilqa.github.io/kombinat/                                        |
-| `domains`       | Shared domain layer: schemas, types, requests, labels, mocks and router-free components, see [its README](packages/domains/README.md)                  |
-| `design-system` | Tailwind tokens and styles, shadcn/radix components and generic layout pieces                                                                          |
-| `utils`         | Business-agnostic helpers that more than one package uses: http, error, date-time, polling, cron and search                                            |
-| `e2e`           | Playwright config and fixtures. The specs live next to the pages as `*.e2e.ts`                                                                         |
-| `promo`         | Source of the promo video: scenes drawn with React, a tour of the website and the scripts that record them, see [its README](packages/promo/README.md) |
+| Package         | Description                                                                                                                                                                          |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `cli`           | `kombinat`, the only published package: CLI commands and the daemon                                                                                                                  |
+| `web-app`       | Browser dashboard (React, Vite, Tailwind), built into `packages/cli/dist/web-app`                                                                                                    |
+| `tui`           | Terminal dashboard, an HTTP client of the daemon. Bundled into `cli`                                                                                                                 |
+| `website`       | Demo of the browser dashboard with sample data, deployed to GitHub Pages at https://danilqa.github.io/kombinat/                                                                      |
+| `domains`       | Shared domain layer: schemas, types, requests, labels, mocks and router-free components, see [its README](packages/domains/README.md)                                                |
+| `design-system` | Tailwind tokens and styles, shadcn/radix components and generic layout pieces                                                                                                        |
+| `utils`         | Business-agnostic helpers that more than one package uses: http, error, date-time, polling, cron and search                                                                          |
+| `e2e`           | Playwright config and fixtures. The specs live next to the pages as `*.e2e.ts`                                                                                                       |
+| `promo`         | Source of the promo video and the README's dashboard GIF: scenes drawn with React, tours of the website and the scripts that record them, see [its README](packages/promo/README.md) |
 
 ## Package manager
 
@@ -105,6 +105,7 @@ The domain map, definitions and invariants are in [packages/domains/README.md](p
 - `src/timeline.ts` lists the video's segments with their lengths. Each scene in `src/scenes/` draws one moment from `time`, and `scripts/record.ts` seeks it frame by frame, so the video is the same on every machine. The dashboard tour in `scripts/capture-tour.ts` clicks through the built website in real time.
 - `src/narration.ts` is the voiceover script. Its takes come from Fish Audio by hand, and `scripts/voice.ts` brings them to one pace before `record` lays them over the video.
 - The recording goes to `packages/promo/out/`, which git ignores. The video is published by hand, not from CI.
+- `pnpm --filter promo readme-gif` records `scripts/readme-tour.ts` into `.github/assets/dashboard.gif`, the GIF of the root README.
 
 ### design-system
 
