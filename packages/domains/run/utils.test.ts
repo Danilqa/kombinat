@@ -17,6 +17,7 @@ import {
   getTokenUsageDates,
   listBlockedRules,
   mergeBlockedActions,
+  getCheckoutCwd,
   getWorktreeChangesLabel,
   paginateRuns,
   parseRunsPageQuery,
@@ -202,4 +203,21 @@ test('the changes of a worktree say how many files changed and what is not commi
   assert.equal(label(1, 1, 0), '1 file changed in 1 commit');
   assert.equal(label(2, 0, 2), '2 files changed, not committed');
   assert.equal(label(3, 2, 1), '3 files changed in 2 commits, 1 not committed');
+});
+
+test('the cwd of a worktree run maps back to the same folder in the checkout', () => {
+  const worktree = {
+    branch: 'kombinat/fixer-20261117T090000Z-wtre',
+    path: '/state/worktrees/fixer/20261117T090000Z-wtre',
+    checkout: '/code/shop',
+    base: 'origin/main',
+    baseCommit: '3f2a1bc',
+    changes: null,
+    state: 'removed' as const,
+  };
+  assert.equal(
+    getCheckoutCwd({ ...worktree, cwd: `${worktree.path}/apps/web` }),
+    '/code/shop/apps/web',
+  );
+  assert.equal(getCheckoutCwd({ ...worktree, cwd: worktree.path }), '/code/shop');
 });
