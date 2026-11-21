@@ -1,6 +1,5 @@
 import { isMatching, match, P } from 'ts-pattern';
 
-import { checkCanKeepMemory } from 'domains/agent/utils';
 import { buildCalendar } from 'domains/calendar/utils';
 import type { DaemonStatus } from 'domains/daemon/types';
 import { NOTIFY_LEVELS } from 'domains/inbox/constants';
@@ -166,8 +165,13 @@ function toRoutineSummary(
     lastRun: runs[0] ?? null,
     lastSkip: skips.at(-1) ?? null,
     tokenUsage,
-    memory: checkCanKeepMemory(routine.agent),
+    memory: checkHasMemory(routine),
   };
+}
+
+// Stands in for memory: true, which only the routines with sample notes have.
+function checkHasMemory(routine: DemoRoutine): boolean {
+  return routine.memory !== undefined;
 }
 
 function getMemoryFile(routine: DemoRoutine): string {
@@ -333,7 +337,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
       queue: listQueue(routine, now),
       webhookCalls: listWebhookCalls(routine, now),
       oneTimeRuns: listRoutineOneTimeRuns(oneTimeRuns, routine.name),
-      memoryNotes: checkCanKeepMemory(routine.agent) ? (memories.get(routine.name) ?? null) : null,
+      memoryNotes: checkHasMemory(routine) ? (memories.get(routine.name) ?? null) : null,
     };
   }
 
@@ -385,10 +389,10 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
   }
 
   function saveMemory(routine: DemoRoutine, body: string, now: Date): ApiResponse {
-    if (!checkCanKeepMemory(routine.agent)) {
+    if (!checkHasMemory(routine)) {
       return fail(
         409,
-        `${routine.name} has no memory. It needs agent claude or codex and no memory: false`,
+        `${routine.name} has no memory. It needs agent claude or codex and memory: true`,
       );
     }
     const request = memoryRequestSchema.safeParse(parseJson(body));

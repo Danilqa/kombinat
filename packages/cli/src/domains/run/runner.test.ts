@@ -592,7 +592,7 @@ test('a replying run keeps its routine running until its reply process is gone',
 });
 
 // A claude routine in its own folder whose agent ends its message with the text.
-function makeAnsweringRoutine(name: string, answer: string, frontmatter = '') {
+function makeAnsweringRoutine(name: string, answer: string, frontmatter = 'memory: true') {
   const cwd = path.join(tmp, name);
   fs.mkdirSync(cwd, { recursive: true });
   fs.writeFileSync(
@@ -676,9 +676,9 @@ test('a reply that never reached the session sends the notes again with the next
   assert.match(readPrompt(), /^Try again\n[\s\S]*- Sign in as admin/);
 });
 
-test('a routine with memory: false gets no notes and keeps its whole message', async () => {
+test('a routine without memory: true gets no notes and keeps its whole message', async () => {
   const answer = 'Done\n<routine-memory>\n- Not saved\n</routine-memory>';
-  const { routine, readPrompt } = makeAnsweringRoutine('forgets', answer, 'memory: false');
+  const { routine, readPrompt } = makeAnsweringRoutine('forgets', answer, '');
   const finished = await runRoutine(routine, { trigger: 'manual' });
   assert.equal(readPrompt(), 'Find design bugs.');
   assert.equal(finished.resultText, answer);
