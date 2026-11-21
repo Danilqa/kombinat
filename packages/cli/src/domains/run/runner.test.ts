@@ -635,6 +635,27 @@ test('a reply gets the notes as they are now and can change them', async () => {
   assert.match(readPrompt(), /^Skip the beta banner\n[\s\S]*- Edited after the run/);
   assert.equal(readMemory(routine.name), '- Skip the beta banner');
   assert.equal(readRoutineMemory(routine.name).change?.runId, run.id);
+  appendLogEvent(run, { type: 'message', text: 'Thanks', source: 'dashboard' });
+  await replyToRun(routine, run);
+  assert.match(readPrompt(), /^Thanks\n\nIf your notes need to change/);
+  assert.doesNotMatch(readPrompt(), /- Skip the beta banner/);
+});
+
+test('a reply sends the notes again only after someone else changed them', async () => {
+  const { routine, readPrompt } = makeAnsweringRoutine('remembers-once', 'Done.');
+  writeMemory(routine.name, '- Sign in as qa', { by: 'user' });
+  const run = makeFinishedRun(routine.name, '20261117T090000Z-once', {
+    startedAt: new Date().toISOString(),
+  });
+  const reply = async (text: string) => {
+    appendLogEvent(run, { type: 'message', text, source: 'dashboard' });
+    await replyToRun(routine, readRunRecord(run.routine, run.id) ?? run);
+    return readPrompt();
+  };
+  assert.doesNotMatch(await reply('Open a PR'), /- Sign in as qa/);
+  writeMemory(routine.name, '- Sign in as admin', { by: 'user' });
+  assert.match(await reply('Merge it'), /- Sign in as admin/);
+  assert.doesNotMatch(await reply('Thanks'), /- Sign in as admin/);
 });
 
 test('a routine with memory: false gets no notes and keeps its whole message', async () => {

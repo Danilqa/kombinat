@@ -122,6 +122,27 @@ Read the notes before you start and follow them. If they need to change, end you
 `;
 }
 
+export function appendMemoryReminder(message: string): string {
+  return `${message}
+
+If your notes need to change, end your final message with the new notes in full, between a ${OPEN_TAG} line and a ${CLOSE_TAG} line.
+`;
+}
+
+// A resumed session keeps the notes it got or wrote, so they need sending again only after someone else changed them.
+export function checkHasMemoryChangedSince(
+  routine: RoutineName,
+  runId: RunId,
+  since: string,
+): boolean {
+  const change = readChange(routine);
+  return (
+    change !== null &&
+    change.runId !== runId &&
+    new Date(change.at).getTime() > new Date(since).getTime()
+  );
+}
+
 function unwrapFence(text: string): string {
   return /^```[\w-]*\n(?<body>[\s\S]*)\n```$/.exec(text)?.groups?.['body']?.trim() ?? text;
 }

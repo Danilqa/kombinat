@@ -22,7 +22,13 @@ import { parseJson } from '../../utils/json';
 import { getAgent } from '../agent/registry';
 import { writePlanUsage } from '../agent/storage';
 import type { Agent, Invocation, OutputEvent, RunContext, UsageLimitStop } from '../agent/types';
-import { appendMemory, keepMemoryUpdate, readMemory } from '../routine/memory';
+import {
+  appendMemory,
+  appendMemoryReminder,
+  checkHasMemoryChangedSince,
+  keepMemoryUpdate,
+  readMemory,
+} from '../routine/memory';
 import type { Routine } from '../routine/types';
 import type { ChatMessage } from './event-log';
 import { appendLogEvent, readLastMessage, readRunEvents } from './event-log';
@@ -337,6 +343,7 @@ export async function runRoutine(
     usageLimit: null,
     tokens: null,
     blockedActions: [],
+    memorySentAt: null,
   };
 
   const prompt = takePrompt(routine.name, id) ?? routine.prompt;
@@ -392,17 +399,31 @@ export async function runRoutine(
 // Resumes the run's session with the last message of its log. The hooks belong to the run, not to replies.
 export async function replyToRun(routine: Routine, run: RunRecord): Promise<RunRecord> {
   const agent = getAgent(run.agent);
-  const replying: RunRecord = { ...run, replyPid: process.pid };
+  const memoryReadAt = new Date().toISOString();
+  const memory = routine.memory ? readMemory(routine.name) : null;
+  const isMemorySent =
+    memory !== null &&
+    checkHasMemoryChangedSince(routine.name, run.id, run.memorySentAt ?? run.startedAt);
+  const replying: RunRecord = {
+    ...run,
+    replyPid: process.pid,
+    memorySentAt: isMemorySent ? memoryReadAt : run.memorySentAt,
+  };
   writeRunRecord(replying);
   const message = readLastMessage(run);
-  // The notes may have changed since the run, so the reply gets them as they are now.
-  const memory = routine.memory ? readMemory(routine.name) : null;
   const invocation =
     routine.agent === run.agent && run.sessionId !== null && message !== null
       ? agent.buildReplyInvocation(
           { routine, runId: run.id, trigger: run.trigger },
           run.sessionId,
-          memory === null ? message : { ...message, text: appendMemory(message.text, memory) },
+          memory === null
+            ? message
+            : {
+                ...message,
+                text: isMemorySent
+                  ? appendMemory(message.text, memory)
+                  : appendMemoryReminder(message.text),
+              },
         )
       : null;
   // A reply that allows the blocked actions reports what it is still blocked from. Until it succeeds, the run keeps them.
@@ -435,6 +456,7 @@ export async function replyToRun(routine: Routine, run: RunRecord): Promise<RunR
   }
   const finished: RunRecord = {
     ...run,
+    memorySentAt: replying.memorySentAt,
     sessionId: session.sessionId,
     resumeCommand: session.resumeCommand,
     replyPid: null,

@@ -172,7 +172,7 @@ A routine with `webhook: true` also starts from a [webhook](#webhook).
 
 Notes that a routine keeps for its next runs, in `memory.ts`. `memory` defaults to `true` for `claude` and `codex` and to `false` for `command`, which cannot have it.
 
-1. The runner reads `<state dir>/memory/<routine>.md` as the run starts and adds it to the end of the prompt, after a webhook's payload, with how to update it. A reply gets the notes as they are then, after its message.
+1. The runner reads `<state dir>/memory/<routine>.md` as the run starts and adds it to the end of the prompt, after a webhook's payload, with how to update it. The resumed session keeps them, so a reply adds them after its message only when a dashboard, a hand edit or another run changed them since the session last got them, and the run keeps that time in `memorySentAt`. Otherwise the reply adds one line on how to update them.
 2. The agent ends its last message with the new notes between a `<routine-memory>` and a `</routine-memory>` line, or leaves them out when they stay the same. The last whole block of the result counts, without a code fence around the notes, and an empty block changes nothing.
 3. The runner saves the notes and takes the block out of the result before it writes the record, so the after hook, the inbox and the dashboards see the result without it. The transcript leaves the block out of the agent's texts and results too.
 

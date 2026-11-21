@@ -46,6 +46,7 @@ function makeRun(routine: string, id: string, overrides: Partial<RunRecord> = {}
     usageLimit: null,
     tokens: null,
     blockedActions: [],
+    memorySentAt: null,
     ...overrides,
   };
 }
