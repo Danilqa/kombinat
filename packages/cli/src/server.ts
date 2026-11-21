@@ -23,6 +23,7 @@ import { runIdSchema, type RunId } from 'domains/run/ids';
 import { runMessageSchema, usageLimitWaitActionSchema } from 'domains/run/schemas';
 import type { RunRecord, TokenUsage } from 'domains/run/types';
 import {
+  buildAllowMessage,
   buildTokenUsages,
   checkCanContinueRun,
   checkIsRunActive,
@@ -30,6 +31,7 @@ import {
   createRunId,
   filterRuns,
   getTokenUsageStart,
+  listBlockedRules,
   paginateRuns,
   parseRunsPageQuery,
 } from 'domains/run/utils';
@@ -293,6 +295,24 @@ function sendMessage(routine: Routine, run: RunRecord, body: Buffer): ApiRespons
   return { status: 202, body: { ok: true } };
 }
 
+// The reply gets the rules for this session only. The routine's own settings stay as they are.
+function allowBlockedActions(routine: Routine, run: RunRecord): ApiResponse {
+  const rules = listBlockedRules(run.blockedActions);
+  if (rules.length === 0) return fail(409, 'This run has no blocked actions to allow');
+  if (!checkCanContinueRun(run)) {
+    return fail(409, `This ${run.agent} run has no session to continue`);
+  }
+  if (checkIsRunning(routine.name)) {
+    return fail(409, `${routine.name} is running, try again once it is done`);
+  }
+  startDetachedReply(run, {
+    text: buildAllowMessage(rules),
+    source: 'dashboard',
+    allowedTools: rules,
+  });
+  return { status: 202, body: { ok: true } };
+}
+
 function sendWaitAction(run: RunRecord, action: string): ApiResponse {
   const parsed = usageLimitWaitActionSchema.safeParse(action);
   if (!parsed.success) return fail(404, 'Not found');
@@ -464,6 +484,11 @@ function routeApi(request: ApiRequest, context: ApiContext): ApiResponse | Promi
         withRun(found.name, runIdSchema.parse(id), run =>
           sendMessage(found, run, context.request.body),
         ),
+      ),
+    )
+    .with(['POST', ['runs', P.string, P.string, 'blocked', 'allow']], ([, [, routine, id]]) =>
+      withRoutine(routineNameSchema.parse(routine), found =>
+        withRun(found.name, runIdSchema.parse(id), run => allowBlockedActions(found, run)),
       ),
     )
     .with(

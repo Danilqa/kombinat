@@ -78,6 +78,16 @@ export async function sendRunMessage(
   });
 }
 
+export async function allowBlockedActions(
+  http: HttpClient,
+  routine: RoutineName,
+  id: RunId,
+): Promise<void> {
+  await http.request(`${getRunApiPath(routine, id)}/blocked/allow`, sentRunMessageSchema, {
+    method: 'POST',
+  });
+}
+
 export async function sendWaitAction(
   http: HttpClient,
   routine: RoutineName,

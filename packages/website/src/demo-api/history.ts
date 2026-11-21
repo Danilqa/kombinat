@@ -49,6 +49,8 @@ interface DemoRun {
 interface DemoMessage {
   text: string;
   sentAt: Date;
+  // Allow and continue sends the message that allows what the run was blocked from.
+  isAllowing: boolean;
 }
 
 interface DemoWaitAction {
@@ -78,6 +80,7 @@ export interface DemoHistory {
   // A one-time run passes the time it was scheduled for.
   startRun(routine: DemoRoutine, now: Date, scheduledFor?: Date): RunId;
   sendMessage(routine: RoutineName, id: RunId, text: string, now: Date): void;
+  allowBlockedActions(routine: RoutineName, id: RunId, text: string, now: Date): void;
   sendWaitAction(routine: RoutineName, id: RunId, action: UsageLimitWaitAction, now: Date): void;
 }
 
@@ -223,6 +226,11 @@ function checkIsReplying(messages: DemoMessage[], now: Date): boolean {
   return last !== undefined && last.sentAt.getTime() + REPLY_MS > now.getTime();
 }
 
+// As on the daemon, the run keeps its blocked actions until the reply that allows them ends.
+function checkIsAllowed(message: DemoMessage, now: Date): boolean {
+  return message.isAllowing && message.sentAt.getTime() + REPLY_MS <= now.getTime();
+}
+
 function toRunRecord(
   run: DemoRun,
   now: Date,
@@ -278,6 +286,10 @@ function toRunRecord(
           }
         : null,
     tokens: isFinished ? getTokens(run) : null,
+    blockedActions:
+      isFinished && !messages.some(message => checkIsAllowed(message, now))
+        ? (outcome.blockedActions ?? [])
+        : [],
   };
 }
 
@@ -537,7 +549,16 @@ export function createDemoHistory(routines: DemoRoutine[], loadedAt: Date): Demo
       return run.id;
     },
     sendMessage(routine, id, text, now) {
-      messages.set(`${routine}/${id}`, [...getMessages(routine, id), { text, sentAt: now }]);
+      messages.set(`${routine}/${id}`, [
+        ...getMessages(routine, id),
+        { text, sentAt: now, isAllowing: false },
+      ]);
+    },
+    allowBlockedActions(routine, id, text, now) {
+      messages.set(`${routine}/${id}`, [
+        ...getMessages(routine, id),
+        { text, sentAt: now, isAllowing: true },
+      ]);
     },
     sendWaitAction(routine, id, action, now) {
       waitActions.set(`${routine}/${id}`, { action, at: now });

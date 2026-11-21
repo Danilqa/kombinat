@@ -1,7 +1,8 @@
-import type { RunRecord } from 'domains/run/types';
+import type { BlockedAction, RunRecord } from 'domains/run/types';
 import {
   checkIsWaitingForSlot,
   formatTokens,
+  getBlockedLabel,
   getRunDurationMs,
   getTokenTotal,
   getTriggerLabel,
@@ -19,6 +20,21 @@ import { renderMarkdown } from '../../terminal/markdown';
 import { S, sanitize, text, wrapLine } from '../../terminal/text';
 import type { Line } from '../../terminal/text';
 
+function blockedLines(actions: BlockedAction[], width: number): Line[] {
+  return [
+    [],
+    sectionTitle('Blocked', 'add the rules to permissions.allow in .claude/settings.json'),
+    ...actions.flatMap(action => [
+      ...wrapLine(
+        [text('▌ ', S.yellow), text(`${action.tool}  `, S.dim), text(sanitize(action.preview))],
+        width,
+        2,
+      ),
+      ...action.rules.flatMap(rule => wrapLine([text('  '), text(rule, S.yellow)], width, 2)),
+    ]),
+  ];
+}
+
 export function runHeaderLines(
   run: RunRecord,
   cwd: string | null,
@@ -26,7 +42,15 @@ export function runHeaderLines(
   now: number,
 ): ContentLine[] {
   const pairs: DetailPair[] = [
-    { label: 'status', value: statusBadge(run.status, now) },
+    {
+      label: 'status',
+      value: [
+        ...statusBadge(run.status, now),
+        ...(run.blockedActions.length === 0
+          ? []
+          : [text(`  ${getBlockedLabel(run.blockedActions.length)}`, S.yellow)]),
+      ],
+    },
     ...(run.usageLimit === null
       ? []
       : [
@@ -84,6 +108,7 @@ export function runHeaderLines(
         .flatMap(errorLine => wrapLine([text('▌ ', S.red), text(errorLine, S.red)], width, 2)),
     );
   }
+  if (run.blockedActions.length > 0) lines.push(...blockedLines(run.blockedActions, width));
   if (run.resultText)
     lines.push([], sectionTitle('Result'), ...renderMarkdown(run.resultText, width));
   return toContent(lines);

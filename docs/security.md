@@ -4,6 +4,7 @@
 
 - The dashboard listens only on localhost and has no login. Other users of the same machine can open it.
 - Anyone who opens it can start a routine with any prompt they write, or message the agent of a finished run. The agent then works in the routine's folder, with the routine's permissions.
+- On a run that was blocked from actions, anyone who opens it can also press Allow and continue. The reply then does what was blocked, beyond the routine's permissions, though the routine's settings stay as they are.
 - Web pages from other sites can't start runs or send messages through it.
 - To open it from another machine, use SSH or Tailscale Serve, and limit who can reach it. See [Remote access](remote-access.md).
 

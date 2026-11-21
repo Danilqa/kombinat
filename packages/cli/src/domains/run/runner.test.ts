@@ -499,6 +499,63 @@ test('a reply resumes the session with the last message and leaves the outcome o
   assert.deepEqual(readLogTypes(run), ['message', 'result']);
 });
 
+const blockedPush = { tool: 'Bash', preview: 'git push', rules: ['Bash(git push *)'] };
+
+function appendAllowPushMessage(run: RunRecord) {
+  appendLogEvent(run, {
+    type: 'message',
+    text: 'These are allowed now',
+    source: 'dashboard',
+    allowedTools: ['Bash(git push *)'],
+  });
+}
+
+test('a reply with allowed rules resumes the session with them and keeps what is still blocked', async () => {
+  const cwd = path.join(tmp, 'allowed');
+  fs.mkdirSync(cwd, { recursive: true });
+  fs.writeFileSync(path.join(cwd, 'limited.jsonl'), '');
+  fs.writeFileSync(
+    path.join(cwd, 'resumed.jsonl'),
+    JSON.stringify({
+      type: 'result',
+      result: 'Pushed the branch. Opening the pull request needs approval.',
+      is_error: false,
+      permission_denials: [
+        { tool_name: 'Bash', tool_use_id: 't1', tool_input: { command: 'gh pr create --fill' } },
+      ],
+    }),
+  );
+  const routine = buildRoutine(path.join(tmp, 'allowed.md'), `---\ncwd: ${cwd}\n---\nFix it.`);
+  const run = makeFinishedRun('allowed', '20261117T090000Z-alow', {
+    blockedActions: [blockedPush],
+  });
+  appendAllowPushMessage(run);
+
+  const finished = await replyToRun(routine, run);
+
+  assert.match(
+    fs.readFileSync(path.join(cwd, 'args.txt'), 'utf8'),
+    /--allowedTools Bash\(git push \*\) --resume s1$/m,
+  );
+  assert.equal(finished.resultText, run.resultText);
+  assert.deepEqual(finished.blockedActions, [
+    { tool: 'Bash', preview: 'gh pr create --fill', rules: ['Bash(gh pr create *)'] },
+  ]);
+});
+
+test('a reply with allowed rules that fails leaves the blocked actions on the run', async () => {
+  const routine = makeRoutine('allow-fails', '');
+  const run = makeFinishedRun('allow-fails', '20261117T090000Z-alfl', {
+    blockedActions: [blockedPush],
+  });
+  appendAllowPushMessage(run);
+
+  const finished = await replyToRun(routine, run);
+
+  assert.deepEqual(finished.blockedActions, [blockedPush]);
+  assert.deepEqual(readRunRecord(run.routine, run.id)?.blockedActions, [blockedPush]);
+});
+
 test('a reply that cannot start logs why', async () => {
   const routine = makeRoutine('chat-command', '');
   const run = makeFinishedRun('chat-command', '20261117T090000Z-cmnd', { agent: 'command' });

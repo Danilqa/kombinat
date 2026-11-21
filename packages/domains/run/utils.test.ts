@@ -15,6 +15,8 @@ import {
   findExpiredRuns,
   getRunDurationMs,
   getTokenUsageDates,
+  listBlockedRules,
+  mergeBlockedActions,
   paginateRuns,
   parseRunsPageQuery,
 } from './utils';
@@ -173,4 +175,20 @@ test("sums the tokens of the last 7 days by local day, with each routine's share
   });
   assert.equal(release?.share, 0.75);
   assert.equal(shell, null);
+});
+
+test('merging blocked actions keeps one of each action and one of each rule', () => {
+  const push = { tool: 'Bash', preview: 'git push', rules: ['Bash(git push *)'] };
+  const forcePush = { tool: 'Bash', preview: 'git push --force', rules: ['Bash(git push *)'] };
+  const fetch = {
+    tool: 'WebFetch',
+    preview: 'https://acme.dev',
+    rules: ['WebFetch(domain:acme.dev)'],
+  };
+
+  const merged = mergeBlockedActions([push], [push, forcePush, fetch, forcePush]);
+
+  assert.deepEqual(merged, [push, forcePush, fetch]);
+  assert.deepEqual(mergeBlockedActions([], [push, push]), [push]);
+  assert.deepEqual(listBlockedRules(merged), ['Bash(git push *)', 'WebFetch(domain:acme.dev)']);
 });

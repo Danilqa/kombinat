@@ -275,6 +275,7 @@ export const codexAgent: Agent = {
 
   readPlanLimits: () => null,
   findUsageLimitStop: () => null,
+  readBlockedActions: () => [],
 
   buildTranscript(events) {
     const items: TranscriptItem[] = [];

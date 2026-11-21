@@ -28,6 +28,13 @@ export const tokenCountsSchema = z.object({
   cacheRead: z.number(),
 });
 
+// An action the agent wanted to take but nobody was there to approve, with the rules that allow it.
+export const blockedActionSchema = z.object({
+  tool: z.string(),
+  preview: z.string(),
+  rules: z.array(z.string()),
+});
+
 export const runTriggerSchema = z.enum(['schedule', 'manual', 'catch_up', 'webhook']);
 
 export const runRecordSchema = z.object({
@@ -58,6 +65,8 @@ export const runRecordSchema = z.object({
   usageLimit: usageLimitWaitSchema.nullable().default(null),
   // Records written before runs saved their tokens have none.
   tokens: tokenCountsSchema.nullable().default(null),
+  // Records written before runs saved what was blocked have none.
+  blockedActions: z.array(blockedActionSchema).default([]),
 });
 
 export const tokenDaySchema = z.object({ date: z.string(), total: z.number() });

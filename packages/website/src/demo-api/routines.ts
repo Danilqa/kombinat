@@ -1,6 +1,6 @@
 import type { AgentName } from 'domains/agent/types';
 import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
-import type { RunStatus } from 'domains/run/types';
+import type { BlockedAction, RunStatus } from 'domains/run/types';
 import type { SkipReason } from 'domains/scheduler/types';
 import type { UsageLimitKind } from 'domains/transcript/types';
 import type { WebhookCallOutcome } from 'domains/webhook/types';
@@ -8,6 +8,7 @@ import type { WebhookCallOutcome } from 'domains/webhook/types';
 import { HOME } from './constants';
 import {
   bash,
+  denied,
   edit,
   fileChange,
   hook,
@@ -44,6 +45,7 @@ export interface DemoOutcome {
   exitCode?: number | null;
   model?: string;
   usageLimit?: DemoUsageLimit;
+  blockedActions?: BlockedAction[];
   steps: TranscriptStep[];
 }
 
@@ -865,6 +867,42 @@ For each flaky test, find the cause in its trace, fix the test or the code, and 
 const BUGS_COMMAND =
   "gh issue list --label bug --search no:assignee --json number,title --jq 'sort_by(.number) | .[0]'";
 
+const roundingFixSteps: TranscriptStep[] = [
+  opusInit,
+  bash(BUGS_COMMAND, '{"number":331,"title":"Totals are off by one cent"}'),
+  bash('gh issue edit 331 --add-assignee @me', 'https://github.com/acme/web/issues/331'),
+  read(
+    `${REPO}/src/invoices/totals.ts`,
+    `1  export function getTotal(lines: InvoiceLine[]): number {
+2    return lines.reduce((sum, line) => sum + roundCents(line.amount), 0);
+3  }`,
+  ),
+  text(
+    'The total adds up line items that are already rounded, so three lines of 0.335 make 1.02 instead of 1.01. Writing a failing test first.',
+  ),
+  edit(
+    `${REPO}/src/invoices/totals.test.ts`,
+    "describe('getTotal', () => {",
+    "describe('getTotal', () => {\n  it('rounds the total once', () => {\n    expect(getTotal([line(0.335), line(0.335), line(0.335)])).toBe(1.01);\n  });",
+  ),
+  bash(
+    'pnpm vitest run src/invoices/totals.test.ts',
+    ` ✗ getTotal > rounds the total once
+   AssertionError: expected 1.02 to be 1.01`,
+    true,
+  ),
+  edit(
+    `${REPO}/src/invoices/totals.ts`,
+    'return lines.reduce((sum, line) => sum + roundCents(line.amount), 0);',
+    'return roundCents(lines.reduce((sum, line) => sum + line.amount, 0));',
+  ),
+  bash(
+    'pnpm typecheck && pnpm test',
+    ` Test Files  39 passed (39)
+      Tests  218 passed (218)`,
+  ),
+];
+
 const bugFixPickup: DemoRoutine = {
   name: routineNameSchema.parse('bug-fix-pickup'),
   description: 'Fixes the oldest unassigned bug and opens a pull request',
@@ -893,42 +931,45 @@ Reproduce it with a failing test first, then fix it. Keep the change small and r
       resultText:
         'Fixed #331 Totals are off by one cent: the total added up rounded line items. It now rounds once, after the sum. Opened #490 with a test.',
       steps: [
-        opusInit,
-        bash(BUGS_COMMAND, '{"number":331,"title":"Totals are off by one cent"}'),
-        bash('gh issue edit 331 --add-assignee @me', 'https://github.com/acme/web/issues/331'),
-        read(
-          `${REPO}/src/invoices/totals.ts`,
-          `1  export function getTotal(lines: InvoiceLine[]): number {
-2    return lines.reduce((sum, line) => sum + roundCents(line.amount), 0);
-3  }`,
-        ),
-        text(
-          'The total adds up line items that are already rounded, so three lines of 0.335 make 1.02 instead of 1.01. Writing a failing test first.',
-        ),
-        edit(
-          `${REPO}/src/invoices/totals.test.ts`,
-          "describe('getTotal', () => {",
-          "describe('getTotal', () => {\n  it('rounds the total once', () => {\n    expect(getTotal([line(0.335), line(0.335), line(0.335)])).toBe(1.01);\n  });",
-        ),
-        bash(
-          'pnpm vitest run src/invoices/totals.test.ts',
-          ` ✗ getTotal > rounds the total once
-   AssertionError: expected 1.02 to be 1.01`,
-          true,
-        ),
-        edit(
-          `${REPO}/src/invoices/totals.ts`,
-          'return lines.reduce((sum, line) => sum + roundCents(line.amount), 0);',
-          'return roundCents(lines.reduce((sum, line) => sum + line.amount, 0));',
-        ),
-        bash(
-          'pnpm typecheck && pnpm test',
-          ` Test Files  39 passed (39)
-      Tests  218 passed (218)`,
-        ),
+        ...roundingFixSteps,
         bash(
           'gh pr create --title "Round invoice totals once" --body "Closes #331"',
           'https://github.com/acme/web/pull/490',
+        ),
+      ],
+    },
+    {
+      id: 'blocked',
+      weight: 0,
+      status: 'succeeded',
+      minutes: 16,
+      costUsd: 0.96,
+      numTurns: 25,
+      resultText:
+        'Fixed #331 Totals are off by one cent on the branch fix/331-round-totals, with a test. Pushing it and opening the pull request need approval. The branch is only on this machine.',
+      blockedActions: [
+        {
+          tool: 'Bash',
+          preview: 'git push -u origin fix/331-round-totals',
+          rules: ['Bash(git push *)'],
+        },
+        {
+          tool: 'Bash',
+          preview: 'gh pr create --title "Round invoice totals once" --body "Closes #331"',
+          rules: ['Bash(gh pr create *)'],
+        },
+      ],
+      steps: [
+        ...roundingFixSteps,
+        bash(
+          'git switch -c fix/331-round-totals && git commit -am "Round invoice totals once"',
+          `[fix/331-round-totals 4f2c9a1] Round invoice totals once
+ 2 files changed, 5 insertions(+), 1 deletion(-)`,
+        ),
+        denied('git push -u origin fix/331-round-totals'),
+        denied('gh pr create --title "Round invoice totals once" --body "Closes #331"'),
+        text(
+          'Pushing the branch and opening the pull request need approval, and nobody can approve them in this session. The fix is committed on fix/331-round-totals.',
         ),
       ],
     },
@@ -956,6 +997,7 @@ Reproduce it with a failing test first, then fix it. Keep the change small and r
       ],
     },
   ],
+  pins: [{ slotsAgo: 0, outcome: 'blocked' }],
 };
 
 const deadCodeCleanup: DemoRoutine = {

@@ -139,7 +139,7 @@ Changes apply on the next check, no restart needed. Write the prompt so the agen
 | `onUsageLimit`   | `wait` (default), `fail`                                                          | -                                                              | -         |
 | `command`        | -                                                                                 | -                                                              | required  |
 
-- `claude` runs `claude -p`. Anything that needs approval is denied.
+- `claude` runs `claude -p`. Anything that needs approval is denied, and the run still succeeds. The dashboard marks such a run with how many actions were blocked, files it under Needs a look and lists each action with a rule that allows it, such as `Bash(git push *)`. Allow and continue resumes the session with those rules, for that reply only. To allow them in every run, add the rules to `permissions.allow` in `.claude/settings.json` in the routine's folder.
 - `fallbackModel` is the model Claude switches to when `model` is not available, overloaded or fails, such as `claude-sonnet-5-5`. A comma-separated list is tried in order. The run's transcript says when it switched.
 - `onUsageLimit` says what a run does when it hits the 5-hour or weekly limit of the Claude plan. With `wait`, the run shows Waiting for limit, and a minute after the reset, once a run slot is free, Kombinat continues its session where it stopped. The run's page has Continue now and Stop waiting, and its transcript marks the pause. With `fail`, the run fails at the limit.
 - `codex` runs `codex exec`. `permissionMode` sets its sandbox.

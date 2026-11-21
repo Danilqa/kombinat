@@ -86,6 +86,38 @@ test('groups failures first, then findings, then runs that report nothing', () =
   );
 });
 
+const pushBlocked = {
+  tool: 'Bash',
+  preview: 'git push -u origin fix/totals',
+  rules: ['Bash(git push *)'],
+};
+
+test('a succeeded run that was blocked from an action needs a look, even with nothing to report', () => {
+  const runs = [
+    run('found', 30),
+    run('blocked', 20, { resultText: 'No pull request opened.', blockedActions: [pushBlocked] }),
+  ];
+
+  assert.deepEqual(
+    groupInboxRuns(runs).map(({ group, runs: grouped }) => [group, toIds(grouped)]),
+    [
+      ['needs_look', ['blocked']],
+      ['findings', ['found']],
+    ],
+  );
+});
+
+test('the notification of a blocked run counts what was blocked', () => {
+  const [notification] = buildRunNotifications([
+    run('blocked', 20, { resultText: 'Fixed #331 on a branch.', blockedActions: [pushBlocked] }),
+  ]);
+
+  assert.deepEqual(
+    [notification?.title, notification?.body],
+    ['triage needs a look', 'Succeeded, 1 blocked: Fixed #331 on a branch.'],
+  );
+});
+
 test('a result reports nothing when it starts with the word no or nothing', () => {
   assert.equal(checkHasNothingToReport('Nothing to report.'), true);
   assert.equal(checkHasNothingToReport('**No** pull requests wait for my review.'), true);

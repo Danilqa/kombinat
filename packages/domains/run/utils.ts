@@ -7,6 +7,7 @@ import { RUNS_PAGE_SIZE, TOKEN_USAGE_DAYS } from './constants';
 import { runIdSchema, type RunId } from './ids';
 import { runsCursorKeySchema, runsCursorSchema } from './schemas';
 import type {
+  BlockedAction,
   RunRecord,
   RunsCursor,
   RunsCursorKey,
@@ -68,6 +69,34 @@ export function checkIsWaitingForSlot(
 // Only an agent that resumes sessions gives a run a resume command, and it needs the session.
 export function checkCanContinueRun(run: Pick<RunRecord, 'resumeCommand'>): boolean {
   return run.resumeCommand !== null;
+}
+
+export function getBlockedLabel(count: number): string {
+  return `${count} blocked`;
+}
+
+const toBlockedKey = ({ tool, preview }: BlockedAction) => `${tool}\n${preview}`;
+
+// An agent that tries the same action twice, in one process or in two, was still blocked from one thing.
+export function mergeBlockedActions(
+  before: BlockedAction[],
+  after: BlockedAction[],
+): BlockedAction[] {
+  const seen = new Set<string>();
+  return [...before, ...after].filter(action => {
+    const key = toBlockedKey(action);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+export function listBlockedRules(actions: BlockedAction[]): string[] {
+  return [...new Set(actions.flatMap(action => action.rules))];
+}
+
+export function buildAllowMessage(rules: string[]): string {
+  return `These are allowed now: ${rules.join(', ')}. Try the actions that were blocked again, then finish the task.`;
 }
 
 export function getRunStatusLabel(status: RunStatus): string {

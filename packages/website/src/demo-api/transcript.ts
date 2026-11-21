@@ -50,6 +50,15 @@ export function bash(command: string, output: string | null, isError = false): T
   return tool('Bash', { command }, command, output, isError);
 }
 
+// The call Claude Code denies when nobody can answer its permission prompt.
+export function denied(command: string): TranscriptStep {
+  return bash(
+    command,
+    'Permission for this tool use was denied. It requires approval, and this session has no approval surface, so it was denied automatically. The action was NOT performed.',
+    true,
+  );
+}
+
 export function read(filePath: string, output: string): TranscriptStep {
   return tool('Read', { file_path: filePath }, filePath, output);
 }

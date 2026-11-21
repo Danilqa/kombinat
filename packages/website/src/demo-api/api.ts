@@ -15,6 +15,7 @@ import { runIdSchema, type RunId } from 'domains/run/ids';
 import { runMessageSchema, usageLimitWaitActionSchema } from 'domains/run/schemas';
 import type { RunRecord, TokenUsage } from 'domains/run/types';
 import {
+  buildAllowMessage,
   buildTokenUsages,
   checkCanContinueRun,
   checkIsRunActive,
@@ -22,6 +23,7 @@ import {
   createRunId,
   filterRuns,
   findExpiredRuns,
+  listBlockedRules,
   paginateRuns,
   parseRunsPageQuery,
 } from 'domains/run/utils';
@@ -374,6 +376,19 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     return { status: 202, body: { ok: true } };
   }
 
+  function allowBlockedActions(routine: DemoRoutine, run: RunRecord, now: Date): ApiResponse {
+    const rules = listBlockedRules(run.blockedActions);
+    if (rules.length === 0) return fail(409, 'This run has no blocked actions to allow');
+    if (!checkCanContinueRun(run)) {
+      return fail(409, `This ${run.agent} run has no session to continue`);
+    }
+    if (listRoutineRuns(routine, now).some(checkIsRunActive)) {
+      return fail(409, `${routine.name} is running, try again once it is done`);
+    }
+    history.allowBlockedActions(routine.name, run.id, buildAllowMessage(rules), now);
+    return { status: 202, body: { ok: true } };
+  }
+
   function sendWaitAction(run: RunRecord, action: string, now: Date): ApiResponse {
     const parsed = usageLimitWaitActionSchema.safeParse(action);
     if (!parsed.success) return fail(404, 'Not found');
@@ -471,6 +486,12 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
         withRoutine(routineNameSchema.parse(name), routine => {
           const run = findRun(routine.name, runIdSchema.parse(id), now);
           return run === null ? fail(404, 'Run not found') : sendMessage(routine, run, body, now);
+        }),
+      )
+      .with(['POST', ['runs', P.string, P.string, 'blocked', 'allow']], ([, [, name, id]]) =>
+        withRoutine(routineNameSchema.parse(name), routine => {
+          const run = findRun(routine.name, runIdSchema.parse(id), now);
+          return run === null ? fail(404, 'Run not found') : allowBlockedActions(routine, run, now);
         }),
       )
       .with(

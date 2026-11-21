@@ -2,7 +2,7 @@ import { isMatching, match } from 'ts-pattern';
 
 import type { RoutineName } from '../routine/ids';
 import type { RunRecord } from '../run/types';
-import { checkIsRunActive, getRunStatusLabel } from '../run/utils';
+import { checkIsRunActive, getBlockedLabel, getRunStatusLabel } from '../run/utils';
 import { DEFAULT_NOTIFY_LEVEL, INBOX_GROUPS, MAX_RUN_NOTIFICATIONS } from './constants';
 import { notifyLevelsSchema } from './schemas';
 import type {
@@ -55,7 +55,11 @@ export function checkHasNothingToReport(resultText: string | null): boolean {
   return resultText === null || resultText.trim() === '' || NOTHING_TO_REPORT.test(resultText);
 }
 
-export function getInboxGroup(run: Pick<RunRecord, 'status' | 'resultText'>): InboxGroup {
+type GroupedRun = Pick<RunRecord, 'status' | 'resultText' | 'blockedActions'>;
+
+// A run that was blocked from an action did less than it was asked to, whatever its status says.
+export function getInboxGroup(run: GroupedRun): InboxGroup {
+  if (run.blockedActions.length > 0) return 'needs_look';
   return match(run.status)
     .with('succeeded', (): InboxGroup =>
       checkHasNothingToReport(run.resultText) ? 'quiet' : 'findings',
@@ -122,10 +126,7 @@ export function keepNotifyLevelsOf(levels: NotifyLevels, routines: RoutineName[]
   );
 }
 
-export function checkIsRunNotified(
-  run: Pick<RunRecord, 'status' | 'resultText'>,
-  level: NotifyLevel,
-): boolean {
+export function checkIsRunNotified(run: GroupedRun, level: NotifyLevel): boolean {
   const group = getInboxGroup(run);
   return match(level)
     .with('failures_and_findings', () => !isMatching('quiet', group))
@@ -155,7 +156,10 @@ function getRunNotificationTitle(run: RunRecord): string {
 
 function getRunNotificationBody(run: RunRecord): string {
   const summary = getInboxRunSummary(run);
-  const status = getRunStatusLabel(run.status);
+  const status =
+    run.blockedActions.length === 0
+      ? getRunStatusLabel(run.status)
+      : `${getRunStatusLabel(run.status)}, ${getBlockedLabel(run.blockedActions.length)}`;
   if (summary === '') return status;
   return match(getInboxGroup(run))
     .with('needs_look', () => `${status}: ${summary}`)
