@@ -796,6 +796,9 @@ c03a5f2 Merge pull request #478 from acme/cache-browsers
   ],
 };
 
+const FLAKY_PR_COMMAND =
+  'gh pr create --title "Wait for the avatar upload before saving" --body-file /tmp/pr.md';
+
 const flakyFixSteps: TranscriptStep[] = [
   opusInit,
   bash(
@@ -831,10 +834,7 @@ const flakyFixSteps: TranscriptStep[] = [
     'git commit -am "Wait for the avatar upload before saving" && git push -u origin HEAD',
     ' 1 file changed, 3 insertions(+), 1 deletion(-)',
   ),
-  bash(
-    'gh pr create --title "Wait for the avatar upload before saving" --body-file /tmp/pr.md',
-    'https://github.com/acme/web/pull/497',
-  ),
+  bash(FLAKY_PR_COMMAND, 'https://github.com/acme/web/pull/497'),
 ];
 
 const flakyFixFiles: ChangedFile[] = [{ path: 'e2e/settings/avatar.e2e.ts', added: 3, removed: 1 }];
@@ -900,7 +900,35 @@ For each flaky test, find the cause in its trace, fix the test or the code, and 
         ),
       ],
     },
+    {
+      id: 'blocked',
+      weight: 0,
+      status: 'succeeded',
+      minutes: 11,
+      costUsd: 0.88,
+      numTurns: 23,
+      resultText:
+        "Fixed 'uploads an avatar' with a commit on this run's branch, and 50 runs in a row pass. Pushing it and opening the pull request need approval.",
+      blockedActions: [
+        { tool: 'Bash', preview: 'git push -u origin HEAD', rules: ['Bash(git push *)'] },
+        { tool: 'Bash', preview: FLAKY_PR_COMMAND, rules: ['Bash(gh pr create *)'] },
+      ],
+      changedFiles: flakyFixFiles,
+      steps: [
+        ...flakyFixSteps.slice(0, -2),
+        bash(
+          'git commit -am "Wait for the avatar upload before saving"',
+          ' 1 file changed, 3 insertions(+), 1 deletion(-)',
+        ),
+        denied('git push -u origin HEAD'),
+        denied(FLAKY_PR_COMMAND),
+        text(
+          "Pushing the branch and opening the pull request need approval, and nobody can approve them in this session. The fix is committed on this run's branch.",
+        ),
+      ],
+    },
   ],
+  pins: [{ slotsAgo: 2, outcome: 'blocked' }],
   manualRuns: [{ minutesAgo: 23, outcome: 'paused' }],
 };
 
