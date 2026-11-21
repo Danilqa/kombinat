@@ -1,4 +1,4 @@
-import type { KeyboardEvent, ReactNode } from 'react';
+import type { KeyboardEvent, ReactNode, Ref } from 'react';
 import { Card, Kbd } from 'design-system/components';
 import { cn } from 'design-system/utils';
 import { isApplePlatform } from '@web-app/hooks/use-search-shortcut';
@@ -22,6 +22,7 @@ interface PromptEditorProps {
   footer?: ReactNode;
   placeholder?: string;
   autoFocus?: boolean;
+  ref?: Ref<HTMLTextAreaElement>;
 }
 
 export function PromptEditor({
@@ -31,6 +32,7 @@ export function PromptEditor({
   footer,
   placeholder,
   autoFocus,
+  ref,
 }: PromptEditorProps) {
   return (
     <Card.Root className="gap-0 py-0 transition-colors focus-within:border-line-strong">
@@ -40,6 +42,7 @@ export function PromptEditor({
         </div>
       )}
       <textarea
+        ref={ref}
         aria-label="Prompt"
         value={value}
         placeholder={placeholder}

@@ -1,4 +1,4 @@
-import { useState, type SubmitEvent } from 'react';
+import { useRef, useState, type SubmitEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader, Play } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router';
@@ -29,6 +29,8 @@ export function NewRunPage() {
   const queryClient = useQueryClient();
   const [routineName, setRoutineName] = useState<RoutineName | null>(null);
   const [prompt, setPrompt] = useState('');
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const promptRef = useRef<HTMLTextAreaElement>(null);
   const { data, error, isPending } = useQuery({
     queryKey: ['routines'],
     queryFn: () => getRoutines(sameOriginApi),
@@ -47,16 +49,19 @@ export function NewRunPage() {
   });
   const routine = data?.find(candidate => candidate.name === routineName) ?? null;
   const isRunning = routine?.running === true;
-  const isUnavailable = routine === null || isRunning || startRun.isPending || prompt.trim() === '';
+  const isUnavailable = isRunning || startRun.isPending || prompt.trim() === '';
 
   function submit(event: SubmitEvent) {
     event.preventDefault();
-    if (!isUnavailable) startRun.mutate({ routine: routine.name, prompt });
+    if (isUnavailable) return;
+    if (routine === null) setIsPickerOpen(true);
+    else startRun.mutate({ routine: routine.name, prompt });
   }
 
   function chooseRoutine(name: RoutineName) {
     startRun.reset();
     setRoutineName(name);
+    promptRef.current?.focus();
   }
 
   // Back to the page it was opened from, or to Runs when the page was opened by its URL.
@@ -116,11 +121,18 @@ export function NewRunPage() {
           <PromptEditor
             value={prompt}
             onChange={setPrompt}
+            ref={promptRef}
             placeholder="What should the agent do?"
             autoFocus
             header={
               <>
-                <RoutinePicker routines={data} value={routineName} onChange={chooseRoutine} />
+                <RoutinePicker
+                  routines={data}
+                  value={routineName}
+                  onChange={chooseRoutine}
+                  isOpen={isPickerOpen}
+                  onOpenChange={setIsPickerOpen}
+                />
                 {routine && (
                   <span className="min-w-0 truncate" title={routine.cwd}>
                     {routine.cwd}

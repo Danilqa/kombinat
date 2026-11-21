@@ -10,27 +10,34 @@ interface RoutinePickerProps {
   routines: RoutineSummary[];
   value: RoutineName | null;
   onChange: (name: RoutineName) => void;
+  isOpen: boolean;
+  onOpenChange: (isOpen: boolean) => void;
 }
 
-export function RoutinePicker({ routines, value, onChange }: RoutinePickerProps) {
-  const [isOpen, setIsOpen] = useState(false);
+export function RoutinePicker({
+  routines,
+  value,
+  onChange,
+  isOpen,
+  onOpenChange,
+}: RoutinePickerProps) {
   const [search, setSearch] = useState('');
+  const [wasOpen, setWasOpen] = useState(isOpen);
+  if (isOpen !== wasOpen) {
+    setWasOpen(isOpen);
+    if (isOpen) setSearch('');
+  }
   const foundRoutines = routines.filter(routine =>
     checkMatchesSearch(search, [routine.name, routine.description, routine.agent, routine.cwd]),
   );
 
-  function toggle(isOpening: boolean) {
-    setIsOpen(isOpening);
-    if (isOpening) setSearch('');
-  }
-
   function choose(name: RoutineName) {
     onChange(name);
-    toggle(false);
+    onOpenChange(false);
   }
 
   return (
-    <Popover.Root open={isOpen} onOpenChange={toggle}>
+    <Popover.Root open={isOpen} onOpenChange={onOpenChange}>
       <Popover.Trigger asChild>
         {/* A 44px tap area on phones that keeps the row above the prompt as short as on desktop. */}
         <Button
@@ -65,7 +72,14 @@ export function RoutinePicker({ routines, value, onChange }: RoutinePickerProps)
           />
           <Command.List className="max-h-[min(20rem,50vh)]">
             <Command.Empty className="py-6">
-              {routines.length === 0 ? 'No routines yet' : 'No routines match'}
+              {routines.length === 0 ? (
+                <>
+                  No routines yet. Add a markdown file to{' '}
+                  <code className="font-mono">routines/</code> to create one.
+                </>
+              ) : (
+                'No routines match'
+              )}
             </Command.Empty>
             {foundRoutines.map(routine => (
               <Command.Item

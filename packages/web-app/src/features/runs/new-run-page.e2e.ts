@@ -26,12 +26,14 @@ test('runs a new prompt once with the routine it picks and opens that run', asyn
   await prompt.press('ControlOrMeta+Enter');
   await expect(page).toHaveURL(/\/runs\/new$/);
 
-  await page.getByRole('button', { name: 'Choose a routine' }).click();
-  await page.getByRole('combobox', { name: 'Search routines' }).fill('prints');
+  const search = page.getByRole('combobox', { name: 'Search routines' });
+  await expect(search).toBeFocused();
+  await search.fill('prints');
   await expect(page.getByRole('option')).toHaveText([/^echo-prompt/]);
-  await page.getByRole('option', { name: /^echo-prompt/ }).click();
+  await search.press('Enter');
   await expect(page.getByRole('button', { name: 'Routine echo-prompt' })).toBeVisible();
-  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await expect(prompt).toBeFocused();
+  await prompt.press('ControlOrMeta+Enter');
 
   await expect(page).toHaveURL(/\/runs\/echo-prompt\/[^/]+$/);
   await expect(page.getByRole('main')).toMatchAriaSnapshot(
