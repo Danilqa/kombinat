@@ -286,7 +286,7 @@ function saveMemory(routine: Routine, body: Buffer): ApiResponse {
   if (!routine.memory) {
     return fail(
       409,
-      `${routine.name} has no memory. It needs agent claude or codex and no memory: false`,
+      `${routine.name} has no memory. It needs agent claude or codex and memory: true`,
     );
   }
   const request = memoryRequestSchema.safeParse(parseJson(body.toString('utf8')));

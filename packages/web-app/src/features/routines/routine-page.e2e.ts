@@ -111,7 +111,7 @@ test('shows the notes a run left and lets you edit, clear and restore them', asy
   kombinat,
   time,
 }) => {
-  kombinat.addRoutine({ name: 'design-ux-issues' });
+  kombinat.addRoutine({ name: 'design-ux-issues', memory: true });
   const run = kombinat.addRun({ routine: 'design-ux-issues', startedAt: time.minutesAgo(70) });
   kombinat.addMemory('design-ux-issues', NOTES, {
     at: time.minutesAgo(60),
@@ -159,9 +159,10 @@ test('shows the notes a run left and lets you edit, clear and restore them', asy
 });
 
 test('a routine without memory has no Memory tab', async ({ page, kombinat }) => {
-  kombinat.addRoutine({ name: 'one-off', memory: false });
+  kombinat.addRoutine({ name: 'one-off' });
+  kombinat.addRoutine({ name: 'turned-off', memory: false });
   kombinat.addRoutine({ name: 'disk-cleanup', agent: 'command', command: 'echo done' });
-  for (const name of ['one-off', 'disk-cleanup']) {
+  for (const name of ['one-off', 'turned-off', 'disk-cleanup']) {
     await page.goto(`/routines/${name}`);
     await expect(page.getByRole('tab', { name: 'Prompt' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Memory' })).toBeHidden();

@@ -81,8 +81,13 @@ test('a webhook gate needs the webhook', () => {
   );
 });
 
-test('memory is on for agents and off for commands unless the frontmatter says otherwise', () => {
-  assert.equal(buildRoutine('/tmp/demo.md', routineFile('agent: codex')).memory, true);
+test('memory is off unless the frontmatter turns it on for an agent', () => {
+  assert.equal(buildRoutine('/tmp/demo.md', routineFile('agent: codex')).memory, false);
+  assert.equal(buildRoutine('/tmp/demo.md', routineFile('memory: true')).memory, true);
+  assert.equal(
+    buildRoutine('/tmp/demo.md', routineFile('agent: codex\nmemory: true')).memory,
+    true,
+  );
   assert.equal(buildRoutine('/tmp/demo.md', routineFile('memory: false')).memory, false);
   assert.equal(
     buildRoutine('/tmp/demo.md', routineFile('agent: command\ncommand: echo hi')).memory,
