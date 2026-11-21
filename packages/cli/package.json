@@ -1,6 +1,6 @@
 {
   "name": "kombinat",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "type": "module",
   "description": "Run agents on a schedule or webhook, from markdown files in your repo. On any machine and the plan you already pay for.",
   "keywords": [
