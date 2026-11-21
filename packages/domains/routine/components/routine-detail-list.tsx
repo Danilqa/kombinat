@@ -16,6 +16,15 @@ function getStatEntries(routine: RoutineSummary): DetailEntry[] {
       value: routine.maxBudgetUsd === null ? 'None' : `$${routine.maxBudgetUsd.toFixed(2)}`,
     },
     { label: 'Working directory', value: routine.cwd, isMono: true, span: 'wide' },
+    ...(routine.worktree
+      ? [
+          {
+            label: 'Worktree',
+            value: `Each run gets its own, on a kombinat/${routine.name}-<run> branch`,
+            span: 'wide' as const,
+          },
+        ]
+      : []),
     { label: 'File', value: routine.file, isMono: true, span: 'wide' },
     ...(routine.webhook
       ? [

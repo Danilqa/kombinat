@@ -8,7 +8,7 @@ import { isMatching, match } from 'ts-pattern';
 
 import type { RoutineName } from 'domains/routine/ids';
 import type { RunId } from 'domains/run/ids';
-import type { RunRecord, RunTrigger } from 'domains/run/types';
+import type { RunRecord, RunTrigger, RunWorktree } from 'domains/run/types';
 import {
   addTokenCounts,
   checkIsRunActive,
@@ -16,6 +16,7 @@ import {
   mergeBlockedActions,
 } from 'domains/run/utils';
 import { getUsageLimitLabel } from 'domains/transcript/utils';
+import { getErrorMessage } from 'utils/error';
 
 import { config, getCliArgs } from '../../config';
 import { parseJson } from '../../utils/json';
@@ -36,6 +37,7 @@ import { getBeforeHookError, HOOK_TIMEOUT_MS, runHook } from './hooks';
 import { appendPayload, takePayload, takePrompt } from './payload';
 import { getRunsDir, listRuns, readRunRecord, writeRunRecord } from './storage';
 import { planUsageLimitWait, waitOutUsageLimit } from './usage-limit';
+import { createWorktree, refreshWorktree, restoreWorktree, settleWorktree } from './worktree';
 
 export interface RunOptions {
   trigger: RunTrigger;
@@ -309,6 +311,22 @@ async function runWaitingOutLimits(run: LimitedRun): Promise<Partial<RunRecord>>
   }
 }
 
+interface WorkPlace {
+  routine: Routine;
+  error: string | null;
+}
+
+// With worktree: true the run works in a worktree of its own, so everything starts in its cwd.
+async function prepareWorkPlace(routine: Routine, record: RunRecord): Promise<WorkPlace> {
+  if (!routine.worktree || !fs.existsSync(routine.cwd)) return { routine, error: null };
+  try {
+    record.worktree = await createWorktree(routine.name, record.id, routine.cwd);
+    return { routine: { ...routine, cwd: record.worktree.cwd }, error: null };
+  } catch (error) {
+    return { routine, error: getErrorMessage(error) };
+  }
+}
+
 export async function runRoutine(
   routine: Routine,
   options: RunOptions,
@@ -344,31 +362,38 @@ export async function runRoutine(
     tokens: null,
     blockedActions: [],
     memorySentAt: null,
+    worktree: null,
   };
 
+  const workPlace = await prepareWorkPlace(routine, record);
+  const workRoutine = workPlace.routine;
   const prompt = takePrompt(routine.name, id) ?? routine.prompt;
   const payload = takePayload(routine.name, id);
   const withPayload = payload === null ? prompt : appendPayload(prompt, payload);
   const memory = routine.memory ? readMemory(routine.name) : null;
   const task = {
-    ...routine,
+    ...workRoutine,
     prompt: memory === null ? withPayload : appendMemory(withPayload, memory),
   };
   const context: RunContext = { routine: task, runId: id, trigger: options.trigger };
   const invocation = agent.buildInvocation(context);
-  const outcome = await runWaitingOutLimits({
-    routine,
-    agent,
-    invocation,
-    record,
-    hookTimeoutMs,
-    timeoutMs: routine.timeoutMinutes * 60_000,
-    persist: writeRunRecord,
-    context,
-  });
+  const outcome: Partial<RunRecord> =
+    workPlace.error === null
+      ? await runWaitingOutLimits({
+          routine: workRoutine,
+          agent,
+          invocation,
+          record,
+          hookTimeoutMs,
+          timeoutMs: routine.timeoutMinutes * 60_000,
+          persist: writeRunRecord,
+          context,
+        })
+      : { status: 'failed', error: workPlace.error };
   if (memory !== null) {
     record.resultText = keepMemoryUpdate(routine.name, id, record.resultText, memory);
   }
+  if (record.worktree !== null) record.worktree = await refreshWorktree(record.worktree);
   const finished: RunRecord = { ...record, ...outcome, endedAt: new Date().toISOString() };
   try {
     if (routine.after !== null) {
@@ -377,7 +402,7 @@ export async function runRoutine(
       await runHook({
         type: 'after_hook',
         command: routine.after,
-        cwd: fs.existsSync(routine.cwd) ? routine.cwd : config.projectRoot,
+        cwd: fs.existsSync(workRoutine.cwd) ? workRoutine.cwd : config.projectRoot,
         env: {
           ...invocation.env,
           KOMBINAT_ROUTINE: finished.routine,
@@ -391,9 +416,27 @@ export async function runRoutine(
       });
     }
   } finally {
+    if (finished.worktree !== null) finished.worktree = await settleWorktree(finished.worktree);
     writeRunRecord(finished);
   }
   return finished;
+}
+
+interface ReplyWorktree {
+  worktree: RunWorktree | null;
+  error: string | null;
+}
+
+async function prepareReplyWorktree(run: RunRecord): Promise<ReplyWorktree> {
+  if (run.worktree === null) return { worktree: null, error: null };
+  try {
+    return { worktree: await restoreWorktree(run.worktree), error: null };
+  } catch (error) {
+    return {
+      worktree: run.worktree,
+      error: `Could not bring back the worktree: ${getErrorMessage(error)}`,
+    };
+  }
 }
 
 // Resumes the run's session with the last message of its log. The hooks belong to the run, not to replies.
@@ -404,17 +447,20 @@ export async function replyToRun(routine: Routine, run: RunRecord): Promise<RunR
   const isMemorySent =
     memory !== null &&
     checkHasMemoryChangedSince(routine.name, run.id, run.memorySentAt ?? run.startedAt);
+  const { worktree, error: worktreeError } = await prepareReplyWorktree(run);
   const replying: RunRecord = {
     ...run,
     replyPid: process.pid,
     memorySentAt: isMemorySent ? memoryReadAt : run.memorySentAt,
+    worktree,
   };
   writeRunRecord(replying);
+  const workRoutine = worktree === null ? routine : { ...routine, cwd: worktree.cwd };
   const message = readLastMessage(run);
   const invocation =
     routine.agent === run.agent && run.sessionId !== null && message !== null
       ? agent.buildReplyInvocation(
-          { routine, runId: run.id, trigger: run.trigger },
+          { routine: workRoutine, runId: run.id, trigger: run.trigger },
           run.sessionId,
           memory === null
             ? message
@@ -434,20 +480,22 @@ export async function replyToRun(routine: Routine, run: RunRecord): Promise<RunR
     blockedActions: isAllowing ? [] : run.blockedActions,
   };
   const outcome: Partial<RunRecord> =
-    invocation === null
-      ? { status: 'failed', error: `This ${run.agent} run has no session to continue` }
-      : (
-          await runAgent({
-            routine: { ...routine, before: null },
-            agent,
-            invocation,
-            record: session,
-            hookTimeoutMs: HOOK_TIMEOUT_MS,
-            timeoutMs: routine.timeoutMinutes * 60_000,
-            persist: ({ sessionId, resumeCommand }) =>
-              writeRunRecord({ ...replying, sessionId, resumeCommand }),
-          })
-        ).outcome;
+    worktreeError !== null
+      ? { status: 'failed', error: worktreeError }
+      : invocation === null
+        ? { status: 'failed', error: `This ${run.agent} run has no session to continue` }
+        : (
+            await runAgent({
+              routine: { ...workRoutine, before: null },
+              agent,
+              invocation,
+              record: session,
+              hookTimeoutMs: HOOK_TIMEOUT_MS,
+              timeoutMs: routine.timeoutMinutes * 60_000,
+              persist: ({ sessionId, resumeCommand }) =>
+                writeRunRecord({ ...replying, sessionId, resumeCommand }),
+            })
+          ).outcome;
   if (memory !== null) keepMemoryUpdate(routine.name, run.id, session.resultText, memory);
   const isSucceeded = isMatching({ status: 'succeeded' }, outcome);
   // An error the agent reported is in its own events already.
@@ -461,6 +509,7 @@ export async function replyToRun(routine: Routine, run: RunRecord): Promise<RunR
     resumeCommand: session.resumeCommand,
     replyPid: null,
     blockedActions: isAllowing && !isSucceeded ? run.blockedActions : session.blockedActions,
+    worktree: worktree === null ? null : await settleWorktree(worktree),
   };
   writeRunRecord(finished);
   return finished;

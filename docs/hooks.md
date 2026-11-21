@@ -11,7 +11,7 @@ Both run with `/bin/sh -c` and have 3 minutes, after which they are killed toget
 
 ## Before
 
-`before` runs in the routine's `cwd` before the agent starts, for example to update a checkout or start a service. If it fails, exits with a non-zero code or takes more than 3 minutes, the agent does not start and the run fails.
+`before` runs in the routine's `cwd` before the agent starts, for example to update a checkout or start a service. With `worktree: true`, both hooks run in the run's worktree instead, see [worktrees.md](worktrees.md). If it fails, exits with a non-zero code or takes more than 3 minutes, the agent does not start and the run fails.
 
 ## After
 

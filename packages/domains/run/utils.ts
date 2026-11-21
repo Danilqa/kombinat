@@ -15,9 +15,12 @@ import type {
   RunsPageQuery,
   RunStatus,
   RunTrigger,
+  RunWorktree,
   TokenCounts,
   TokenUsage,
   UsageLimitWait,
+  WorktreeBaseStep,
+  WorktreeChanges,
 } from './types';
 
 const tokenFormatter = new Intl.NumberFormat('en', {
@@ -108,6 +111,33 @@ export function getRunStatusLabel(status: RunStatus): string {
     .with('timed_out', () => 'Timed out')
     .with('aborted', () => 'Aborted')
     .exhaustive();
+}
+
+export function getWorktreeBranch(routine: RoutineName, id: RunId): string {
+  return `kombinat/${routine}-${id}`;
+}
+
+const countFiles = (count: number) => `${count} ${count === 1 ? 'file' : 'files'}`;
+const countCommits = (count: number) => `${count} ${count === 1 ? 'commit' : 'commits'}`;
+
+export function getWorktreeChangesLabel({ fileCount, commits, uncommitted }: WorktreeChanges) {
+  if (fileCount === 0)
+    return commits === 0 ? 'No changes' : `No changes in ${countCommits(commits)}`;
+  const changed = `${countFiles(fileCount)} changed`;
+  if (commits === 0) return `${changed}, not committed`;
+  const committed = `${changed} in ${countCommits(commits)}`;
+  return uncommitted === 0 ? committed : `${committed}, ${uncommitted} not committed`;
+}
+
+// The folder of the routine's cwd in the checkout, which outlives the worktree.
+export function getCheckoutCwd({ checkout, path, cwd }: RunWorktree): string {
+  return `${checkout}${cwd.slice(path.length)}`;
+}
+
+// A new worktree starts from the base, so a change reaches later runs only once the base has it.
+export function getWorktreeBaseStep({ base, baseCommit }: RunWorktree): WorktreeBaseStep {
+  if (base === baseCommit.slice(0, 7)) return { verb: 'commit', branch: null };
+  return { verb: base.startsWith('origin/') ? 'push' : 'commit', branch: base };
 }
 
 export function getTriggerLabel(trigger: RunTrigger): string {

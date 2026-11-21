@@ -1,6 +1,6 @@
 import type { AgentName } from 'domains/agent/types';
 import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
-import type { BlockedAction, RunStatus } from 'domains/run/types';
+import type { BlockedAction, ChangedFile, RunStatus } from 'domains/run/types';
 import type { SkipReason } from 'domains/scheduler/types';
 import type { UsageLimitKind } from 'domains/transcript/types';
 import type { WebhookCallOutcome } from 'domains/webhook/types';
@@ -46,6 +46,8 @@ export interface DemoOutcome {
   model?: string;
   usageLimit?: DemoUsageLimit;
   blockedActions?: BlockedAction[];
+  // The files a worktree run committed. A worktree run without them changed nothing.
+  changedFiles?: ChangedFile[];
   steps: TranscriptStep[];
 }
 
@@ -104,6 +106,7 @@ export interface DemoRoutine {
   command: string | null;
   cwd: string;
   timeoutMinutes: number;
+  worktree?: boolean;
   maxBudgetUsd: number | null;
   prompt: string;
   runModel: string | null;
@@ -301,6 +304,55 @@ const DESIGN_ISSUES_COMMAND = 'gh issue list --label design --state open --json 
 const KNOWN_DESIGN_ISSUES =
   '[{"number":498,"title":"Sidebar icons are misaligned in Safari"},{"number":503,"title":"The invoices empty state has no call to action"}]';
 
+const designIssueSteps: TranscriptStep[] = [
+  sonnetInit,
+  bash('pnpm dev --port 4300 > /tmp/dev.log 2>&1 &', '[1] 51022'),
+  bash(DESIGN_ISSUES_COMMAND, KNOWN_DESIGN_ISSUES),
+  mcp(
+    'mcp__playwright__browser_navigate',
+    { url: 'http://localhost:4300/reports' },
+    'Navigated to http://localhost:4300/reports\nPage title: Reports · Acme',
+  ),
+  mcp(
+    'mcp__playwright__browser_resize',
+    { width: 390, height: 844 },
+    'Resized the browser window to 390×844',
+  ),
+  mcp(
+    'mcp__playwright__browser_click',
+    { element: 'Date range button', ref: 'e42' },
+    'Clicked Date range button',
+  ),
+  mcp(
+    'mcp__playwright__browser_take_screenshot',
+    { filename: 'date-picker-phone.png' },
+    'Saved the screenshot to date-picker-phone.png',
+  ),
+  text(
+    'On a phone the date picker is 412 px wide, so its right column is cut off. It is not among the open design issues.',
+  ),
+  bash(
+    'gh issue create --label design --title "Date picker overflows the screen on phones" --body-file /tmp/issue-date-picker.md',
+    'https://github.com/acme/web/issues/512',
+  ),
+  mcp(
+    'mcp__playwright__browser_navigate',
+    { url: 'http://localhost:4300/settings?theme=dark' },
+    'Navigated to http://localhost:4300/settings?theme=dark\nPage title: Settings · Acme',
+  ),
+  text(
+    'In dark mode the Save button is #5b6ee1 text on #3a3f58, a 2.9:1 contrast. Buttons need at least 4.5:1.',
+  ),
+  bash(
+    'gh issue create --label design --title "Save button has low contrast in dark mode" --body-file /tmp/issue-contrast.md',
+    'https://github.com/acme/web/issues/513',
+  ),
+  bash(
+    'gh issue create --label design --title "Reports page says Export and Download for the same action" --body-file /tmp/issue-wording.md',
+    'https://github.com/acme/web/issues/514',
+  ),
+];
+
 const designUxIssues: DemoRoutine = {
   name: routineNameSchema.parse('design-ux-issues'),
   description: 'Clicks through the app at night and files design and UX issues',
@@ -348,54 +400,19 @@ Look for broken layouts, text that overflows or is cut off, low contrast, incons
       numTurns: 41,
       resultText:
         'Filed 3 issues: #512 the date picker overflows the screen on phones, #513 the Save button has 2.9:1 contrast in dark mode and #514 the reports page says Export in one place and Download in another.',
-      steps: [
-        sonnetInit,
-        bash('pnpm dev --port 4300 > /tmp/dev.log 2>&1 &', '[1] 51022'),
-        bash(DESIGN_ISSUES_COMMAND, KNOWN_DESIGN_ISSUES),
-        mcp(
-          'mcp__playwright__browser_navigate',
-          { url: 'http://localhost:4300/reports' },
-          'Navigated to http://localhost:4300/reports\nPage title: Reports · Acme',
-        ),
-        mcp(
-          'mcp__playwright__browser_resize',
-          { width: 390, height: 844 },
-          'Resized the browser window to 390×844',
-        ),
-        mcp(
-          'mcp__playwright__browser_click',
-          { element: 'Date range button', ref: 'e42' },
-          'Clicked Date range button',
-        ),
-        mcp(
-          'mcp__playwright__browser_take_screenshot',
-          { filename: 'date-picker-phone.png' },
-          'Saved the screenshot to date-picker-phone.png',
-        ),
-        text(
-          'On a phone the date picker is 412 px wide, so its right column is cut off. It is not among the open design issues.',
-        ),
-        bash(
-          'gh issue create --label design --title "Date picker overflows the screen on phones" --body-file /tmp/issue-date-picker.md',
-          'https://github.com/acme/web/issues/512',
-        ),
-        mcp(
-          'mcp__playwright__browser_navigate',
-          { url: 'http://localhost:4300/settings?theme=dark' },
-          'Navigated to http://localhost:4300/settings?theme=dark\nPage title: Settings · Acme',
-        ),
-        text(
-          'In dark mode the Save button is #5b6ee1 text on #3a3f58, a 2.9:1 contrast. Buttons need at least 4.5:1.',
-        ),
-        bash(
-          'gh issue create --label design --title "Save button has low contrast in dark mode" --body-file /tmp/issue-contrast.md',
-          'https://github.com/acme/web/issues/513',
-        ),
-        bash(
-          'gh issue create --label design --title "Reports page says Export and Download for the same action" --body-file /tmp/issue-wording.md',
-          'https://github.com/acme/web/issues/514',
-        ),
-      ],
+      steps: designIssueSteps,
+    },
+    {
+      id: 'paused',
+      weight: 0,
+      status: 'succeeded',
+      minutes: 24,
+      costUsd: 1.89,
+      numTurns: 42,
+      resultText:
+        'Filed 3 issues: #512 the date picker overflows the screen on phones, #513 the Save button has 2.9:1 contrast in dark mode and #514 the reports page says Export in one place and Download in another.',
+      usageLimit: { limit: 'session', afterStep: 5, waitMinutes: 70 },
+      steps: designIssueSteps,
     },
     {
       id: 'clean',
@@ -424,6 +441,7 @@ Look for broken layouts, text that overflows or is cut off, low contrast, incons
     },
   ],
   pins: [{ slotsAgo: 2, lateMinutes: 96 }],
+  manualRuns: [{ minutesAgo: 23, outcome: 'paused' }],
 };
 
 const postReleaseMonitoring: DemoRoutine = {
@@ -793,6 +811,9 @@ c03a5f2 Merge pull request #478 from acme/cache-browsers
   ],
 };
 
+const FLAKY_PR_COMMAND =
+  'gh pr create --title "Wait for the avatar upload before saving" --body-file /tmp/pr.md';
+
 const flakyFixSteps: TranscriptStep[] = [
   opusInit,
   bash(
@@ -825,10 +846,13 @@ const flakyFixSteps: TranscriptStep[] = [
     'Running 50 tests using 4 workers\n  50 passed (1.7m)',
   ),
   bash(
-    'gh pr create --title "Wait for the avatar upload before saving" --body-file /tmp/pr.md',
-    'https://github.com/acme/web/pull/497',
+    'git commit -am "Wait for the avatar upload before saving" && git push -u origin HEAD',
+    ' 1 file changed, 3 insertions(+), 1 deletion(-)',
   ),
+  bash(FLAKY_PR_COMMAND, 'https://github.com/acme/web/pull/497'),
 ];
+
+const flakyFixFiles: ChangedFile[] = [{ path: 'e2e/settings/avatar.e2e.ts', added: 3, removed: 1 }];
 
 const flakyE2eFixer: DemoRoutine = {
   name: routineNameSchema.parse('flaky-e2e-fixer'),
@@ -842,6 +866,7 @@ const flakyE2eFixer: DemoRoutine = {
   command: null,
   cwd: REPO,
   timeoutMinutes: 45,
+  worktree: true,
   maxBudgetUsd: 3,
   prompt: `Find the end-to-end tests that failed and then passed on a retry in the last 24 hours of CI.
 
@@ -857,18 +882,7 @@ For each flaky test, find the cause in its trace, fix the test or the code, and 
       numTurns: 24,
       resultText:
         "Fixed 'uploads an avatar': it clicked Save before the upload finished. It now waits for the upload response, 50 runs in a row pass, and #497 is open.",
-      steps: flakyFixSteps,
-    },
-    {
-      id: 'paused',
-      weight: 0,
-      status: 'succeeded',
-      minutes: 12,
-      costUsd: 0.97,
-      numTurns: 25,
-      resultText:
-        "Fixed 'uploads an avatar': it clicked Save before the upload finished. It now waits for the upload response, 50 runs in a row pass, and #497 is open.",
-      usageLimit: { limit: 'session', afterStep: 5, waitMinutes: 70 },
+      changedFiles: flakyFixFiles,
       steps: flakyFixSteps,
     },
     {
@@ -888,8 +902,35 @@ For each flaky test, find the cause in its trace, fix the test or the code, and 
         ),
       ],
     },
+    {
+      id: 'blocked',
+      weight: 0,
+      status: 'succeeded',
+      minutes: 11,
+      costUsd: 0.88,
+      numTurns: 23,
+      resultText:
+        "Fixed 'uploads an avatar' with a commit on this run's branch, and 50 runs in a row pass. Pushing it and opening the pull request need approval.",
+      blockedActions: [
+        { tool: 'Bash', preview: 'git push -u origin HEAD', rules: ['Bash(git push *)'] },
+        { tool: 'Bash', preview: FLAKY_PR_COMMAND, rules: ['Bash(gh pr create *)'] },
+      ],
+      changedFiles: flakyFixFiles,
+      steps: [
+        ...flakyFixSteps.slice(0, -2),
+        bash(
+          'git commit -am "Wait for the avatar upload before saving"',
+          ' 1 file changed, 3 insertions(+), 1 deletion(-)',
+        ),
+        denied('git push -u origin HEAD'),
+        denied(FLAKY_PR_COMMAND),
+        text(
+          "Pushing the branch and opening the pull request need approval, and nobody can approve them in this session. The fix is committed on this run's branch.",
+        ),
+      ],
+    },
   ],
-  manualRuns: [{ minutesAgo: 23, outcome: 'paused' }],
+  pins: [{ slotsAgo: 2, outcome: 'blocked' }],
 };
 
 const BUGS_COMMAND =

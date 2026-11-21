@@ -76,8 +76,10 @@ import {
   listRuns,
   listRunsSince,
   readRunRecord,
+  writeRunRecord,
 } from './domains/run/storage';
 import { requestWaitAction } from './domains/run/usage-limit';
+import { reconcileWorktree, removeWorktree } from './domains/run/worktree';
 import { readOneTimeRuns, writeOneTimeRuns } from './domains/scheduler/one-time-runs';
 import { getSkips, readSchedulerState } from './domains/scheduler/storage';
 import { readSettings, writeSettings } from './domains/settings/storage';
@@ -160,6 +162,7 @@ function toRoutineSummary(
     command: routine.command,
     cwd: routine.cwd,
     timeoutMinutes: routine.timeoutMinutes,
+    worktree: routine.worktree,
     maxBudgetUsd: routine.maxBudgetUsd,
     file: path.relative(config.projectRoot, routine.file),
     running: checkIsStarting(routine.name) || runs.some(checkIsRunActive),
@@ -200,11 +203,11 @@ function withRoutine<T extends ApiResponse | Promise<ApiResponse>>(
   return routine === undefined ? fail(404, `Unknown routine ${name}`) : respond(routine);
 }
 
-function withRun(
+function withRun<T extends ApiResponse | Promise<ApiResponse>>(
   routine: RoutineName,
   id: RunId,
-  respond: (record: RunRecord) => ApiResponse,
-): ApiResponse {
+  respond: (record: RunRecord) => T,
+): T | ApiResponse {
   const record = readRunRecord(routine, id);
   return record === null ? fail(404, 'Run not found') : respond(record);
 }
@@ -347,6 +350,29 @@ function sendWaitAction(run: RunRecord, action: string): ApiResponse {
   }
   requestWaitAction(run, parsed.data);
   return { status: 202, body: { ok: true } };
+}
+
+async function removeRunWorktree(run: RunRecord): Promise<ApiResponse> {
+  const { worktree } = run;
+  if (worktree === null) return fail(404, 'This run has no worktree');
+  if (checkIsRunActive(run)) {
+    return fail(409, 'The run is still working in its worktree. Remove it once the run is done');
+  }
+  if (!isMatching({ state: 'present' }, worktree)) return ok({ ok: true });
+  return match(await removeWorktree(worktree))
+    .with({ outcome: 'has_changes' }, () =>
+      fail(
+        409,
+        `The worktree has changes that aren't committed. Commit them, or delete them with git worktree remove --force ${worktree.path}`,
+      ),
+    )
+    .with({ outcome: 'removed' }, removal => {
+      // Read again, so a reply that started meanwhile keeps its pid.
+      const latest = readRunRecord(run.routine, run.id) ?? run;
+      writeRunRecord({ ...latest, worktree: removal.worktree });
+      return ok({ ok: true });
+    })
+    .exhaustive();
 }
 
 // Linear treats anything but 200 as a failed delivery.
@@ -508,7 +534,12 @@ function routeApi(request: ApiRequest, context: ApiContext): ApiResponse | Promi
     })
     .with(['GET', ['runs']], () => getRunsPage(url))
     .with(['GET', ['runs', P.string, P.string]], ([, [, routine, id]]) =>
-      withRun(routineNameSchema.parse(routine), runIdSchema.parse(id), ok),
+      withRun(routineNameSchema.parse(routine), runIdSchema.parse(id), record =>
+        ok(reconcileWorktree(record)),
+      ),
+    )
+    .with(['POST', ['runs', P.string, P.string, 'worktree', 'remove']], ([, [, routine, id]]) =>
+      withRun(routineNameSchema.parse(routine), runIdSchema.parse(id), removeRunWorktree),
     )
     .with(['POST', ['runs', P.string, P.string, 'messages']], ([, [, routine, id]]) =>
       withRoutine(routineNameSchema.parse(routine), found =>

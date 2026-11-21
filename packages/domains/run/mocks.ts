@@ -29,6 +29,7 @@ export function makeRunRecord(overrides: Partial<RunRecord> = {}): RunRecord {
     tokens: null,
     blockedActions: [],
     memorySentAt: null,
+    worktree: null,
     ...overrides,
   };
 }

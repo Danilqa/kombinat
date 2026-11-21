@@ -8,10 +8,12 @@ import type {
   RunRecord,
   RunStatus,
   RunTrigger,
+  RunWorktree,
   TokenCounts,
   UsageLimitWaitAction,
 } from 'domains/run/types';
-import { compareRunsByNewest } from 'domains/run/utils';
+import { compareRunsByNewest, getWorktreeBranch } from 'domains/run/utils';
+import { transcriptItemSchema } from 'domains/transcript/schemas';
 import type { Skip, SkipReason } from 'domains/scheduler/types';
 import type {
   Transcript,
@@ -82,6 +84,7 @@ export interface DemoHistory {
   sendMessage(routine: RoutineName, id: RunId, text: string, now: Date): void;
   allowBlockedActions(routine: RoutineName, id: RunId, text: string, now: Date): void;
   sendWaitAction(routine: RoutineName, id: RunId, action: UsageLimitWaitAction, now: Date): void;
+  removeWorktree(routine: RoutineName, id: RunId): void;
 }
 
 function fail(message: string): never {
@@ -217,8 +220,49 @@ function getTokens(run: DemoRun): TokenCounts | null {
     .exhaustive();
 }
 
+const BASE_COMMIT = '3f9c2a17e0b84d6c5a1e7f2b9d0c4e8a6b3f1d27';
+
+function getWorktreePath({ routine, id }: DemoRun): string {
+  return `${STATE_DIR}/worktrees/${routine.name}/${id}`;
+}
+
 function buildSteps(run: DemoRun): TranscriptItem[] {
-  return run.outcome.steps.map((step, index) => step(String(index)));
+  const items = run.outcome.steps.map((step, index) => step(String(index)));
+  if (run.routine.worktree !== true) return items;
+  // The agent of a worktree run works in its worktree, so its paths point there.
+  return items.map(item =>
+    transcriptItemSchema.parse(
+      JSON.parse(JSON.stringify(item).replaceAll(run.routine.cwd, getWorktreePath(run))),
+    ),
+  );
+}
+
+function getWorktree(run: DemoRun, hasEnded: boolean, isRemoved: boolean): RunWorktree {
+  const { routine, outcome } = run;
+  const files = outcome.changedFiles ?? [];
+  const path = getWorktreePath(run);
+  return {
+    branch: getWorktreeBranch(routine.name, run.id),
+    path,
+    cwd: path,
+    checkout: routine.cwd,
+    base: 'origin/main',
+    baseCommit: BASE_COMMIT,
+    changes: hasEnded
+      ? {
+          files,
+          fileCount: files.length,
+          added: files.reduce((sum, file) => sum + (file.added ?? 0), 0),
+          removed: files.reduce((sum, file) => sum + (file.removed ?? 0), 0),
+          commits: files.length === 0 ? 0 : 1,
+          uncommitted: 0,
+        }
+      : null,
+    state: match({ hasEnded, isRemoved, hasChanges: files.length > 0 })
+      .with({ hasEnded: true, hasChanges: false }, () => 'discarded' as const)
+      .with({ isRemoved: true }, () => 'removed' as const)
+      .otherwise(() => 'present' as const),
+  };
 }
 
 function checkIsReplying(messages: DemoMessage[], now: Date): boolean {
@@ -236,6 +280,7 @@ function toRunRecord(
   now: Date,
   messages: DemoMessage[],
   pause: DemoPause | null,
+  isWorktreeRemoved = false,
 ): RunRecord {
   const { routine, outcome } = run;
   const durationMs = getDurationMs(run);
@@ -291,6 +336,7 @@ function toRunRecord(
         ? (outcome.blockedActions ?? [])
         : [],
     memorySentAt: null,
+    worktree: routine.worktree === true ? getWorktree(run, !isRunning, isWorktreeRemoved) : null,
   };
 }
 
@@ -488,6 +534,7 @@ export function createDemoHistory(routines: DemoRoutine[], loadedAt: Date): Demo
   const waitActions = new Map<string, DemoWaitAction>();
   const findPause = (run: DemoRun) =>
     getPause(run, waitActions.get(`${run.routine.name}/${run.id}`));
+  const removedWorktrees = new Set<string>();
   const slotsBeforeLoad = new Map(
     routines.map(routine => [
       routine.name,
@@ -532,7 +579,15 @@ export function createDemoHistory(routines: DemoRoutine[], loadedAt: Date): Demo
   return {
     listRuns: now =>
       listDemoRuns(now)
-        .map(run => toRunRecord(run, now, getMessages(run.routine.name, run.id), findPause(run)))
+        .map(run =>
+          toRunRecord(
+            run,
+            now,
+            getMessages(run.routine.name, run.id),
+            findPause(run),
+            removedWorktrees.has(`${run.routine.name}/${run.id}`),
+          ),
+        )
         .sort(compareRunsByNewest),
     listSkips: (routine, now) => getScheduledEvents(routine, now).skips.slice(-MAX_SKIPS),
     getTranscript(routine, id, now) {
@@ -550,12 +605,15 @@ export function createDemoHistory(routines: DemoRoutine[], loadedAt: Date): Demo
       return run.id;
     },
     sendMessage(routine, id, text, now) {
+      // A reply brings the worktree back, as it does on your machine.
+      removedWorktrees.delete(`${routine}/${id}`);
       messages.set(`${routine}/${id}`, [
         ...getMessages(routine, id),
         { text, sentAt: now, isAllowing: false },
       ]);
     },
     allowBlockedActions(routine, id, text, now) {
+      removedWorktrees.delete(`${routine}/${id}`);
       messages.set(`${routine}/${id}`, [
         ...getMessages(routine, id),
         { text, sentAt: now, isAllowing: true },
@@ -563,6 +621,9 @@ export function createDemoHistory(routines: DemoRoutine[], loadedAt: Date): Demo
     },
     sendWaitAction(routine, id, action, now) {
       waitActions.set(`${routine}/${id}`, { action, at: now });
+    },
+    removeWorktree(routine, id) {
+      removedWorktrees.add(`${routine}/${id}`);
     },
   };
 }

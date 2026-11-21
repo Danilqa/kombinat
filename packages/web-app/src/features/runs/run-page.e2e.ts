@@ -1,7 +1,58 @@
+import { routineNameSchema } from 'domains/routine/ids';
 import { runsPageSchema } from 'domains/run/schemas';
+import { createRunId } from 'domains/run/utils';
 import { expect, test } from 'e2e/web-app';
 
 const REPLY_TIMEOUT_MS = 25_000;
+
+test('a run in its own worktree shows its branch and changes, and its worktree goes while the branch stays', async ({
+  page,
+  kombinat,
+}) => {
+  kombinat.addRoutine({ name: 'fix-e2e-tests', worktree: true });
+  const id = createRunId();
+  const worktree = kombinat.addWorktree({ routine: routineNameSchema.parse('fix-e2e-tests'), id });
+  kombinat.addRun({ routine: 'fix-e2e-tests', id, worktree });
+
+  await page.goto(`/runs/fix-e2e-tests/${id}`);
+
+  const card = page.getByRole('region', { name: 'Ran in its own worktree' });
+  await expect(card).toContainText(`${worktree.branch} from main`);
+  await expect(card).toContainText(worktree.path);
+  await expect(card.getByRole('list', { name: 'Changed files' })).toHaveText(
+    'e2e/checkout.e2e.ts+2−1',
+  );
+  await expect(card).toContainText('1 file changed in 1 commit');
+  await card.getByRole('button', { name: 'Remove worktree' }).click();
+  await expect(card.getByRole('button', { name: 'Worktree removed' })).toBeDisabled();
+  await expect(card).toContainText('Worktree removed. The branch stays.');
+  await expect(card.getByRole('button', { name: 'Copy git switch' })).toBeVisible();
+  expect(kombinat.inspectWorktree(worktree)).toEqual({ hasFolder: false, hasBranch: true });
+});
+
+test('a worktree with changes that are not committed stays and says how to remove it', async ({
+  page,
+  kombinat,
+}) => {
+  kombinat.addRoutine({ name: 'fix-e2e-tests', worktree: true });
+  const id = createRunId();
+  const worktree = kombinat.addWorktree({
+    routine: routineNameSchema.parse('fix-e2e-tests'),
+    id,
+    uncommittedFile: 'notes.md',
+  });
+  kombinat.addRun({ routine: 'fix-e2e-tests', id, worktree });
+
+  await page.goto(`/runs/fix-e2e-tests/${id}`);
+  const card = page.getByRole('region', { name: 'Ran in its own worktree' });
+  await card.getByRole('button', { name: 'Remove worktree' }).click();
+
+  await expect(card.getByRole('alert')).toHaveText(
+    `The worktree has changes that aren't committed. Commit them, or delete them with git worktree remove --force ${worktree.path}`,
+  );
+  await expect(card.getByRole('button', { name: 'Remove worktree' })).toBeEnabled();
+  expect(kombinat.inspectWorktree(worktree)).toEqual({ hasFolder: true, hasBranch: true });
+});
 
 test("shows a run's result, transcript and how to resume it", async ({
   page,

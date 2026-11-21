@@ -1,4 +1,6 @@
-import type { BlockedAction, RunRecord } from 'domains/run/types';
+import { isMatching, match } from 'ts-pattern';
+
+import type { BlockedAction, RunRecord, RunWorktree } from 'domains/run/types';
 import {
   checkIsWaitingForSlot,
   formatTokens,
@@ -6,6 +8,8 @@ import {
   getRunDurationMs,
   getTokenTotal,
   getTriggerLabel,
+  getWorktreeBaseStep,
+  getWorktreeChangesLabel,
 } from 'domains/run/utils';
 import { getUsageLimitLabel } from 'domains/transcript/utils';
 import { formatDuration } from 'utils/date-time';
@@ -20,10 +24,21 @@ import { renderMarkdown } from '../../terminal/markdown';
 import { S, sanitize, text, wrapLine } from '../../terminal/text';
 import type { Line } from '../../terminal/text';
 
-function blockedLines(actions: BlockedAction[], width: number): Line[] {
+function getBlockedHint(worktree: RunWorktree | null): string {
+  const hint = 'add the rules to permissions.allow in .claude/settings.json';
+  if (worktree === null) return hint;
+  const { verb, branch } = getWorktreeBaseStep(worktree);
+  return `${hint} and ${verb} the change${branch === null ? '' : ` to ${branch}`}`;
+}
+
+function blockedLines(
+  actions: BlockedAction[],
+  worktree: RunWorktree | null,
+  width: number,
+): Line[] {
   return [
     [],
-    sectionTitle('Blocked', 'add the rules to permissions.allow in .claude/settings.json'),
+    ...wrapLine(sectionTitle('Blocked', getBlockedHint(worktree)), width, 2),
     ...actions.flatMap(action => [
       ...wrapLine(
         [text('▌ ', S.yellow), text(`${action.tool}  `, S.dim), text(sanitize(action.preview))],
@@ -35,12 +50,62 @@ function blockedLines(actions: BlockedAction[], width: number): Line[] {
   ];
 }
 
+function worktreePairs(worktree: RunWorktree): DetailPair[] {
+  const { changes } = worktree;
+  return [
+    {
+      label: 'branch',
+      value: [text(worktree.branch, S.cyan), text(`  from ${worktree.base}`, S.dim)],
+      isWide: true,
+    },
+    {
+      label: 'worktree',
+      value: match(worktree.state)
+        .with('present', () => [text(worktree.path)])
+        .with('removed', () => [text('removed, the branch stays', S.dim)])
+        .with('discarded', () => [text('nothing changed, removed with its branch', S.dim)])
+        .exhaustive(),
+      isWide: true,
+    },
+    ...(changes === null || isMatching({ state: 'discarded' }, worktree)
+      ? []
+      : [
+          {
+            label: 'changes',
+            value: [
+              text(getWorktreeChangesLabel(changes)),
+              ...(changes.added + changes.removed === 0
+                ? []
+                : [text(`  +${changes.added}`, S.green), text(` −${changes.removed}`, S.red)]),
+            ],
+            isWide: true,
+          },
+        ]),
+  ];
+}
+
+// Claude finds a session by its folder, so a worktree that is gone comes back first, as it does for a reply.
+function getResumeFolderCommand(worktree: RunWorktree | null, cwd: string | null): string | null {
+  if (worktree === null) return cwd === null ? null : `cd ${cwd}`;
+  const restore = `cd ${worktree.checkout} && git worktree prune && git worktree add`;
+  return match(worktree.state)
+    .with('present', () => `cd ${worktree.cwd}`)
+    .with('removed', () => `${restore} ${worktree.path} ${worktree.branch} && cd ${worktree.cwd}`)
+    .with(
+      'discarded',
+      () =>
+        `${restore} -b ${worktree.branch} ${worktree.path} ${worktree.baseCommit} && cd ${worktree.cwd}`,
+    )
+    .exhaustive();
+}
+
 export function runHeaderLines(
   run: RunRecord,
   cwd: string | null,
   width: number,
   now: number,
 ): ContentLine[] {
+  const resumeFolder = getResumeFolderCommand(run.worktree, cwd);
   const pairs: DetailPair[] = [
     {
       label: 'status',
@@ -89,10 +154,16 @@ export function runHeaderLines(
       : [
           {
             label: 'resume',
-            value: [text(`${cwd === null ? '' : `cd ${cwd} && `}${run.resumeCommand}`, S.cyan)],
+            value: [
+              text(
+                `${resumeFolder === null ? '' : `${resumeFolder} && `}${run.resumeCommand}`,
+                S.cyan,
+              ),
+            ],
             isWide: true,
           },
         ]),
+    ...(run.worktree === null ? [] : worktreePairs(run.worktree)),
     { label: 'log', value: [text(run.logFile, S.dim)], isWide: true },
   ];
   const lines: Line[] = [
@@ -108,7 +179,8 @@ export function runHeaderLines(
         .flatMap(errorLine => wrapLine([text('▌ ', S.red), text(errorLine, S.red)], width, 2)),
     );
   }
-  if (run.blockedActions.length > 0) lines.push(...blockedLines(run.blockedActions, width));
+  if (run.blockedActions.length > 0)
+    lines.push(...blockedLines(run.blockedActions, run.worktree, width));
   if (run.resultText)
     lines.push([], sectionTitle('Result'), ...renderMarkdown(run.resultText, width));
   return toContent(lines);
