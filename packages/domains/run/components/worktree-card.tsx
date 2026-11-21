@@ -214,9 +214,14 @@ export function WorktreeCard({ run, worktree }: WorktreeCardProps) {
         {!isDiscarded && (
           <div className="flex flex-wrap items-center gap-2">
             {isPresent ? (
-              <CopyCommandButton label="Copy cd" command={`cd ${quoteForShell(worktree.cwd)}`} />
+              <CopyCommandButton
+                key="cd"
+                label="Copy cd"
+                command={`cd ${quoteForShell(worktree.cwd)}`}
+              />
             ) : (
               <CopyCommandButton
+                key="git-switch"
                 label="Copy git switch"
                 command={`git switch ${worktree.branch}`}
               />
