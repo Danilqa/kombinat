@@ -82,6 +82,13 @@ export interface DemoWebhookCall {
   payload: string;
 }
 
+// Notes that the routine's last finished run left, with the lines it changed.
+export interface DemoMemory {
+  text: string;
+  added: number;
+  removed: number;
+}
+
 export interface DemoRoutine {
   name: RoutineName;
   description: string;
@@ -108,6 +115,7 @@ export interface DemoRoutine {
   queuedWebhooks?: DemoQueuedWebhook[];
   webhookCalls?: DemoWebhookCall[];
   oneTimeRuns?: DemoOneTimeRun[];
+  memory?: DemoMemory;
 }
 
 const REPO = `${HOME}/Projects/acme-web`;
@@ -306,6 +314,26 @@ const designUxIssues: DemoRoutine = {
   cwd: REPO,
   timeoutMinutes: 60,
   maxBudgetUsd: 3,
+  memory: {
+    text: `## Filed, don't file again
+
+- #512 the date picker overflows the screen on phones
+- #513 the Save button has 2.9:1 contrast in dark mode
+- #514 the reports page says Export in one place and Download in another
+- #509 chart colours in dark mode: closed as won't fix on Nov 14, the brand team keeps them
+
+## How to get around
+
+- Reports is empty until you run \`pnpm seed:reports\`
+- Sign in as qa@acme.dev, the password is in \`.env.local\`
+- The invoices page takes about 8 s to load at phone size, wait for the table
+
+## Next time
+
+- Settings → Billing was not reached: the run ran out of time after Invoices. Start there.`,
+    added: 4,
+    removed: 1,
+  },
   prompt: `Start the app with \`pnpm dev\` and go through the main flows with the Playwright MCP: sign-in, dashboard, reports, invoices and settings, at desktop (1440×900) and phone (390×844) sizes, in light and dark mode.
 
 Look for broken layouts, text that overflows or is cut off, low contrast, inconsistent spacing or wording, and steps that take more clicks than they should. Check the open issues labelled \`design\` first so you do not file duplicates. File each new problem as an issue labelled \`design\`, with a screenshot and the steps to see it.`,
@@ -916,6 +944,19 @@ const bugFixPickup: DemoRoutine = {
   cwd: REPO,
   timeoutMinutes: 40,
   maxBudgetUsd: 2,
+  memory: {
+    text: `## Skip
+
+- #431 needs a design decision first, it's labelled \`blocked\`
+- #447 only happens on the old Android app, which this repo doesn't build
+
+## Good to know
+
+- Run \`pnpm test --filter api\` before the e2e tests, they take 12 minutes
+- Branch names: \`fix/<issue>-<short-name>\``,
+    added: 1,
+    removed: 0,
+  },
   prompt: `Take the oldest open issue labelled \`bug\` that nobody is assigned to, and assign it to yourself.
 
 Reproduce it with a failing test first, then fix it. Keep the change small and run \`pnpm typecheck\` and \`pnpm test\`. Open a pull request that closes the issue. If you cannot reproduce it, or it needs a product decision, explain why in a comment, unassign yourself and stop.`,

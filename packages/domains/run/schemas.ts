@@ -67,6 +67,8 @@ export const runRecordSchema = z.object({
   tokens: tokenCountsSchema.nullable().default(null),
   // Records written before runs saved what was blocked have none.
   blockedActions: z.array(blockedActionSchema).default([]),
+  // When a reply last sent the routine's memory notes to the session. Until then, it has none.
+  memorySentAt: z.string().nullable().default(null),
 });
 
 export const tokenDaySchema = z.object({ date: z.string(), total: z.number() });

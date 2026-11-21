@@ -13,6 +13,7 @@ const STATE_ENTRIES = [
   'runs',
   'queue',
   'webhooks',
+  'memory',
   'inbox.json',
   NOTIFICATIONS_FILE,
   ONE_TIME_RUNS_FILE,

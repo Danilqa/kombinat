@@ -1,6 +1,7 @@
 #!/bin/sh
-# Answers the message on stdin the way claude -p --output-format stream-json does.
-message=$(cat)
+# Answers the first line of the message on stdin the way claude -p --output-format stream-json
+# does. The lines after it are kombinat's notes for the agent.
+message=$(cat | head -n 1)
 sleep 1
 printf '%s\n' '{"type":"system","subtype":"init","session_id":"b5c1e2d4","model":"claude-opus-5-5","cwd":"/repo"}'
 printf '{"type":"assistant","message":{"content":[{"type":"text","text":"You asked: %s"}]}}\n' "$message"

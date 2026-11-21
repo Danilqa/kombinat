@@ -290,6 +290,7 @@ function toRunRecord(
       isFinished && !messages.some(message => checkIsAllowed(message, now))
         ? (outcome.blockedActions ?? [])
         : [],
+    memorySentAt: null,
   };
 }
 

@@ -22,6 +22,7 @@ import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 import { useRuns } from '@web-app/hooks/use-runs';
 import { useTabSearchParam } from '@web-app/hooks/use-tab-search-param';
 import { ChangePromptMenuItem } from './change-prompt-menu-item';
+import { MemoryPanel } from './memory-panel';
 import { NotifyMenu } from './notify-menu';
 import { OneTimeRunsTable } from './one-time-runs-table';
 import { TokenUsageSection } from './token-usage-section';
@@ -73,9 +74,13 @@ interface RoutineViewProps {
 
 function RoutineView({ routine, runNowRef }: RoutineViewProps) {
   const runs = useRuns(routine.name, routine.lastRun);
-  const [tab, setTab] = useTabSearchParam(
-    routine.webhook ? ['runs', 'prompt', 'webhooks'] : ['runs', 'prompt'],
-  );
+  const memory = routine.memoryNotes;
+  const [tab, setTab] = useTabSearchParam([
+    'runs',
+    'prompt',
+    ...(memory === null ? [] : ['memory' as const]),
+    ...(routine.webhook ? ['webhooks' as const] : []),
+  ]);
   return (
     <div className="space-y-10">
       <Card.Root className="gap-0 py-0">
@@ -83,12 +88,14 @@ function RoutineView({ routine, runNowRef }: RoutineViewProps) {
       </Card.Root>
       {routine.tokenUsage && <TokenUsageSection usage={routine.tokenUsage} />}
       <Tabs.Root value={tab} onValueChange={setTab} className="gap-4">
-        <Tabs.List>
+        {/* Four tabs with long counts are wider than a phone, so the last one wraps. */}
+        <Tabs.List className="flex-wrap">
           <Tabs.Trigger value="runs">
             Runs
             {runs.data && <span className="text-fg-secondary tabular-nums">{runs.data.total}</span>}
           </Tabs.Trigger>
           <Tabs.Trigger value="prompt">Prompt</Tabs.Trigger>
+          {memory !== null && <Tabs.Trigger value="memory">Memory</Tabs.Trigger>}
           {routine.webhook && (
             <Tabs.Trigger value="webhooks">
               Webhooks
@@ -130,6 +137,17 @@ function RoutineView({ routine, runNowRef }: RoutineViewProps) {
             <Markdown source={routine.prompt} minHeadingLevel={2} />
           </Card.Root>
         </Tabs.Content>
+        {memory !== null && (
+          // Kept mounted, so long notes render once in the background and the tab opens at once.
+          <Tabs.Content value="memory" forceMount className="data-[state=inactive]:hidden">
+            <MemoryPanel
+              routine={routine.name}
+              memory={memory}
+              lastRunId={routine.lastRun?.id ?? null}
+              isRunning={routine.running}
+            />
+          </Tabs.Content>
+        )}
         {routine.webhook && (
           <Tabs.Content value="webhooks">
             <Card.Root className="gap-0 py-0">

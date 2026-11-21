@@ -124,8 +124,15 @@ timeoutMinutes: 55
 - `after` is an optional shell command that runs last, whatever the outcome, for example to post failures to Slack. It gets the finished run on stdin and cannot change it, see [docs/hooks.md](docs/hooks.md).
 - `enabled: false` keeps the file but stops the schedule.
 - `webhook: true` lets other apps start the routine with a request, see [docs/webhook.md](docs/webhook.md).
+- `memory: false` turns off the notes that carry over between runs, see below.
 
 Changes apply on the next check, no restart needed. Write the prompt so the agent never has to ask a question: nobody will answer. When there is nothing to do, have it start its answer with "No" or "Nothing", such as "No open incidents.", so the dashboard's Inbox files the run under Nothing to report.
+
+### Memory
+
+Each `claude` and `codex` routine keeps notes for its next runs, such as the issues it filed, how to sign in to the app and where to start next time. Kombinat adds the notes to the prompt of each run, and the agent ends its last message with the updated notes, which Kombinat saves. Replies to a run get the notes as they are now and can update them too.
+
+The routine's Memory tab in the dashboard shows the notes and the run that changed them last. Edit them to tell the next run something, or Clear them to start fresh. If you save notes while a run is at work, your notes win over the ones that run ends with. The notes stay on this machine in `~/.kombinat/memory/<routine>.md`, not in git, and can be up to 20,000 characters.
 
 ### Agents
 

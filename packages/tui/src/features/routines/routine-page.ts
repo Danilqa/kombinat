@@ -14,12 +14,13 @@ import type { ContentLine, PageContent } from '../../page-content';
 import { renderMarkdown } from '../../terminal/markdown';
 import { S, sanitize, text, wrapLine } from '../../terminal/text';
 import type { Line } from '../../terminal/text';
+import { memoryNotes } from './memory-notes';
 import { buildQueueTable, formatQueueLabel } from './queue-table';
 import { runsTable } from './runs-table';
 import { skipsTable } from './skips-table';
 import { buildWebhookCallsTable } from './webhook-calls-table';
 
-export type RoutineTab = 'runs' | 'prompt' | 'skips' | 'queue' | 'webhooks';
+export type RoutineTab = 'runs' | 'prompt' | 'memory' | 'skips' | 'queue' | 'webhooks';
 
 interface Tab {
   id: RoutineTab;
@@ -27,9 +28,13 @@ interface Tab {
 }
 
 export function getRoutineTabs(routine: RoutineSummary): RoutineTab[] {
-  return routine.webhook
-    ? ['runs', 'prompt', 'skips', 'queue', 'webhooks']
-    : ['runs', 'prompt', 'skips'];
+  return [
+    'runs',
+    'prompt',
+    ...(routine.memory ? (['memory'] as const) : []),
+    'skips',
+    ...(routine.webhook ? (['queue', 'webhooks'] as const) : []),
+  ];
 }
 
 function getTabLabel(
@@ -42,6 +47,7 @@ function getTabLabel(
   return match(tab)
     .with('runs', () => (runs === undefined ? 'Runs' : `Runs ${runs.total}`))
     .with('prompt', () => 'Prompt')
+    .with('memory', () => 'Memory')
     .with('skips', () => `Skipped${formatCount(detail?.skips)}`)
     .with('queue', () => `Queue${formatCount(detail?.queue)}`)
     .with('webhooks', () => `Webhooks${formatCount(detail?.webhookCalls)}`)
@@ -189,6 +195,15 @@ export function routinePage({
     .with('prompt', (): PageContent => ({
       mode: 'scroll',
       lines: [...header, ...toContent(renderMarkdown(detail.prompt, width))],
+    }))
+    .with('memory', (): PageContent => ({
+      mode: 'scroll',
+      lines: [
+        ...header,
+        ...(detail.memoryNotes === null
+          ? [{ line: [text('This routine has no memory.', S.dim)] }]
+          : toContent(memoryNotes(detail.memoryNotes, routine.lastRun?.id ?? null, width, now))),
+      ],
     }))
     .with('skips', (): PageContent => ({
       mode: 'scroll',

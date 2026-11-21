@@ -1,5 +1,6 @@
 import { isMatching, match, P } from 'ts-pattern';
 
+import { checkCanKeepMemory } from 'domains/agent/utils';
 import { buildCalendar } from 'domains/calendar/utils';
 import type { DaemonStatus } from 'domains/daemon/types';
 import { NOTIFY_LEVELS } from 'domains/inbox/constants';
@@ -7,9 +8,11 @@ import { markReadRequestSchema, notifyRequestSchema } from 'domains/inbox/schema
 import type { InboxState, NotifyLevels } from 'domains/inbox/types';
 import { addReadRuns, changeNotifyLevel, listUnreadRuns } from 'domains/inbox/utils';
 import type { ReleaseUpdate } from 'domains/release/types';
+import { MEMORY_MAX_LENGTH } from 'domains/routine/constants';
 import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
-import { oneTimeRunRequestSchema } from 'domains/routine/schemas';
-import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
+import { memoryRequestSchema, oneTimeRunRequestSchema } from 'domains/routine/schemas';
+import type { RoutineDetail, RoutineMemory, RoutineSummary } from 'domains/routine/types';
+import { countChangedLines } from 'domains/routine/utils';
 import { RUNS_CURSOR_ERROR } from 'domains/run/constants';
 import { runIdSchema, type RunId } from 'domains/run/ids';
 import { runMessageSchema, usageLimitWaitActionSchema } from 'domains/run/schemas';
@@ -162,6 +165,26 @@ function toRoutineSummary(
     lastRun: runs[0] ?? null,
     lastSkip: skips.at(-1) ?? null,
     tokenUsage,
+    memory: checkCanKeepMemory(routine.agent),
+  };
+}
+
+function getMemoryFile(routine: DemoRoutine): string {
+  return `${STATE_DIR}/memory/${routine.name}.md`;
+}
+
+// The sample notes come from the last run that finished before the visitor came.
+function toDemoMemory(routine: DemoRoutine, runs: RunRecord[]): RoutineMemory {
+  const lastRun = runs.find(run => run.routine === routine.name && run.endedAt !== null);
+  const file = getMemoryFile(routine);
+  if (routine.memory === undefined || lastRun === undefined || lastRun.endedAt === null) {
+    return { text: '', file, change: null };
+  }
+  const { text, added, removed } = routine.memory;
+  return {
+    text,
+    file,
+    change: { at: lastRun.endedAt, by: 'run', runId: lastRun.id, added, removed },
   };
 }
 
@@ -183,6 +206,9 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
       ),
     )
     .reduce((runs: OneTimeRun[], run) => addOneTimeRun(runs, run), []);
+  const memories = new Map(
+    demoRoutines.map(routine => [routine.name, toDemoMemory(routine, history.listRuns(loadedAt))]),
+  );
   const queues = new Map(
     demoRoutines.map(routine => [
       routine.name,
@@ -306,6 +332,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
       queue: listQueue(routine, now),
       webhookCalls: listWebhookCalls(routine, now),
       oneTimeRuns: listRoutineOneTimeRuns(oneTimeRuns, routine.name),
+      memoryNotes: checkCanKeepMemory(routine.agent) ? (memories.get(routine.name) ?? null) : null,
     };
   }
 
@@ -353,6 +380,37 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
       );
     }
     oneTimeRuns = removeOneTimeRun(oneTimeRuns, oneTimeRun);
+    return ok({ ok: true });
+  }
+
+  function saveMemory(routine: DemoRoutine, body: string, now: Date): ApiResponse {
+    if (!checkCanKeepMemory(routine.agent)) {
+      return fail(
+        409,
+        `${routine.name} has no memory. It needs agent claude or codex and no memory: false`,
+      );
+    }
+    const request = memoryRequestSchema.safeParse(parseJson(body));
+    if (!request.success) {
+      return fail(
+        400,
+        `The body must be JSON with notes of at most ${MEMORY_MAX_LENGTH} characters in text`,
+      );
+    }
+    const before = memories.get(routine.name)?.text ?? '';
+    const text = request.data.text.replace(/\r\n/g, '\n').trim();
+    if (text !== before) {
+      memories.set(routine.name, {
+        text,
+        file: getMemoryFile(routine),
+        change: {
+          at: now.toISOString(),
+          by: 'user',
+          runId: null,
+          ...countChangedLines(before, text),
+        },
+      });
+    }
     return ok({ ok: true });
   }
 
@@ -467,6 +525,9 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
       )
       .with(['POST', ['routines', P.string, 'one-time-runs', 'cancel']], ([, [, name]]) =>
         withRoutine(routineNameSchema.parse(name), routine => cancelOneTimeRun(routine, body)),
+      )
+      .with(['PUT', ['routines', P.string, 'memory']], ([, [, name]]) =>
+        withRoutine(routineNameSchema.parse(name), routine => saveMemory(routine, body, now)),
       )
       .with(['GET', ['calendar']], () => getCalendar(url, now))
       .with(['GET', ['inbox']], () => ok({ runs: listUnreadRuns(listRuns(now), inbox), notify }))

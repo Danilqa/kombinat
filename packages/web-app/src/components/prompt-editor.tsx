@@ -3,20 +3,22 @@ import { Card, Kbd } from 'design-system/components';
 import { cn } from 'design-system/utils';
 import { isApplePlatform } from '@web-app/hooks/use-search-shortcut';
 
-const RUN_SHORTCUT_LABEL = isApplePlatform ? '⌘↵' : 'Ctrl ↵';
+const SUBMIT_SHORTCUT_LABEL = isApplePlatform ? '⌘↵' : 'Ctrl ↵';
 
-function checkIsRunShortcut(event: KeyboardEvent): boolean {
+function checkIsSubmitShortcut(event: KeyboardEvent): boolean {
   return event.key === 'Enter' && (event.metaKey || event.ctrlKey);
 }
 
 function submitOnShortcut(event: KeyboardEvent<HTMLTextAreaElement>) {
-  if (!checkIsRunShortcut(event)) return;
+  if (!checkIsSubmitShortcut(event)) return;
   event.preventDefault();
   event.currentTarget.form?.requestSubmit();
 }
 
 interface PromptEditorProps {
   value: string;
+  label?: string;
+  submitLabel?: string;
   onChange: (value: string) => void;
   header?: ReactNode;
   footer?: ReactNode;
@@ -27,6 +29,8 @@ interface PromptEditorProps {
 
 export function PromptEditor({
   value,
+  label = 'Prompt',
+  submitLabel = 'run',
   onChange,
   header,
   footer,
@@ -43,7 +47,7 @@ export function PromptEditor({
       )}
       <textarea
         ref={ref}
-        aria-label="Prompt"
+        aria-label={label}
         value={value}
         placeholder={placeholder}
         autoFocus={autoFocus}
@@ -61,7 +65,7 @@ export function PromptEditor({
       >
         {footer}
         <span className="flex shrink-0 items-center gap-1.5 max-sm:hidden">
-          <Kbd>{RUN_SHORTCUT_LABEL}</Kbd> to run
+          <Kbd>{SUBMIT_SHORTCUT_LABEL}</Kbd> to {submitLabel}
         </span>
       </div>
     </Card.Root>
