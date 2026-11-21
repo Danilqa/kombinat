@@ -42,6 +42,12 @@ export interface RunsPageQuery {
   search: string | null;
 }
 
+export interface WorktreeBaseStep {
+  verb: 'push' | 'commit';
+  // null when the worktree started from a commit that no branch named.
+  branch: string | null;
+}
+
 export interface RunWithTranscript {
   run: RunRecord;
   transcript: Transcript;

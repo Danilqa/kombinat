@@ -10,7 +10,12 @@ import { getAgentLabel } from '../../agent/utils';
 import { QUERY_KEYS_CHANGED_BY_ALLOW } from '../constants';
 import { allowBlockedActions } from '../requests';
 import type { BlockedAction, RunRecord } from '../types';
-import { checkCanContinueRun, checkIsRunActive, listBlockedRules } from '../utils';
+import {
+  checkCanContinueRun,
+  checkIsRunActive,
+  getWorktreeBaseStep,
+  listBlockedRules,
+} from '../utils';
 
 const COPIED_MS = 1500;
 const VISIBLE_ACTIONS = 5;
@@ -83,7 +88,7 @@ function BlockedActionRow({ action }: BlockedActionRowProps) {
 
 interface BlockedActionsCardProps {
   run: RunRecord;
-  // The folder the agent worked in, whose .claude/settings.json allows the rules in every run.
+  // The folder whose .claude/settings.json allows the rules, in the checkout for a worktree run.
   cwd: string | null;
   onAllowed: () => void;
 }
@@ -113,6 +118,7 @@ export function BlockedActionsCard({ run, cwd, onAllowed }: BlockedActionsCardPr
   const visible = isExpanded ? actions : actions.slice(0, VISIBLE_ACTIONS);
   const hiddenCount = actions.length - visible.length;
   const settingsPath = cwd === null ? '.claude/settings.json' : `${cwd}/.claude/settings.json`;
+  const baseStep = run.worktree === null ? null : getWorktreeBaseStep(run.worktree);
 
   function allow() {
     if (!isBusy) mutate();
@@ -170,6 +176,17 @@ export function BlockedActionsCard({ run, cwd, onAllowed }: BlockedActionsCardPr
           To allow {isOne ? 'it' : 'them'} in every run, add {hasOneRule ? 'the rule' : 'the rules'}{' '}
           to <code className="font-mono text-fg-secondary">permissions.allow</code> in{' '}
           <code className="font-mono break-all text-fg-secondary">{settingsPath}</code>
+          {baseStep !== null &&
+            (baseStep.branch === null ? (
+              " and commit the change. Each run's worktree starts from the checkout's current commit."
+            ) : (
+              <>
+                {' '}
+                and {baseStep.verb} the change to{' '}
+                <code className="font-mono break-all text-fg-secondary">{baseStep.branch}</code>.
+                Each run's worktree starts from there.
+              </>
+            ))}
         </p>
       </div>
       {error && (

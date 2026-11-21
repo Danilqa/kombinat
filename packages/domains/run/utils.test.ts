@@ -18,6 +18,7 @@ import {
   listBlockedRules,
   mergeBlockedActions,
   getCheckoutCwd,
+  getWorktreeBaseStep,
   getWorktreeChangesLabel,
   paginateRuns,
   parseRunsPageQuery,
@@ -220,4 +221,28 @@ test('the cwd of a worktree run maps back to the same folder in the checkout', (
     '/code/shop/apps/web',
   );
   assert.equal(getCheckoutCwd({ ...worktree, cwd: worktree.path }), '/code/shop');
+});
+
+test('a change reaches the next worktrees by the step their base needs', () => {
+  const worktree = {
+    branch: 'kombinat/fixer-20261117T090000Z-wtre',
+    path: '/state/worktrees/fixer/20261117T090000Z-wtre',
+    cwd: '/state/worktrees/fixer/20261117T090000Z-wtre',
+    checkout: '/code/shop',
+    baseCommit: '3f2a1bc9d8e7f60512a4b3c2d1e0f9a8b7c6d5e4',
+    changes: null,
+    state: 'present' as const,
+  };
+  assert.deepEqual(getWorktreeBaseStep({ ...worktree, base: 'origin/main' }), {
+    verb: 'push',
+    branch: 'origin/main',
+  });
+  assert.deepEqual(getWorktreeBaseStep({ ...worktree, base: 'feature/totals' }), {
+    verb: 'commit',
+    branch: 'feature/totals',
+  });
+  assert.deepEqual(getWorktreeBaseStep({ ...worktree, base: '3f2a1bc' }), {
+    verb: 'commit',
+    branch: null,
+  });
 });

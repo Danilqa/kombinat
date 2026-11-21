@@ -8,6 +8,7 @@ import {
   getRunDurationMs,
   getTokenTotal,
   getTriggerLabel,
+  getWorktreeBaseStep,
   getWorktreeChangesLabel,
 } from 'domains/run/utils';
 import { getUsageLimitLabel } from 'domains/transcript/utils';
@@ -23,10 +24,21 @@ import { renderMarkdown } from '../../terminal/markdown';
 import { S, sanitize, text, wrapLine } from '../../terminal/text';
 import type { Line } from '../../terminal/text';
 
-function blockedLines(actions: BlockedAction[], width: number): Line[] {
+function getBlockedHint(worktree: RunWorktree | null): string {
+  const hint = 'add the rules to permissions.allow in .claude/settings.json';
+  if (worktree === null) return hint;
+  const { verb, branch } = getWorktreeBaseStep(worktree);
+  return `${hint} and ${verb} the change${branch === null ? '' : ` to ${branch}`}`;
+}
+
+function blockedLines(
+  actions: BlockedAction[],
+  worktree: RunWorktree | null,
+  width: number,
+): Line[] {
   return [
     [],
-    sectionTitle('Blocked', 'add the rules to permissions.allow in .claude/settings.json'),
+    ...wrapLine(sectionTitle('Blocked', getBlockedHint(worktree)), width, 2),
     ...actions.flatMap(action => [
       ...wrapLine(
         [text('▌ ', S.yellow), text(`${action.tool}  `, S.dim), text(sanitize(action.preview))],
@@ -167,7 +179,8 @@ export function runHeaderLines(
         .flatMap(errorLine => wrapLine([text('▌ ', S.red), text(errorLine, S.red)], width, 2)),
     );
   }
-  if (run.blockedActions.length > 0) lines.push(...blockedLines(run.blockedActions, width));
+  if (run.blockedActions.length > 0)
+    lines.push(...blockedLines(run.blockedActions, run.worktree, width));
   if (run.resultText)
     lines.push([], sectionTitle('Result'), ...renderMarkdown(run.resultText, width));
   return toContent(lines);

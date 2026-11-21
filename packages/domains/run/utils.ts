@@ -19,6 +19,7 @@ import type {
   TokenCounts,
   TokenUsage,
   UsageLimitWait,
+  WorktreeBaseStep,
   WorktreeChanges,
 } from './types';
 
@@ -131,6 +132,12 @@ export function getWorktreeChangesLabel({ fileCount, commits, uncommitted }: Wor
 // The folder of the routine's cwd in the checkout, which outlives the worktree.
 export function getCheckoutCwd({ checkout, path, cwd }: RunWorktree): string {
   return `${checkout}${cwd.slice(path.length)}`;
+}
+
+// A new worktree starts from the base, so a change reaches later runs only once the base has it.
+export function getWorktreeBaseStep({ base, baseCommit }: RunWorktree): WorktreeBaseStep {
+  if (base === baseCommit.slice(0, 7)) return { verb: 'commit', branch: null };
+  return { verb: base.startsWith('origin/') ? 'push' : 'commit', branch: base };
 }
 
 export function getTriggerLabel(trigger: RunTrigger): string {
