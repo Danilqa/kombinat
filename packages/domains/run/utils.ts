@@ -15,6 +15,7 @@ import type {
   RunsPageQuery,
   RunStatus,
   RunTrigger,
+  RunWorktree,
   TokenCounts,
   TokenUsage,
   UsageLimitWait,
@@ -125,6 +126,11 @@ export function getWorktreeChangesLabel({ fileCount, commits, uncommitted }: Wor
   if (commits === 0) return `${changed}, not committed`;
   const committed = `${changed} in ${countCommits(commits)}`;
   return uncommitted === 0 ? committed : `${committed}, ${uncommitted} not committed`;
+}
+
+// The folder of the routine's cwd in the checkout, which outlives the worktree.
+export function getCheckoutCwd({ checkout, path, cwd }: RunWorktree): string {
+  return `${checkout}${cwd.slice(path.length)}`;
 }
 
 export function getTriggerLabel(trigger: RunTrigger): string {
