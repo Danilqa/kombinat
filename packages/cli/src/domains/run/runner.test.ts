@@ -658,6 +658,17 @@ test('a reply sends the notes again only after someone else changed them', async
   assert.doesNotMatch(await reply('Thanks'), /- Sign in as admin/);
 });
 
+test('a reply that never reached the session sends the notes again with the next one', async () => {
+  const { routine, readPrompt } = makeAnsweringRoutine('remembers-retry', 'Done.');
+  const run = makeFinishedRun(routine.name, '20261117T090000Z-rtry');
+  writeMemory(routine.name, '- Sign in as admin', { by: 'user' });
+  appendLogEvent(run, { type: 'message', text: 'Open a PR', source: 'dashboard' });
+  await replyToRun({ ...routine, cwd: path.join(tmp, 'missing-cwd') }, run);
+  appendLogEvent(run, { type: 'message', text: 'Try again', source: 'dashboard' });
+  await replyToRun(routine, readRunRecord(run.routine, run.id) ?? run);
+  assert.match(readPrompt(), /^Try again\n[\s\S]*- Sign in as admin/);
+});
+
 test('a routine with memory: false gets no notes and keeps its whole message', async () => {
   const answer = 'Done\n<routine-memory>\n- Not saved\n</routine-memory>';
   const { routine, readPrompt } = makeAnsweringRoutine('forgets', answer, 'memory: false');

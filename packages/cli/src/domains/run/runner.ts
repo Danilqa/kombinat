@@ -456,7 +456,7 @@ export async function replyToRun(routine: Routine, run: RunRecord): Promise<RunR
   }
   const finished: RunRecord = {
     ...run,
-    memorySentAt: replying.memorySentAt,
+    memorySentAt: isSucceeded ? replying.memorySentAt : run.memorySentAt,
     sessionId: session.sessionId,
     resumeCommand: session.resumeCommand,
     replyPid: null,
