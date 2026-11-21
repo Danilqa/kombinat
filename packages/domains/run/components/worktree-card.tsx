@@ -203,7 +203,7 @@ export function WorktreeCard({ run, worktree }: WorktreeCardProps) {
               .with('removed', () => 'Worktree removed. The branch stays.')
               .with(
                 'discarded',
-                () => 'Nothing changed, so Kombinat removed the worktree and its branch.',
+                () => 'Nothing changed. Kombinat removed the worktree and its branch.',
               )
               .exhaustive()}
           </p>
