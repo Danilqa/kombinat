@@ -59,7 +59,7 @@ export function UsageLimitCard({ run, wait }: UsageLimitCardProps) {
       className="mb-6 rounded-xl border border-info/30 bg-surface p-4 sm:p-5"
     >
       <h2 id={titleId} className="flex items-start gap-2 text-body font-medium text-fg">
-        <Hourglass aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-info" />
+        <Hourglass aria-hidden="true" className="h-lh w-4 shrink-0 text-info" />
         {isWaitingForSlot ? (
           'Waiting for a free run slot'
         ) : (

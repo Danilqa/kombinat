@@ -175,7 +175,7 @@ export function WorktreeCard({ run, worktree }: WorktreeCardProps) {
       className="mb-6 rounded-xl border border-line bg-surface p-4 sm:p-5"
     >
       <h2 id={titleId} className="flex items-start gap-2 text-body font-medium text-fg">
-        <FolderGit2 aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-info" />
+        <FolderGit2 aria-hidden="true" className="h-lh w-4 shrink-0 text-info" />
         {isActive ? 'Working in its own worktree' : 'Ran in its own worktree'}
       </h2>
       <p className="mt-1 text-body-sm text-fg-muted sm:pl-6">
@@ -185,8 +185,8 @@ export function WorktreeCard({ run, worktree }: WorktreeCardProps) {
           ? 'stays as it is. The agent works on its own branch:'
           : 'stayed as it was. The agent worked on its own branch:'}
       </p>
-      <div className="mt-3 flex items-start gap-2 sm:pl-6">
-        <GitBranch aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-fg-muted" />
+      <div className="mt-3 flex items-start gap-2 text-body-sm sm:pl-6">
+        <GitBranch aria-hidden="true" className="h-lh w-3.5 shrink-0 text-fg-muted" />
         <div className="min-w-0">
           <p className="font-mono text-body-sm wrap-anywhere text-fg">
             {worktree.branch}
