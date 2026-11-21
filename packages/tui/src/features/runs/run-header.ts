@@ -72,13 +72,28 @@ function worktreePairs(worktree: RunWorktree): DetailPair[] {
   ];
 }
 
+// Claude finds a session by its folder, so a worktree that is gone comes back first, as it does for a reply.
+function getResumeFolderCommand(worktree: RunWorktree | null, cwd: string | null): string | null {
+  if (worktree === null) return cwd === null ? null : `cd ${cwd}`;
+  const restore = `cd ${worktree.checkout} && git worktree prune && git worktree add`;
+  return match(worktree.state)
+    .with('present', () => `cd ${worktree.cwd}`)
+    .with('removed', () => `${restore} ${worktree.path} ${worktree.branch} && cd ${worktree.cwd}`)
+    .with(
+      'discarded',
+      () =>
+        `${restore} -b ${worktree.branch} ${worktree.path} ${worktree.baseCommit} && cd ${worktree.cwd}`,
+    )
+    .exhaustive();
+}
+
 export function runHeaderLines(
   run: RunRecord,
   cwd: string | null,
   width: number,
   now: number,
 ): ContentLine[] {
-  const resumeCwd = isMatching({ state: 'present' }, run.worktree) ? run.worktree.cwd : cwd;
+  const resumeFolder = getResumeFolderCommand(run.worktree, cwd);
   const pairs: DetailPair[] = [
     {
       label: 'status',
@@ -129,7 +144,7 @@ export function runHeaderLines(
             label: 'resume',
             value: [
               text(
-                `${resumeCwd === null ? '' : `cd ${resumeCwd} && `}${run.resumeCommand}`,
+                `${resumeFolder === null ? '' : `${resumeFolder} && `}${run.resumeCommand}`,
                 S.cyan,
               ),
             ],
