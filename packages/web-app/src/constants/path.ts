@@ -6,6 +6,7 @@ export const ROUTINE_PATH = '/routines/:name';
 export const ROUTINE_RUN_PATH = '/routines/:name/run';
 export const CALENDAR_PATH = '/calendar';
 export const RUNS_PATH = '/runs';
+export const NEW_RUN_PATH = '/runs/new';
 export const INBOX_PATH = '/inbox';
 export const RUN_PATH = '/runs/:routine/:id';
 

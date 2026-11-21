@@ -1,8 +1,8 @@
-import { useState, type KeyboardEvent, type SubmitEvent } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader, Play, RotateCcw } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router';
-import { Button, Card, ErrorState, Kbd, LoadingState } from 'design-system/components';
+import { Button, ErrorState, LoadingState } from 'design-system/components';
 import { PageHeader } from 'design-system/layouts';
 import { QUERY_KEYS_CHANGED_BY_RUN } from 'domains/routine/constants';
 import { routineNameSchema } from 'domains/routine/ids';
@@ -10,16 +10,11 @@ import { getRoutine, startRoutineRunWithPrompt } from 'domains/routine/requests'
 import { sameOriginApi } from 'utils/http';
 import { getPollInterval } from 'utils/polling';
 import { Breadcrumbs } from '@web-app/components/breadcrumbs';
+import { PromptEditor } from '@web-app/components/prompt-editor';
 import { ROUTINES_PATH, getRoutinePath, getRunPath } from '@web-app/constants/path';
 import { useDocumentTitle } from '@web-app/hooks/use-document-title';
-import { isApplePlatform } from '@web-app/hooks/use-search-shortcut';
 
 const FORM_ID = 'change-prompt';
-const RUN_SHORTCUT_LABEL = isApplePlatform ? '⌘↵' : 'Ctrl ↵';
-
-function checkIsRunShortcut(event: KeyboardEvent): boolean {
-  return event.key === 'Enter' && (event.metaKey || event.ctrlKey);
-}
 
 export function ChangePromptPage() {
   const name = routineNameSchema.parse(useParams<'name'>().name ?? '');
@@ -55,12 +50,6 @@ export function ChangePromptPage() {
   function cancel() {
     if (location.key === 'default') void navigate(getRoutinePath(name));
     else void navigate(-1);
-  }
-
-  function submitOnShortcut(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (!checkIsRunShortcut(event)) return;
-    event.preventDefault();
-    event.currentTarget.form?.requestSubmit();
   }
 
   return (
@@ -126,24 +115,15 @@ export function ChangePromptPage() {
       {isPending && <LoadingState />}
       {data && (
         <form id={FORM_ID} onSubmit={submit}>
-          <Card.Root className="gap-0 py-0 transition-colors focus-within:border-line-strong">
-            <textarea
-              aria-label="Prompt"
-              value={prompt}
-              onChange={event => setChangedPrompt(event.target.value)}
-              onKeyDown={submitOnShortcut}
-              spellCheck={false}
-              className="min-h-[60vh] w-full resize-y bg-transparent p-6 font-mono text-body-sm/relaxed text-fg outline-none focus-visible:shadow-none"
-            />
-            <div className="flex items-center justify-between gap-3 border-t border-line px-6 py-2.5 text-body-sm text-fg-muted">
+          <PromptEditor
+            value={prompt}
+            onChange={setChangedPrompt}
+            footer={
               <span className="min-w-0 truncate">
                 {isChanged ? 'Changed for this run' : data.file}
               </span>
-              <span className="flex shrink-0 items-center gap-1.5 max-sm:hidden">
-                <Kbd>{RUN_SHORTCUT_LABEL}</Kbd> to run
-              </span>
-            </div>
-          </Card.Root>
+            }
+          />
         </form>
       )}
     </div>

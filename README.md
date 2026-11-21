@@ -154,6 +154,7 @@ A setting the agent does not support fails validation.
 - A routine never runs twice at the same time. If it is still running at its next time, that run is skipped. A run that waits for a usage limit to reset counts as running.
 - At most 3 routines run at once. A run that waits for a usage limit does not count toward this.
 - To run a routine once at another time, such as tonight, open the menu next to Run now and pick a time, or press `L` in the terminal. The time is kept on this machine, not in the routine file. The run waits while the routine is still running, and the routine's page lists it with Cancel. After a sleep, missed one-time runs count as missed times: the routine runs once.
+- To run a one-off task, press New run on the Runs page of the dashboard, write the prompt and pick a routine. The prompt runs once in that routine's folder, with its agent and settings, and the routine file stays as it is.
 
 ## 🪝 Webhooks
 
