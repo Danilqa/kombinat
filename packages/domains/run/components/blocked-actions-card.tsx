@@ -130,7 +130,7 @@ export function BlockedActionsCard({ run, cwd, onAllowed }: BlockedActionsCardPr
       className="mb-6 rounded-xl border border-warning/30 bg-surface p-4 sm:p-5"
     >
       <h2 id={titleId} className="flex items-start gap-2 text-body font-medium text-fg">
-        <ShieldAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-warning" />
+        <ShieldAlert aria-hidden="true" className="h-lh w-4 shrink-0 text-warning" />
         {isOne ? '1 action was blocked' : `${actions.length} actions were blocked`}
       </h2>
       <p className="mt-1 text-body-sm text-fg-muted sm:pl-6">

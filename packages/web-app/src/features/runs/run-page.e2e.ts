@@ -591,4 +591,20 @@ test.describe('on a phone', () => {
     const getMiddle = (box: typeof messageBox) => (box?.y ?? 0) + (box?.height ?? 0) / 2;
     expect(getMiddle(sendBox)).toBeCloseTo(getMiddle(messageBox), 0);
   });
+
+  test('centers the icon of the blocked actions card on its title', async ({ page, kombinat }) => {
+    kombinat.addRoutine({ name: 'fix-e2e-tests' });
+    const run = kombinat.addRun({
+      routine: 'fix-e2e-tests',
+      blockedActions: [{ tool: 'Bash', preview: 'git push', rules: ['Bash(git push *)'] }],
+    });
+
+    await page.goto(`/runs/fix-e2e-tests/${run.id}`);
+
+    const title = page.getByRole('heading', { name: '1 action was blocked' });
+    const titleBox = await title.boundingBox();
+    const iconBox = await title.locator('svg').boundingBox();
+    const getMiddle = (box: typeof titleBox) => (box?.y ?? 0) + (box?.height ?? 0) / 2;
+    expect(getMiddle(iconBox)).toBeCloseTo(getMiddle(titleBox), 0);
+  });
 });
