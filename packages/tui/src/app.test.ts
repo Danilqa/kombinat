@@ -47,6 +47,7 @@ function makeRun(routine: string, id: string, overrides: Partial<RunRecord> = {}
     tokens: null,
     blockedActions: [],
     memorySentAt: null,
+    worktree: null,
     ...overrides,
   };
 }
@@ -69,6 +70,7 @@ function makeRoutine(name: string, overrides: Partial<RoutineSummary> = {}): Rou
     command: null,
     cwd: '/repo',
     timeoutMinutes: 55,
+    worktree: false,
     maxBudgetUsd: null,
     file: `routines/${name}.md`,
     running: false,

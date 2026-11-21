@@ -7,10 +7,12 @@ import type { InboxState } from 'domains/inbox/types';
 import { routineNameSchema } from 'domains/routine/ids';
 import type { MemoryChange } from 'domains/routine/types';
 import { makeRunRecord } from 'domains/run/mocks';
-import type { RunRecord } from 'domains/run/types';
+import type { RunRecord, RunWorktree } from 'domains/run/types';
 import { createRunId } from 'domains/run/utils';
 import type { SchedulerState, SkipReason } from 'domains/scheduler/types';
 
+import { createWorktree, inspectWorktree } from './git';
+import type { WorktreeFile, WorktreeOnDisk } from './git';
 import { minutesAgo } from './time';
 
 export interface RoutineFile {
@@ -27,6 +29,7 @@ export interface RoutineFile {
   webhook?: boolean;
   webhookGate?: string;
   timeoutMinutes?: number;
+  worktree?: boolean;
   maxBudgetUsd?: number;
   memory?: boolean;
   prompt?: string;
@@ -51,6 +54,8 @@ export interface Kombinat {
   addQueuedWebhook: (webhook: QueuedWebhookFile) => void;
   addMemory: (routine: string, text: string, change: MemoryChange) => void;
   readMemory: (routine: string) => string | null;
+  addWorktree: (worktree: WorktreeFile) => RunWorktree;
+  inspectWorktree: (worktree: RunWorktree) => WorktreeOnDisk;
   lookAtInbox: (at: string) => void;
   stallScheduler: () => void;
 }
@@ -141,6 +146,8 @@ export function createKombinat(root: string): Kombinat {
       const file = path.join(stateDir, 'memory', `${routine}.md`);
       return fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null;
     },
+    addWorktree: worktree => createWorktree(root, worktree),
+    inspectWorktree,
     lookAtInbox: at => {
       const inbox: InboxState = { since: at, readRuns: [] };
       fs.writeFileSync(path.join(stateDir, 'inbox.json'), JSON.stringify(inbox));

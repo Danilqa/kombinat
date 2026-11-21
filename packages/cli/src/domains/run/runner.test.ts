@@ -48,6 +48,13 @@ cat '${bigResultFile}'
   { mode: 0o755 },
 );
 process.env['CLAUDE_BIN'] = fakeClaude;
+// The user's git config, such as commit signing, stays out of the tests.
+fs.writeFileSync(
+  path.join(tmp, 'gitconfig'),
+  '[user]\n\tname = Test\n\temail = test@example.com\n',
+);
+process.env['GIT_CONFIG_GLOBAL'] = path.join(tmp, 'gitconfig');
+process.env['GIT_CONFIG_NOSYSTEM'] = '1';
 
 const { config } = await import('../../config');
 const { buildRoutine } = await import('../routine/utils');
@@ -812,4 +819,67 @@ test('a waiting run whose runner is gone is aborted and its wait ends', () => {
   assert.equal(reconciled?.status, 'aborted');
   assert.equal(reconciled.usageLimit, null);
   assert.ok(isMatching([{ type: 'usage_limit_end', outcome: 'stopped' }], readLog(run)));
+});
+
+function makeGitRepo(name: string): string {
+  const repo = path.join(tmp, 'repos', name);
+  fs.mkdirSync(repo, { recursive: true });
+  fs.writeFileSync(path.join(repo, 'README.md'), 'Hello\n');
+  for (const args of [
+    ['init', '--quiet', '--initial-branch=main'],
+    ['add', '.'],
+    ['commit', '--quiet', '-m', 'Start'],
+  ]) {
+    spawnSync('git', args, { cwd: repo });
+  }
+  return repo;
+}
+
+test('a routine with worktree: true works on its own branch, with its after hook, and leaves its cwd alone', async () => {
+  const repo = makeGitRepo('fix');
+  const record = await runRoutine(
+    makeRoutine(
+      'worktree-fix',
+      `cwd: ${repo}\ncommand: echo fixed > fix.txt && git add fix.txt && git commit --quiet -m Fix\nworktree: true\n${makeRecordingHook('worktree')}`,
+    ),
+    { trigger: 'manual' },
+  );
+  assert.equal(record.status, 'succeeded');
+  const { worktree } = record;
+  assert.equal(worktree?.state, 'present');
+  assert.equal(worktree.branch, `kombinat/worktree-fix-${record.id}`);
+  assert.deepEqual(worktree.changes?.files, [{ path: 'fix.txt', added: 1, removed: 0 }]);
+  assert.equal(fs.readFileSync(path.join(worktree.cwd, 'fix.txt'), 'utf8'), 'fixed\n');
+  assert.ok(!fs.existsSync(path.join(repo, 'fix.txt')));
+  const hook = readHookCapture('worktree');
+  assert.equal(hook.cwd, worktree.cwd);
+  assert.deepEqual(hook.stdin, record);
+});
+
+test('a worktree run that changed nothing leaves no worktree or branch behind', async () => {
+  const repo = makeGitRepo('quiet');
+  const record = await runRoutine(makeRoutine('worktree-quiet', `cwd: ${repo}\nworktree: true`), {
+    trigger: 'manual',
+  });
+  assert.equal(record.status, 'succeeded');
+  assert.equal(record.worktree?.state, 'discarded');
+  assert.ok(!fs.existsSync(record.worktree.path));
+  const branches = spawnSync('git', ['branch', '--list', 'kombinat/*'], {
+    cwd: repo,
+    encoding: 'utf8',
+  });
+  assert.equal(branches.stdout, '');
+});
+
+test('a worktree run outside a git repository fails before its agent starts', async () => {
+  const folder = path.join(tmp, 'plain-folder');
+  fs.mkdirSync(folder, { recursive: true });
+  const record = await runRoutine(
+    makeRoutine('worktree-no-repo', `cwd: ${folder}\ncommand: touch started.txt\nworktree: true`),
+    { trigger: 'manual' },
+  );
+  assert.equal(record.status, 'failed');
+  assert.match(record.error ?? '', /worktree: true needs a git repository/);
+  assert.equal(record.worktree, null);
+  assert.ok(!fs.existsSync(path.join(folder, 'started.txt')));
 });
