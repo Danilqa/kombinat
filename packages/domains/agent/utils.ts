@@ -9,3 +9,11 @@ export function getAgentLabel(agent: AgentName): string {
     .with('command', () => 'Command')
     .exhaustive();
 }
+
+// A command's output is its result, so it has no way to hand notes back.
+export function checkCanKeepMemory(agent: AgentName): boolean {
+  return match(agent)
+    .with('claude', 'codex', () => true)
+    .with('command', () => false)
+    .exhaustive();
+}

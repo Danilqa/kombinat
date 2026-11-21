@@ -46,6 +46,7 @@ function makeRun(routine: string, id: string, overrides: Partial<RunRecord> = {}
     usageLimit: null,
     tokens: null,
     blockedActions: [],
+    memorySentAt: null,
     ...overrides,
   };
 }
@@ -74,6 +75,7 @@ function makeRoutine(name: string, overrides: Partial<RoutineSummary> = {}): Rou
     lastRun: null,
     lastSkip: null,
     tokenUsage: null,
+    memory: false,
     ...overrides,
   };
 }
@@ -155,6 +157,7 @@ interface FakeOptions {
   runsPageSize?: number;
   transcript?: Transcript;
   webhookCalls?: RoutineDetail['webhookCalls'];
+  memoryNotes?: RoutineDetail['memoryNotes'];
 }
 
 function makeClient(overview: Overview, options: FakeOptions) {
@@ -189,6 +192,7 @@ function makeClient(overview: Overview, options: FakeOptions) {
           const [routine, at] = entry.split(' ');
           return routine === name && at !== undefined ? [{ routine: name, at }] : [];
         }),
+        memoryNotes: options.memoryNotes ?? null,
       };
       return Promise.resolve(detail);
     },
@@ -692,6 +696,30 @@ test('the webhooks tab lists the calls of a routine with what each did', async (
     /2m ago\s+401\s+Rejected by the gate\s+0 B\s+▌\s+exited with 1: bad signature\s+▌\s+empty body/,
   );
   assert.match(tab, /5m ago\s+200\s+Started a run\s+23 B\s+▌\s+\{"alert":"api is slow"\}/);
+});
+
+test('the memory tab shows the notes of a routine and the run that changed them', async () => {
+  const overview = makeOverview();
+  overview.routines = overview.routines.map(routine => ({ ...routine, memory: true }));
+  const { press } = await makeApp({
+    overview,
+    memoryNotes: {
+      text: "## Filed, don't file again\n\n- #512 the date picker overflows",
+      file: '/state/memory/smoke-test.md',
+      change: {
+        at: '2026-10-06T11:55:00Z',
+        by: 'run',
+        runId: runIdSchema.parse('20261006T110000Z-mem0'),
+        added: 2,
+        removed: 1,
+      },
+    },
+  });
+  const tab = await press('enter', ']', ']');
+  assert.match(tab, /Updated by an earlier run 5m ago · \+2 −1 lines/);
+  assert.match(tab, /Filed, don't file again/);
+  assert.match(tab, /• #512 the date picker overflows/);
+  assert.match(tab, /Edit them in the dashboard or in \/state\/memory\/smoke-test\.md/);
 });
 
 test('routines without a webhook have no queue tab', async () => {

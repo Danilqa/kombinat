@@ -99,6 +99,75 @@ test('keeps the open tab in the URL', async ({ page, kombinat }) => {
   await expect(page.getByRole('tab', { name: /^Runs/ })).toHaveAttribute('aria-selected', 'true');
 });
 
+const NOTES = [
+  "## Filed, don't file again",
+  '',
+  '- #512 the date picker overflows the screen on phones',
+  '- #513 the Save button has 2.9:1 contrast in dark mode',
+].join('\n');
+
+test('shows the notes a run left and lets you edit, clear and restore them', async ({
+  page,
+  kombinat,
+  time,
+}) => {
+  kombinat.addRoutine({ name: 'design-ux-issues' });
+  const run = kombinat.addRun({ routine: 'design-ux-issues', startedAt: time.minutesAgo(70) });
+  kombinat.addMemory('design-ux-issues', NOTES, {
+    at: time.minutesAgo(60),
+    by: 'run',
+    runId: run.id,
+    added: 2,
+    removed: 1,
+  });
+  await page.goto('/routines/design-ux-issues');
+
+  await page.getByRole('tab', { name: 'Memory' }).click();
+  await expect(page.getByRole('heading', { name: "Filed, don't file again" })).toBeVisible();
+  await expect(
+    page.getByText(/^Updated by the last run 1 hr\. ago.* · \+2 −1 lines$/),
+  ).toBeVisible();
+  await expect(page.getByRole('link', { name: 'the last run' })).toHaveAttribute(
+    'href',
+    `/runs/design-ux-issues/${run.id}`,
+  );
+
+  await page.getByRole('button', { name: 'Edit' }).click();
+  const notes = page.getByRole('textbox', { name: 'Notes' });
+  await expect(notes).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(notes).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Edit' })).toBeFocused();
+
+  await page.getByRole('button', { name: 'Edit' }).click();
+  await notes.pressSequentially("\n- Don't report the beta banner, it's on purpose");
+  await notes.press('ControlOrMeta+Enter');
+  await expect(page.getByText("Don't report the beta banner, it's on purpose")).toBeVisible();
+  await expect(page.getByText(/Updated by you .* · \+1 −0 lines/)).toBeVisible();
+  expect(kombinat.readMemory('design-ux-issues')).toBe(
+    `${NOTES}\n- Don't report the beta banner, it's on purpose\n`,
+  );
+
+  await page.getByRole('button', { name: 'Clear' }).click();
+  await expect(page.getByText('No notes yet. The next run starts them.')).toBeVisible();
+  await expect(page.getByText(/^Cleared by you/)).toBeVisible();
+  expect(kombinat.readMemory('design-ux-issues')).toBeNull();
+  await expect(page.getByRole('button', { name: 'Undo' })).toBeFocused();
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect(page.getByRole('heading', { name: "Filed, don't file again" })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Undo' })).toBeHidden();
+});
+
+test('a routine without memory has no Memory tab', async ({ page, kombinat }) => {
+  kombinat.addRoutine({ name: 'one-off', memory: false });
+  kombinat.addRoutine({ name: 'disk-cleanup', agent: 'command', command: 'echo done' });
+  for (const name of ['one-off', 'disk-cleanup']) {
+    await page.goto(`/routines/${name}`);
+    await expect(page.getByRole('tab', { name: 'Prompt' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Memory' })).toBeHidden();
+  }
+});
+
 // The browser runs in UTC, so the time input takes UTC times.
 function toTimeInputValue(date: Date): string {
   return date.toISOString().slice(0, 16);

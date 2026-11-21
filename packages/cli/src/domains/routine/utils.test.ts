@@ -72,6 +72,19 @@ test('a webhook gate needs the webhook', () => {
   );
 });
 
+test('memory is on for agents and off for commands unless the frontmatter says otherwise', () => {
+  assert.equal(buildRoutine('/tmp/demo.md', routineFile('agent: codex')).memory, true);
+  assert.equal(buildRoutine('/tmp/demo.md', routineFile('memory: false')).memory, false);
+  assert.equal(
+    buildRoutine('/tmp/demo.md', routineFile('agent: command\ncommand: echo hi')).memory,
+    false,
+  );
+  assert.throws(
+    () => buildRoutine('/tmp/demo.md', routineFile('agent: command\ncommand: echo\nmemory: true')),
+    /agent command has no memory/,
+  );
+});
+
 test('manual routines have no schedule', () => {
   const r = buildRoutine(
     '/tmp/demo.md',

@@ -8,10 +8,17 @@ import {
   changedOneTimeRunsSchema,
   routineDetailSchema,
   routineSummarySchema,
+  savedMemorySchema,
   startedRunSchema,
   startedRunWithIdSchema,
 } from './schemas';
-import type { OneTimeRunRequest, RoutineDetail, RoutineSummary, StartRunRequest } from './types';
+import type {
+  MemoryRequest,
+  OneTimeRunRequest,
+  RoutineDetail,
+  RoutineSummary,
+  StartRunRequest,
+} from './types';
 
 export async function getRoutines(http: HttpClient): Promise<RoutineSummary[]> {
   return http.request('/api/routines', z.array(routineSummarySchema));
@@ -68,4 +75,18 @@ export async function cancelOneTimeRun(
     `/api/routines/${encodeURIComponent(name)}/one-time-runs/cancel`,
     at,
   );
+}
+
+// Empty text clears the notes.
+export async function saveRoutineMemory(
+  http: HttpClient,
+  name: RoutineName,
+  text: string,
+): Promise<void> {
+  const body: MemoryRequest = { text };
+  await http.request(`/api/routines/${encodeURIComponent(name)}/memory`, savedMemorySchema, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
 }

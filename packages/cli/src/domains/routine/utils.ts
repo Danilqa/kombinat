@@ -2,6 +2,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import type { AgentName } from 'domains/agent/types';
+import { checkCanKeepMemory } from 'domains/agent/utils';
 import { routineNameSchema } from 'domains/routine/ids';
 import { describeCron, nextCronRun, parseCron } from 'utils/cron';
 import { getErrorMessage } from 'utils/error';
@@ -111,6 +112,10 @@ export function buildRoutine(file: string, source: string): Routine {
   const webhook = withFile(file, () => readBoolean(data, 'webhook')) ?? false;
   const webhookGate = readString(data, 'webhookGate');
   if (webhookGate !== null && !webhook) throw new Error(`${file}: webhookGate needs webhook: true`);
+  const memory = withFile(file, () => readBoolean(data, 'memory'));
+  if (memory === true && !checkCanKeepMemory(agent)) {
+    throw new Error(`${file}: agent command has no memory, use claude or codex`);
+  }
   return {
     name: routineNameSchema.parse(name),
     description: readString(data, 'description') ?? '',
@@ -123,6 +128,7 @@ export function buildRoutine(file: string, source: string): Routine {
     webhookGate,
     timeoutMinutes:
       withFile(file, () => readNumber(data, 'timeoutMinutes')) ?? DEFAULT_TIMEOUT_MINUTES,
+    memory: memory ?? checkCanKeepMemory(agent),
     before: readString(data, 'before'),
     after: readString(data, 'after'),
     prompt: body,
