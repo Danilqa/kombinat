@@ -5,6 +5,7 @@ import { runIdSchema } from '../run/ids';
 import { runRecordSchema, tokenUsageSchema } from '../run/schemas';
 import { oneTimeRunSchema, skipSchema } from '../scheduler/schemas';
 import { queuedWebhookSchema, webhookCallSchema } from '../webhook/schemas';
+import { MEMORY_MAX_LENGTH } from './constants';
 import { routineNameSchema } from './ids';
 
 export const routineSummarySchema = z.object({
@@ -33,6 +34,25 @@ export const routineSummarySchema = z.object({
   lastSkip: skipSchema.nullable(),
   // The last days' tokens. Older daemons do not send it, and tui --url may talk to one.
   tokenUsage: tokenUsageSchema.nullable().default(null),
+  // Older daemons do not send it, and tui --url may talk to one.
+  memory: z.boolean().default(false),
+});
+
+export const memoryAuthorSchema = z.enum(['run', 'user']);
+
+export const memoryChangeSchema = z.object({
+  at: z.string(),
+  by: memoryAuthorSchema,
+  runId: runIdSchema.nullable(),
+  // A change made in an editor outside kombinat has no counts.
+  added: z.number().nullable(),
+  removed: z.number().nullable(),
+});
+
+export const routineMemorySchema = z.object({
+  text: z.string(),
+  file: z.string(),
+  change: memoryChangeSchema.nullable(),
 });
 
 export const routineDetailSchema = routineSummarySchema.extend({
@@ -43,6 +63,8 @@ export const routineDetailSchema = routineSummarySchema.extend({
   webhookCalls: z.array(webhookCallSchema).default([]),
   // Older daemons do not send it, and tui --url may talk to one.
   oneTimeRuns: z.array(oneTimeRunSchema).default([]),
+  // null when the routine has no memory. Older daemons do not send it.
+  memoryNotes: routineMemorySchema.nullable().default(null),
 });
 
 export const startedRunSchema = z.object({ ok: z.literal(true) });
@@ -54,3 +76,7 @@ export const startRunRequestSchema = z.object({ prompt: z.string().regex(/\S/) }
 export const oneTimeRunRequestSchema = z.object({ at: z.iso.datetime({ offset: true }) });
 
 export const changedOneTimeRunsSchema = z.object({ ok: z.literal(true) });
+
+export const memoryRequestSchema = z.object({ text: z.string().max(MEMORY_MAX_LENGTH) });
+
+export const savedMemorySchema = z.object({ ok: z.literal(true) });

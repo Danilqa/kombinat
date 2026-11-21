@@ -5,6 +5,7 @@ import { sessionIdSchema } from 'domains/agent/ids';
 import type { AgentName } from 'domains/agent/types';
 import type { InboxState } from 'domains/inbox/types';
 import { routineNameSchema } from 'domains/routine/ids';
+import type { MemoryChange } from 'domains/routine/types';
 import { makeRunRecord } from 'domains/run/mocks';
 import type { RunRecord } from 'domains/run/types';
 import { createRunId } from 'domains/run/utils';
@@ -27,6 +28,7 @@ export interface RoutineFile {
   webhookGate?: string;
   timeoutMinutes?: number;
   maxBudgetUsd?: number;
+  memory?: boolean;
   prompt?: string;
 }
 
@@ -47,6 +49,8 @@ export interface Kombinat {
   addRun: (run: RunFile) => RunRecord;
   addSkip: (routine: string, reason: SkipReason) => void;
   addQueuedWebhook: (webhook: QueuedWebhookFile) => void;
+  addMemory: (routine: string, text: string, change: MemoryChange) => void;
+  readMemory: (routine: string) => string | null;
   lookAtInbox: (at: string) => void;
   stallScheduler: () => void;
 }
@@ -123,6 +127,19 @@ export function createKombinat(root: string): Kombinat {
       const file = `${String(queuedAt.getTime()).padStart(15, '0')}-${createRunId(queuedAt)}.payload`;
       fs.mkdirSync(queueDir, { recursive: true });
       fs.writeFileSync(path.join(queueDir, file), payload);
+    },
+    addMemory: (routine, text, change) => {
+      const memoryDir = path.join(stateDir, 'memory');
+      fs.mkdirSync(memoryDir, { recursive: true });
+      const file = path.join(memoryDir, `${routine}.md`);
+      fs.writeFileSync(file, `${text}\n`);
+      // A file newer than its change counts as edited by hand.
+      fs.utimesSync(file, new Date(change.at), new Date(change.at));
+      fs.writeFileSync(path.join(memoryDir, `${routine}.json`), JSON.stringify(change));
+    },
+    readMemory: routine => {
+      const file = path.join(stateDir, 'memory', `${routine}.md`);
+      return fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null;
     },
     lookAtInbox: at => {
       const inbox: InboxState = { since: at, readRuns: [] };

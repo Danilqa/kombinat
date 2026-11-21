@@ -16,7 +16,12 @@ import {
 } from 'domains/inbox/utils';
 import { releaseVersionSchema } from 'domains/release/ids';
 import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
-import { oneTimeRunRequestSchema, startRunRequestSchema } from 'domains/routine/schemas';
+import { MEMORY_MAX_LENGTH } from 'domains/routine/constants';
+import {
+  memoryRequestSchema,
+  oneTimeRunRequestSchema,
+  startRunRequestSchema,
+} from 'domains/routine/schemas';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import { RUNS_CURSOR_ERROR } from 'domains/run/constants';
 import { runIdSchema, type RunId } from 'domains/run/ids';
@@ -51,6 +56,7 @@ import { config } from './config';
 import { readPlanUsage } from './domains/agent/storage';
 import { readNotifyLevels, writeNotifyLevels } from './domains/inbox/notifications';
 import { readInboxState, writeInboxState } from './domains/inbox/storage';
+import { readRoutineMemory, writeMemory } from './domains/routine/memory';
 import { loadRoutines } from './domains/routine/storage';
 import type { Routine } from './domains/routine/types';
 import { describeSchedule, getNextRun } from './domains/routine/utils';
@@ -160,6 +166,7 @@ function toRoutineSummary(
     lastRun: runs[0] ?? null,
     lastSkip: getSkips(routine.name).at(-1) ?? null,
     tokenUsage,
+    memory: routine.memory,
   };
 }
 
@@ -234,6 +241,7 @@ function getRoutineDetail(routine: Routine): ApiResponse {
     queue: listQueuedWebhooks(routine.name),
     webhookCalls: listWebhookCalls(routine.name),
     oneTimeRuns,
+    memoryNotes: routine.memory ? readRoutineMemory(routine.name) : null,
   };
   return ok(detail);
 }
@@ -268,6 +276,24 @@ function cancelOneTimeRun(routine: Routine, body: Buffer): ApiResponse {
     );
   }
   writeOneTimeRuns(removeOneTimeRun(runs, oneTimeRun));
+  return ok({ ok: true });
+}
+
+function saveMemory(routine: Routine, body: Buffer): ApiResponse {
+  if (!routine.memory) {
+    return fail(
+      409,
+      `${routine.name} has no memory. It needs agent claude or codex and no memory: false`,
+    );
+  }
+  const request = memoryRequestSchema.safeParse(parseJson(body.toString('utf8')));
+  if (!request.success) {
+    return fail(
+      400,
+      `The body must be JSON with notes of at most ${MEMORY_MAX_LENGTH} characters in text`,
+    );
+  }
+  writeMemory(routine.name, request.data.text, { by: 'user' });
   return ok({ ok: true });
 }
 
@@ -453,6 +479,11 @@ function routeApi(request: ApiRequest, context: ApiContext): ApiResponse | Promi
     .with(['POST', ['routines', P.string, 'one-time-runs', 'cancel']], ([, [, name]]) =>
       withRoutine(routineNameSchema.parse(name), routine =>
         cancelOneTimeRun(routine, context.request.body),
+      ),
+    )
+    .with(['PUT', ['routines', P.string, 'memory']], ([, [, name]]) =>
+      withRoutine(routineNameSchema.parse(name), routine =>
+        saveMemory(routine, context.request.body),
       ),
     )
     .with(['POST', ['routines', P.string, 'webhook']], ([, [, name]]) =>

@@ -5,7 +5,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 import type { TestContext } from 'node:test';
 
-import { isMatching } from 'ts-pattern';
+import { isMatching, P } from 'ts-pattern';
 import { z } from 'zod';
 
 import { spawnSync } from 'node:child_process';
@@ -26,10 +26,16 @@ fs.writeFileSync(
   `${JSON.stringify({ type: 'result', result: 'x'.repeat(250_000), is_error: false, num_turns: 1 })}\n`,
 );
 // In a folder with limited.jsonl, it stops at a usage limit and its resumed session finishes.
+// In a folder with answer.jsonl, it keeps its prompt in prompt.txt and answers with the file.
 const fakeClaude = path.join(tmp, 'fake-claude');
 fs.writeFileSync(
   fakeClaude,
   `#!/bin/sh
+if [ -f answer.jsonl ]; then
+  cat > prompt.txt
+  cat answer.jsonl
+  exit 0
+fi
 cat > /dev/null
 if [ -f limited.jsonl ]; then
   echo "$@" >> args.txt
@@ -45,7 +51,8 @@ process.env['CLAUDE_BIN'] = fakeClaude;
 
 const { config } = await import('../../config');
 const { buildRoutine } = await import('../routine/utils');
-const { appendLogEvent } = await import('./event-log');
+const { readMemory, readRoutineMemory, writeMemory } = await import('../routine/memory');
+const { appendLogEvent, buildRunTranscript, readRunEvents } = await import('./event-log');
 const { writePayload, writePrompt } = await import('./payload');
 const { checkIsRunning, checkIsStarting, replyToRun, runRoutine, startDetachedRun } =
   await import('./runner');
@@ -575,6 +582,68 @@ test('a replying run keeps its routine running until its reply process is gone',
   assert.equal(checkIsRunning(run.routine), false);
   assert.equal(listRuns(run.routine)[0]?.replyPid, null);
   assert.deepEqual(readLog(run), [{ type: 'reply_error', error: 'Reply process disappeared' }]);
+});
+
+// A claude routine in its own folder whose agent ends its message with the text.
+function makeAnsweringRoutine(name: string, answer: string, frontmatter = '') {
+  const cwd = path.join(tmp, name);
+  fs.mkdirSync(cwd, { recursive: true });
+  fs.writeFileSync(
+    path.join(cwd, 'answer.jsonl'),
+    [
+      { type: 'system', subtype: 'init', session_id: 's1' },
+      { type: 'assistant', message: { content: [{ type: 'text', text: answer }] } },
+      { type: 'result', result: answer, is_error: false, num_turns: 1 },
+    ]
+      .map(event => JSON.stringify(event))
+      .join('\n'),
+  );
+  const routine = buildRoutine(
+    path.join(tmp, `${name}.md`),
+    `---\ncwd: ${cwd}\n${frontmatter}\n---\nFind design bugs.`,
+  );
+  return { routine, readPrompt: () => fs.readFileSync(path.join(cwd, 'prompt.txt'), 'utf8') };
+}
+
+test('a run reads the notes of the last runs and saves the notes it ends with', async () => {
+  const { routine, readPrompt } = makeAnsweringRoutine(
+    'remembers',
+    'Filed #512.\n\n<routine-memory>\n- Sign in as qa\n- #512 filed\n</routine-memory>',
+  );
+  writeMemory(routine.name, '- Sign in as qa', { by: 'user' });
+  const finished = await runRoutine(routine, { trigger: 'manual' });
+  assert.match(readPrompt(), /^Find design bugs\.\n[\s\S]*\n- Sign in as qa\n<\/routine-memory>/);
+  assert.equal(finished.resultText, 'Filed #512.');
+  assert.equal(readRunRecord(routine.name, finished.id)?.resultText, 'Filed #512.');
+  assert.equal(readMemory(routine.name), '- Sign in as qa\n- #512 filed');
+  assert.equal(readRoutineMemory(routine.name).change?.runId, finished.id);
+  const texts = buildRunTranscript('claude', readRunEvents(finished)).items.flatMap(item =>
+    isMatching({ kind: P.union('text', 'result') }, item) ? [item.text] : [],
+  );
+  assert.deepEqual(texts, ['Filed #512.', 'Filed #512.']);
+});
+
+test('a reply gets the notes as they are now and can change them', async () => {
+  const { routine, readPrompt } = makeAnsweringRoutine(
+    'remembers-reply',
+    'Noted.\n<routine-memory>\n- Skip the beta banner\n</routine-memory>',
+  );
+  const run = makeFinishedRun(routine.name, '20261117T090000Z-mmry');
+  writeMemory(routine.name, '- Edited after the run', { by: 'user' });
+  appendLogEvent(run, { type: 'message', text: 'Skip the beta banner', source: 'dashboard' });
+  await replyToRun(routine, run);
+  assert.match(readPrompt(), /^Skip the beta banner\n[\s\S]*- Edited after the run/);
+  assert.equal(readMemory(routine.name), '- Skip the beta banner');
+  assert.equal(readRoutineMemory(routine.name).change?.runId, run.id);
+});
+
+test('a routine with memory: false gets no notes and keeps its whole message', async () => {
+  const answer = 'Done\n<routine-memory>\n- Not saved\n</routine-memory>';
+  const { routine, readPrompt } = makeAnsweringRoutine('forgets', answer, 'memory: false');
+  const finished = await runRoutine(routine, { trigger: 'manual' });
+  assert.equal(readPrompt(), 'Find design bugs.');
+  assert.equal(finished.resultText, answer);
+  assert.equal(readMemory(routine.name), '');
 });
 
 const LIMIT_MESSAGE = "You've hit your limit · resets 8pm";

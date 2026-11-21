@@ -13,7 +13,7 @@ Each routine is a markdown file. The frontmatter at the top sets the schedule an
 
 ## Run history
 
-Logs and run history are stored in `~/.kombinat/`. Kombinat keeps runs forever by default.
+Logs, run history and the [memory](../README.md#memory) of each routine are stored in `~/.kombinat/`. Kombinat keeps runs forever by default.
 
 To delete old runs and [webhook calls](webhook.md#call-log), open the settings menu of the Runs page, or press `s` in the terminal dashboard. You can delete those older than a week, a month or 3 months. The last run of each routine is always kept.
 

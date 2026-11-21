@@ -22,6 +22,7 @@ import { parseJson } from '../../utils/json';
 import { getAgent } from '../agent/registry';
 import { writePlanUsage } from '../agent/storage';
 import type { Agent, Invocation, OutputEvent, RunContext, UsageLimitStop } from '../agent/types';
+import { appendMemory, keepMemoryUpdate, readMemory } from '../routine/memory';
 import type { Routine } from '../routine/types';
 import type { ChatMessage } from './event-log';
 import { appendLogEvent, readLastMessage, readRunEvents } from './event-log';
@@ -340,7 +341,12 @@ export async function runRoutine(
 
   const prompt = takePrompt(routine.name, id) ?? routine.prompt;
   const payload = takePayload(routine.name, id);
-  const task = { ...routine, prompt: payload === null ? prompt : appendPayload(prompt, payload) };
+  const withPayload = payload === null ? prompt : appendPayload(prompt, payload);
+  const memory = routine.memory ? readMemory(routine.name) : null;
+  const task = {
+    ...routine,
+    prompt: memory === null ? withPayload : appendMemory(withPayload, memory),
+  };
   const context: RunContext = { routine: task, runId: id, trigger: options.trigger };
   const invocation = agent.buildInvocation(context);
   const outcome = await runWaitingOutLimits({
@@ -353,6 +359,9 @@ export async function runRoutine(
     persist: writeRunRecord,
     context,
   });
+  if (memory !== null) {
+    record.resultText = keepMemoryUpdate(routine.name, id, record.resultText, memory);
+  }
   const finished: RunRecord = { ...record, ...outcome, endedAt: new Date().toISOString() };
   try {
     if (routine.after !== null) {
@@ -386,12 +395,14 @@ export async function replyToRun(routine: Routine, run: RunRecord): Promise<RunR
   const replying: RunRecord = { ...run, replyPid: process.pid };
   writeRunRecord(replying);
   const message = readLastMessage(run);
+  // The notes may have changed since the run, so the reply gets them as they are now.
+  const memory = routine.memory ? readMemory(routine.name) : null;
   const invocation =
     routine.agent === run.agent && run.sessionId !== null && message !== null
       ? agent.buildReplyInvocation(
           { routine, runId: run.id, trigger: run.trigger },
           run.sessionId,
-          message,
+          memory === null ? message : { ...message, text: appendMemory(message.text, memory) },
         )
       : null;
   // A reply that allows the blocked actions reports what it is still blocked from. Until it succeeds, the run keeps them.
@@ -416,6 +427,7 @@ export async function replyToRun(routine: Routine, run: RunRecord): Promise<RunR
               writeRunRecord({ ...replying, sessionId, resumeCommand }),
           })
         ).outcome;
+  if (memory !== null) keepMemoryUpdate(routine.name, run.id, session.resultText, memory);
   const isSucceeded = isMatching({ status: 'succeeded' }, outcome);
   // An error the agent reported is in its own events already.
   if (!isSucceeded && session.error === null) {

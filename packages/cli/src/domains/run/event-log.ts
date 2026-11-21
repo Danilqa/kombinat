@@ -17,6 +17,7 @@ import type {
 
 import { parseJson } from '../../utils/json';
 import { getAgent } from '../agent/registry';
+import { splitMemoryBlock } from '../routine/memory';
 
 const hookEventSchema = z.object({
   type: z.enum(['before_hook', 'after_hook']),
@@ -142,6 +143,17 @@ function toSessionItems(agent: AgentName, session: Session, index: number): Tran
   return [...continued.filter(item => !isMatching({ kind: 'result' }, item)), session.wait];
 }
 
+// Kombinat saves the notes at the end of the agent's message, so the message shows without them.
+function withoutMemoryBlock(item: TranscriptItem): TranscriptItem[] {
+  return match(item)
+    .with({ kind: 'result' }, result => [{ ...result, text: splitMemoryBlock(result.text).text }])
+    .with({ kind: 'text' }, text => {
+      const rest = splitMemoryBlock(text.text).text;
+      return rest === '' ? [] : [{ ...text, text: rest }];
+    })
+    .otherwise(() => [item]);
+}
+
 export function buildRunTranscript(agent: AgentName, events: unknown[]): Transcript {
   const hooks: HookItem[] = [];
   let session: Session = { events: [], wait: null };
@@ -176,6 +188,6 @@ export function buildRunTranscript(agent: AgentName, events: unknown[]): Transcr
       ...sessions.flatMap((session, index) => toSessionItems(agent, session, index)),
       ...hooks.filter(isMatching({ phase: 'after' })),
       ...replies.flatMap((reply, index) => toReplyItems(agent, reply, index)),
-    ],
+    ].flatMap(withoutMemoryBlock),
   };
 }
