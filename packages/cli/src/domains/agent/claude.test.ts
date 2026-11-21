@@ -96,6 +96,57 @@ test('reads the session and the result into the run record', () => {
   assert.equal(claudeAgent.getResumeCommand(sessionIdSchema.parse('s1')), 'claude --resume s1');
 });
 
+test('reads the calls nobody could approve into blocked actions, with the rules that allow them', () => {
+  const denied = (id: string, reason: string) => ({
+    type: 'user',
+    message: {
+      content: [{ type: 'tool_result', tool_use_id: id, content: reason, is_error: true }],
+    },
+  });
+  const result = {
+    type: 'result',
+    subtype: 'success',
+    is_error: false,
+    permission_denials: [
+      { tool_name: 'Bash', tool_use_id: 't1', tool_input: { command: 'git push' } },
+      { tool_name: 'Bash', tool_use_id: 't2', tool_input: { command: 'touch /tmp/notes/a.md' } },
+      {
+        tool_name: 'Write',
+        tool_use_id: 't3',
+        tool_input: { file_path: '/notes/today.md', content: 'hi' },
+      },
+      { tool_name: 'mcp__linear__create_issue', tool_use_id: 't4', tool_input: { title: 'Bug' } },
+    ],
+  };
+
+  const blocked = claudeAgent.readBlockedActions([
+    denied(
+      't1',
+      'Permission for this tool use was denied. What required approval: This command requires approval',
+    ),
+    denied(
+      't2',
+      "Permission for this tool use was denied. What required approval: touch in '/tmp/notes/a.md' needs approval. The path is outside the working directories for this session ('/repo').",
+    ),
+    result,
+  ]);
+
+  assert.deepEqual(blocked, [
+    { tool: 'Bash', preview: 'git push', rules: ['Bash(git push *)'] },
+    {
+      tool: 'Bash',
+      preview: 'touch /tmp/notes/a.md',
+      rules: ['Bash(touch *)', 'Edit(//tmp/notes/**)'],
+    },
+    { tool: 'Write', preview: '/notes/today.md', rules: ['Edit(//notes/**)'] },
+    {
+      tool: 'mcp__linear__create_issue',
+      preview: '{"title":"Bug"}',
+      rules: ['mcp__linear__create_issue'],
+    },
+  ]);
+});
+
 test('counts the tokens of every model in the result, subagents included', () => {
   const result = {
     type: 'result',
@@ -257,6 +308,28 @@ test('resumes the session with the message and a note about the dashboard', () =
     args[args.indexOf('--append-system-prompt') + 1] ?? '',
     /message from the dashboard/,
   );
+});
+
+test('allows the rules of the message for the resumed session only', () => {
+  const task = {
+    routine: makeAgentTask(),
+    runId: runIdSchema.parse('r1'),
+    trigger: 'manual' as const,
+  };
+  const message = { text: 'These are allowed now', source: 'dashboard' as const };
+  const { args } =
+    claudeAgent.buildReplyInvocation(task, sessionIdSchema.parse('s1'), {
+      ...message,
+      allowedTools: ['Bash(git push *)', 'Edit(//My Notes/**)'],
+    }) ?? assert.fail('claude continues sessions');
+
+  assert.deepEqual(args.slice(args.indexOf('--allowedTools'), args.indexOf('--resume')), [
+    '--allowedTools',
+    'Bash(git push *)',
+    '--allowedTools',
+    'Edit(//My Notes/**)',
+  ]);
+  assert.equal(claudeAgent.buildInvocation(task).args.includes('--allowedTools'), false);
 });
 
 test('says when the message came from a webhook', () => {

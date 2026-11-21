@@ -96,6 +96,7 @@ test('a routine that is still running is skipped and not started twice', () => {
     conversation: null,
     usageLimit: null,
     tokens: null,
+    blockedActions: [],
   });
   const result = tick(new Date('2026-09-30T10:02:30'));
   assert.deepEqual(result.started, []);

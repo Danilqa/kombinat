@@ -64,6 +64,30 @@ test('groups the runs that ended since the last look and clears them as they are
   await expect(inbox).toHaveAccessibleName('Inbox');
 });
 
+test('a succeeded run that was blocked from an action needs a look', async ({
+  page,
+  kombinat,
+  time,
+}) => {
+  kombinat.addRoutine({ name: 'fix-e2e-tests' });
+  kombinat.lookAtInbox(time.minutesAgo(120));
+  kombinat.addRun({
+    routine: 'fix-e2e-tests',
+    resultText: 'Fixed the login spec on a branch.',
+    startedAt: time.minutesAgo(40),
+    blockedActions: [{ tool: 'Bash', preview: 'git push', rules: ['Bash(git push *)'] }],
+  });
+
+  await page.goto('/inbox');
+
+  await expect(page.getByRole('region', { name: 'Needs a look' })).toMatchAriaSnapshot(`
+    - heading "Needs a look"
+    - list:
+      - listitem:
+        - link /^fix-e2e-tests Succeeded 1 blocked .+ ago .* Fixed the login spec on a branch\\.$/
+  `);
+});
+
 test.describe('on a tablet', () => {
   test.use({ viewport: { width: 768, height: 1024 } });
 

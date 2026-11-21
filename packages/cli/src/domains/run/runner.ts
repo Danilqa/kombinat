@@ -9,7 +9,12 @@ import { isMatching, match } from 'ts-pattern';
 import type { RoutineName } from 'domains/routine/ids';
 import type { RunId } from 'domains/run/ids';
 import type { RunRecord, RunTrigger } from 'domains/run/types';
-import { addTokenCounts, checkIsRunActive, createRunId } from 'domains/run/utils';
+import {
+  addTokenCounts,
+  checkIsRunActive,
+  createRunId,
+  mergeBlockedActions,
+} from 'domains/run/utils';
 import { getUsageLimitLabel } from 'domains/transcript/utils';
 
 import { config, getCliArgs } from '../../config';
@@ -185,6 +190,12 @@ async function runAgent({
   killTimer.clear();
   await new Promise<void>(resolve => log.end(resolve));
   const workedMs = Date.now() - spawnedAt;
+  const events = readRunEvents(record, logStart);
+  // Each process reports its own: the run's first, each after a usage limit and each reply.
+  record.blockedActions = mergeBlockedActions(
+    record.blockedActions,
+    agent.readBlockedActions(events),
+  );
 
   if (killTimer.checkHasFired()) {
     return exitWith(
@@ -192,7 +203,7 @@ async function runAgent({
       workedMs,
     );
   }
-  const usageLimitStop = agent.findUsageLimitStop(readRunEvents(record, logStart));
+  const usageLimitStop = agent.findUsageLimitStop(events);
   if (exitCode !== 0) {
     const stderr = stderrChunks.join('').trim().slice(-2000);
     return {
@@ -324,6 +335,7 @@ export async function runRoutine(
     conversation: options.conversation ?? null,
     usageLimit: null,
     tokens: null,
+    blockedActions: [],
   };
 
   const prompt = takePrompt(routine.name, id) ?? routine.prompt;
@@ -407,6 +419,7 @@ export async function replyToRun(routine: Routine, run: RunRecord): Promise<RunR
     sessionId: session.sessionId,
     resumeCommand: session.resumeCommand,
     replyPid: null,
+    blockedActions: session.blockedActions,
   };
   writeRunRecord(finished);
   return finished;

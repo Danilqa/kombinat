@@ -47,6 +47,7 @@ export const commandAgent: Agent = {
 
   readPlanLimits: () => null,
   findUsageLimitStop: () => null,
+  readBlockedActions: () => [],
 
   buildTranscript(events) {
     const text = events

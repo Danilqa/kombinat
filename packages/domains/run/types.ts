@@ -3,6 +3,7 @@ import type { z } from 'zod';
 import type { RoutineName } from '../routine/ids';
 import type { Transcript } from '../transcript/types';
 import type {
+  blockedActionSchema,
   runRecordSchema,
   runsCursorKeySchema,
   runsCursorSchema,
@@ -16,6 +17,7 @@ import type {
   usageLimitWaitSchema,
 } from './schemas';
 
+export type BlockedAction = z.infer<typeof blockedActionSchema>;
 export type RunStatus = z.infer<typeof runStatusSchema>;
 export type RunTrigger = z.infer<typeof runTriggerSchema>;
 export type RunRecord = z.infer<typeof runRecordSchema>;

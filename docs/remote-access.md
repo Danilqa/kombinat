@@ -36,6 +36,6 @@ The dashboard is then at `https://mac-mini.<your-tailnet>.ts.net`. To open it in
 
 ### Who can use it
 
-Anyone in your tailnet who can reach the Mac can read transcripts, start routines and message their agents. They can also run any prompt they write with a routine's agent, folder and permissions.
+Anyone in your tailnet who can reach the Mac can read transcripts, start routines and message their agents. They can also run any prompt they write with a routine's agent, folder and permissions, and allow the actions a run was blocked from for one reply.
 
 To limit this, let only some people reach port 443 of the Mac in your [Tailscale access rules](https://tailscale.com/kb/1018/acls).

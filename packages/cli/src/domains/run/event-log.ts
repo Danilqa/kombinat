@@ -31,6 +31,7 @@ const messageEventSchema = z.object({
   text: z.string(),
   // Messages logged before webhooks could send them have no source.
   source: messageSourceSchema.default('dashboard'),
+  allowedTools: z.array(z.string()).optional(),
 });
 
 const replyErrorEventSchema = z.object({ type: z.literal('reply_error'), error: z.string() });
@@ -90,8 +91,8 @@ export function readRunEvents(record: Pick<RunRecord, 'logFile'>, fromByte = 0):
     .filter(event => event !== undefined);
 }
 
-function toReplyMessage({ text, source }: MessageEvent): ChatMessage {
-  return { text, source };
+function toReplyMessage({ text, source, allowedTools }: MessageEvent): ChatMessage {
+  return allowedTools === undefined ? { text, source } : { text, source, allowedTools };
 }
 
 export function appendLogEvent(record: RunRecord, event: ChatEvent | UsageLimitEvent): void {

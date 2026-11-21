@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 import { EmptyState, RelativeTime, Table } from 'design-system/components';
 import { cn } from 'design-system/utils';
-import { RunDuration, RunStatusBadge } from 'domains/run/components';
+import { BlockedBadge, RunDuration, RunStatusBadge } from 'domains/run/components';
 import type { RunRecord } from 'domains/run/types';
 import { formatTokens, getTokenTotal, getTriggerLabel } from 'domains/run/utils';
 import { formatDayTime } from 'utils/date-time';
@@ -63,7 +63,10 @@ export function RunsTable({ runs, total, hasRoutineColumn, onEndReached }: RunsT
             </Table.Cell>
           )}
           <Table.Cell>
-            <RunStatusBadge status={run.status} />
+            <span className="flex flex-col items-start gap-1">
+              <RunStatusBadge status={run.status} />
+              {run.blockedActions.length > 0 && <BlockedBadge count={run.blockedActions.length} />}
+            </span>
           </Table.Cell>
           <Table.Cell>
             <Link

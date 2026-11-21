@@ -5,7 +5,7 @@ import type { AgentName } from 'domains/agent/types';
 import type { PlanLimits } from 'domains/daemon/types';
 import type { RoutineName } from 'domains/routine/ids';
 import type { RunId } from 'domains/run/ids';
-import type { RunRecord, RunTrigger } from 'domains/run/types';
+import type { BlockedAction, RunRecord, RunTrigger } from 'domains/run/types';
 import type { MessageSource, TranscriptItem, UsageLimitKind } from 'domains/transcript/types';
 
 import type { outputEventSchema } from './schemas';
@@ -39,6 +39,8 @@ export type ReplySource = MessageSource | 'usage_limit';
 export interface ReplyMessage {
   text: string;
   source: ReplySource;
+  // Permission rules that let the reply do what the run was blocked from.
+  allowedTools?: string[] | undefined;
 }
 
 export interface UsageLimitStop {
@@ -84,6 +86,7 @@ export interface Agent {
   readEvent(event: unknown, record: Readonly<RunRecord>): RunUpdate;
   readPlanLimits(event: unknown): PlanLimits | null;
   findUsageLimitStop(events: unknown[]): UsageLimitStop | null;
+  readBlockedActions(events: unknown[]): BlockedAction[];
   buildTranscript(events: unknown[]): TranscriptItem[];
   getResumeCommand(sessionId: SessionId): string | null;
 }

@@ -10,6 +10,7 @@ import { toPreview } from 'domains/transcript/utils';
 
 import { config } from '../../config';
 import { checkIsRecord } from '../../utils/json';
+import { suggestAllowRules } from './claude-rules';
 import {
   getReplyNote,
   getUnattendedNote,
@@ -101,6 +102,12 @@ const modelUsageSchema = z.object({
   cacheReadInputTokens: z.number().optional(),
 });
 
+const permissionDenialSchema = z.object({
+  tool_name: z.string(),
+  tool_use_id: z.string().optional(),
+  tool_input: z.unknown().optional(),
+});
+
 const claudeEventSchema = z.object({
   type: z.string().optional(),
   subtype: z.string().optional(),
@@ -123,6 +130,7 @@ const claudeEventSchema = z.object({
   error: z.string().optional(),
   usage: resultUsageSchema.optional(),
   modelUsage: z.record(z.string(), modelUsageSchema).optional(),
+  permission_denials: z.array(permissionDenialSchema).optional(),
 });
 type ClaudeEvent = z.infer<typeof claudeEventSchema>;
 
@@ -362,7 +370,12 @@ export const claudeAgent: Agent = {
   buildReplyInvocation(context, sessionId, message) {
     return {
       command: config.claudeBin,
-      args: [...buildArgs(context, getReplyNote(context, message.source)), '--resume', sessionId],
+      args: [
+        ...buildArgs(context, getReplyNote(context, message.source)),
+        ...(message.allowedTools ?? []).flatMap(rule => ['--allowedTools', rule]),
+        '--resume',
+        sessionId,
+      ],
       env: withoutEnv(DROPPED_ENV),
       input: message.text,
     };
@@ -409,6 +422,23 @@ export const claudeAgent: Agent = {
       limit: toUsageLimitKind(info.rateLimitType),
       resetsAt: new Date(info.resetsAt * 1000).toISOString(),
     };
+  },
+
+  // With nobody to answer a permission prompt, a call is denied and the run goes on without it.
+  readBlockedActions(events) {
+    const claudeEvents = toClaudeEvents(events);
+    const results = collectToolResults(claudeEvents);
+    return claudeEvents.flatMap(({ permission_denials }) =>
+      (permission_denials ?? []).map(({ tool_name, tool_use_id, tool_input }) => ({
+        tool: tool_name,
+        preview: getInputPreview(tool_name, tool_input),
+        rules: suggestAllowRules(
+          tool_name,
+          tool_input,
+          tool_use_id === undefined ? null : (results.get(tool_use_id)?.content ?? null),
+        ),
+      })),
+    );
   },
 
   buildTranscript(events) {

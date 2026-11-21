@@ -45,6 +45,7 @@ function makeRun(routine: string, id: string, overrides: Partial<RunRecord> = {}
     conversation: null,
     usageLimit: null,
     tokens: null,
+    blockedActions: [],
     ...overrides,
   };
 }
@@ -299,6 +300,25 @@ test("enter opens a run from the routine's runs tab and esc goes back", async ()
   assert.match(runScreen, /▸ Bash\s+gh pr list/);
   assert.match(runScreen, /claude --resume session-1/);
   assert.match(await press('escape'), /0 {2}on-call-monitoring {2}/);
+});
+
+test('a run that was blocked from actions lists them with the rules that allow them', async () => {
+  const overview = makeOverview();
+  overview.runs = overview.runs.map(run => ({
+    ...run,
+    blockedActions: [
+      { tool: 'Bash', preview: 'git push -u origin fix/totals', rules: ['Bash(git push *)'] },
+    ],
+  }));
+  const { press } = await makeApp({ overview });
+  await press('enter');
+  const runScreen = await press('enter');
+  assert.match(runScreen, /status {4}✓ Succeeded {2}1 blocked/);
+  assert.match(
+    runScreen,
+    /BLOCKED {2}add the rules to permissions\.allow in \.claude\/settings\.json/,
+  );
+  assert.match(runScreen, /▌ Bash {2}git push -u origin fix\/totals\s*│?\n.*Bash\(git push \*\)/);
 });
 
 test('opening a finished run marks it read in the inbox once, though its page reloads', async () => {
