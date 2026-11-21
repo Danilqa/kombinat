@@ -29,14 +29,52 @@ const READ_ONLY_COMMANDS = new Set([
   'true',
   'false',
 ]);
+// They open or close a block, before the command in it, as in do git add "$f".
+const SHELL_KEYWORDS = new Set([
+  'if',
+  'then',
+  'else',
+  'elif',
+  'fi',
+  'while',
+  'until',
+  'do',
+  'done',
+  'esac',
+  '{',
+  '}',
+  '!',
+]);
+// Their whole simple command is a header with no command in it, as in for f in *.md.
+const HEADER_KEYWORDS = new Set(['for', 'select', 'case']);
 const SUBCOMMAND = /^[a-z][a-z0-9-]*$/i;
 const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;
+// Such as > out.log, 2>&1 or < list.txt. Its target is the next word when the redirection has none.
+const REDIRECTION = /^(?:\d*|&)[<>]+&?(?<target>.*)$/;
 // How Claude Code says a command touched a path outside the working folders of the session.
 const BLOCKED_PATH = /(\S+) in '([^']+)' (?:needs approval|was blocked)/;
 const BLOCKED_PART = /requires approval: ([^\n]+)/;
+const HEREDOC = /(?<!<)<<(?!<)-?\s*(['"]?)([A-Za-z_]\w*)\1/g;
+
+// A heredoc's lines are text for the command, such as a pull request body, not commands.
+function dropHeredocs(command: string): string {
+  const ends: string[] = [];
+  return command
+    .split('\n')
+    .filter(line => {
+      if (ends.length > 0) {
+        if (line.trim() === ends[0]) ends.shift();
+        return false;
+      }
+      ends.push(...Array.from(line.matchAll(HEREDOC), ([, , end = '']) => end));
+      return true;
+    })
+    .join('\n');
+}
 
 // Splits a shell command into its simple commands, at ; & | newlines and parentheses outside quotes.
-function splitCommands(command: string): ShellWord[][] {
+function splitCommands(shell: string): ShellWord[][] {
+  const command = dropHeredocs(shell);
   const commands: ShellWord[][] = [];
   let words: ShellWord[] = [];
   let word: ShellWord = { text: '', isQuoted: false };
@@ -76,8 +114,27 @@ function splitCommands(command: string): ShellWord[][] {
   return commands;
 }
 
-function toCommandPrefix(words: ShellWord[]): string[] {
-  const start = words.findIndex(word => !ASSIGNMENT.test(word.text));
+function dropShellKeywords(words: ShellWord[]): ShellWord[] {
+  const start = words.findIndex(word => word.isQuoted || !SHELL_KEYWORDS.has(word.text));
+  const [first] = start === -1 ? [] : words.slice(start);
+  if (first === undefined || (!first.isQuoted && HEADER_KEYWORDS.has(first.text))) return [];
+  return words.slice(start);
+}
+
+// Assignments and redirections can come before the command's name, as in NODE_ENV=test pnpm build.
+function findCommandName(words: ShellWord[]): number {
+  for (let index = 0; index < words.length; index += 1) {
+    const { text = '', isQuoted = false } = words[index] ?? {};
+    const redirection = isQuoted ? null : REDIRECTION.exec(text);
+    if (redirection?.groups?.['target'] === '') index += 1;
+    else if (redirection === null && !ASSIGNMENT.test(text)) return index;
+  }
+  return -1;
+}
+
+function toCommandPrefix(shellWords: ShellWord[]): string[] {
+  const words = dropShellKeywords(shellWords);
+  const start = findCommandName(words);
   const [first, ...rest] = start === -1 ? [] : words.slice(start);
   if (first === undefined) return [];
   const length = NOUN_VERB_COMMANDS.has(first.text) ? 3 : 2;

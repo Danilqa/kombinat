@@ -106,8 +106,10 @@ export function BlockedActionsCard({ run, cwd, onAllowed }: BlockedActionsCardPr
   });
   const isOne = actions.length === 1;
   const hasOneRule = rules.length === 1;
-  const isContinuing = isPending || isSuccess;
-  const isBusy = isContinuing || checkIsRunActive(run);
+  const isRunActive = checkIsRunActive(run);
+  // A reply that fails leaves the actions on the run, so the card offers to allow them again.
+  const isContinuing = isPending || (isSuccess && isRunActive);
+  const isBusy = isContinuing || isRunActive;
   const visible = isExpanded ? actions : actions.slice(0, VISIBLE_ACTIONS);
   const hiddenCount = actions.length - visible.length;
   const settingsPath = cwd === null ? '.claude/settings.json' : `${cwd}/.claude/settings.json`;

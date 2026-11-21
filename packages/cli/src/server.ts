@@ -70,7 +70,6 @@ import {
   listRuns,
   listRunsSince,
   readRunRecord,
-  writeRunRecord,
 } from './domains/run/storage';
 import { requestWaitAction } from './domains/run/usage-limit';
 import { readOneTimeRuns, writeOneTimeRuns } from './domains/scheduler/one-time-runs';
@@ -306,9 +305,7 @@ function allowBlockedActions(routine: Routine, run: RunRecord): ApiResponse {
   if (checkIsRunning(routine.name)) {
     return fail(409, `${routine.name} is running, try again once it is done`);
   }
-  const allowed: RunRecord = { ...run, blockedActions: [] };
-  writeRunRecord(allowed);
-  startDetachedReply(allowed, {
+  startDetachedReply(run, {
     text: buildAllowMessage(rules),
     source: 'dashboard',
     allowedTools: rules,

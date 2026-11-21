@@ -77,13 +77,18 @@ export function getBlockedLabel(count: number): string {
 
 const toBlockedKey = ({ tool, preview }: BlockedAction) => `${tool}\n${preview}`;
 
-// An agent that tries the same action twice was still blocked from one thing.
+// An agent that tries the same action twice, in one process or in two, was still blocked from one thing.
 export function mergeBlockedActions(
   before: BlockedAction[],
   after: BlockedAction[],
 ): BlockedAction[] {
-  const seen = new Set(before.map(toBlockedKey));
-  return [...before, ...after.filter(action => !seen.has(toBlockedKey(action)))];
+  const seen = new Set<string>();
+  return [...before, ...after].filter(action => {
+    const key = toBlockedKey(action);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 export function listBlockedRules(actions: BlockedAction[]): string[] {

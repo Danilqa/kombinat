@@ -226,6 +226,11 @@ function checkIsReplying(messages: DemoMessage[], now: Date): boolean {
   return last !== undefined && last.sentAt.getTime() + REPLY_MS > now.getTime();
 }
 
+// As on the daemon, the run keeps its blocked actions until the reply that allows them ends.
+function checkIsAllowed(message: DemoMessage, now: Date): boolean {
+  return message.isAllowing && message.sentAt.getTime() + REPLY_MS <= now.getTime();
+}
+
 function toRunRecord(
   run: DemoRun,
   now: Date,
@@ -282,7 +287,7 @@ function toRunRecord(
         : null,
     tokens: isFinished ? getTokens(run) : null,
     blockedActions:
-      isFinished && !messages.some(message => message.isAllowing)
+      isFinished && !messages.some(message => checkIsAllowed(message, now))
         ? (outcome.blockedActions ?? [])
         : [],
   };

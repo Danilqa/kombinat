@@ -394,7 +394,13 @@ export async function replyToRun(routine: Routine, run: RunRecord): Promise<RunR
           message,
         )
       : null;
-  const session: RunRecord = { ...replying, error: null };
+  // A reply that allows the blocked actions reports what it is still blocked from. Until it succeeds, the run keeps them.
+  const isAllowing = message?.allowedTools !== undefined;
+  const session: RunRecord = {
+    ...replying,
+    error: null,
+    blockedActions: isAllowing ? [] : run.blockedActions,
+  };
   const outcome: Partial<RunRecord> =
     invocation === null
       ? { status: 'failed', error: `This ${run.agent} run has no session to continue` }
@@ -410,8 +416,9 @@ export async function replyToRun(routine: Routine, run: RunRecord): Promise<RunR
               writeRunRecord({ ...replying, sessionId, resumeCommand }),
           })
         ).outcome;
+  const isSucceeded = isMatching({ status: 'succeeded' }, outcome);
   // An error the agent reported is in its own events already.
-  if (!isMatching({ status: 'succeeded' }, outcome) && session.error === null) {
+  if (!isSucceeded && session.error === null) {
     appendLogEvent(run, { type: 'reply_error', error: outcome.error ?? 'The reply failed' });
   }
   const finished: RunRecord = {
@@ -419,7 +426,7 @@ export async function replyToRun(routine: Routine, run: RunRecord): Promise<RunR
     sessionId: session.sessionId,
     resumeCommand: session.resumeCommand,
     replyPid: null,
-    blockedActions: session.blockedActions,
+    blockedActions: isAllowing && !isSucceeded ? run.blockedActions : session.blockedActions,
   };
   writeRunRecord(finished);
   return finished;

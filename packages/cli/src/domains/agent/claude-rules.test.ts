@@ -31,6 +31,23 @@ test('each command of a chain that needs approval gets a rule, once', () => {
   );
 });
 
+test('the lines of a heredoc are text, not commands', () => {
+  assert.deepEqual(
+    bash(
+      "cat > /tmp/body.md <<'EOF'\nFixes the totals\n- rounds to cents\nEOF\ngh pr create --body-file /tmp/body.md",
+    ),
+    ['Bash(gh pr create *)'],
+  );
+});
+
+test('a loop or a condition gets a rule for each command inside it', () => {
+  assert.deepEqual(bash('for f in *.md; do git add "$f"; done'), ['Bash(git add *)']);
+  assert.deepEqual(bash('if ! git diff --quiet; then\n  git commit -am wip\nfi > commit.log'), [
+    'Bash(git diff *)',
+    'Bash(git commit *)',
+  ]);
+});
+
 test('a chain of commands that run without asking keeps a rule for its first one', () => {
   assert.deepEqual(bash('cat /etc/hosts | head -3'), ['Bash(cat *)']);
 });

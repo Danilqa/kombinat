@@ -403,7 +403,8 @@ test('a run blocked from actions lists them with their rules and continues with 
 
   await card.getByRole('button', { name: 'Allow and continue' }).click();
 
-  await expect(card).toBeHidden();
+  await expect(card.getByRole('button', { name: 'Continuing…' })).toBeVisible();
+  await expect(card).toBeHidden({ timeout: REPLY_TIMEOUT_MS });
   await expect(page).toHaveURL(/\?tab=transcript$/);
   await expect(page.getByRole('main').getByText('2 blocked')).toBeHidden();
   await expect(
@@ -445,6 +446,36 @@ test('a webhook of the same conversation continues the run that the first one st
     timeout: REPLY_TIMEOUT_MS,
   });
   await expect(page.getByText('You wrote: Open a PR with the fix')).toHaveCount(0);
+});
+
+test('a run whose allowed reply fails offers to allow its blocked actions again', async ({
+  page,
+  kombinat,
+  claude,
+}) => {
+  test.slow();
+  // A routine that switched agents can no longer continue the run's Claude session.
+  kombinat.addRoutine({ name: 'switched', agent: 'command', command: 'echo Hello' });
+  const run = kombinat.addRun({
+    routine: 'switched',
+    sessionId: 'b5c1e2d4',
+    resumeCommand: 'claude --resume b5c1e2d4',
+    blockedActions: [{ tool: 'Bash', preview: 'git push', rules: ['Bash(git push *)'] }],
+    events: [claude.init(), claude.result()],
+  });
+
+  await page.goto(`/runs/switched/${run.id}`);
+  const card = page.getByRole('region', { name: '1 action was blocked' });
+  await card.getByRole('button', { name: 'Allow and continue' }).click();
+
+  await expect(page.getByText('This claude run has no session to continue')).toBeVisible({
+    timeout: REPLY_TIMEOUT_MS,
+  });
+  await expect(card.getByRole('button', { name: 'Allow and continue' })).not.toHaveAttribute(
+    'aria-disabled',
+  );
+  await expect(card.getByRole('listitem')).toHaveText(['Bashgit pushBash(git push *)']);
+  await expect(page.getByRole('main').getByText('1 blocked')).toBeVisible();
 });
 
 test('a run without an agent session cannot be continued', async ({ page, kombinat }) => {

@@ -186,8 +186,9 @@ test('merging blocked actions keeps one of each action and one of each rule', ()
     rules: ['WebFetch(domain:acme.dev)'],
   };
 
-  const merged = mergeBlockedActions([push], [push, forcePush, fetch]);
+  const merged = mergeBlockedActions([push], [push, forcePush, fetch, forcePush]);
 
   assert.deepEqual(merged, [push, forcePush, fetch]);
+  assert.deepEqual(mergeBlockedActions([], [push, push]), [push]);
   assert.deepEqual(listBlockedRules(merged), ['Bash(git push *)', 'WebFetch(domain:acme.dev)']);
 });

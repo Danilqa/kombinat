@@ -111,10 +111,10 @@ Invariants:
 
 A Claude run is `claude -p` with nobody to answer a permission prompt. Claude Code denies every call that needs approval and goes on without it. The process still exits with 0. A run's `blockedActions` lists these calls, each with its tool, the preview of its input and the rules that would allow it in a `permissions.allow` list.
 
-- Claude reports the denials of each process in `permission_denials` of its result. The processes of a run add up: after a usage limit and after each reply, without the same tool and preview twice.
+- Claude reports the denials of each process in `permission_denials` of its result. The processes of a run add up: after a usage limit and after each reply, without the same tool and preview twice, also when one process tried it twice.
 - The rules come from `agent/claude-rules.ts`: a shell command gets `Bash(<name> <subcommand> *)` for each of its commands that needs approval, such as `Bash(git push *)` or `Bash(gh pr create *)`, a file tool `Edit(//<folder>/**)` or `Read(//<folder>/**)`, a fetch `WebFetch(domain:<host>)` and any other tool its name. When the reason Claude Code gave the agent says a command reached outside the working folders, the command also gets `Edit(//<folder>/**)`, or `Read(//<folder>/**)` for a command that only reads, since a `Bash` rule alone does not let it out.
 - The inbox files a run with blocked actions under Needs a look, whatever its status.
-- `POST /api/runs/<routine>/<id>/blocked/allow` continues the run as a message does, with a message that lists the rules and the rules in its `allowedTools`. The reply gets them with `--allowedTools`, for its session only. The daemon empties the run's `blockedActions` first, and the reply adds back what it was still blocked from. It answers 409 for a run without blocked actions, without a resume command or whose routine is running.
+- `POST /api/runs/<routine>/<id>/blocked/allow` continues the run as a message does, with a message that lists the rules and the rules in its `allowedTools`. The reply gets them with `--allowedTools`, for its session only. The run keeps its `blockedActions` while the reply works. Once the reply succeeds, they become what the reply was still blocked from. A reply that fails, such as one whose session is gone, leaves them as they were, so they can be allowed again. It answers 409 for a run without blocked actions, without a resume command or whose routine is running.
 - Older records have none.
 
 #### Continuing a run
