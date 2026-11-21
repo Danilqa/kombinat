@@ -1,6 +1,6 @@
 import type { AgentName } from 'domains/agent/types';
 import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
-import type { BlockedAction, RunStatus } from 'domains/run/types';
+import type { BlockedAction, ChangedFile, RunStatus } from 'domains/run/types';
 import type { SkipReason } from 'domains/scheduler/types';
 import type { UsageLimitKind } from 'domains/transcript/types';
 import type { WebhookCallOutcome } from 'domains/webhook/types';
@@ -46,6 +46,8 @@ export interface DemoOutcome {
   model?: string;
   usageLimit?: DemoUsageLimit;
   blockedActions?: BlockedAction[];
+  // The files a worktree run committed. A worktree run without them changed nothing.
+  changedFiles?: ChangedFile[];
   steps: TranscriptStep[];
 }
 
@@ -97,6 +99,7 @@ export interface DemoRoutine {
   command: string | null;
   cwd: string;
   timeoutMinutes: number;
+  worktree?: boolean;
   maxBudgetUsd: number | null;
   prompt: string;
   runModel: string | null;
@@ -797,10 +800,16 @@ const flakyFixSteps: TranscriptStep[] = [
     'Running 50 tests using 4 workers\n  50 passed (1.7m)',
   ),
   bash(
+    'git commit -am "Wait for the avatar upload before saving" && git push -u origin HEAD',
+    ' 1 file changed, 3 insertions(+), 1 deletion(-)',
+  ),
+  bash(
     'gh pr create --title "Wait for the avatar upload before saving" --body-file /tmp/pr.md',
     'https://github.com/acme/web/pull/497',
   ),
 ];
+
+const flakyFixFiles: ChangedFile[] = [{ path: 'e2e/settings/avatar.e2e.ts', added: 3, removed: 1 }];
 
 const flakyE2eFixer: DemoRoutine = {
   name: routineNameSchema.parse('flaky-e2e-fixer'),
@@ -814,6 +823,7 @@ const flakyE2eFixer: DemoRoutine = {
   command: null,
   cwd: REPO,
   timeoutMinutes: 45,
+  worktree: true,
   maxBudgetUsd: 3,
   prompt: `Find the end-to-end tests that failed and then passed on a retry in the last 24 hours of CI.
 
@@ -829,6 +839,7 @@ For each flaky test, find the cause in its trace, fix the test or the code, and 
       numTurns: 24,
       resultText:
         "Fixed 'uploads an avatar': it clicked Save before the upload finished. It now waits for the upload response, 50 runs in a row pass, and #497 is open.",
+      changedFiles: flakyFixFiles,
       steps: flakyFixSteps,
     },
     {
@@ -841,6 +852,7 @@ For each flaky test, find the cause in its trace, fix the test or the code, and 
       resultText:
         "Fixed 'uploads an avatar': it clicked Save before the upload finished. It now waits for the upload response, 50 runs in a row pass, and #497 is open.",
       usageLimit: { limit: 'session', afterStep: 5, waitMinutes: 70 },
+      changedFiles: flakyFixFiles,
       steps: flakyFixSteps,
     },
     {

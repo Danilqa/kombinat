@@ -118,6 +118,7 @@ timeoutMinutes: 55
 - `name` must match the file name.
 - `schedule` is a 5-field cron in local time, or `manual` to run only on demand.
 - `cwd` is where the agent starts.
+- `worktree: true` gives each run a git worktree of its own, on a new branch, so the agent never touches your checkout in `cwd`, see [docs/worktrees.md](docs/worktrees.md).
 - `agent` is `claude` (default), `codex` or `command`.
 - `timeoutMinutes` stops the run after this time. Default 55.
 - `before` is an optional shell command that runs first. If it fails or takes more than 3 minutes, the run fails.

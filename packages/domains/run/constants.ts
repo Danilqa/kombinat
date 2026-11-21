@@ -10,3 +10,4 @@ export const QUERY_KEYS_CHANGED_BY_WAIT_ACTION = [
   ['calendar'],
   ['inbox'],
 ];
+export const QUERY_KEYS_CHANGED_BY_WORKTREE = [['runs']];

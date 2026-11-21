@@ -6,10 +6,12 @@ import type { AgentName } from 'domains/agent/types';
 import type { InboxState } from 'domains/inbox/types';
 import { routineNameSchema } from 'domains/routine/ids';
 import { makeRunRecord } from 'domains/run/mocks';
-import type { RunRecord } from 'domains/run/types';
+import type { RunRecord, RunWorktree } from 'domains/run/types';
 import { createRunId } from 'domains/run/utils';
 import type { SchedulerState, SkipReason } from 'domains/scheduler/types';
 
+import { createWorktree, inspectWorktree } from './git';
+import type { WorktreeFile, WorktreeOnDisk } from './git';
 import { minutesAgo } from './time';
 
 export interface RoutineFile {
@@ -26,6 +28,7 @@ export interface RoutineFile {
   webhook?: boolean;
   webhookGate?: string;
   timeoutMinutes?: number;
+  worktree?: boolean;
   maxBudgetUsd?: number;
   prompt?: string;
 }
@@ -47,6 +50,8 @@ export interface Kombinat {
   addRun: (run: RunFile) => RunRecord;
   addSkip: (routine: string, reason: SkipReason) => void;
   addQueuedWebhook: (webhook: QueuedWebhookFile) => void;
+  addWorktree: (worktree: WorktreeFile) => RunWorktree;
+  inspectWorktree: (worktree: RunWorktree) => WorktreeOnDisk;
   lookAtInbox: (at: string) => void;
   stallScheduler: () => void;
 }
@@ -124,6 +129,8 @@ export function createKombinat(root: string): Kombinat {
       fs.mkdirSync(queueDir, { recursive: true });
       fs.writeFileSync(path.join(queueDir, file), payload);
     },
+    addWorktree: worktree => createWorktree(root, worktree),
+    inspectWorktree,
     lookAtInbox: at => {
       const inbox: InboxState = { since: at, readRuns: [] };
       fs.writeFileSync(path.join(stateDir, 'inbox.json'), JSON.stringify(inbox));

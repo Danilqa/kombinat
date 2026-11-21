@@ -13,11 +13,12 @@ import {
   RunOutput,
   RunStatusBadge,
   UsageLimitCard,
+  WorktreeCard,
 } from 'domains/run/components';
 import { runIdSchema } from 'domains/run/ids';
 import { getRunWithTranscript } from 'domains/run/requests';
 import type { RunWithTranscript } from 'domains/run/types';
-import { checkIsRunActive } from 'domains/run/utils';
+import { checkIsRunActive, getCheckoutCwd } from 'domains/run/utils';
 import type { Transcript } from 'domains/transcript/types';
 import { sameOriginApi } from 'utils/http';
 import { getPollInterval } from 'utils/polling';
@@ -156,9 +157,16 @@ export function RunPage() {
       {data && data.run.blockedActions.length > 0 && (
         <BlockedActionsCard
           run={data.run}
-          cwd={getAgentCwd(data.transcript)}
+          cwd={
+            data.run.worktree === null
+              ? getAgentCwd(data.transcript)
+              : getCheckoutCwd(data.run.worktree)
+          }
           onAllowed={() => setTab('transcript')}
         />
+      )}
+      {data && data.run.worktree !== null && (
+        <WorktreeCard run={data.run} worktree={data.run.worktree} />
       )}
       {data && <RunView run={data.run} transcript={data.transcript} />}
     </div>

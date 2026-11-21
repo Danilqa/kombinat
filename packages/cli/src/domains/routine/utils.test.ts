@@ -62,6 +62,15 @@ test('webhooks are off unless the frontmatter turns them on', () => {
   );
 });
 
+test('a routine runs in its cwd unless the frontmatter asks for a worktree', () => {
+  assert.equal(buildRoutine('/tmp/demo.md', routineFile('schedule: manual')).worktree, false);
+  assert.equal(buildRoutine('/tmp/demo.md', routineFile('worktree: true')).worktree, true);
+  assert.throws(
+    () => buildRoutine('/tmp/demo.md', routineFile('worktree: yes')),
+    /worktree must be true or false/,
+  );
+});
+
 test('a webhook gate needs the webhook', () => {
   const gated = buildRoutine('/tmp/demo.md', routineFile('webhook: true\nwebhookGate: check.sh'));
   assert.equal(gated.webhookGate, 'check.sh');

@@ -105,6 +105,9 @@ export function routinePage({
   const lastRun = routine.lastRun;
   const pairs: DetailPair[] = [
     { label: 'cwd', value: [text(routine.cwd)], isWide: true },
+    ...(routine.worktree
+      ? [{ label: 'worktree', value: [text('each run gets its own')], isWide: true }]
+      : []),
     ...(routine.command === null
       ? []
       : [{ label: 'command', value: [text(routine.command, S.cyan)], isWide: true }]),

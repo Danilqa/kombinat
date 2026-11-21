@@ -5,6 +5,7 @@ import { transcriptSchema } from '../transcript/schemas';
 import type { Transcript } from '../transcript/types';
 import type { RunId } from './ids';
 import {
+  removedWorktreeSchema,
   runRecordSchema,
   runsPageSchema,
   sentRunMessageSchema,
@@ -95,6 +96,16 @@ export async function sendWaitAction(
   action: UsageLimitWaitAction,
 ): Promise<void> {
   await http.request(`${getRunApiPath(routine, id)}/wait/${action}`, sentWaitActionSchema, {
+    method: 'POST',
+  });
+}
+
+export async function removeRunWorktree(
+  http: HttpClient,
+  routine: RoutineName,
+  id: RunId,
+): Promise<void> {
+  await http.request(`${getRunApiPath(routine, id)}/worktree/remove`, removedWorktreeSchema, {
     method: 'POST',
   });
 }
