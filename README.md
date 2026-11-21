@@ -1,10 +1,10 @@
 <img src=".github/assets/banner.png" alt="Kombinat: routines in your repo, run by AI agents 24/7" width="100%" />
 
-> ✨ Run AI agents on a schedule or webhook, from markdown files in your repo. On your Mac or Linux machine, with the plan you already pay for.
+> 🏃‍♀️ Run AI agents on a schedule or webhook, from markdown files in your repo. On your Mac or Linux machine, with the plan you already pay for.
 
 [Live demo](https://kombinat.tech/) · [80-second video](https://www.youtube.com/watch?v=P6f0QCEyr68) · [Quickstart](#-quickstart) · ⭐ [Star on GitHub](https://github.com/Danilqa/kombinat)
 
-## 💡 Features
+## ✨ Features
 
 - **Routines in git.** One markdown file each, live within 5 minutes of the merge.
 - **Schedule or webhook.** Cron, or a request from Linear, GitHub or any other app.
@@ -18,17 +18,17 @@
 - **Guardrails.** Timeouts, a budget cap, no overlapping runs and catch-up after sleep.
 - **Small.** One command, two dependencies, no cloud, no database, no telemetry.
 
-## 🤖 What to run
+## 😄 Fun fact
+
+Kombinat runs as a **software factory** that improves and promotes itself. See for yourself in the [closed issues](https://github.com/Danilqa/kombinat/issues?q=is%3Aissue%20state%3Aclosed).
+
+## 🤨 What to run?
 
 A routine can be basically any automation, for your team or at home. Teams use them to work through issues overnight, fix bugs and flaky tests, remove dead code, watch production and draft release notes. At home, routines can look for discounts, book appointments, check the weather or tell you when a website changes.
 
 See example routines in the [live demo](https://kombinat.tech/).
 
-## 😄 Fun fact
-
-Kombinat runs as a **software factory** that improves and promotes itself. See for yourself in the [closed issues](https://github.com/Danilqa/kombinat/issues?q=is%3Aissue%20state%3Aclosed).
-
-## 🚀 Quickstart
+## ⚡ Quickstart
 
 You need Node 24 and Claude Code or Codex, logged in. On Linux, see [docs/linux.md](docs/linux.md).
 
@@ -51,7 +51,7 @@ You need Node 24 and Claude Code or Codex, logged in. On Linux, see [docs/linux.
 
 3. Add your own routines to `routines/`, see [Writing a routine](#-writing-a-routine). No restart needed.
 
-## 📊 Monitoring
+## 👀 Monitoring
 
 <img src=".github/assets/dashboard.gif" alt="A tour of the Kombinat dashboard: routines, calendar, runs, inbox, daemon status, search and a run transcript" width="100%" />
 
@@ -70,19 +70,19 @@ The daemon serves a dashboard at http://localhost:7433.
 
 `pnpm kombinat tui` shows the same in the terminal. It works over ssh. Press `?` for keys.
 
-## 🌐 Remote access
+## 🗺️ Remote access
 
 To open the dashboard from your laptop or phone, connect over SSH with `npx kombinat connect`, or share it in your tailnet with Tailscale Serve. See [docs/remote-access.md](docs/remote-access.md).
 
-## 🧩 How it works
+## 🤓 How it works
 
 A small daemon starts the agents of due routines, serves the dashboard and keeps the run history. See [docs/how-it-works.md](docs/how-it-works.md).
 
-## 🔒 Security
+## 👮🏻 Security
 
 The dashboard has no login, and agents can do whatever their routine's permissions allow. Read [docs/security.md](docs/security.md) before you open the dashboard to other people or let a routine read issues, chats or webhooks.
 
-## 💻 Commands
+## 🫵 Commands
 
 Run them from the folder with `routines/`. With npm, use `npx kombinat` instead of `pnpm kombinat`, with Yarn `yarn kombinat`.
 
@@ -97,7 +97,7 @@ pnpm kombinat readme         # update the routines table in README.md
 pnpm kombinat uninstall      # stop and remove the daemon
 ```
 
-## 📝 Writing a routine
+## ✍️ Writing a routine
 
 ```markdown
 ---
@@ -160,7 +160,7 @@ A setting the agent does not support fails validation.
 
 A routine with `webhook: true` also runs when another app, such as Linear or GitHub, sends it a request. The request body goes into the prompt, an optional `webhookGate` command checks and filters requests, and requests that arrive while the routine runs wait in a queue. The gate can also tie requests to a conversation, so that follow-ups, such as messages to a Linear agent, continue the run that the first request started. See [docs/webhook.md](docs/webhook.md).
 
-## 🔄 Updating
+## 🎉 Updating
 
 Merged changes to your routines go live within 5 minutes. To update Kombinat, bump `kombinat` in `package.json`, and the daemon installs it and restarts. See [docs/updating.md](docs/updating.md).
 
