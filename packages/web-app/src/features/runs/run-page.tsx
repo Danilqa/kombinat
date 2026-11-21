@@ -13,6 +13,7 @@ import {
   RunOutput,
   RunStatusBadge,
   UsageLimitCard,
+  WorktreeCard,
 } from 'domains/run/components';
 import { runIdSchema } from 'domains/run/ids';
 import { getRunWithTranscript } from 'domains/run/requests';
@@ -159,6 +160,9 @@ export function RunPage() {
           cwd={getAgentCwd(data.transcript)}
           onAllowed={() => setTab('transcript')}
         />
+      )}
+      {data && data.run.worktree !== null && (
+        <WorktreeCard run={data.run} worktree={data.run.worktree} />
       )}
       {data && <RunView run={data.run} transcript={data.transcript} />}
     </div>

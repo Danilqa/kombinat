@@ -123,6 +123,7 @@ export function buildRoutine(file: string, source: string): Routine {
     webhookGate,
     timeoutMinutes:
       withFile(file, () => readNumber(data, 'timeoutMinutes')) ?? DEFAULT_TIMEOUT_MINUTES,
+    worktree: withFile(file, () => readBoolean(data, 'worktree')) ?? false,
     before: readString(data, 'before'),
     after: readString(data, 'after'),
     prompt: body,

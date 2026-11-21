@@ -156,6 +156,7 @@ function toRoutineSummary(
     command: routine.command,
     cwd: routine.cwd,
     timeoutMinutes: routine.timeoutMinutes,
+    worktree: routine.worktree ?? false,
     maxBudgetUsd: routine.maxBudgetUsd,
     file: `routines/${routine.name}.md`,
     running: runs.some(checkIsRunActive),
@@ -399,6 +400,15 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     return { status: 202, body: { ok: true } };
   }
 
+  function removeWorktree(run: RunRecord): ApiResponse {
+    if (run.worktree === null) return fail(404, 'This run has no worktree');
+    if (checkIsRunActive(run)) {
+      return fail(409, 'The run is still working in its worktree. Remove it once the run is done');
+    }
+    history.removeWorktree(run.routine, run.id);
+    return ok({ ok: true });
+  }
+
   function getRunsPage(url: URL, now: Date): ApiResponse {
     const query = parseRunsPageQuery(url.searchParams);
     if (query === null) return fail(400, RUNS_CURSOR_ERROR);
@@ -502,6 +512,10 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
             return run === null ? fail(404, 'Run not found') : sendWaitAction(run, action, now);
           }),
       )
+      .with(['POST', ['runs', P.string, P.string, 'worktree', 'remove']], ([, [, routine, id]]) => {
+        const run = findRun(routineNameSchema.parse(routine), runIdSchema.parse(id), now);
+        return run === null ? fail(404, 'Run not found') : removeWorktree(run);
+      })
       .with(['GET', ['runs', P.string, P.string, 'transcript']], ([, [, routine, id]]) => {
         const run = findRun(routineNameSchema.parse(routine), runIdSchema.parse(id), now);
         const transcript = run && history.getTranscript(run.routine, run.id, now);

@@ -26,6 +26,8 @@ export const routineSummarySchema = z.object({
   command: z.string().nullable(),
   cwd: z.string(),
   timeoutMinutes: z.number(),
+  // Older daemons do not send it, and tui --url may talk to one.
+  worktree: z.boolean().default(false),
   maxBudgetUsd: z.number().nullable(),
   file: z.string(),
   running: z.boolean(),

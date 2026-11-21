@@ -37,6 +37,38 @@ export const blockedActionSchema = z.object({
 
 export const runTriggerSchema = z.enum(['schedule', 'manual', 'catch_up', 'webhook']);
 
+// removed: the folder is gone and the branch stays. discarded: nothing changed, so both are gone.
+export const worktreeStateSchema = z.enum(['present', 'removed', 'discarded']);
+
+export const changedFileSchema = z.object({
+  path: z.string(),
+  // null for a binary file and for a new file that is not committed.
+  added: z.number().nullable(),
+  removed: z.number().nullable(),
+});
+
+export const worktreeChangesSchema = z.object({
+  // The first files by path, while the counts cover them all.
+  files: z.array(changedFileSchema),
+  fileCount: z.number(),
+  added: z.number(),
+  removed: z.number(),
+  commits: z.number(),
+  uncommitted: z.number(),
+});
+
+export const runWorktreeSchema = z.object({
+  branch: z.string(),
+  path: z.string(),
+  // Where the agent starts: the folder of the routine's cwd inside the worktree.
+  cwd: z.string(),
+  checkout: z.string(),
+  base: z.string(),
+  baseCommit: z.string(),
+  changes: worktreeChangesSchema.nullable(),
+  state: worktreeStateSchema,
+});
+
 export const runRecordSchema = z.object({
   id: runIdSchema,
   routine: routineNameSchema,
@@ -67,6 +99,8 @@ export const runRecordSchema = z.object({
   tokens: tokenCountsSchema.nullable().default(null),
   // Records written before runs saved what was blocked have none.
   blockedActions: z.array(blockedActionSchema).default([]),
+  // Records written before runs could have a worktree have none.
+  worktree: runWorktreeSchema.nullable().default(null),
 });
 
 export const tokenDaySchema = z.object({ date: z.string(), total: z.number() });
@@ -81,6 +115,8 @@ export const tokenUsageSchema = z.object({
 export const runMessageSchema = z.object({ text: z.string().trim().min(1) });
 
 export const sentRunMessageSchema = z.object({ ok: z.literal(true) });
+
+export const removedWorktreeSchema = z.object({ ok: z.literal(true) });
 
 export const usageLimitWaitActionSchema = z.enum(['continue', 'stop']);
 
