@@ -150,7 +150,7 @@ export function MemoryPanel({ routine, memory, lastRunId, isRunning }: MemoryPan
           autoFocus
           header={
             <>
-              <span className="min-w-0 flex-1">
+              <span className="min-w-48 flex-1">
                 {error ?? (
                   <MemoryChangeLine routine={routine} memory={memory} lastRunId={lastRunId} />
                 )}
@@ -200,7 +200,7 @@ export function MemoryPanel({ routine, memory, lastRunId, isRunning }: MemoryPan
     <div className="space-y-3">
       <Card.Root className="gap-0 py-0">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-line px-6 py-2.5 text-body-sm text-fg-muted">
-          <span className="min-w-0 flex-1">
+          <span className="min-w-48 flex-1">
             {error ?? <MemoryChangeLine routine={routine} memory={memory} lastRunId={lastRunId} />}
           </span>
           <div className="ml-auto flex shrink-0 items-center gap-1">
