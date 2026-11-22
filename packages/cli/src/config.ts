@@ -8,7 +8,6 @@ import { readJsonFile } from './utils/json';
 
 export const PACKAGE_NAME = 'kombinat';
 export const DEFAULT_PORT = 7433;
-export const REPO_URL = 'https://github.com/Danilqa/kombinat';
 
 const packageJsonSchema = z.object({ version: z.string() });
 

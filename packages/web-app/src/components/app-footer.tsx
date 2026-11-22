@@ -2,8 +2,9 @@ import { ArrowUpRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getDaemonStatus } from 'domains/daemon/requests';
+import { GITHUB_REPO_URL } from 'domains/release/constants';
 import { sameOriginApi } from 'utils/http';
-import { CHANGELOG_URL, REPO_URL } from '@web-app/constants/links';
+import { CHANGELOG_URL } from '@web-app/constants/links';
 
 interface FooterLinkProps {
   href: string;
@@ -38,7 +39,7 @@ function KombinatCopyright() {
       {data?.version !== undefined && `v${data.version} · `}© {new Date().getFullYear()}{' '}
       <span className="text-fg">Kombinat</span> ·{' '}
       <FooterLink href={CHANGELOG_URL}>Changelog</FooterLink> ·{' '}
-      <FooterLink href={REPO_URL}>GitHub</FooterLink>
+      <FooterLink href={GITHUB_REPO_URL}>GitHub</FooterLink>
     </>
   );
 }
