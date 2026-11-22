@@ -205,7 +205,7 @@ A named, version-controlled unit of recurring agent work: one markdown file, `ro
 - `schedule` is a 5-field cron in local time, or `manual`, which is stored as `null`.
 - `cwd` is required, and a leading `~` is expanded.
 - The prompt is not empty.
-- `agent` defaults to `claude`, `enabled` to `true`, `webhook` and `worktree` to `false`, `timeoutMinutes` to 55 and `retries` to 0. `webhook` and `worktree` must be `true` or `false`, and `webhookGate` needs `webhook: true`.
+- `agent` defaults to `claude`, `enabled` to `true`, `webhook` and `worktree` to `false`, `timeoutMinutes` to 55 and `retries` to 0. `webhook` and `worktree` must be `true` or `false`, `webhookGate` needs `webhook: true` and `check` needs a schedule.
 - The schedule gives the routine its next run, `null` when it is manual or disabled, and its label: `Manual` or the cron in words.
 
 Clients see a routine as a summary (its definition plus next run, running, last run, last skip and [tokens](#tokens) of the last 7 days) or a detail (plus the prompt, skips, queued webhooks, webhook calls, [one-time runs](#one-time-runs) and [memory](#memory) notes). Its runs come page by page from `/api/runs`. They can start it with Run now, which answers 409 while the routine is running, and can give that run a changed prompt, which only that run gets. The dashboard's New run on the Runs page starts such a run with a prompt written from scratch, in the routine the user picks.

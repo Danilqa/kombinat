@@ -24,7 +24,7 @@ It runs at each scheduled time in the routine's `cwd`, before the worktree, `bef
 - Exit 78 skips the run, so no agent starts and no tokens are spent. The routine's page lists it under Skipped runs as "nothing to do", with the first 500 characters the check printed.
 - Any other exit, or more than 3 minutes, fails the run before its agent starts, so a broken check shows in the Inbox instead of hiding work. `after` still runs.
 
-Run now, runs scheduled once, webhooks and `kombinat run` start the agent without the check, since someone asked for that run.
+Run now, runs scheduled once, webhooks and `kombinat run` start the agent without the check, since someone asked for that run. A routine with `schedule: manual` has no scheduled times, and Kombinat refuses to load it with a check.
 
 ## Before
 
