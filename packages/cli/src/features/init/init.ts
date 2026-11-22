@@ -266,7 +266,7 @@ export function formatInitSummary(result: InitResult, cwd = process.cwd()): stri
     'Next:',
     ...formatNextSteps(getNextSteps(result, folderArg)),
     '',
-    `Star Kombinat on GitHub to keep up with new releases: ${REPO_URL}`,
+    `⭐ Star Kombinat on GitHub to keep up with new releases: ${REPO_URL}`,
   ].join('\n');
 }
 

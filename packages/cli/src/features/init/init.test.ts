@@ -162,7 +162,7 @@ test('the summary ends by asking for a star on GitHub, with the link', () => {
   const summary = formatInitSummary(initFolder(folder, noInstall()), folder);
   assert.equal(
     summary.endsWith(
-      '\n\nStar Kombinat on GitHub to keep up with new releases: https://github.com/Danilqa/kombinat',
+      '\n\n⭐ Star Kombinat on GitHub to keep up with new releases: https://github.com/Danilqa/kombinat',
     ),
     true,
   );
