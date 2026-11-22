@@ -19,9 +19,10 @@ function FooterLink({ href, children }: FooterLinkProps) {
       className="group inline-flex items-center gap-0.5 transition-colors hover:text-fg"
     >
       {children}
+      {/* Takes back the icon's inner padding, so the gap before the next "·" matches the others. */}
       <ArrowUpRight
         aria-hidden="true"
-        className="size-3 transition-transform duration-200 ease-out-quint group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+        className="-mr-0.75 size-3 transition-transform duration-200 ease-out-quint group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
       />
     </a>
   );
