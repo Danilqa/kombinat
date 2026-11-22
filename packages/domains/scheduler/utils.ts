@@ -14,6 +14,7 @@ export function getSkipReasonLabel(reason: SkipReason): string {
     .with('already_running', () => 'already running')
     .with('concurrency_limit', () => 'concurrency limit')
     .with('disabled', () => 'disabled')
+    .with('nothing_to_do', () => 'nothing to do')
     .exhaustive();
 }
 

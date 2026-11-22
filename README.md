@@ -123,6 +123,7 @@ timeoutMinutes: 55
 - `agent` is `claude` (default), `codex` or `command`.
 - `timeoutMinutes` stops the run after this time. Default 55.
 - `retries` is how many more attempts a run gets when it fails or times out, 5 minutes apart. Default 0, at most 10. See [Retries](#retries).
+- `check` is an optional shell command that runs before each scheduled run and skips it when there is nothing to do, so the agent spends no tokens then. Exit 0 starts the run and exit 78 skips it, see [docs/hooks.md](docs/hooks.md#check).
 - `before` is an optional shell command that runs first. If it fails or takes more than 3 minutes, the run fails.
 - `after` is an optional shell command that runs last, whatever the outcome, for example to post failures to Slack. It gets the finished run on stdin and cannot change it, see [docs/hooks.md](docs/hooks.md).
 - `enabled: false` keeps the file but stops the schedule.

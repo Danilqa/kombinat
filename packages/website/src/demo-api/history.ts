@@ -31,6 +31,7 @@ import { cronRunsBetween } from 'utils/cron';
 import { STATE_DIR } from './constants';
 import { createRandom, randomId, randomInt, randomUuid, type Random } from './random';
 import type { DemoOutcome, DemoPin, DemoRoutine, DemoStartedRun } from './routines';
+import { check } from './transcript';
 
 const HISTORY_DAYS = 14;
 const DAY_MS = 86_400_000;
@@ -554,11 +555,26 @@ function getPinsBySlot(routine: DemoRoutine, slots: Date[]): Map<number, DemoPin
   );
 }
 
-function toSkip(slot: Date, reason: SkipReason, random: Random): Skip {
+function toSkip(
+  slot: Date,
+  reason: SkipReason,
+  random: Random,
+  checkOutput: string | null = null,
+): Skip {
   return {
     at: new Date(slot.getTime() + randomInt(random, 1, 29) * 1000).toISOString(),
     scheduledFor: slot.toISOString(),
     reason,
+    checkOutput,
+  };
+}
+
+// A scheduled run starts with the routine's check, which runs before the agent.
+function withCheck(routine: DemoRoutine, outcome: DemoOutcome): DemoOutcome {
+  if (routine.check === undefined || outcome.checkOutput === undefined) return outcome;
+  return {
+    ...outcome,
+    steps: [check(routine.check.command, 0, outcome.checkOutput), ...outcome.steps],
   };
 }
 
@@ -580,11 +596,15 @@ function buildScheduledEvents(
         pin?.outcome === undefined
           ? pickOutcome(routine, random)
           : findOutcome(routine, pin.outcome);
+      if (outcome.id === routine.check?.skipsOutcome) {
+        skips.push(toSkip(slot, 'nothing_to_do', random, routine.check.skipOutput));
+        continue;
+      }
       const delayMs =
         pin?.lateMinutes === undefined ? randomInt(random, 2, 20) * 1000 : pin.lateMinutes * 60_000;
       const trigger = pin?.lateMinutes === undefined ? 'schedule' : 'catch_up';
       const startedAt = new Date(slot.getTime() + delayMs);
-      runs.push(createRun(routine, outcome, trigger, slot, startedAt, random));
+      runs.push(createRun(routine, withCheck(routine, outcome), trigger, slot, startedAt, random));
     } else {
       skips.push(toSkip(slot, pin.skip, random));
       if (isMatching({ skip: 'already_running' }, pin)) {

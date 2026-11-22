@@ -9,6 +9,23 @@ after: notify-slack.mjs
 
 Both run with `/bin/sh -c` and have 3 minutes, after which they are killed together with the processes they started. They get `KOMBINAT_REPO`, the folder with `routines/`, and its `scripts/` folder comes first on `PATH`, so a script there runs by its name.
 
+## Check
+
+`check` decides whether a scheduled run starts at all. A routine that watches for work, such as pull requests to review or new alerts, often finds none, and a cheap check spares the agent and its tokens:
+
+```yaml
+schedule: '*/15 9-18 * * 1-5'
+check: n=$(gh pr list --search review-requested:@me --json number --jq length); echo "Waiting for review: $n"; [ "$n" -gt 0 ] || exit 78
+```
+
+It runs at each scheduled time in the routine's `cwd`, before the worktree, `before` and the agent, with `/bin/sh -c`, the same 3 minutes, `KOMBINAT_REPO`, `PATH` and `KOMBINAT_ROUTINE`.
+
+- Exit 0 starts the run. The check is the first item of its transcript, "Check".
+- Exit 78 skips the run, so no agent starts and no tokens are spent. The routine's page lists it under Skipped runs as "nothing to do", with the first 500 characters the check printed.
+- Any other exit, or more than 3 minutes, fails the run before its agent starts, so a broken check shows in the Inbox instead of hiding work. `after` still runs.
+
+Run now, runs scheduled once, webhooks and `kombinat run` start the agent without the check, since someone asked for that run.
+
 ## Before
 
 `before` runs in the routine's `cwd` before the agent starts, for example to update a checkout or start a service. With `worktree: true`, both hooks run in the run's worktree instead, see [worktrees.md](worktrees.md). If it fails, exits with a non-zero code or takes more than 3 minutes, the agent does not start and the run fails. With [`retries`](../README.md#retries), the run tries again after 5 minutes, `before` first.

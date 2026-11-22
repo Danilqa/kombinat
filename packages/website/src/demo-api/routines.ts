@@ -53,6 +53,8 @@ export interface DemoOutcome {
   usageLimit?: DemoUsageLimit;
   retry?: DemoRetry;
   blockedActions?: BlockedAction[];
+  // What the routine's check printed before a scheduled run of this outcome started.
+  checkOutput?: string;
   // The files a worktree run committed. A worktree run without them changed nothing.
   changedFiles?: ChangedFile[];
   steps: TranscriptStep[];
@@ -64,6 +66,13 @@ export interface DemoPin {
   outcome?: string;
   lateMinutes?: number;
   skip?: SkipReason;
+}
+
+export interface DemoCheck {
+  command: string;
+  // A scheduled time that would end with this outcome is skipped instead, since the check found nothing to do.
+  skipsOutcome: string;
+  skipOutput: string;
 }
 
 export interface DemoOneTimeRun {
@@ -105,6 +114,7 @@ export interface DemoRoutine {
   enabled: boolean;
   webhook?: boolean;
   webhookGate?: string;
+  check?: DemoCheck;
   agent: AgentName;
   model: string | null;
   fallbackModel?: string;
@@ -1297,6 +1307,12 @@ const prReviewSweep: DemoRoutine = {
   agent: 'claude',
   model: OPUS,
   effort: 'high',
+  check: {
+    command:
+      'n=$(gh pr list --search review-requested:@me --json number --jq length); echo "Waiting for review: $n"; [ "$n" -gt 0 ] || exit 78',
+    skipsOutcome: 'nothing',
+    skipOutput: 'Waiting for review: 0',
+  },
   permissionMode: 'acceptEdits',
   command: null,
   cwd: REPO,
@@ -1316,6 +1332,7 @@ If nothing waits for review, say so and stop.`,
       minutes: 7,
       costUsd: 0.62,
       numTurns: 21,
+      checkOutput: 'Waiting for review: 1',
       resultText:
         'Reviewed #482 Add CSV export to reports: approved with 2 comments, a comma inside quoted cells breaks the row and the empty report has no test.',
       steps: [
@@ -1392,6 +1409,7 @@ new file mode 100644
       weight: 0,
       status: 'timed_out',
       minutes: 20,
+      checkOutput: 'Waiting for review: 2',
       error: 'Killed after 20 minutes',
       steps: [
         pullLatest,
@@ -1412,6 +1430,7 @@ new file mode 100644
       status: 'failed',
       minutes: 0.1,
       exitCode: null,
+      checkOutput: 'Waiting for review: 1',
       error: 'before hook exited with 128: fatal: Not possible to fast-forward, aborting.',
       steps: [hook('git pull --ff-only', 128, 'fatal: Not possible to fast-forward, aborting.')],
     },

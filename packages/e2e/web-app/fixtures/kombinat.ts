@@ -28,6 +28,7 @@ export interface RoutineFile {
   enabled?: boolean;
   webhook?: boolean;
   webhookGate?: string;
+  check?: string;
   timeoutMinutes?: number;
   worktree?: boolean;
   maxBudgetUsd?: number;
@@ -50,7 +51,7 @@ export interface QueuedWebhookFile {
 export interface Kombinat {
   addRoutine: (routine: RoutineFile) => void;
   addRun: (run: RunFile) => RunRecord;
-  addSkip: (routine: string, reason: SkipReason) => void;
+  addSkip: (routine: string, reason: SkipReason, checkOutput?: string) => void;
   addQueuedWebhook: (webhook: QueuedWebhookFile) => void;
   addMemory: (routine: string, text: string, change: MemoryChange) => void;
   readMemory: (routine: string) => string | null;
@@ -118,12 +119,17 @@ export function createKombinat(root: string): Kombinat {
       fs.writeFileSync(record.logFile, events.map(event => `${JSON.stringify(event)}\n`).join(''));
       return record;
     },
-    addSkip: (routine, reason) => {
+    addSkip: (routine, reason, checkOutput) => {
       const entry = (scheduler.routines[routineNameSchema.parse(routine)] ??= {
         lastScheduledFor: null,
         skips: [],
       });
-      entry.skips.push({ at: minutesAgo(30), scheduledFor: minutesAgo(30), reason });
+      entry.skips.push({
+        at: minutesAgo(30),
+        scheduledFor: minutesAgo(30),
+        reason,
+        checkOutput: checkOutput ?? null,
+      });
       saveScheduler();
     },
     addQueuedWebhook: ({ routine, payload, minutesAgo: minutes }) => {

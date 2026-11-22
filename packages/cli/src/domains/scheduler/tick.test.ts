@@ -26,7 +26,7 @@ const chat = routineNameSchema.parse('chat');
 const { tick } = await import('./tick');
 const { readSchedulerState, writeSchedulerState } = await import('./storage');
 const { writeRunRecord } = await import('../run/storage');
-const { startDetachedRun } = await import('../run/runner');
+const { checkIsRunning, startDetachedRun } = await import('../run/runner');
 const { countQueuedWebhooks, enqueueWebhook } = await import('../webhook/queue');
 const { readOneTimeRuns, writeOneTimeRuns } = await import('./one-time-runs');
 const { makeRunRecord } = await import('domains/run/mocks');
@@ -58,7 +58,7 @@ test('first tick only records the tick time', () => {
   writeRoutine('every-minute', 'schedule: "* * * * *"\nenabled: false');
   const now = new Date('2026-09-30T10:00:30');
   const result = tick(now);
-  assert.deepEqual(result, { started: [], continued: [], skipped: [] });
+  assert.deepEqual(result, { started: [], continued: [], skipped: [], checks: [] });
   assert.equal(readSchedulerState()?.lastTickAt, now.toISOString());
 });
 
@@ -254,6 +254,7 @@ test('a due one-time run waits while its routine runs, and one of a disabled or 
     at: new Date('2026-10-02T10:00:20').toISOString(),
     scheduledFor: new Date('2026-10-02T09:58:00').toISOString(),
     reason: 'disabled',
+    checkOutput: null,
   });
   assert.equal(pausedEntry.lastScheduledFor, null);
 
@@ -376,4 +377,67 @@ test('a queued webhook of a conversation whose run cannot continue starts a run 
     fs.readFileSync(path.join(runsDir, '20261118T120000Z-bbbb.payload'), 'utf8'),
     'Fix the test',
   );
+});
+
+// The runs of the tests before start real processes, which hold their slots until their records appear.
+async function waitUntilIdle(): Promise<void> {
+  const names = fs
+    .readdirSync(routinesDir)
+    .map(file => routineNameSchema.parse(path.basename(file, '.md')));
+  for (let i = 0; i < 100 && names.some(name => checkIsRunning(name)); i++) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+}
+
+test('a check that finds nothing to do skips the scheduled time with what it printed, and starts no run', async () => {
+  writeRoutine(
+    'watcher',
+    'schedule: "* * * * *"\nagent: command\ncommand: "true"\ncheck: echo "Waiting for review: 0"; exit 78',
+  );
+  const watcher = routineNameSchema.parse('watcher');
+  await waitUntilIdle();
+  const result = tick(new Date('2026-10-02T10:07:30'));
+  assert.equal(result.started.includes(watcher), false);
+  assert.deepEqual(await Promise.all(result.checks), ['skipped watcher (nothing to do)']);
+  const entry = readSchedulerState()?.routines[watcher];
+  assert.equal(entry?.lastScheduledFor, new Date('2026-10-02T10:07:00').toISOString());
+  const skip = entry.skips.at(-1);
+  assert.equal(skip?.scheduledFor, new Date('2026-10-02T10:07:00').toISOString());
+  assert.equal(skip.reason, 'nothing_to_do');
+  assert.equal(skip.checkOutput, 'Waiting for review: 0');
+  assert.equal(fs.existsSync(path.join(stateDir, 'runs', 'watcher')), false);
+});
+
+test('a check that finds work, or fails, starts the run with the check first in its log', async () => {
+  const watcher = routineNameSchema.parse('watcher');
+  const readCheckLines = () =>
+    fs
+      .readdirSync(path.join(stateDir, 'runs', 'watcher'))
+      .filter(file => file.endsWith('.jsonl'))
+      .sort()
+      .map(file => readLog(path.join(stateDir, 'runs', 'watcher', file))[0]);
+  const cases = [
+    { check: 'echo "Waiting for review: 2"', exitCode: 0, output: 'Waiting for review: 2' },
+    { check: 'echo "gh: not logged in" >&2; exit 4', exitCode: 4, output: 'gh: not logged in' },
+  ];
+  for (const [index, { check }] of cases.entries()) {
+    writeRoutine(
+      'watcher',
+      `schedule: "* * * * *"\nagent: command\ncommand: "true"\ncheck: ${check}`,
+    );
+    await waitUntilIdle();
+    const result = tick(new Date(`2026-10-02T10:0${8 + index}:30`));
+    assert.deepEqual(await Promise.all(result.checks), ['started watcher']);
+  }
+  assert.deepEqual(
+    readCheckLines(),
+    cases.map(({ check, exitCode, output }) => ({
+      type: 'check',
+      command: check,
+      exitCode,
+      output,
+    })),
+  );
+  assert.equal(readSchedulerState()?.routines[watcher]?.skips.length, 1);
+  fs.rmSync(path.join(routinesDir, 'watcher.md'));
 });

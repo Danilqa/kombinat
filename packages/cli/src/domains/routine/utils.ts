@@ -140,6 +140,7 @@ export function buildRoutine(file: string, source: string): Routine {
     retries: withFile(file, () => readRetries(data)),
     memory: memory ?? false,
     worktree: withFile(file, () => readBoolean(data, 'worktree')) ?? false,
+    check: readString(data, 'check'),
     before: readString(data, 'before'),
     after: readString(data, 'after'),
     prompt: body,

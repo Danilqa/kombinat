@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const toolResultSchema = z.object({ content: z.string(), isError: z.boolean() });
 
-export const hookPhaseSchema = z.enum(['before', 'after']);
+export const hookPhaseSchema = z.enum(['check', 'before', 'after']);
 
 export const hookItemSchema = z.object({
   kind: z.literal('hook'),

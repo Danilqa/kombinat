@@ -16,6 +16,7 @@ export interface Routine extends AgentSettings {
   retries: number;
   memory: boolean;
   worktree: boolean;
+  check: string | null;
   before: string | null;
   after: string | null;
   prompt: string;

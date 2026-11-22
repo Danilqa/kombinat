@@ -26,7 +26,17 @@ export function SkipsTable({ skips }: SkipsTableProps) {
             <Table.Cell className="text-fg-secondary">
               <RelativeTime iso={skip.scheduledFor} isFocusable />
             </Table.Cell>
-            <Table.Cell className="text-fg-secondary">{getSkipReasonLabel(skip.reason)}</Table.Cell>
+            <Table.Cell className="text-fg-secondary">
+              {getSkipReasonLabel(skip.reason)}
+              {skip.checkOutput && (
+                <pre
+                  className="mt-1 line-clamp-2 font-mono text-caption whitespace-pre-wrap text-fg-muted wrap-anywhere"
+                  title={skip.checkOutput}
+                >
+                  {skip.checkOutput}
+                </pre>
+              )}
+            </Table.Cell>
           </Table.Row>
         ))}
       </Table.Body>

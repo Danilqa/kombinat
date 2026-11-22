@@ -63,6 +63,7 @@ function makeRoutine(name: string, overrides: Partial<RoutineSummary> = {}): Rou
     enabled: true,
     webhook: false,
     webhookGate: null,
+    check: null,
     queuedWebhooks: 0,
     agent: 'claude',
     model: 'claude-opus-5-5',

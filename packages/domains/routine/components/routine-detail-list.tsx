@@ -30,6 +30,9 @@ function getStatEntries(routine: RoutineSummary): DetailEntry[] {
         ]
       : []),
     { label: 'File', value: routine.file, isMono: true, span: 'wide' },
+    ...(routine.check === null
+      ? []
+      : [{ label: 'Check', value: routine.check, isMono: true, span: 'full' as const }]),
     ...(routine.webhook
       ? [
           {
