@@ -1,5 +1,6 @@
 import { DetailList, RelativeTime, type DetailEntry } from 'design-system/components';
 
+import { getRetriesLabel } from '../../run/utils';
 import type { RoutineSummary } from '../types';
 import { getWebhookPath } from '../../webhook/utils';
 
@@ -11,6 +12,9 @@ function getStatEntries(routine: RoutineSummary): DetailEntry[] {
       value: <RelativeTime iso={routine.lastRun?.startedAt ?? null} isFocusable />,
     },
     { label: 'Timeout', value: `${routine.timeoutMinutes} min` },
+    ...(routine.retries === 0
+      ? []
+      : [{ label: 'Retries', value: getRetriesLabel(routine.retries) }]),
     {
       label: 'Budget',
       value: routine.maxBudgetUsd === null ? 'None' : `$${routine.maxBudgetUsd.toFixed(2)}`,

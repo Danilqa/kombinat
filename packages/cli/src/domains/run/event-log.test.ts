@@ -178,6 +178,44 @@ test('a usage limit wait replaces the result it cut short, and the continued ses
   });
 });
 
+test('a retry replaces the result of the attempt that stopped, and the next attempt continues the session', () => {
+  const retry = {
+    attempt: 2,
+    attempts: 3,
+    error: 'API Error: Stream idle timeout - partial response received',
+    stoppedAt: '2026-11-22T02:06:00Z',
+    continuesAt: '2026-11-22T02:11:00Z',
+    continuesSession: true,
+  };
+  const events = [
+    { type: 'before_hook', command: 'git pull', exitCode: 0, output: '' },
+    { type: 'system', subtype: 'init', model: 'claude-opus-5-5', cwd: '/repo' },
+    { type: 'result', result: retry.error, is_error: true, num_turns: 3 },
+    { type: 'retry_wait', ...retry },
+    { type: 'retry_end', at: '2026-11-22T02:11:30Z', outcome: 'retried' },
+    { type: 'system', subtype: 'init', model: 'claude-opus-5-5', cwd: '/repo' },
+    { type: 'result', result: 'Fixed it', is_error: false, num_turns: 2 },
+    { type: 'after_hook', command: 'notify-slack', exitCode: 0, output: '' },
+  ];
+  const { items } = buildRunTranscript('claude', events);
+  assert.deepEqual(
+    items.map(item => [item.kind, item.key]),
+    [
+      ['hook', 'hook-0'],
+      ['init', 'init-0'],
+      ['retry', 'retry-0'],
+      ['result', 'resume-1-result-1'],
+      ['hook', 'hook-1'],
+    ],
+  );
+  assert.deepEqual(items[2], {
+    kind: 'retry',
+    key: 'retry-0',
+    ...retry,
+    end: { at: '2026-11-22T02:11:30Z', outcome: 'retried' },
+  });
+});
+
 test('a usage limit that is still being waited out has no end', () => {
   const events = [
     { type: 'system', subtype: 'init', model: 'claude-opus-5-5', cwd: '/repo' },

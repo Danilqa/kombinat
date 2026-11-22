@@ -17,7 +17,10 @@ function getPlaceholder(run: RunRecord): string {
   const agent = getAgentLabel(run.agent);
   return match(run)
     .with({ replyPid: P.number }, () => `${agent} is replying…`)
-    .with({ status: P.union('running', 'waiting') }, () => 'Send a message once the run is done')
+    .with(
+      { status: P.union('running', 'waiting', 'retrying') },
+      () => 'Send a message once the run is done',
+    )
     .otherwise(() => `Message ${agent}`);
 }
 

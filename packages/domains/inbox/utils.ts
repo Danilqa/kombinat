@@ -64,7 +64,15 @@ export function getInboxGroup(run: GroupedRun): InboxGroup {
     .with('succeeded', (): InboxGroup =>
       checkHasNothingToReport(run.resultText) ? 'quiet' : 'findings',
     )
-    .with('running', 'waiting', 'failed', 'timed_out', 'aborted', (): InboxGroup => 'needs_look')
+    .with(
+      'running',
+      'waiting',
+      'retrying',
+      'failed',
+      'timed_out',
+      'aborted',
+      (): InboxGroup => 'needs_look',
+    )
     .exhaustive();
 }
 

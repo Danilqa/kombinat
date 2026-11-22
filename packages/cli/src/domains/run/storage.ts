@@ -1,13 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { isMatching, P } from 'ts-pattern';
+import { isMatching } from 'ts-pattern';
 
 import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
 import type { RunId } from 'domains/run/ids';
 import { runRecordSchema } from 'domains/run/schemas';
 import type { RunRecord } from 'domains/run/types';
-import { checkIsRunActive, compareRunsByNewest } from 'domains/run/utils';
+import { checkIsRunActive, checkIsRunWaiting, compareRunsByNewest } from 'domains/run/utils';
 
 import { config } from '../../config';
 import { readJsonFile, writeJsonFile } from '../../utils/json';
@@ -48,18 +48,24 @@ function reconcileRecord(record: RunRecord): RunRecord {
     writeRunRecord(reconciled);
     return reconciled;
   }
-  const hasRunner = isMatching({ status: P.union('running', 'waiting') }, record);
+  const hasRunner = isMatching({ status: 'running' }, record) || checkIsRunWaiting(record);
   if (!hasRunner || checkIsProcessAlive(record.pid)) return record;
   const endedAt = new Date().toISOString();
+  const isRetrying = isMatching({ status: 'retrying' }, record);
   const reconciled: RunRecord = {
     ...record,
     status: 'aborted',
     endedAt,
     error: 'Runner process disappeared',
     usageLimit: null,
+    // The attempt it waited for never started.
+    retry: isRetrying ? null : record.retry,
   };
   if (record.usageLimit !== null) {
     appendLogEvent(record, { type: 'usage_limit_end', at: endedAt, outcome: 'stopped' });
+  }
+  if (isRetrying) {
+    appendLogEvent(record, { type: 'retry_end', at: endedAt, outcome: 'stopped' });
   }
   writeRunRecord(reconciled);
   return reconciled;

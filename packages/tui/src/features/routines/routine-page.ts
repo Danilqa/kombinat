@@ -2,7 +2,7 @@ import { match } from 'ts-pattern';
 
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import type { RunsPage, TokenUsage } from 'domains/run/types';
-import { formatTokens, formatTokenShare, getTokenTotal } from 'domains/run/utils';
+import { formatTokens, formatTokenShare, getRetriesLabel, getTokenTotal } from 'domains/run/utils';
 import { getSkipReasonLabel } from 'domains/scheduler/utils';
 import { formatDayTime, formatRelativeCompact } from 'utils/date-time';
 
@@ -158,6 +158,9 @@ export function routinePage({
       label: 'budget',
       value: [text(routine.maxBudgetUsd === null ? 'none' : `$${routine.maxBudgetUsd.toFixed(2)}`)],
     },
+    ...(routine.retries === 0
+      ? []
+      : [{ label: 'retries', value: [text(getRetriesLabel(routine.retries))], isWide: true }]),
   ];
   const header: ContentLine[] = toContent([
     [

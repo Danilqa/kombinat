@@ -33,8 +33,8 @@ export interface RunContext {
   trigger: RunTrigger;
 }
 
-// A run that waited out a usage limit continues its session without a message.
-export type ReplySource = MessageSource | 'usage_limit';
+// A run that waited out a usage limit or retries after an error continues its session without a message.
+export type ReplySource = MessageSource | 'usage_limit' | 'retry';
 
 export interface ReplyMessage {
   text: string;
@@ -86,6 +86,7 @@ export interface Agent {
   readEvent(event: unknown, record: Readonly<RunRecord>): RunUpdate;
   readPlanLimits(event: unknown): PlanLimits | null;
   findUsageLimitStop(events: unknown[]): UsageLimitStop | null;
+  checkIsStoppedByBudget(events: unknown[]): boolean;
   readBlockedActions(events: unknown[]): BlockedAction[];
   buildTranscript(events: unknown[]): TranscriptItem[];
   getResumeCommand(sessionId: SessionId): string | null;

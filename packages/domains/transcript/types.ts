@@ -8,6 +8,9 @@ import type {
   messageSourceSchema,
   modelFallbackItemSchema,
   resultItemSchema,
+  retryEndSchema,
+  retryItemSchema,
+  retryOutcomeSchema,
   textItemSchema,
   toolItemSchema,
   toolResultSchema,
@@ -35,3 +38,6 @@ export type UsageLimitKind = z.infer<typeof usageLimitKindSchema>;
 export type UsageLimitOutcome = z.infer<typeof usageLimitOutcomeSchema>;
 export type UsageLimitEnd = z.infer<typeof usageLimitEndSchema>;
 export type UsageLimitItem = z.infer<typeof usageLimitItemSchema>;
+export type RetryOutcome = z.infer<typeof retryOutcomeSchema>;
+export type RetryEnd = z.infer<typeof retryEndSchema>;
+export type RetryItem = z.infer<typeof retryItemSchema>;

@@ -12,6 +12,7 @@ import type {
   MessageItem,
   ModelFallbackItem,
   ResultItem,
+  RetryItem,
   TextItem,
   ToolItem,
   TranscriptItem,
@@ -24,6 +25,8 @@ import {
   getHookLabel,
   getMessageSourceLabel,
   getModelFallbackReasonLabel,
+  getRetryNextLabel,
+  getRetryStopLabel,
   getTranscriptEmptyLabel,
   getToolResultText,
   getTranscriptResultLabel,
@@ -103,6 +106,21 @@ function UsageLimitRow({ item }: UsageLimitRowProps) {
         Paused at the {getUsageLimitLabel(item.limit)}
       </span>
       <span className="tabular-nums">{getUsageLimitPauseLabel(item)}</span>
+    </div>
+  );
+}
+
+interface RetryRowProps {
+  item: RetryItem;
+}
+
+function RetryRow({ item }: RetryRowProps) {
+  return (
+    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-body-sm text-fg-muted">
+      <span className="min-w-0 text-body font-medium text-info wrap-anywhere">
+        {getRetryStopLabel(item)}
+      </span>
+      <span className="tabular-nums">{getRetryNextLabel(item)}</span>
     </div>
   );
 }
@@ -263,6 +281,7 @@ function renderItem(item: TranscriptItem, isRunning: boolean, search: string) {
     .with({ kind: 'result', isError: true }, result => <FailedRow item={result} />)
     .with({ kind: 'result', isError: false }, result => <FinishedRow item={result} />)
     .with({ kind: 'usage-limit' }, usageLimit => <UsageLimitRow item={usageLimit} />)
+    .with({ kind: 'retry' }, retry => <RetryRow item={retry} />)
     .exhaustive();
 }
 

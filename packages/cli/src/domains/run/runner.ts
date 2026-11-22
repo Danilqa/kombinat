@@ -15,6 +15,7 @@ import {
   createRunId,
   mergeBlockedActions,
 } from 'domains/run/utils';
+import type { RetryOutcome, UsageLimitOutcome } from 'domains/transcript/types';
 import { getUsageLimitLabel } from 'domains/transcript/utils';
 import { getErrorMessage } from 'utils/error';
 
@@ -36,7 +37,9 @@ import { appendLogEvent, readLastMessage, readRunEvents } from './event-log';
 import { getBeforeHookError, HOOK_TIMEOUT_MS, runHook } from './hooks';
 import { appendPayload, takePayload, takePrompt } from './payload';
 import { getRunsDir, listRuns, readRunRecord, writeRunRecord } from './storage';
-import { planUsageLimitWait, waitOutUsageLimit } from './usage-limit';
+import { checkShouldRetry, getBudgetLeft, planRetry, RETRY_TEXT } from './retry';
+import type { AttemptEnd } from './retry';
+import { planUsageLimitWait, waitForAction } from './usage-limit';
 import { createWorktree, refreshWorktree, restoreWorktree, settleWorktree } from './worktree';
 
 export interface RunOptions {
@@ -98,16 +101,22 @@ interface AgentRun {
   persist: (record: RunRecord) => void;
 }
 
-interface AgentExit {
-  outcome: Partial<RunRecord>;
+interface AgentExit extends AttemptEnd {
   usageLimitStop: UsageLimitStop | null;
   workedMs: number;
 }
 
 const exitWith = (outcome: Partial<RunRecord>, workedMs = 0): AgentExit => ({
   outcome,
+  canRetry: true,
   usageLimitStop: null,
   workedMs,
+});
+
+// A missing folder or binary stays missing, so another attempt would fail the same way.
+const failSetup = (error: string): AgentExit => ({
+  ...exitWith({ status: 'failed', error }),
+  canRetry: false,
 });
 
 // Runs the preflight, the before hook and the agent, and returns how the run ended.
@@ -121,20 +130,14 @@ async function runAgent({
   persist,
 }: AgentRun): Promise<AgentExit> {
   if (!fs.existsSync(routine.cwd)) {
-    return exitWith({
-      status: 'failed',
-      error: `cwd does not exist: ${routine.cwd} (create it or change cwd in the routine)`,
-    });
+    return failSetup(`cwd does not exist: ${routine.cwd} (create it or change cwd in the routine)`);
   }
   if (!checkIsBinaryFound(invocation.command)) {
     const hint =
       agent.binaryEnv === null
         ? ''
         : ` (set ${agent.binaryEnv} to its path before kombinat serve or install)`;
-    return exitWith({
-      status: 'failed',
-      error: `${agent.name} binary not found at ${invocation.command}${hint}`,
-    });
+    return failSetup(`${agent.name} binary not found at ${invocation.command}${hint}`);
   }
   if (routine.before !== null) {
     const result = await runHook({
@@ -213,6 +216,7 @@ async function runAgent({
     );
   }
   const usageLimitStop = agent.findUsageLimitStop(events);
+  const canRetry = !agent.checkIsStoppedByBudget(events);
   if (exitCode !== 0) {
     const stderr = stderrChunks.join('').trim().slice(-2000);
     return {
@@ -221,12 +225,14 @@ async function runAgent({
         exitCode,
         error: record.error ?? (stderr || `exit code ${exitCode}`),
       },
+      canRetry,
       usageLimitStop,
       workedMs,
     };
   }
   return {
     outcome: { status: record.error === null ? 'succeeded' : 'failed', exitCode },
+    canRetry,
     usageLimitStop,
     workedMs,
   };
@@ -236,12 +242,36 @@ function addSpend(before: number | null, after: number | null): number | null {
   return before === null && after === null ? null : (before ?? 0) + (after ?? 0);
 }
 
+// Each process reports its own spend, so the run's adds up over the processes of its session.
+async function addingSpend<T>(record: RunRecord, work: () => Promise<T>): Promise<T> {
+  const spent = {
+    costUsd: record.costUsd,
+    numTurns: record.numTurns,
+    durationMs: record.durationMs,
+    tokens: record.tokens,
+  };
+  Object.assign(record, {
+    costUsd: null,
+    numTurns: null,
+    durationMs: null,
+    tokens: null,
+    resultText: null,
+    error: null,
+  });
+  const result = await work();
+  record.costUsd = addSpend(spent.costUsd, record.costUsd);
+  record.numTurns = addSpend(spent.numTurns, record.numTurns);
+  record.durationMs = addSpend(spent.durationMs, record.durationMs);
+  record.tokens = addTokenCounts(spent.tokens, record.tokens);
+  return result;
+}
+
 interface LimitedRun extends AgentRun {
   context: RunContext;
 }
 
 // Each time a usage limit stops the agent, the run waits for the reset and continues the session.
-async function runWaitingOutLimits(run: LimitedRun): Promise<Partial<RunRecord>> {
+async function runWaitingOutLimits(run: LimitedRun): Promise<AttemptEnd> {
   const { routine, agent, record, context } = run;
   let exit = await runAgent(run);
   let workedMs = exit.workedMs;
@@ -255,7 +285,9 @@ async function runWaitingOutLimits(run: LimitedRun): Promise<Partial<RunRecord>>
             text: CONTINUE_TEXT,
             source: 'usage_limit',
           });
-    if (wait === null || invocation === null) return exit.outcome;
+    if (wait === null || invocation === null) {
+      return { outcome: exit.outcome, canRetry: exit.canRetry && exit.usageLimitStop === null };
+    }
 
     appendLogEvent(record, { type: 'usage_limit_wait', ...wait });
     writeRunRecord({
@@ -266,49 +298,102 @@ async function runWaitingOutLimits(run: LimitedRun): Promise<Partial<RunRecord>>
       error: null,
       usageLimit: wait,
     });
-    const waitOutcome = await waitOutUsageLimit(record, wait);
+    const action = await waitForAction(record, wait.continuesAt);
     appendLogEvent(record, {
       type: 'usage_limit_end',
       at: new Date().toISOString(),
-      outcome: waitOutcome,
+      outcome: match(action)
+        .with('stop', (): UsageLimitOutcome => 'stopped')
+        .with('continue', (): UsageLimitOutcome => 'continued')
+        .exhaustive(),
     });
-    if (isMatching('stopped', waitOutcome)) {
+    if (isMatching('stop', action)) {
       return {
-        ...exit.outcome,
-        status: 'failed',
-        error:
-          exit.outcome.error ??
-          record.error ??
-          `Stopped waiting for the ${getUsageLimitLabel(wait.limit)} to reset`,
+        outcome: {
+          ...exit.outcome,
+          status: 'failed',
+          error:
+            exit.outcome.error ??
+            record.error ??
+            `Stopped waiting for the ${getUsageLimitLabel(wait.limit)} to reset`,
+        },
+        canRetry: false,
       };
     }
 
-    const spent = {
-      costUsd: record.costUsd,
-      numTurns: record.numTurns,
-      durationMs: record.durationMs,
-      tokens: record.tokens,
+    exit = await addingSpend(record, () =>
+      runAgent({
+        ...run,
+        routine: { ...routine, before: null },
+        invocation,
+        timeoutMs: routine.timeoutMinutes * 60_000 - workedMs,
+      }),
+    );
+    workedMs += exit.workedMs;
+  }
+}
+
+// An attempt that stops with an error is tried again after a while, up to the routine's retries. The
+// next attempt continues the session when there is one, and starts over with the before hook when not.
+async function runRetryingErrors(run: LimitedRun): Promise<Partial<RunRecord>> {
+  const { routine, agent, record } = run;
+  const getRunBudgetLeft = () => getBudgetLeft(routine.maxBudgetUsd, record.costUsd);
+  let end = await runWaitingOutLimits(run);
+  for (
+    let attempt = 1;
+    checkShouldRetry(end, attempt, routine.retries, getRunBudgetLeft());
+    attempt += 1
+  ) {
+    const context: RunContext = {
+      ...run.context,
+      routine: { ...run.context.routine, maxBudgetUsd: getRunBudgetLeft() },
     };
-    Object.assign(record, {
-      costUsd: null,
-      numTurns: null,
-      durationMs: null,
-      tokens: null,
+    const sessionInvocation =
+      record.sessionId === null
+        ? null
+        : agent.buildReplyInvocation(context, record.sessionId, {
+            text: RETRY_TEXT,
+            source: 'retry',
+          });
+    const retry = planRetry({
+      attempt,
+      retries: routine.retries,
+      error: end.outcome.error ?? record.error ?? 'The run stopped with an error',
+      continuesSession: sessionInvocation !== null,
+    });
+    appendLogEvent(record, { type: 'retry_wait', ...retry });
+    writeRunRecord({
+      ...record,
+      status: 'retrying',
+      pid: process.pid,
       resultText: null,
       error: null,
+      retry,
     });
-    exit = await runAgent({
-      ...run,
-      routine: { ...routine, before: null },
-      invocation,
-      timeoutMs: routine.timeoutMinutes * 60_000 - workedMs,
+    const action = await waitForAction(record, retry.continuesAt);
+    appendLogEvent(record, {
+      type: 'retry_end',
+      at: new Date().toISOString(),
+      outcome: match(action)
+        .with('stop', (): RetryOutcome => 'stopped')
+        .with('continue', (): RetryOutcome => 'retried')
+        .exhaustive(),
     });
-    workedMs += exit.workedMs;
-    record.costUsd = addSpend(spent.costUsd, record.costUsd);
-    record.numTurns = addSpend(spent.numTurns, record.numTurns);
-    record.durationMs = addSpend(spent.durationMs, record.durationMs);
-    record.tokens = addTokenCounts(spent.tokens, record.tokens);
+    if (isMatching('stop', action)) return end.outcome;
+
+    record.retry = retry;
+    // The runner's own pid keeps the run from being reconciled as aborted until its agent starts.
+    writeRunRecord({ ...record, pid: process.pid });
+    end = await addingSpend(record, () =>
+      runWaitingOutLimits({
+        ...run,
+        routine: sessionInvocation === null ? routine : { ...routine, before: null },
+        invocation: sessionInvocation ?? agent.buildInvocation(context),
+        context,
+      }),
+    );
   }
+  return end.outcome;
 }
 
 interface WorkPlace {
@@ -359,6 +444,7 @@ export async function runRoutine(
     replyPid: null,
     conversation: options.conversation ?? null,
     usageLimit: null,
+    retry: null,
     tokens: null,
     blockedActions: [],
     memorySentAt: null,
@@ -379,7 +465,7 @@ export async function runRoutine(
   const invocation = agent.buildInvocation(context);
   const outcome: Partial<RunRecord> =
     workPlace.error === null
-      ? await runWaitingOutLimits({
+      ? await runRetryingErrors({
           routine: workRoutine,
           agent,
           invocation,

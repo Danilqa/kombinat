@@ -33,6 +33,7 @@ import {
   checkCanContinueRun,
   checkIsRunActive,
   checkIsRunAtWork,
+  checkIsRunWaiting,
   createRunId,
   filterRuns,
   getTokenUsageStart,
@@ -162,6 +163,7 @@ function toRoutineSummary(
     command: routine.command,
     cwd: routine.cwd,
     timeoutMinutes: routine.timeoutMinutes,
+    retries: routine.retries,
     worktree: routine.worktree,
     maxBudgetUsd: routine.maxBudgetUsd,
     file: path.relative(config.projectRoot, routine.file),
@@ -345,8 +347,8 @@ function allowBlockedActions(routine: Routine, run: RunRecord): ApiResponse {
 function sendWaitAction(run: RunRecord, action: string): ApiResponse {
   const parsed = usageLimitWaitActionSchema.safeParse(action);
   if (!parsed.success) return fail(404, 'Not found');
-  if (!isMatching({ status: 'waiting' }, run) || !checkIsProcessAlive(run.pid)) {
-    return fail(409, 'This run is not waiting for a usage limit');
+  if (!checkIsRunWaiting(run) || !checkIsProcessAlive(run.pid)) {
+    return fail(409, 'This run is not waiting for a usage limit or a retry');
   }
   requestWaitAction(run, parsed.data);
   return { status: 202, body: { ok: true } };

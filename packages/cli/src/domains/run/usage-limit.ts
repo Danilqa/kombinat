@@ -1,11 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { isMatching, match } from 'ts-pattern';
+import { match, P } from 'ts-pattern';
 
 import { usageLimitWaitActionSchema } from 'domains/run/schemas';
 import type { RunRecord, UsageLimitWait, UsageLimitWaitAction } from 'domains/run/types';
-import type { UsageLimitOutcome } from 'domains/transcript/types';
 
 import { config } from '../../config';
 import type { UsageLimitStop } from '../agent/types';
@@ -53,23 +52,31 @@ function getLastTickMark(): number | null {
   return fs.statSync(file, { throwIfNoEntry: false })?.mtimeMs ?? null;
 }
 
-// Only the daemon knows the runs that started and have no record yet, so its scheduler continues a run.
-export function checkIsWaitOver(run: RunRecord, now: Date): boolean {
-  return (
-    isMatching('waiting', run.status) &&
-    run.usageLimit !== null &&
-    now.getTime() >= new Date(run.usageLimit.continuesAt).getTime()
-  );
+function getContinuesAt(run: RunRecord): string | null {
+  return match(run)
+    .with(
+      { status: 'waiting', usageLimit: P.nonNullable },
+      ({ usageLimit }) => usageLimit.continuesAt,
+    )
+    .with({ status: 'retrying', retry: P.nonNullable }, ({ retry }) => retry.continuesAt)
+    .otherwise(() => null);
 }
 
-// Without a ticking scheduler, such as for a run started in a terminal, the run continues by itself.
-export function waitOutUsageLimit(
+// Only the daemon knows the runs that started and have no record yet, so its scheduler continues a run.
+export function checkIsWaitOver(run: RunRecord, now: Date): boolean {
+  const continuesAt = getContinuesAt(run);
+  return continuesAt !== null && now.getTime() >= new Date(continuesAt).getTime();
+}
+
+// Waits out a usage limit or the time until a retry. Without a ticking scheduler, such as for a run
+// started in a terminal, the run continues by itself.
+export function waitForAction(
   record: RunRecord,
-  wait: UsageLimitWait,
-): Promise<UsageLimitOutcome> {
+  continuesAtIso: string,
+): Promise<UsageLimitWaitAction> {
   // A click that came as an earlier wait ended must not end this one.
   takeWaitAction(record);
-  const continuesAt = new Date(wait.continuesAt).getTime();
+  const continuesAt = new Date(continuesAtIso).getTime();
   // Polls, not clock time, so a scheduler that slept with the computer is not taken for gone.
   const idlePolls = (2 * config.tickSeconds * 1000) / POLL_MS;
   let tickMark = getLastTickMark();
@@ -85,12 +92,7 @@ export function waitOutUsageLimit(
         (isSchedulerIdle && Date.now() >= continuesAt ? 'continue' : null);
       if (action === null) return;
       clearInterval(timer);
-      resolve(
-        match(action)
-          .with('stop', (): UsageLimitOutcome => 'stopped')
-          .with('continue', (): UsageLimitOutcome => 'continued')
-          .exhaustive(),
-      );
+      resolve(action);
     }, POLL_MS);
   });
 }

@@ -424,6 +424,11 @@ export const claudeAgent: Agent = {
     };
   },
 
+  checkIsStoppedByBudget(events) {
+    const result = toClaudeEvents(events).findLast(event => event.type === 'result');
+    return result?.subtype === 'error_max_budget_usd';
+  },
+
   // With nobody to answer a permission prompt, a call is denied and the run goes on without it.
   readBlockedActions(events) {
     const claudeEvents = toClaudeEvents(events);

@@ -1,4 +1,4 @@
-import { isMatching, match, P } from 'ts-pattern';
+import { match, P } from 'ts-pattern';
 
 import { buildCalendar } from 'domains/calendar/utils';
 import type { DaemonStatus } from 'domains/daemon/types';
@@ -21,6 +21,7 @@ import {
   buildTokenUsages,
   checkCanContinueRun,
   checkIsRunActive,
+  checkIsRunWaiting,
   checkIsRunAtWork,
   createRunId,
   filterRuns,
@@ -158,6 +159,7 @@ function toRoutineSummary(
     command: routine.command,
     cwd: routine.cwd,
     timeoutMinutes: routine.timeoutMinutes,
+    retries: routine.retries ?? 0,
     worktree: routine.worktree ?? false,
     maxBudgetUsd: routine.maxBudgetUsd,
     file: `routines/${routine.name}.md`,
@@ -455,8 +457,8 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
   function sendWaitAction(run: RunRecord, action: string, now: Date): ApiResponse {
     const parsed = usageLimitWaitActionSchema.safeParse(action);
     if (!parsed.success) return fail(404, 'Not found');
-    if (!isMatching({ status: 'waiting' }, run)) {
-      return fail(409, 'This run is not waiting for a usage limit');
+    if (!checkIsRunWaiting(run)) {
+      return fail(409, 'This run is not waiting for a usage limit or a retry');
     }
     history.sendWaitAction(run.routine, run.id, parsed.data, now);
     return { status: 202, body: { ok: true } };

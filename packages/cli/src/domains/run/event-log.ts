@@ -4,18 +4,23 @@ import { isMatching, match } from 'ts-pattern';
 import { z } from 'zod';
 
 import type { AgentName } from 'domains/agent/types';
-import { usageLimitWaitSchema } from 'domains/run/schemas';
+import { runRetrySchema, usageLimitWaitSchema } from 'domains/run/schemas';
 import type { RunRecord } from 'domains/run/types';
-import { messageSourceSchema, usageLimitEndSchema } from 'domains/transcript/schemas';
+import {
+  messageSourceSchema,
+  retryEndSchema,
+  usageLimitEndSchema,
+} from 'domains/transcript/schemas';
 import type {
   HookItem,
   HookPhase,
+  RetryItem,
   Transcript,
   TranscriptItem,
   UsageLimitItem,
 } from 'domains/transcript/types';
 
-import { parseJson } from '../../utils/json';
+import { checkIsRecord, parseJson } from '../../utils/json';
 import { getAgent } from '../agent/registry';
 import { splitMemoryBlock } from '../routine/memory';
 
@@ -45,6 +50,10 @@ const usageLimitEndEventSchema = usageLimitEndSchema.extend({
   type: z.literal('usage_limit_end'),
 });
 
+const retryWaitEventSchema = runRetrySchema.extend({ type: z.literal('retry_wait') });
+
+const retryEndEventSchema = retryEndSchema.extend({ type: z.literal('retry_end') });
+
 type MessageEvent = z.infer<typeof messageEventSchema>;
 
 export type ChatMessage = Omit<MessageEvent, 'type'>;
@@ -54,16 +63,20 @@ type ChatEvent = MessageEvent | z.infer<typeof replyErrorEventSchema>;
 type UsageLimitEvent =
   z.infer<typeof usageLimitWaitEventSchema> | z.infer<typeof usageLimitEndEventSchema>;
 
+type RetryEvent = z.infer<typeof retryWaitEventSchema> | z.infer<typeof retryEndEventSchema>;
+
 interface Reply {
   message: ChatMessage;
   events: unknown[];
   error: string | null;
 }
 
-// The agent's events up to a usage limit, or up to the end, and the wait that followed them.
+// The agent's events up to a usage limit, an error that is retried or the end, and the wait that
+// followed them. An attempt that starts over runs the before hook again.
 interface Session {
+  hooks: HookItem[];
   events: unknown[];
-  wait: UsageLimitItem | null;
+  wait: UsageLimitItem | RetryItem | null;
 }
 
 function toHookItem(event: HookEvent, index: number): HookItem {
@@ -96,7 +109,10 @@ function toReplyMessage({ text, source, allowedTools }: MessageEvent): ChatMessa
   return allowedTools === undefined ? { text, source } : { text, source, allowedTools };
 }
 
-export function appendLogEvent(record: RunRecord, event: ChatEvent | UsageLimitEvent): void {
+export function appendLogEvent(
+  record: RunRecord,
+  event: ChatEvent | UsageLimitEvent | RetryEvent,
+): void {
   fs.appendFileSync(record.logFile, `${JSON.stringify(event)}\n`);
 }
 
@@ -129,18 +145,25 @@ function toReplyItems(agent: AgentName, reply: Reply, index: number): Transcript
   return [{ kind: 'message', key, ...reply.message }, ...items, ...error];
 }
 
-// A session continued after a usage limit is its own agent process, like a reply. The pause takes
-// the place of the result that the limit cut short.
-function toSessionItems(agent: AgentName, session: Session, index: number): TranscriptItem[] {
+// A session continued after a usage limit or an error is its own agent process, like a reply. The
+// pause takes the place of the result that it cut short.
+function toSessionItems(
+  agent: AgentName,
+  session: Session,
+  index: number,
+  previous: Session | undefined,
+): TranscriptItem[] {
   const items = getAgent(agent).buildTranscript(session.events);
+  const isStartedOver = isMatching({ kind: 'retry', continuesSession: false }, previous?.wait);
   const continued =
     index === 0
       ? items
       : items
-          .filter(item => !isMatching({ kind: 'init' }, item))
+          .filter(item => isStartedOver || !isMatching({ kind: 'init' }, item))
           .map(item => ({ ...item, key: `resume-${index}-${item.key}` }));
-  if (session.wait === null) return continued;
-  return [...continued.filter(item => !isMatching({ kind: 'result' }, item)), session.wait];
+  const withHooks = [...session.hooks, ...continued];
+  if (session.wait === null) return withHooks;
+  return [...withHooks.filter(item => !isMatching({ kind: 'result' }, item)), session.wait];
 }
 
 // Kombinat saves the notes at the end of the agent's message, so the message shows without them.
@@ -155,8 +178,9 @@ function withoutMemoryBlock(item: TranscriptItem): TranscriptItem[] {
 }
 
 export function buildRunTranscript(agent: AgentName, events: unknown[]): Transcript {
-  const hooks: HookItem[] = [];
-  let session: Session = { events: [], wait: null };
+  let hookCount = 0;
+  const afterHooks: HookItem[] = [];
+  let session: Session = { hooks: [], events: [], wait: null };
   const sessions = [session];
   const replies: Reply[] = [];
   for (const event of events) {
@@ -165,28 +189,53 @@ export function buildRunTranscript(agent: AgentName, events: unknown[]): Transcr
     const replyError = replyErrorEventSchema.safeParse(event);
     const wait = usageLimitWaitEventSchema.safeParse(event);
     const waitEnd = usageLimitEndEventSchema.safeParse(event);
+    // Agents log thousands of events, so these rare ones are parsed only when the type says so.
+    const type = checkIsRecord(event) ? event['type'] : null;
+    const retryWait = type === 'retry_wait' ? retryWaitEventSchema.safeParse(event) : null;
+    const retryEnd = type === 'retry_end' ? retryEndEventSchema.safeParse(event) : null;
     const reply = replies.at(-1);
     const lastWait = sessions.at(-2)?.wait;
-    if (hook.success) hooks.push(toHookItem(hook.data, hooks.length));
-    else if (message.success) {
+    if (hook.success) {
+      const item = toHookItem(hook.data, hookCount);
+      hookCount += 1;
+      (isMatching({ phase: 'before' }, item) ? session.hooks : afterHooks).push(item);
+    } else if (message.success) {
       replies.push({ message: toReplyMessage(message.data), events: [], error: null });
     } else if (replyError.success && reply !== undefined) reply.error = replyError.data.error;
     else if (wait.success) {
       const { limit, stoppedAt, continuesAt } = wait.data;
       const key = `usage-limit-${sessions.length - 1}`;
       session.wait = { kind: 'usage-limit', key, limit, stoppedAt, continuesAt, end: null };
-      session = { events: [], wait: null };
+      session = { hooks: [], events: [], wait: null };
       sessions.push(session);
-    } else if (waitEnd.success && lastWait) {
+    } else if (retryWait?.success) {
+      const { attempt, attempts, error, stoppedAt, continuesAt, continuesSession } = retryWait.data;
+      session.wait = {
+        kind: 'retry',
+        key: `retry-${sessions.length - 1}`,
+        attempt,
+        attempts,
+        error,
+        stoppedAt,
+        continuesAt,
+        continuesSession,
+        end: null,
+      };
+      session = { hooks: [], events: [], wait: null };
+      sessions.push(session);
+    } else if (waitEnd.success && isMatching({ kind: 'usage-limit' }, lastWait)) {
       lastWait.end = { at: waitEnd.data.at, outcome: waitEnd.data.outcome };
+    } else if (retryEnd?.success && isMatching({ kind: 'retry' }, lastWait)) {
+      lastWait.end = { at: retryEnd.data.at, outcome: retryEnd.data.outcome };
     } else (reply?.events ?? session.events).push(event);
   }
   return {
     eventCount: events.length,
     items: [
-      ...hooks.filter(isMatching({ phase: 'before' })),
-      ...sessions.flatMap((session, index) => toSessionItems(agent, session, index)),
-      ...hooks.filter(isMatching({ phase: 'after' })),
+      ...sessions.flatMap((session, index) =>
+        toSessionItems(agent, session, index, sessions[index - 1]),
+      ),
+      ...afterHooks,
       ...replies.flatMap((reply, index) => toReplyItems(agent, reply, index)),
     ].flatMap(withoutMemoryBlock),
   };

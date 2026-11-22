@@ -13,6 +13,7 @@ export interface Routine extends AgentSettings {
   webhook: boolean;
   webhookGate: string | null;
   timeoutMinutes: number;
+  retries: number;
   memory: boolean;
   worktree: boolean;
   before: string | null;

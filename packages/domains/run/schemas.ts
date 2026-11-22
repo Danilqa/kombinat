@@ -9,6 +9,7 @@ import { runIdSchema } from './ids';
 export const runStatusSchema = z.enum([
   'running',
   'waiting',
+  'retrying',
   'succeeded',
   'failed',
   'timed_out',
@@ -19,6 +20,17 @@ export const usageLimitWaitSchema = z.object({
   limit: usageLimitKindSchema,
   stoppedAt: z.string(),
   continuesAt: z.string(),
+});
+
+// The attempt that runs or comes next after an error, with why the one before it stopped.
+export const runRetrySchema = z.object({
+  attempt: z.number(),
+  attempts: z.number(),
+  error: z.string(),
+  stoppedAt: z.string(),
+  continuesAt: z.string(),
+  // false when the next attempt starts over, without a session to continue.
+  continuesSession: z.boolean(),
 });
 
 export const tokenCountsSchema = z.object({
@@ -95,6 +107,8 @@ export const runRecordSchema = z.object({
   conversation: z.string().nullable().default(null),
   // Set while the run waits for a usage limit to reset. Older records have none.
   usageLimit: usageLimitWaitSchema.nullable().default(null),
+  // Set from the first retry after an error. Older records have none.
+  retry: runRetrySchema.nullable().default(null),
   // Records written before runs saved their tokens have none.
   tokens: tokenCountsSchema.nullable().default(null),
   // Records written before runs saved what was blocked have none.

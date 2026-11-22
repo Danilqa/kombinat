@@ -3,12 +3,13 @@ import { isMatching, match, P } from 'ts-pattern';
 import { checkMatchesSearch } from 'utils/search';
 
 import { routineNameSchema, type RoutineName } from '../routine/ids';
-import { RUNS_PAGE_SIZE, TOKEN_USAGE_DAYS } from './constants';
+import { RETRY_DELAY_MINUTES, RUNS_PAGE_SIZE, TOKEN_USAGE_DAYS } from './constants';
 import { runIdSchema, type RunId } from './ids';
 import { runsCursorKeySchema, runsCursorSchema } from './schemas';
 import type {
   BlockedAction,
   RunRecord,
+  RunRetry,
   RunsCursor,
   RunsCursorKey,
   RunsPage,
@@ -51,17 +52,22 @@ export function getRunDurationMs(
   return Math.max(0, end - new Date(run.startedAt).getTime());
 }
 
-// A run is active while its agent is at work, waits out a usage limit or replies to a message.
+// A run that waits out a usage limit or for its next attempt has a runner that waits with it.
+export function checkIsRunWaiting(run: Pick<RunRecord, 'status'>): boolean {
+  return isMatching({ status: P.union('waiting', 'retrying') }, run);
+}
+
+// A run is active while its agent is at work, waits out a usage limit or a retry, or replies to a message.
 export function checkIsRunActive(run: Pick<RunRecord, 'status' | 'replyPid'>): boolean {
-  return isMatching({ status: P.union('running', 'waiting') }, run) || run.replyPid !== null;
+  return isMatching({ status: 'running' }, run) || checkIsRunWaiting(run) || run.replyPid !== null;
 }
 
-// A run that waits out a usage limit uses neither the Mac nor the plan, so it takes no slot.
+// A waiting run uses neither the Mac nor the plan, so it takes no slot.
 export function checkIsRunAtWork(run: Pick<RunRecord, 'status' | 'replyPid'>): boolean {
-  return checkIsRunActive(run) && !isMatching({ status: 'waiting' }, run);
+  return checkIsRunActive(run) && !checkIsRunWaiting(run);
 }
 
-// Past its reset, a waiting run continues as soon as a run at work finishes and frees a slot.
+// Past its time, a waiting run continues as soon as a run at work finishes and frees a slot.
 export function checkIsWaitingForSlot(
   wait: Pick<UsageLimitWait, 'continuesAt'>,
   now: number,
@@ -106,11 +112,21 @@ export function getRunStatusLabel(status: RunStatus): string {
   return match(status)
     .with('running', () => 'Running')
     .with('waiting', () => 'Waiting for limit')
+    .with('retrying', () => 'Retrying')
     .with('succeeded', () => 'Succeeded')
     .with('failed', () => 'Failed')
     .with('timed_out', () => 'Timed out')
     .with('aborted', () => 'Aborted')
     .exhaustive();
+}
+
+export function getRetriesLabel(retries: number): string {
+  // Keeps the number and its unit on one line.
+  return `${retries} after an error, ${RETRY_DELAY_MINUTES}\u00a0min apart`;
+}
+
+export function getAttemptLabel({ attempt, attempts }: Pick<RunRetry, 'attempt' | 'attempts'>) {
+  return `Attempt ${attempt} of ${attempts}`;
 }
 
 export function getWorktreeBranch(routine: RoutineName, id: RunId): string {

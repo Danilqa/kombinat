@@ -4,6 +4,7 @@ import path from 'node:path';
 import type { AgentName } from 'domains/agent/types';
 import { checkCanKeepMemory } from 'domains/agent/utils';
 import { routineNameSchema } from 'domains/routine/ids';
+import { MAX_RETRIES } from 'domains/run/constants';
 import { describeCron, nextCronRun, parseCron } from 'utils/cron';
 import { getErrorMessage } from 'utils/error';
 
@@ -62,6 +63,14 @@ function readBoolean(data: Frontmatter, key: string): boolean | null {
   if (value === undefined || value === '') return null;
   if (typeof value !== 'boolean') throw new Error(`${key} must be true or false`);
   return value;
+}
+
+function readRetries(data: Frontmatter): number {
+  const retries = Number(readString(data, 'retries') ?? 0);
+  if (!Number.isInteger(retries) || retries < 0 || retries > MAX_RETRIES) {
+    throw new Error(`retries must be a whole number from 0 to ${MAX_RETRIES}`);
+  }
+  return retries;
 }
 
 function readSchedule(data: Frontmatter): string | null {
@@ -128,6 +137,7 @@ export function buildRoutine(file: string, source: string): Routine {
     webhookGate,
     timeoutMinutes:
       withFile(file, () => readNumber(data, 'timeoutMinutes')) ?? DEFAULT_TIMEOUT_MINUTES,
+    retries: withFile(file, () => readRetries(data)),
     memory: memory ?? false,
     worktree: withFile(file, () => readBoolean(data, 'worktree')) ?? false,
     before: readString(data, 'before'),

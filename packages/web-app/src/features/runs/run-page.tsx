@@ -9,6 +9,7 @@ import { routineNameSchema } from 'domains/routine/ids';
 import {
   BlockedActionsCard,
   BlockedBadge,
+  RetryCard,
   RunDetailList,
   RunOutput,
   RunStatusBadge,
@@ -153,6 +154,9 @@ export function RunPage() {
           run={data.run}
           wait={data.run.usageLimit}
         />
+      )}
+      {data && data.run.retry !== null && (
+        <RetryCard key={data.run.retry.stoppedAt} run={data.run} retry={data.run.retry} />
       )}
       {data && data.run.blockedActions.length > 0 && (
         <BlockedActionsCard

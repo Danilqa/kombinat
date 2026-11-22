@@ -275,6 +275,7 @@ export const codexAgent: Agent = {
 
   readPlanLimits: () => null,
   findUsageLimitStop: () => null,
+  checkIsStoppedByBudget: () => false,
   readBlockedActions: () => [],
 
   buildTranscript(events) {
