@@ -154,6 +154,7 @@ function toRoutineSummary(
     enabled: routine.enabled,
     webhook: routine.webhook,
     webhookGate: routine.webhookGate,
+    check: routine.check,
     queuedWebhooks: countQueuedWebhooks(routine.name),
     agent: routine.agent,
     model: routine.model,

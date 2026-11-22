@@ -60,7 +60,7 @@ const { config } = await import('../../config');
 const { buildRoutine } = await import('../routine/utils');
 const { readMemory, readRoutineMemory, writeMemory } = await import('../routine/memory');
 const { appendLogEvent, buildRunTranscript, readRunEvents } = await import('./event-log');
-const { writePayload, writePrompt } = await import('./payload');
+const { writeCheckError, writePayload, writePrompt } = await import('./payload');
 const { checkIsRunning, checkIsStarting, replyToRun, runRoutine, startDetachedRun } =
   await import('./runner');
 const { checkIsProcessAlive, listRuns, readRunRecord, writeRunRecord } = await import('./storage');
@@ -450,6 +450,21 @@ test('a before hook past its limit fails the run as killed, and the after hook s
     output: 'waiting\nKilled after 0.005 minutes',
   });
   assert.deepEqual(readLogTypes(record), ['before_hook', 'after_hook']);
+});
+
+test('a run whose check failed fails before its hooks and agent start, and the after hook still runs', async () => {
+  const routine = makeRoutine(
+    'check-failed',
+    `worktree: true\nbefore: echo before\n${makeRecordingHook('check')}`,
+  );
+  const runId = runIdSchema.parse('20261122T120000Z-chck');
+  writeCheckError(routine.name, runId, 'check exited with 4: gh: not logged in');
+  const record = await runRoutine(routine, { trigger: 'schedule', runId });
+  assert.equal(record.status, 'failed');
+  assert.equal(record.error, 'check exited with 4: gh: not logged in');
+  assert.equal(record.worktree, null);
+  assert.deepEqual(readLogTypes(record), ['after_hook']);
+  assert.deepEqual(readHookCapture('check').stdin, record);
 });
 
 test('a before hook that exits non-zero fails the run with its output', async () => {

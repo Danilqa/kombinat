@@ -121,6 +121,10 @@ export function buildRoutine(file: string, source: string): Routine {
   const webhook = withFile(file, () => readBoolean(data, 'webhook')) ?? false;
   const webhookGate = readString(data, 'webhookGate');
   if (webhookGate !== null && !webhook) throw new Error(`${file}: webhookGate needs webhook: true`);
+  const check = readString(data, 'check');
+  if (check !== null && schedule === null) {
+    throw new Error(`${file}: check runs only at scheduled times, add a schedule or remove check`);
+  }
   const memory = withFile(file, () => readBoolean(data, 'memory'));
   if (memory === true && !checkCanKeepMemory(agent)) {
     throw new Error(`${file}: agent command has no memory, use claude or codex`);
@@ -140,6 +144,7 @@ export function buildRoutine(file: string, source: string): Routine {
     retries: withFile(file, () => readRetries(data)),
     memory: memory ?? false,
     worktree: withFile(file, () => readBoolean(data, 'worktree')) ?? false,
+    check,
     before: readString(data, 'before'),
     after: readString(data, 'after'),
     prompt: body,

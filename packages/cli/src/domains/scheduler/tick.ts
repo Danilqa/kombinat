@@ -1,17 +1,22 @@
+import { match } from 'ts-pattern';
+
 import type { RoutineName } from 'domains/routine/ids';
 import { checkIsRunAtWork } from 'domains/run/utils';
 import type { OneTimeRun, SchedulerState, SkipReason } from 'domains/scheduler/types';
+import { getSkipReasonLabel } from 'domains/scheduler/utils';
 import { cronRunsBetween } from 'utils/cron';
 import { getErrorMessage } from 'utils/error';
 
 import { config } from '../../config';
 import { loadRoutines } from '../routine/storage';
 import type { Routine } from '../routine/types';
-import { checkIsStarting, startDetachedRun } from '../run/runner';
+import { checkIsRunning, checkIsStarting, startDetachedRun } from '../run/runner';
+import type { RunOptions } from '../run/runner';
 import { getRunningRuns } from '../run/storage';
 import { checkIsWaitOver, requestWaitAction } from '../run/usage-limit';
 import { listQueuedRoutines, takeQueuedWebhook } from '../webhook/queue';
 import { startWebhook } from '../webhook/start';
+import { checkIsChecking, prepareCheckedRun, runCheck } from './check';
 import { readOneTimeRuns, writeOneTimeRuns } from './one-time-runs';
 import { readSchedulerState, writeSchedulerState } from './storage';
 
@@ -31,11 +36,12 @@ function addSkip(
   scheduledFor: Date,
   reason: SkipReason,
   now: Date,
+  checkOutput: string | null = null,
 ): void {
   const entry = state.routines[routine.name] ?? { lastScheduledFor: null, skips: [] };
   entry.skips = [
     ...entry.skips.slice(-49),
-    { at: now.toISOString(), scheduledFor: scheduledFor.toISOString(), reason },
+    { at: now.toISOString(), scheduledFor: scheduledFor.toISOString(), reason, checkOutput },
   ];
   state.routines[routine.name] = entry;
 }
@@ -65,6 +71,44 @@ export interface TickResult {
   started: RoutineName[];
   continued: RoutineName[];
   skipped: string[];
+  // Each resolves to the log line of a check that ends after the tick.
+  checks: Promise<string>[];
+}
+
+interface CheckSkip {
+  reason: SkipReason;
+  output: string | null;
+}
+
+// The check runs while the tick goes on, so it can only add its skip once it ends.
+async function startAfterCheck(
+  routine: Routine,
+  check: string,
+  scheduledFor: Date,
+  options: RunOptions,
+): Promise<string> {
+  try {
+    const decision = await runCheck(routine, check);
+    const skip = match(decision)
+      .with({ outcome: 'skip' }, ({ output }): CheckSkip => ({ reason: 'nothing_to_do', output }))
+      .with({ outcome: 'start' }, (start): CheckSkip | null => {
+        if (checkIsRunning(routine.name)) return { reason: 'already_running', output: null };
+        startDetachedRun(routine.name, {
+          ...options,
+          runId: prepareCheckedRun(routine.name, start),
+        });
+        return null;
+      })
+      .exhaustive();
+    if (skip === null) return `started ${routine.name}`;
+    const now = new Date();
+    const state = loadState(now);
+    addSkip(state, routine, scheduledFor, skip.reason, now, skip.output);
+    writeSchedulerState(state);
+    return `skipped ${routine.name} (${getSkipReasonLabel(skip.reason)})`;
+  } catch (err) {
+    return `check of ${routine.name} failed: ${getErrorMessage(err)}`;
+  }
 }
 
 export function tick(now = new Date()): TickResult {
@@ -72,11 +116,14 @@ export function tick(now = new Date()): TickResult {
   const started: RoutineName[] = [];
   const continued: RoutineName[] = [];
   const skipped: string[] = [];
+  const checks: Promise<string>[] = [];
   const floor = new Date(now.getTime() - config.catchUpWindowDays * 86_400_000);
   const lastTick = new Date(state.lastTickAt);
   const routines = loadRoutines();
   const runningRuns = getRunningRuns();
-  const startingNames = routines.map(r => r.name).filter(name => checkIsStarting(name));
+  const startingNames = routines
+    .map(r => r.name)
+    .filter(name => checkIsStarting(name) || checkIsChecking(name));
   const runningNames = new Set([...runningRuns.map(r => r.routine), ...startingNames]);
   const caughtUpNames = new Set<RoutineName>();
   // A run that waits out a usage limit or a retry keeps its routine busy but takes no slot.
@@ -110,15 +157,20 @@ export function tick(now = new Date()): TickResult {
       skipped.push(`${routine.name} (concurrency limit, will retry)`);
       continue;
     }
-    startDetachedRun(routine.name, {
+    const options: RunOptions = {
       trigger: isCatchUp ? 'catch_up' : 'schedule',
       scheduledFor: scheduledFor.toISOString(),
-    });
+    };
+    if (routine.check === null) {
+      startDetachedRun(routine.name, options);
+      started.push(routine.name);
+    } else {
+      checks.push(startAfterCheck(routine, routine.check, scheduledFor, options));
+    }
     markScheduled(state, routine, scheduledFor);
     if (isCatchUp) caughtUpNames.add(routine.name);
     runningCount += 1;
     runningNames.add(routine.name);
-    started.push(routine.name);
   }
 
   // Unlike a scheduled time, a one-time run waits while its routine runs instead of being skipped.
@@ -194,13 +246,14 @@ export function tick(now = new Date()): TickResult {
 
   state.lastTickAt = now.toISOString();
   writeSchedulerState(state);
-  return { started, continued, skipped };
+  return { started, continued, skipped, checks };
 }
 
 export function startSchedulerLoop(log: (line: string) => void): () => void {
   const run = () => {
     try {
-      const { started, continued, skipped } = tick();
+      const { started, continued, skipped, checks } = tick();
+      for (const check of checks) void check.then(log);
       for (const name of started) log(`started ${name}`);
       for (const name of continued) log(`continued ${name}`);
       for (const name of skipped) log(`skipped ${name}`);

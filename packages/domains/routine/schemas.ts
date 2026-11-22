@@ -17,6 +17,8 @@ export const routineSummarySchema = z.object({
   enabled: z.boolean(),
   webhook: z.boolean(),
   webhookGate: z.string().nullable(),
+  // Older daemons do not send it, and tui --url may talk to one.
+  check: z.string().nullable().default(null),
   queuedWebhooks: z.number(),
   agent: agentNameSchema,
   model: z.string().nullable(),

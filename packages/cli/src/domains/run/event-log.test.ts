@@ -33,14 +33,15 @@ test('the before hook comes first and every logged event is counted', () => {
   });
 });
 
-test('the after hook comes last and hook keys count every hook in order', () => {
+test('the check comes first, the after hook last, and hook keys count every hook in order', () => {
   const events = [
+    { type: 'check', command: 'gh pr list', exitCode: 0, output: '#482' },
     { type: 'before_hook', command: 'git pull', exitCode: 0, output: 'Already up to date.' },
     { type: 'output', text: 'Hello' },
     { type: 'after_hook', command: 'notify-slack', exitCode: 1, output: 'no webhook url' },
   ];
   const { eventCount, items } = buildRunTranscript('command', events);
-  assert.equal(eventCount, 3);
+  assert.equal(eventCount, 4);
   assert.deepEqual(
     items.map(item => [
       item.kind,
@@ -50,14 +51,15 @@ test('the after hook comes last and hook keys count every hook in order', () => 
         .otherwise(() => null),
     ]),
     [
-      ['hook', 'hook-0', 'before'],
+      ['hook', 'hook-0', 'check'],
+      ['hook', 'hook-1', 'before'],
       ['text', 'output', null],
-      ['hook', 'hook-1', 'after'],
+      ['hook', 'hook-2', 'after'],
     ],
   );
-  assert.deepEqual(items[2], {
+  assert.deepEqual(items[3], {
     kind: 'hook',
-    key: 'hook-1',
+    key: 'hook-2',
     command: 'notify-slack',
     exitCode: 1,
     output: 'no webhook url',

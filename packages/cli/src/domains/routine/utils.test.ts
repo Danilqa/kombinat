@@ -92,6 +92,18 @@ test('a webhook gate needs the webhook', () => {
   );
 });
 
+test('a check needs a schedule', () => {
+  const checked = buildRoutine(
+    '/tmp/demo.md',
+    routineFile('schedule: "*/15 * * * *"\ncheck: exit 78'),
+  );
+  assert.equal(checked.check, 'exit 78');
+  assert.throws(
+    () => buildRoutine('/tmp/demo.md', routineFile('schedule: manual\ncheck: exit 78')),
+    /check runs only at scheduled times, add a schedule or remove check/,
+  );
+});
+
 test('memory is off unless the frontmatter turns it on for an agent', () => {
   assert.equal(buildRoutine('/tmp/demo.md', routineFile('agent: codex')).memory, false);
   assert.equal(buildRoutine('/tmp/demo.md', routineFile('memory: true')).memory, true);

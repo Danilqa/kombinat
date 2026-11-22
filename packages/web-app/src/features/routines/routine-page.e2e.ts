@@ -354,6 +354,27 @@ test('keeps the breadcrumbs, the section and its table header stacked as the pag
   expect(headerTops.filter(top => top > sectionBottom && top < sectionBottom + 32)).toHaveLength(1);
 });
 
+test('shows the check of a routine and what it printed when it found nothing to do', async ({
+  page,
+  kombinat,
+}) => {
+  const check =
+    'n=$(gh pr list --json number --jq length); echo "Waiting for review: $n"; [ "$n" -gt 0 ] || exit 78';
+  kombinat.addRoutine({ name: 'pr-review-sweep', schedule: '*/15 * * * *', check });
+  kombinat.addSkip('pr-review-sweep', 'nothing_to_do', 'Waiting for review: 0');
+  kombinat.addSkip('pr-review-sweep', 'already_running');
+  await page.goto('/routines/pr-review-sweep');
+
+  await expect(page.getByRole('main')).toMatchAriaSnapshot(`
+    - term: Check
+    - definition: ${JSON.stringify(check)}
+  `);
+  await expect(page.getByRole('row').filter({ hasText: /^.+ago.+ago/ })).toHaveText([
+    /already running$/,
+    /nothing to doWaiting for review: 0$/,
+  ]);
+});
+
 // The browser asks for the permission in a prompt that Playwright cannot answer.
 const FAKE_NOTIFICATIONS = `
   window.shownNotifications = [];

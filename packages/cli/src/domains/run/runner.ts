@@ -34,8 +34,8 @@ import {
 import type { Routine } from '../routine/types';
 import type { ChatMessage } from './event-log';
 import { appendLogEvent, readLastMessage, readRunEvents } from './event-log';
-import { getBeforeHookError, HOOK_TIMEOUT_MS, runHook } from './hooks';
-import { appendPayload, takePayload, takePrompt } from './payload';
+import { getHookError, HOOK_TIMEOUT_MS, runHook } from './hooks';
+import { appendPayload, takeCheckError, takePayload, takePrompt } from './payload';
 import { getRunsDir, listRuns, readRunRecord, writeRunRecord } from './storage';
 import { checkShouldRetry, getBudgetLeft, planRetry, RETRY_TEXT } from './retry';
 import type { AttemptEnd } from './retry';
@@ -149,7 +149,7 @@ async function runAgent({
       timeoutMs: hookTimeoutMs,
       logFile: record.logFile,
     });
-    const beforeError = getBeforeHookError(result, hookTimeoutMs);
+    const beforeError = getHookError('before hook', result, hookTimeoutMs);
     if (beforeError !== null) return exitWith({ status: 'failed', error: beforeError });
   }
 
@@ -451,7 +451,9 @@ export async function runRoutine(
     worktree: null,
   };
 
-  const workPlace = await prepareWorkPlace(routine, record);
+  const checkError = takeCheckError(routine.name, id);
+  const workPlace =
+    checkError === null ? await prepareWorkPlace(routine, record) : { routine, error: checkError };
   const workRoutine = workPlace.routine;
   const prompt = takePrompt(routine.name, id) ?? routine.prompt;
   const payload = takePayload(routine.name, id);

@@ -22,6 +22,10 @@ export function hook(command: string, exitCode: number, output: string): Transcr
   return key => ({ kind: 'hook', key, command, exitCode, output, phase: 'before' });
 }
 
+export function check(command: string, exitCode: number, output: string): TranscriptStep {
+  return key => ({ kind: 'hook', key, command, exitCode, output, phase: 'check' });
+}
+
 export function text(value: string): TranscriptStep {
   return key => ({ kind: 'text', key, text: value, isSubagent: false });
 }

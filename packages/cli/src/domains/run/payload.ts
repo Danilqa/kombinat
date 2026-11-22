@@ -6,7 +6,7 @@ import type { RunId } from 'domains/run/ids';
 
 import { getRunsDir } from './storage';
 
-type RunInput = 'payload' | 'prompt';
+type RunInput = 'payload' | 'prompt' | 'check-error';
 
 function getInputFile(routine: RoutineName, runId: RunId, input: RunInput): string {
   return path.join(getRunsDir(routine), `${runId}.${input}`);
@@ -39,6 +39,14 @@ export function writePrompt(routine: RoutineName, runId: RunId, prompt: string):
 
 export function takePrompt(routine: RoutineName, runId: RunId): string | null {
   return takeInput(routine, runId, 'prompt');
+}
+
+export function writeCheckError(routine: RoutineName, runId: RunId, error: string): void {
+  writeInput(routine, runId, 'check-error', error);
+}
+
+export function takeCheckError(routine: RoutineName, runId: RunId): string | null {
+  return takeInput(routine, runId, 'check-error');
 }
 
 // Longer than any backtick run in the payload, so the payload cannot close the fence.

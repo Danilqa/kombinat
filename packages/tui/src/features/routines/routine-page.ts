@@ -118,6 +118,9 @@ export function routinePage({
       ? []
       : [{ label: 'command', value: [text(routine.command, S.cyan)], isWide: true }]),
     { label: 'file', value: [text(routine.file)], isWide: true },
+    ...(routine.check === null
+      ? []
+      : [{ label: 'check', value: [text(routine.check, S.cyan)], isWide: true }]),
     { label: 'next run', value: timeValue(routine.nextRunAt, now), isWide: true },
     ...(detail === undefined || detail.oneTimeRuns.length === 0
       ? []
@@ -213,7 +216,7 @@ export function routinePage({
     }))
     .with('skips', (): PageContent => ({
       mode: 'scroll',
-      lines: [...header, ...skipsTable(detail.skips, now)],
+      lines: [...header, ...skipsTable(detail.skips, now, width)],
     }))
     .with('queue', (): PageContent => ({
       mode: 'scroll',

@@ -68,6 +68,7 @@ export function getModelFallbackReasonLabel(reason: string | null): string | nul
 
 export function getHookLabel(phase: HookPhase): string {
   return match(phase)
+    .with('check', () => 'Check')
     .with('before', () => 'Before hook')
     .with('after', () => 'After hook')
     .exhaustive();

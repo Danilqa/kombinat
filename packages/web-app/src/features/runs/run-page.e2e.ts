@@ -405,11 +405,16 @@ test('shows when a run switched to a fallback model', async ({ page, kombinat, c
   await expect(page.getByText('because the model is overloaded')).toBeVisible();
 });
 
-test('shows the before hook first and the after hook last', async ({ page, kombinat, claude }) => {
+test('shows the check and the before hook first and the after hook last', async ({
+  page,
+  kombinat,
+  claude,
+}) => {
   kombinat.addRoutine({ name: 'fix-e2e-tests' });
   const run = kombinat.addRun({
     routine: 'fix-e2e-tests',
     events: [
+      { type: 'check', command: 'gh pr list', exitCode: 0, output: 'Waiting for review: 1' },
       { type: 'before_hook', command: 'git pull', exitCode: 0, output: 'Already up to date.' },
       claude.init(),
       claude.result(),
@@ -420,12 +425,14 @@ test('shows the before hook first and the after hook last', async ({ page, kombi
   await page.goto(`/runs/fix-e2e-tests/${run.id}`);
   await page.getByRole('tab', { name: /Transcript & chat/ }).click();
 
-  await expect(page.getByText(/^(Before hook|Finished|After hook)$/)).toHaveText([
+  await expect(page.getByText(/^(Check|Before hook|Finished|After hook)$/)).toHaveText([
+    'Check',
     'Before hook',
     'Finished',
     'After hook',
   ]);
   await expect(page.getByRole('region', { name: 'Hook output' })).toHaveText([
+    'Waiting for review: 1',
     'Already up to date.',
     'Posted to #routines',
   ]);

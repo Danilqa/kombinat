@@ -25,7 +25,7 @@ import { getAgent } from '../agent/registry';
 import { splitMemoryBlock } from '../routine/memory';
 
 const hookEventSchema = z.object({
-  type: z.enum(['before_hook', 'after_hook']),
+  type: z.enum(['check', 'before_hook', 'after_hook']),
   command: z.string(),
   exitCode: z.number().nullable(),
   output: z.string(),
@@ -87,6 +87,7 @@ function toHookItem(event: HookEvent, index: number): HookItem {
     exitCode: event.exitCode,
     output: event.output,
     phase: match(event.type)
+      .with('check', (): HookPhase => 'check')
       .with('before_hook', (): HookPhase => 'before')
       .with('after_hook', (): HookPhase => 'after')
       .exhaustive(),
@@ -179,6 +180,7 @@ function withoutMemoryBlock(item: TranscriptItem): TranscriptItem[] {
 
 export function buildRunTranscript(agent: AgentName, events: unknown[]): Transcript {
   let hookCount = 0;
+  const checkHooks: HookItem[] = [];
   const afterHooks: HookItem[] = [];
   let session: Session = { hooks: [], events: [], wait: null };
   const sessions = [session];
@@ -198,7 +200,11 @@ export function buildRunTranscript(agent: AgentName, events: unknown[]): Transcr
     if (hook.success) {
       const item = toHookItem(hook.data, hookCount);
       hookCount += 1;
-      (isMatching({ phase: 'before' }, item) ? session.hooks : afterHooks).push(item);
+      match(item.phase)
+        .with('check', () => checkHooks.push(item))
+        .with('before', () => session.hooks.push(item))
+        .with('after', () => afterHooks.push(item))
+        .exhaustive();
     } else if (message.success) {
       replies.push({ message: toReplyMessage(message.data), events: [], error: null });
     } else if (replyError.success && reply !== undefined) reply.error = replyError.data.error;
@@ -232,6 +238,7 @@ export function buildRunTranscript(agent: AgentName, events: unknown[]): Transcr
   return {
     eventCount: events.length,
     items: [
+      ...checkHooks,
       ...sessions.flatMap((session, index) =>
         toSessionItems(agent, session, index, sessions[index - 1]),
       ),

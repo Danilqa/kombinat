@@ -17,7 +17,7 @@ Each domain has up to two halves with the same name:
 | **agent**      | `AgentName`, `SessionId`, agent label                                                                                                                                                                                                                                                                                                                                                                 | claude, codex and command adapters, registry, settings validation, `AgentTask`, plan usage storage                                         |
 | **transcript** | item schemas and types, message source, usage limit kinds, preview rule, subagent check, tool input, result and search match count, empty, result, hook, message source, usage limit and retry labels, `TranscriptList`                                                                                                                                                                               | none                                                                                                                                       |
 | **run**        | `RunRecord`, `RunId`, status and trigger, requests, labels, new ids, duration, cursor pages, active, waiting and continue rules, expired runs, blocked actions, retries and attempt labels, `makeRunRecord`, worktree branch and changes label, `RunStatusBadge`, `RunDetailList`, `RunOutput`, `RunMessageForm`, `UsageLimitCard`, `RetryCard`, `BlockedBadge`, `BlockedActionsCard`, `WorktreeCard` | runner, replies, hooks, usage limit waits, retries, worktrees, record storage with orphan reconciliation, event log, transcript, retention |
-| **scheduler**  | `Skip`, `SkipReason`, `SchedulerState`, `OneTimeRun`, skip label, run later presets, one-time run rules, next run, `SkipsTable`                                                                                                                                                                                                                                                                       | tick loop, `scheduler.json` and `one-time-runs.json` storage                                                                               |
+| **scheduler**  | `Skip`, `SkipReason`, `SchedulerState`, `OneTimeRun`, skip label, run later presets, one-time run rules, next run, `SkipsTable`                                                                                                                                                                                                                                                                       | tick loop, checks, `scheduler.json` and `one-time-runs.json` storage                                                                       |
 | **routine**    | `RoutineName`, `RoutineSummary`, `RoutineDetail`, `RoutineMemory`, requests, memory labels and changed lines, `RunNowButton`, `RoutineBadges`, `RoutineDetailList`, `WebhookQueueButton`                                                                                                                                                                                                              | file parsing, validation, defaults, loading, next run, schedule label, examples, memory storage and its prompt                             |
 | **calendar**   | `CalendarEntryId`, entry schemas and types, `getCalendar`, `buildCalendar`, planned lengths, entry title and overlap labels, overlap count                                                                                                                                                                                                                                                            | none, `cli/src/server.ts` serves `buildCalendar`                                                                                           |
 | **daemon**     | status schema, `getDaemonStatus`, `watchDaemonChanges`, health rules, plan usage rules, `DaemonStatusIndicator`                                                                                                                                                                                                                                                                                       | none, `cli/src/server.ts` builds the status                                                                                                |
@@ -50,7 +50,7 @@ Every agent gets the prompt on stdin. An agent decides which routine settings it
 
 An agent-independent view of a run's event log, ready to display: `{ eventCount, items }`. An item is one of:
 
-- `hook`: the before or the after hook, with its phase, command, exit code and output;
+- `hook`: the [check](#checks), the before or the after hook, with its phase, command, exit code and output;
 - `init`: the session start;
 - `model-fallback`: the agent switched from one model to another, with the reason when it gave one;
 - `usage-limit`: the run stopped at a usage limit and waited, see [Waiting out a usage limit](#waiting-out-a-usage-limit);
@@ -81,7 +81,7 @@ Invariants:
 - The record is `<state dir>/runs/<routine>/<id>.json` and the event log `<id>.jsonl` next to it. This layout is a compatibility contract.
 - A webhook run's request body waits in `<id>.payload` next to them until the run starts: the daemon writes it and starts the run with `--run-id <id>`, and the runner deletes it and adds the body after the prompt in a code fence, before the routine's [memory](#memory).
 - A run started for a webhook [conversation](#conversations) keeps its key in `conversation`, passed as `--conversation=<key>`. Other runs have `null`.
-- The transcript is built from the event log: the hook lines become `hook` items, the before hook first and the after hook last, and the agent turns the other lines into items.
+- The transcript is built from the event log: the hook lines become `hook` items, the check first, then the before hook, and the after hook last, and the agent turns the other lines into items.
 - With a run retention set, the daemon deletes the record and event log of each run that is not active and started longer ago than that, except the newest run of each routine. It does so when it starts, every hour and when the retention changes.
 - `GET /api/runs` answers a page of runs, newest first by `startedAt`, then routine and id, with `nextCursor` and `total`. `routine` limits it to one routine and answers 404 when there is no such routine, a page holds 50 runs, and `cursor` is an opaque token for the run a page ends with, so the next page starts right after that run even when new runs arrive above it.
 
@@ -177,6 +177,16 @@ The daemon's decision of when routines start. Every `KOMBINAT_TICK_SECONDS` (def
 - After the scheduled times, each enabled routine with `webhook: true` that is idle starts its oldest queued webhook, within the same limit.
 - `scheduler.json` holds `lastTickAt` and, for each routine, its last scheduled time and its last 50 skips.
 
+#### Checks
+
+A routine's `check`, a shell command, decides whether a scheduled time starts a run, in `check.ts`, so a routine that often has nothing to do spends no tokens then.
+
+1. The tick does not wait for it: the check runs in `cwd` with the before hook's `KOMBINAT_REPO`, `PATH` and 3-minute limit, plus `KOMBINAT_ROUTINE`, and the routine counts as starting and takes a slot until it ends. With no `cwd`, the run starts without it, and its preflight fails.
+2. Exit 78 starts nothing: the scheduled time gets a `nothing_to_do` skip with the first 500 characters of the check's output in `checkOutput`.
+3. Otherwise the check's line, `{"type":"check",…}`, goes first into the event log of a new run id, and the run starts with that id, or gets an `already_running` skip when the routine started meanwhile, such as with Run now. A check that failed to start, exited with another code or ran past its limit leaves its error in `<id>.check-error`, and the runner fails the run with it before the worktree, the before hook and the agent. The after hook still runs.
+
+Run now, one-time runs, webhooks and `kombinat run` start the agent without the check.
+
 #### One-time runs
 
 A routine can also run once at a time the user picks, such as tonight at 02:00, without a change to its file: `POST /api/routines/<name>/one-time-runs` with `{ "at": "<ISO time>" }`, and `POST /api/routines/<name>/one-time-runs/cancel` with the same body. `<state dir>/one-time-runs.json` keeps them as `{ "runs": [{ "routine": "…", "at": "…" }] }`, oldest first.
@@ -189,13 +199,13 @@ A routine can also run once at a time the user picks, such as tonight at 02:00, 
 
 ### routine
 
-A named, version-controlled unit of recurring agent work: one markdown file, `routines/<name>.md`. Its frontmatter holds scalar values only and sets `name`, `description`, `schedule`, `cwd`, `agent` and its settings, `enabled`, `webhook` with an optional `webhookGate`, `worktree`, `timeoutMinutes`, `retries` and optional `before` and `after` hooks. The body is the prompt.
+A named, version-controlled unit of recurring agent work: one markdown file, `routines/<name>.md`. Its frontmatter holds scalar values only and sets `name`, `description`, `schedule`, `cwd`, `agent` and its settings, `enabled`, `webhook` with an optional `webhookGate`, `worktree`, `timeoutMinutes`, `retries`, an optional [`check`](#checks) and optional `before` and `after` hooks. The body is the prompt.
 
 - `name` equals the file name and is lowercase kebab-case.
 - `schedule` is a 5-field cron in local time, or `manual`, which is stored as `null`.
 - `cwd` is required, and a leading `~` is expanded.
 - The prompt is not empty.
-- `agent` defaults to `claude`, `enabled` to `true`, `webhook` and `worktree` to `false`, `timeoutMinutes` to 55 and `retries` to 0. `webhook` and `worktree` must be `true` or `false`, and `webhookGate` needs `webhook: true`.
+- `agent` defaults to `claude`, `enabled` to `true`, `webhook` and `worktree` to `false`, `timeoutMinutes` to 55 and `retries` to 0. `webhook` and `worktree` must be `true` or `false`, `webhookGate` needs `webhook: true` and `check` needs a schedule.
 - The schedule gives the routine its next run, `null` when it is manual or disabled, and its label: `Manual` or the cron in words.
 
 Clients see a routine as a summary (its definition plus next run, running, last run, last skip and [tokens](#tokens) of the last 7 days) or a detail (plus the prompt, skips, queued webhooks, webhook calls, [one-time runs](#one-time-runs) and [memory](#memory) notes). Its runs come page by page from `/api/runs`. They can start it with Run now, which answers 409 while the routine is running, and can give that run a changed prompt, which only that run gets. The dashboard's New run on the Runs page starts such a run with a prompt written from scratch, in the routine the user picks.
