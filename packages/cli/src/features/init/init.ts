@@ -4,7 +4,7 @@ import path from 'node:path';
 import { isMatching, match, P } from 'ts-pattern';
 import { z } from 'zod';
 
-import { config, DEFAULT_PORT, PACKAGE_NAME } from '../../config';
+import { config, DEFAULT_PORT, PACKAGE_NAME, REPO_URL } from '../../config';
 import { EXAMPLE_ROUTINES, HELLO_EXAMPLE_ROUTINE } from '../../domains/routine/examples';
 import { listRoutineFiles, loadRoutines } from '../../domains/routine/storage';
 import { readJsonFile } from '../../utils/json';
@@ -87,7 +87,7 @@ function renderReadme(folder: string, manager: PackageManager): string {
   return [
     `# ${path.basename(folder)}`,
     '',
-    'Routines that [Kombinat](https://github.com/Danilqa/kombinat) runs with AI agents, one file each in `routines/`.',
+    `Routines that [Kombinat](${REPO_URL}) runs with AI agents, one file each in \`routines/\`.`,
     '',
     `Run \`${kombinat} serve\` and open http://localhost:${DEFAULT_PORT}, or \`${kombinat} install\` to keep it running in the background. \`${kombinat} readme\` updates this table.`,
     '',
@@ -265,6 +265,8 @@ export function formatInitSummary(result: InitResult, cwd = process.cwd()): stri
     '',
     'Next:',
     ...formatNextSteps(getNextSteps(result, folderArg)),
+    '',
+    `Star Kombinat on GitHub to keep up with new releases: ${REPO_URL}`,
   ].join('\n');
 }
 

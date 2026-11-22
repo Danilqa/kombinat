@@ -157,6 +157,17 @@ test('a fresh package.json gets a plain install in the folder', () => {
   assert.match(formatInitSummary(result, folder), /Ran npm install\./);
 });
 
+test('the summary ends by asking for a star on GitHub, with the link', () => {
+  const folder = makeFolder();
+  const summary = formatInitSummary(initFolder(folder, noInstall()), folder);
+  assert.equal(
+    summary.endsWith(
+      '\n\nStar Kombinat on GitHub to keep up with new releases: https://github.com/Danilqa/kombinat',
+    ),
+    true,
+  );
+});
+
 test('--no-install runs nothing and lists the install among the next commands', () => {
   const folder = makeFolder();
   const { calls, options } = record({ install: false });

@@ -3,7 +3,29 @@ import type { ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getDaemonStatus } from 'domains/daemon/requests';
 import { sameOriginApi } from 'utils/http';
-import { REPO_URL } from '@web-app/constants/links';
+import { CHANGELOG_URL, REPO_URL } from '@web-app/constants/links';
+
+interface FooterLinkProps {
+  href: string;
+  children: ReactNode;
+}
+
+function FooterLink({ href, children }: FooterLinkProps) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="group inline-flex items-center gap-0.5 transition-colors hover:text-fg"
+    >
+      {children}
+      <ArrowUpRight
+        aria-hidden="true"
+        className="size-3 transition-transform duration-200 ease-out-quint group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+      />
+    </a>
+  );
+}
 
 function KombinatCopyright() {
   const { data } = useQuery({
@@ -14,18 +36,8 @@ function KombinatCopyright() {
     <>
       {data?.version !== undefined && `v${data.version} · `}© {new Date().getFullYear()}{' '}
       <span className="text-fg">Kombinat</span> ·{' '}
-      <a
-        href={REPO_URL}
-        target="_blank"
-        rel="noreferrer"
-        className="group inline-flex items-center gap-0.5 transition-colors hover:text-fg"
-      >
-        GitHub
-        <ArrowUpRight
-          aria-hidden="true"
-          className="size-3 transition-transform duration-200 ease-out-quint group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-        />
-      </a>
+      <FooterLink href={CHANGELOG_URL}>Changelog</FooterLink> ·{' '}
+      <FooterLink href={REPO_URL}>GitHub</FooterLink>
     </>
   );
 }
