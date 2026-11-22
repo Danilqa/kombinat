@@ -19,10 +19,21 @@ interface RetryPlan {
   continuesSession: boolean;
 }
 
-export function checkShouldRetry(end: AttemptEnd, attempt: number, retries: number): boolean {
+// Each agent process counts only its own spend, so the next attempt gets what the run has left.
+export function getBudgetLeft(maxBudgetUsd: number | null, costUsd: number | null): number | null {
+  return maxBudgetUsd === null ? null : maxBudgetUsd - (costUsd ?? 0);
+}
+
+export function checkShouldRetry(
+  end: AttemptEnd,
+  attempt: number,
+  retries: number,
+  budgetLeft: number | null,
+): boolean {
   return (
     end.canRetry &&
     attempt <= retries &&
+    (budgetLeft === null || budgetLeft > 0) &&
     isMatching({ status: P.union('failed', 'timed_out') }, end.outcome)
   );
 }

@@ -37,7 +37,7 @@ import { appendLogEvent, readLastMessage, readRunEvents } from './event-log';
 import { getBeforeHookError, HOOK_TIMEOUT_MS, runHook } from './hooks';
 import { appendPayload, takePayload, takePrompt } from './payload';
 import { getRunsDir, listRuns, readRunRecord, writeRunRecord } from './storage';
-import { checkShouldRetry, planRetry, RETRY_TEXT } from './retry';
+import { checkShouldRetry, getBudgetLeft, planRetry, RETRY_TEXT } from './retry';
 import type { AttemptEnd } from './retry';
 import { planUsageLimitWait, waitForAction } from './usage-limit';
 import { createWorktree, refreshWorktree, restoreWorktree, settleWorktree } from './worktree';
@@ -336,9 +336,18 @@ async function runWaitingOutLimits(run: LimitedRun): Promise<AttemptEnd> {
 // An attempt that stops with an error is tried again after a while, up to the routine's retries. The
 // next attempt continues the session when there is one, and starts over with the before hook when not.
 async function runRetryingErrors(run: LimitedRun): Promise<Partial<RunRecord>> {
-  const { routine, agent, record, context } = run;
+  const { routine, agent, record } = run;
+  const getRunBudgetLeft = () => getBudgetLeft(routine.maxBudgetUsd, record.costUsd);
   let end = await runWaitingOutLimits(run);
-  for (let attempt = 1; checkShouldRetry(end, attempt, routine.retries); attempt += 1) {
+  for (
+    let attempt = 1;
+    checkShouldRetry(end, attempt, routine.retries, getRunBudgetLeft());
+    attempt += 1
+  ) {
+    const context: RunContext = {
+      ...run.context,
+      routine: { ...run.context.routine, maxBudgetUsd: getRunBudgetLeft() },
+    };
     const sessionInvocation =
       record.sessionId === null
         ? null
@@ -379,7 +388,8 @@ async function runRetryingErrors(run: LimitedRun): Promise<Partial<RunRecord>> {
       runWaitingOutLimits({
         ...run,
         routine: sessionInvocation === null ? routine : { ...routine, before: null },
-        invocation: sessionInvocation ?? run.invocation,
+        invocation: sessionInvocation ?? agent.buildInvocation(context),
+        context,
       }),
     );
   }

@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Loader, RotateCcw } from 'lucide-react';
 import { useId, useState } from 'react';
-import { isMatching, match, P } from 'ts-pattern';
+import { isMatching, match } from 'ts-pattern';
 
 import { Button } from 'design-system/components';
 import { cn, useLiveText, useLiveValue } from 'design-system/utils';
@@ -121,7 +121,8 @@ function getTitle(run: RunRecord, retry: RunRetry): string {
       'retrying',
       () => `Attempt ${retry.attempt - 1} of ${retry.attempts} stopped with an error`,
     )
-    .with(P.union('running', 'waiting'), () => `${getAttemptLabel(retry)} is running`)
+    .with('running', () => `${getAttemptLabel(retry)} is running`)
+    .with('waiting', () => `${getAttemptLabel(retry)} is waiting for the limit to reset`)
     .otherwise(
       status => `${getRunStatusLabel(status)} on attempt ${retry.attempt} of ${retry.attempts}`,
     );

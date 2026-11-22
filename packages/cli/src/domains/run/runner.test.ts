@@ -941,6 +941,32 @@ test('a run stopped by its budget fails without a retry', async () => {
   assert.equal(readLogTypes(finished).includes('retry_wait'), false);
 });
 
+test('the next attempt gets only what is left of the budget', async () => {
+  const runId = runIdSchema.parse('20261122T020000Z-bdgt');
+  const finishing = runRoutine(
+    makeErroringRoutine('budget-left', { result: STREAM_ERROR }, 'retries: 2\nmaxBudgetUsd: 2'),
+    { trigger: 'manual', runId },
+  );
+  requestWaitAction(await waitForStatus('budget-left', runId, 'retrying'), 'continue');
+
+  assert.equal((await finishing).status, 'succeeded');
+  const args = fs
+    .readFileSync(path.join(tmp, 'budget-left', 'args.txt'), 'utf8')
+    .trim()
+    .split('\n');
+  assert.match(args[0] ?? '', /--max-budget-usd 2$/);
+  assert.match(args[1] ?? '', /--max-budget-usd 1\.5 --resume s1$/);
+});
+
+test('a run that spent its whole budget fails without a retry', async () => {
+  const finished = await runRoutine(
+    makeErroringRoutine('budget-spent', { result: STREAM_ERROR }, 'retries: 2\nmaxBudgetUsd: 0.5'),
+    { trigger: 'manual' },
+  );
+  assert.equal(finished.status, 'failed');
+  assert.equal(readLogTypes(finished).includes('retry_wait'), false);
+});
+
 test('a routine without retries fails at the first error', async () => {
   const finished = await runRoutine(makeRoutine('no-retries', 'command: exit 3'), {
     trigger: 'manual',
