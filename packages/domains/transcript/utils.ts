@@ -6,6 +6,7 @@ import { countSearchMatches } from 'utils/search';
 import type {
   HookPhase,
   MessageSource,
+  RetryItem,
   ToolItem,
   TranscriptItem,
   UsageLimitItem,
@@ -96,4 +97,29 @@ export function getUsageLimitPauseLabel(item: UsageLimitItem, now: number = Date
     .with({ outcome: 'stopped' }, ({ at: endedAt }) => `stopped waiting at ${at(endedAt)}`)
     .exhaustive();
   return `${at(item.stoppedAt)}, ${end}`;
+}
+
+export function getRetryStopLabel({
+  attempt,
+  error,
+}: Pick<RetryItem, 'attempt' | 'error'>): string {
+  return `Attempt ${attempt - 1} stopped: ${toPreview(error)}`;
+}
+
+export function getRetryNextLabel(item: RetryItem, now: number = Date.now()): string {
+  const at = (iso: string) => formatClockOrDayTime(iso, now);
+  const next = `attempt ${item.attempt}`;
+  return match(item.end)
+    .with(null, () =>
+      item.continuesSession
+        ? `${next} continues the session at ${at(item.continuesAt)}`
+        : `${next} starts over at ${at(item.continuesAt)}`,
+    )
+    .with({ outcome: 'retried' }, ({ at: endedAt }) =>
+      item.continuesSession
+        ? `${next} continued the session at ${at(endedAt)}`
+        : `${next} started over at ${at(endedAt)}`,
+    )
+    .with({ outcome: 'stopped' }, ({ at: endedAt }) => `stopped retrying at ${at(endedAt)}`)
+    .exhaustive();
 }

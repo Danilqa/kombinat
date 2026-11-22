@@ -23,13 +23,19 @@ import {
   type TranscriptStep,
 } from './transcript';
 
-export type FinishedStatus = Exclude<RunStatus, 'running' | 'waiting'>;
+export type FinishedStatus = Exclude<RunStatus, 'running' | 'waiting' | 'retrying'>;
 
 // The agent stops at a usage limit after this many steps and continues once it resets.
 export interface DemoUsageLimit {
   limit: UsageLimitKind;
   afterStep: number;
   waitMinutes: number;
+}
+
+// The first attempt stops with this error after this many steps, and the second continues its session.
+export interface DemoRetry {
+  error: string;
+  afterStep: number;
 }
 
 export interface DemoOutcome {
@@ -45,6 +51,7 @@ export interface DemoOutcome {
   exitCode?: number | null;
   model?: string;
   usageLimit?: DemoUsageLimit;
+  retry?: DemoRetry;
   blockedActions?: BlockedAction[];
   // The files a worktree run committed. A worktree run without them changed nothing.
   changedFiles?: ChangedFile[];
@@ -106,6 +113,7 @@ export interface DemoRoutine {
   command: string | null;
   cwd: string;
   timeoutMinutes: number;
+  retries?: number;
   worktree?: boolean;
   maxBudgetUsd: number | null;
   prompt: string;
@@ -134,6 +142,65 @@ const codexInit = init({ model: null, cwd: null, toolCount: null, permissionMode
 const AGENT_QUEUE_COMMAND =
   "gh issue list --label agent --state open --json number,title --jq 'sort_by(.number)'";
 
+const OPENED_RESULT =
+  'Opened 3 draft pull requests: #491 Remember the last report filter, #492 Show the invoice number in the email subject and #493 Add a loading state to the export button. Left a question on #388: should archived clients count toward the plan limit?';
+const STREAM_IDLE_ERROR = 'API Error: Stream idle timeout - partial response received';
+
+const nightAgentSteps: TranscriptStep[] = [
+  hook('git switch main && git pull --ff-only', 0, 'Already up to date.'),
+  init({ model: OPUS, cwd: REPO, toolCount: 32, permissionMode: 'bypassPermissions' }),
+  bash(
+    AGENT_QUEUE_COMMAND,
+    `[{"number":388,"title":"Archived clients and the plan limit"},
+ {"number":402,"title":"Remember the last report filter"},
+ {"number":417,"title":"Invoice number in the email subject"},
+ {"number":421,"title":"Loading state on the export button"}]`,
+  ),
+  bash(
+    'gh issue view 388 --json body --jq .body',
+    'Archived clients should not count toward the plan limit. Or should they? Check with product.',
+  ),
+  bash(
+    'gh issue comment 388 --body "Should archived clients count toward the plan limit? I will pick this up once it is decided."',
+    'https://github.com/acme/web/issues/388#issuecomment-2481190',
+  ),
+  text('#388 needs a product decision, so I left a question. Moving on to #402.'),
+  bash(
+    'git switch -c agent/402-remember-report-filter',
+    "Switched to a new branch 'agent/402-remember-report-filter'",
+  ),
+  read(
+    `${REPO}/src/reports/use-report-filter.ts`,
+    `1  export function useReportFilter() {
+2    const [filter, setFilter] = useState<ReportFilter>(DEFAULT_FILTER);
+3    return { filter, setFilter };
+4  }`,
+  ),
+  edit(
+    `${REPO}/src/reports/use-report-filter.ts`,
+    'const [filter, setFilter] = useState<ReportFilter>(DEFAULT_FILTER);',
+    "const [filter, setFilter] = useStoredState<ReportFilter>('report-filter', DEFAULT_FILTER);",
+  ),
+  bash(
+    'pnpm typecheck && pnpm lint && pnpm test',
+    ` Test Files  39 passed (39)
+  Tests  217 passed (217)`,
+  ),
+  bash(
+    'gh pr create --draft --title "Remember the last report filter" --body-file /tmp/pr-402.md',
+    'https://github.com/acme/web/pull/491',
+  ),
+  text('Opened #491. Doing the same for #417 and #421.'),
+  bash(
+    'gh pr create --draft --title "Show the invoice number in the email subject" --body-file /tmp/pr-417.md',
+    'https://github.com/acme/web/pull/492',
+  ),
+  bash(
+    'gh pr create --draft --title "Add a loading state to the export button" --body-file /tmp/pr-421.md',
+    'https://github.com/acme/web/pull/493',
+  ),
+];
+
 const nightAgentTasks: DemoRoutine = {
   name: routineNameSchema.parse('night-agent-tasks'),
   description: 'Works through the issues labelled agent while I sleep',
@@ -147,6 +214,7 @@ const nightAgentTasks: DemoRoutine = {
   command: null,
   cwd: REPO,
   timeoutMinutes: 240,
+  retries: 2,
   maxBudgetUsd: 5,
   prompt: `Pick up the open issues labelled \`agent\` in this repo, oldest first, until the queue is empty.
 
@@ -162,62 +230,30 @@ Never merge, and keep one issue per branch.`,
       minutes: 46,
       costUsd: 3.12,
       numTurns: 58,
-      resultText:
-        'Opened 3 draft pull requests: #491 Remember the last report filter, #492 Show the invoice number in the email subject and #493 Add a loading state to the export button. Left a question on #388: should archived clients count toward the plan limit?',
-      steps: [
-        hook('git switch main && git pull --ff-only', 0, 'Already up to date.'),
-        init({ model: OPUS, cwd: REPO, toolCount: 32, permissionMode: 'bypassPermissions' }),
-        bash(
-          AGENT_QUEUE_COMMAND,
-          `[{"number":388,"title":"Archived clients and the plan limit"},
- {"number":402,"title":"Remember the last report filter"},
- {"number":417,"title":"Invoice number in the email subject"},
- {"number":421,"title":"Loading state on the export button"}]`,
-        ),
-        bash(
-          'gh issue view 388 --json body --jq .body',
-          'Archived clients should not count toward the plan limit. Or should they? Check with product.',
-        ),
-        bash(
-          'gh issue comment 388 --body "Should archived clients count toward the plan limit? I will pick this up once it is decided."',
-          'https://github.com/acme/web/issues/388#issuecomment-2481190',
-        ),
-        text('#388 needs a product decision, so I left a question. Moving on to #402.'),
-        bash(
-          'git switch -c agent/402-remember-report-filter',
-          "Switched to a new branch 'agent/402-remember-report-filter'",
-        ),
-        read(
-          `${REPO}/src/reports/use-report-filter.ts`,
-          `1  export function useReportFilter() {
-2    const [filter, setFilter] = useState<ReportFilter>(DEFAULT_FILTER);
-3    return { filter, setFilter };
-4  }`,
-        ),
-        edit(
-          `${REPO}/src/reports/use-report-filter.ts`,
-          'const [filter, setFilter] = useState<ReportFilter>(DEFAULT_FILTER);',
-          "const [filter, setFilter] = useStoredState<ReportFilter>('report-filter', DEFAULT_FILTER);",
-        ),
-        bash(
-          'pnpm typecheck && pnpm lint && pnpm test',
-          ` Test Files  39 passed (39)
-      Tests  217 passed (217)`,
-        ),
-        bash(
-          'gh pr create --draft --title "Remember the last report filter" --body-file /tmp/pr-402.md',
-          'https://github.com/acme/web/pull/491',
-        ),
-        text('Opened #491. Doing the same for #417 and #421.'),
-        bash(
-          'gh pr create --draft --title "Show the invoice number in the email subject" --body-file /tmp/pr-417.md',
-          'https://github.com/acme/web/pull/492',
-        ),
-        bash(
-          'gh pr create --draft --title "Add a loading state to the export button" --body-file /tmp/pr-421.md',
-          'https://github.com/acme/web/pull/493',
-        ),
-      ],
+      resultText: OPENED_RESULT,
+      steps: nightAgentSteps,
+    },
+    {
+      id: 'retried',
+      weight: 0,
+      status: 'succeeded',
+      minutes: 46,
+      costUsd: 3.31,
+      numTurns: 61,
+      resultText: OPENED_RESULT,
+      retry: { error: STREAM_IDLE_ERROR, afterStep: 9 },
+      steps: nightAgentSteps,
+    },
+    {
+      id: 'retrying',
+      weight: 0,
+      status: 'succeeded',
+      minutes: 8,
+      costUsd: 3.08,
+      numTurns: 57,
+      resultText: OPENED_RESULT,
+      retry: { error: STREAM_IDLE_ERROR, afterStep: 5 },
+      steps: nightAgentSteps,
     },
     {
       id: 'empty',
@@ -295,9 +331,11 @@ Never merge, and keep one issue per branch.`,
     },
   ],
   pins: [
+    { slotsAgo: 0, outcome: 'retried' },
     { slotsAgo: 1, outcome: 'fallback' },
     { slotsAgo: 3, outcome: 'budget' },
   ],
+  manualRuns: [{ minutesAgo: 3, outcome: 'retrying' }],
 };
 
 const DESIGN_ISSUES_COMMAND = 'gh issue list --label design --state open --json number,title';

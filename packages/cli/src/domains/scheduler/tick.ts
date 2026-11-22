@@ -79,7 +79,7 @@ export function tick(now = new Date()): TickResult {
   const startingNames = routines.map(r => r.name).filter(name => checkIsStarting(name));
   const runningNames = new Set([...runningRuns.map(r => r.routine), ...startingNames]);
   const caughtUpNames = new Set<RoutineName>();
-  // A run that waits for a usage limit to reset keeps its routine busy but takes no slot.
+  // A run that waits out a usage limit or a retry keeps its routine busy but takes no slot.
   let runningCount = new Set([
     ...runningRuns.filter(checkIsRunAtWork).map(r => r.routine),
     ...startingNames,
@@ -171,7 +171,7 @@ export function tick(now = new Date()): TickResult {
     writeOneTimeRuns(oneTimeRuns.filter(oneTimeRun => !doneOneTimeRuns.has(oneTimeRun)));
   }
 
-  // After the schedules, so a run that waited out a usage limit never makes one skip.
+  // After the schedules, so a run that waited out a usage limit or a retry never makes one skip.
   for (const run of runningRuns.toReversed()) {
     if (!checkIsWaitOver(run, now) || runningCount >= config.maxConcurrentRuns) continue;
     requestWaitAction(run, 'continue');

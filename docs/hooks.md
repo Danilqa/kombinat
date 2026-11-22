@@ -11,11 +11,11 @@ Both run with `/bin/sh -c` and have 3 minutes, after which they are killed toget
 
 ## Before
 
-`before` runs in the routine's `cwd` before the agent starts, for example to update a checkout or start a service. With `worktree: true`, both hooks run in the run's worktree instead, see [worktrees.md](worktrees.md). If it fails, exits with a non-zero code or takes more than 3 minutes, the agent does not start and the run fails.
+`before` runs in the routine's `cwd` before the agent starts, for example to update a checkout or start a service. With `worktree: true`, both hooks run in the run's worktree instead, see [worktrees.md](worktrees.md). If it fails, exits with a non-zero code or takes more than 3 minutes, the agent does not start and the run fails. With [`retries`](../README.md#retries), the run tries again after 5 minutes, `before` first.
 
 ## After
 
-`after` runs once the run has ended, for example to send its result or its failure somewhere. It runs after every run that ends as `succeeded`, `failed` or `timed_out`. A failed run includes one that never started its agent: the `cwd` is missing, the agent binary is not found or `before` failed. A run that waits for a usage limit to reset runs it once, when it ends after it continued or stopped waiting.
+`after` runs once the run has ended, for example to send its result or its failure somewhere. It runs after every run that ends as `succeeded`, `failed` or `timed_out`. A failed run includes one that never started its agent: the `cwd` is missing, the agent binary is not found or `before` failed. A run that waits for a usage limit to reset runs it once, when it ends after it continued or stopped waiting. A run with `retries` runs it once too, after its last attempt.
 
 It does not run when the run is `aborted`, which means the runner itself stopped, for example when the Mac restarted. A schedule time that was skipped has no run, so nothing runs either.
 

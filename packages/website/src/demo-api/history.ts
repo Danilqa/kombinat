@@ -6,16 +6,20 @@ import type { RoutineName } from 'domains/routine/ids';
 import { runIdSchema, type RunId } from 'domains/run/ids';
 import type {
   RunRecord,
+  RunRetry,
   RunStatus,
   RunTrigger,
   RunWorktree,
   TokenCounts,
+  UsageLimitWait,
   UsageLimitWaitAction,
 } from 'domains/run/types';
+import { RETRY_DELAY_MINUTES } from 'domains/run/constants';
 import { compareRunsByNewest, getWorktreeBranch } from 'domains/run/utils';
 import { transcriptItemSchema } from 'domains/transcript/schemas';
 import type { Skip, SkipReason } from 'domains/scheduler/types';
 import type {
+  RetryItem,
   Transcript,
   TranscriptItem,
   UsageLimitItem,
@@ -60,12 +64,23 @@ interface DemoWaitAction {
   at: Date;
 }
 
-interface DemoPause {
+interface UsageLimitStop {
+  kind: 'usage-limit';
   limit: UsageLimitKind;
+}
+
+interface RetryStop {
+  kind: 'retry';
+  error: string;
+}
+
+// A usage limit or an error that stops the run for a while, until it continues its session.
+interface DemoPause {
+  stop: UsageLimitStop | RetryStop;
   afterStep: number;
   stoppedAt: Date;
   continuesAt: Date;
-  // When the wait ends: at the reset, or earlier with Continue now or Stop waiting.
+  // When the wait ends: at its time, or earlier with Continue now, Retry now or a stop.
   endedAt: Date;
   outcome: UsageLimitOutcome;
 }
@@ -141,16 +156,30 @@ function getDurationMs(run: DemoRun): number {
 }
 
 function getPause(run: DemoRun, waitAction: DemoWaitAction | undefined): DemoPause | null {
-  const { usageLimit, steps } = run.outcome;
-  if (usageLimit === undefined) return null;
-  const workMs = (getDurationMs(run) * usageLimit.afterStep) / steps.length;
+  const { usageLimit, retry, steps } = run.outcome;
+  const planned =
+    usageLimit === undefined
+      ? retry === undefined
+        ? null
+        : {
+            stop: { kind: 'retry' as const, error: retry.error },
+            afterStep: retry.afterStep,
+            waitMinutes: RETRY_DELAY_MINUTES,
+          }
+      : {
+          stop: { kind: 'usage-limit' as const, limit: usageLimit.limit },
+          afterStep: usageLimit.afterStep,
+          waitMinutes: usageLimit.waitMinutes,
+        };
+  if (planned === null) return null;
+  const workMs = (getDurationMs(run) * planned.afterStep) / steps.length;
   const stoppedAt = new Date(run.startedAt.getTime() + workMs);
-  const continuesAt = new Date(stoppedAt.getTime() + usageLimit.waitMinutes * 60_000);
+  const continuesAt = new Date(stoppedAt.getTime() + planned.waitMinutes * 60_000);
   const isEarly =
     waitAction !== undefined && waitAction.at >= stoppedAt && waitAction.at < continuesAt;
   return {
-    limit: usageLimit.limit,
-    afterStep: usageLimit.afterStep,
+    stop: planned.stop,
+    afterStep: planned.afterStep,
     stoppedAt,
     continuesAt,
     endedAt: isEarly ? waitAction.at : continuesAt,
@@ -174,7 +203,9 @@ function checkIsWaiting(pause: DemoPause, now: Date): boolean {
 }
 
 function getStatus(run: DemoRun, pause: DemoPause | null, now: Date): RunStatus {
-  if (pause !== null && checkIsWaiting(pause, now)) return 'waiting';
+  if (pause !== null && checkIsWaiting(pause, now)) {
+    return isMatching({ stop: { kind: 'retry' } }, pause) ? 'retrying' : 'waiting';
+  }
   if (checkIsRunning(run, pause, now)) return 'running';
   return isMatching({ outcome: 'stopped' }, pause) ? 'failed' : run.outcome.status;
 }
@@ -315,21 +346,17 @@ function toRunRecord(
     durationMs: hasResult ? durationMs : null,
     resultText: isFinished ? (outcome.resultText ?? null) : null,
     error: isStopped
-      ? "You've hit your session limit"
+      ? match(pause.stop)
+          .with({ kind: 'retry' }, ({ error }) => error)
+          .otherwise(() => "You've hit your session limit")
       : isFinished
         ? (outcome.error ?? null)
         : null,
     logFile: `${STATE_DIR}/runs/${routine.name}/${run.id}.jsonl`,
     replyPid: checkIsReplying(messages, now) ? run.pid + 1 : null,
     conversation: null,
-    usageLimit:
-      pause !== null && checkIsWaiting(pause, now)
-        ? {
-            limit: pause.limit,
-            stoppedAt: pause.stoppedAt.toISOString(),
-            continuesAt: pause.continuesAt.toISOString(),
-          }
-        : null,
+    usageLimit: getUsageLimit(pause, now),
+    retry: getRetry(run, pause, now),
     tokens: isFinished ? getTokens(run) : null,
     blockedActions:
       isFinished && !messages.some(message => checkIsAllowed(message, now))
@@ -338,6 +365,37 @@ function toRunRecord(
     memorySentAt: null,
     worktree: routine.worktree === true ? getWorktree(run, !isRunning, isWorktreeRemoved) : null,
   };
+}
+
+function getUsageLimit(pause: DemoPause | null, now: Date): UsageLimitWait | null {
+  if (pause === null || !checkIsWaiting(pause, now)) return null;
+  return match(pause.stop)
+    .with({ kind: 'usage-limit' }, ({ limit }) => ({
+      limit,
+      stoppedAt: pause.stoppedAt.toISOString(),
+      continuesAt: pause.continuesAt.toISOString(),
+    }))
+    .otherwise(() => null);
+}
+
+// Set once the first attempt stops, and kept while the second runs, unless the user stopped retrying.
+function getRetry(run: DemoRun, pause: DemoPause | null, now: Date): RunRetry | null {
+  if (pause === null || now < pause.stoppedAt) return null;
+  const hasStopped = isMatching({ outcome: 'stopped' }, pause) && now >= pause.endedAt;
+  return match(pause.stop)
+    .with({ kind: 'retry' }, ({ error }): RunRetry | null =>
+      hasStopped
+        ? null
+        : {
+            attempt: 2,
+            attempts: (run.routine.retries ?? 0) + 1,
+            error,
+            stoppedAt: pause.stoppedAt.toISOString(),
+            continuesAt: pause.continuesAt.toISOString(),
+            continuesSession: true,
+          },
+    )
+    .otherwise(() => null);
 }
 
 function getResultItems(record: RunRecord): TranscriptItem[] {
@@ -376,22 +434,49 @@ function getWorkedMs(run: DemoRun, pause: DemoPause | null, now: Date): number {
   return workedBeforeMs + Math.max(0, now.getTime() - pause.endedAt.getTime());
 }
 
-function toPauseItem(pause: DemoPause, now: Date): UsageLimitItem {
-  return {
-    kind: 'usage-limit',
-    key: 'usage-limit-0',
-    limit: pause.limit,
-    stoppedAt: pause.stoppedAt.toISOString(),
-    continuesAt: pause.continuesAt.toISOString(),
-    end: now >= pause.endedAt ? { at: pause.endedAt.toISOString(), outcome: pause.outcome } : null,
-  };
+function toPauseItem(run: DemoRun, pause: DemoPause, now: Date): UsageLimitItem | RetryItem {
+  const stoppedAt = pause.stoppedAt.toISOString();
+  const continuesAt = pause.continuesAt.toISOString();
+  const endedAt = now >= pause.endedAt ? pause.endedAt.toISOString() : null;
+  return match(pause.stop)
+    .with({ kind: 'usage-limit' }, ({ limit }): UsageLimitItem => ({
+      kind: 'usage-limit',
+      key: 'usage-limit-0',
+      limit,
+      stoppedAt,
+      continuesAt,
+      end: endedAt === null ? null : { at: endedAt, outcome: pause.outcome },
+    }))
+    .with({ kind: 'retry' }, ({ error }): RetryItem => ({
+      kind: 'retry',
+      key: 'retry-0',
+      attempt: 2,
+      attempts: (run.routine.retries ?? 0) + 1,
+      error,
+      stoppedAt,
+      continuesAt,
+      continuesSession: true,
+      end:
+        endedAt === null
+          ? null
+          : {
+              at: endedAt,
+              outcome: isMatching('stopped', pause.outcome) ? 'stopped' : 'retried',
+            },
+    }))
+    .exhaustive();
 }
 
-function withPause(items: TranscriptItem[], pause: DemoPause | null, now: Date): TranscriptItem[] {
+function withPause(
+  run: DemoRun,
+  items: TranscriptItem[],
+  pause: DemoPause | null,
+  now: Date,
+): TranscriptItem[] {
   if (pause === null || now < pause.stoppedAt) return items;
   return [
     ...items.slice(0, pause.afterStep),
-    toPauseItem(pause, now),
+    toPauseItem(run, pause, now),
     ...(isMatching({ outcome: 'stopped' }, pause) ? [] : items.slice(pause.afterStep)),
   ];
 }
@@ -409,7 +494,7 @@ function getRunningItems(run: DemoRun, pause: DemoPause | null, now: Date): Tran
     isWaiting || last === undefined || !isMatching({ kind: 'tool' }, last)
       ? reached
       : [...reached.slice(0, -1), { ...last, result: null }];
-  return withPause(items, pause, now);
+  return withPause(run, items, pause, now);
 }
 
 // A reply shows its text halfway through and its result once it is done.
@@ -452,7 +537,7 @@ function buildTranscript(
   const items = checkIsRunning(run, pause, now)
     ? getRunningItems(run, pause, now)
     : [
-        ...withPause(buildSteps(run), pause, now),
+        ...withPause(run, buildSteps(run), pause, now),
         ...getResultItems(record),
         ...getReplyItems(messages, now),
       ];

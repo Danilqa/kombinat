@@ -19,6 +19,7 @@ import {
   Ellipsis,
   Hourglass,
   Loader,
+  RotateCcw,
   X,
 } from 'lucide-react';
 import { Link } from 'react-router';
@@ -88,6 +89,7 @@ const blockSurfaceClassNames: Record<BlockVariant, string> = {
   aborted: 'bg-neutral-tint shadow-[inset_2px_0_0_var(--fg-faint)]',
   running: 'bg-warning-tint shadow-[inset_2px_0_0_var(--warning)]',
   waiting: 'bg-info-tint shadow-[inset_2px_0_0_var(--info)]',
+  retrying: 'bg-info-tint shadow-[inset_2px_0_0_var(--info)]',
 };
 
 // The icon repeats the outcome that the tint shows, so it does not depend on colour alone.
@@ -98,6 +100,7 @@ const blockIcons: Record<RunStatus, BlockIcon> = {
   aborted: { component: Ban, className: 'text-fg-muted' },
   running: { component: Loader, className: 'text-warning' },
   waiting: { component: Hourglass, className: 'text-info' },
+  retrying: { component: RotateCcw, className: 'text-info' },
 };
 
 const outlinedBlockClassName = 'hover:border-fg-faint';
@@ -136,6 +139,10 @@ const blockStyles: Record<BlockVariant, BlockStyle> = {
     className: cn(blockSurfaceClassNames.waiting, tintedBlockClassName),
     icon: blockIcons.waiting,
   },
+  retrying: {
+    className: cn(blockSurfaceClassNames.retrying, tintedBlockClassName),
+    icon: blockIcons.retrying,
+  },
 };
 
 interface LegendItem {
@@ -152,6 +159,7 @@ const legendItems: LegendItem[] = [
   { label: 'Aborted', variant: 'aborted' },
   { label: 'Running', variant: 'running' },
   { label: 'Waiting for limit', variant: 'waiting' },
+  { label: 'Retrying', variant: 'retrying' },
 ];
 
 function getBlockVariant(entry: CalendarEntry): BlockVariant {

@@ -71,6 +71,17 @@ test('a routine runs in its cwd unless the frontmatter asks for a worktree', () 
   );
 });
 
+test('a routine retries no errors unless the frontmatter sets retries', () => {
+  assert.equal(buildRoutine('/tmp/demo.md', routineFile('schedule: manual')).retries, 0);
+  assert.equal(buildRoutine('/tmp/demo.md', routineFile('retries: 2')).retries, 2);
+  for (const retries of ['-1', '1.5', '11', 'twice']) {
+    assert.throws(
+      () => buildRoutine('/tmp/demo.md', routineFile(`retries: ${retries}`)),
+      /retries must be a whole number from 0 to 10/,
+    );
+  }
+});
+
 test('a webhook gate needs the webhook', () => {
   const gated = buildRoutine('/tmp/demo.md', routineFile('webhook: true\nwebhookGate: check.sh'));
   assert.equal(gated.webhookGate, 'check.sh');

@@ -105,9 +105,11 @@ test('a run is active while it runs and while it replies to a message', () => {
   assert.equal(checkIsRunActive(makeRunRecord({ status: 'failed' })), false);
 });
 
-test('a run that waits for a usage limit is active but not at work', () => {
+test('a run that waits for a usage limit or its next attempt is active but not at work', () => {
   assert.equal(checkIsRunActive(makeRunRecord({ status: 'waiting' })), true);
   assert.equal(checkIsRunAtWork(makeRunRecord({ status: 'waiting' })), false);
+  assert.equal(checkIsRunActive(makeRunRecord({ status: 'retrying' })), true);
+  assert.equal(checkIsRunAtWork(makeRunRecord({ status: 'retrying' })), false);
   assert.equal(checkIsRunAtWork(makeRunRecord({ status: 'succeeded', replyPid: 42 })), true);
 });
 

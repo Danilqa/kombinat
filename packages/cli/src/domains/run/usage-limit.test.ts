@@ -14,7 +14,7 @@ process.env['KOMBINAT_STATE_DIR'] = stateDir;
 process.env['KOMBINAT_TICK_SECONDS'] = '0.5';
 
 const { writeRunRecord } = await import('./storage');
-const { requestWaitAction, waitOutUsageLimit } = await import('./usage-limit');
+const { requestWaitAction, waitForAction } = await import('./usage-limit');
 const { makeRunRecord } = await import('domains/run/mocks');
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -42,7 +42,7 @@ test(
   { timeout: 10_000 },
   async () => {
     const { record, usageLimit } = writeWaitingRun('no-scheduler');
-    assert.equal(await waitOutUsageLimit(record, usageLimit), 'continued');
+    assert.equal(await waitForAction(record, usageLimit.continuesAt), 'continue');
   },
 );
 
@@ -50,10 +50,10 @@ test('while the scheduler ticks, a run past its reset waits for it to continue',
   const schedulerFile = path.join(stateDir, 'scheduler.json');
   const ticking = setInterval(() => fs.writeFileSync(schedulerFile, '{}'), 300);
   const { record, usageLimit } = writeWaitingRun('ticking');
-  const waiting = waitOutUsageLimit(record, usageLimit);
+  const waiting = waitForAction(record, usageLimit.continuesAt);
   assert.equal(await Promise.race([waiting, sleep(3000).then(() => 'pending')]), 'pending');
 
   requestWaitAction(record, 'continue');
-  assert.equal(await waiting, 'continued');
+  assert.equal(await waiting, 'continue');
   clearInterval(ticking);
 });

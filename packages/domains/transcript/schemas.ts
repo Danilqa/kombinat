@@ -82,6 +82,23 @@ export const usageLimitItemSchema = z.object({
   end: usageLimitEndSchema.nullable(),
 });
 
+export const retryOutcomeSchema = z.enum(['retried', 'stopped']);
+
+export const retryEndSchema = z.object({ at: z.string(), outcome: retryOutcomeSchema });
+
+// An attempt that stopped with an error, and when the next one started or was meant to.
+export const retryItemSchema = z.object({
+  kind: z.literal('retry'),
+  key: z.string(),
+  attempt: z.number(),
+  attempts: z.number(),
+  error: z.string(),
+  stoppedAt: z.string(),
+  continuesAt: z.string(),
+  continuesSession: z.boolean(),
+  end: retryEndSchema.nullable(),
+});
+
 export const transcriptItemSchema = z.discriminatedUnion('kind', [
   hookItemSchema,
   initItemSchema,
@@ -91,6 +108,7 @@ export const transcriptItemSchema = z.discriminatedUnion('kind', [
   toolItemSchema,
   resultItemSchema,
   usageLimitItemSchema,
+  retryItemSchema,
 ]);
 
 export const transcriptSchema = z.object({

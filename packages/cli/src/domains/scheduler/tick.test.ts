@@ -95,6 +95,7 @@ test('a routine that is still running is skipped and not started twice', () => {
     replyPid: null,
     conversation: null,
     usageLimit: null,
+    retry: null,
     tokens: null,
     blockedActions: [],
     memorySentAt: null,
@@ -147,6 +148,40 @@ test('runs past their usage limit reset continue, oldest first, only into slots 
     writeRunRecord({ ...run, status: 'succeeded', usageLimit: null });
   }
   fs.rmSync(path.join(routinesDir, 'hooked.md'));
+});
+
+test('a run whose retry time has come gets its next attempt, and one that waits keeps waiting', () => {
+  const now = new Date('2026-09-30T10:02:45');
+  const minutesFromNow = (minutes: number) =>
+    new Date(now.getTime() + minutes * 60_000).toISOString();
+  const writeRetryingRun = (name: string, continuesIn: number) => {
+    const run = makeRunRecord({
+      id: runIdSchema.parse(`${name}-1`),
+      routine: routineNameSchema.parse(name),
+      status: 'retrying',
+      pid: process.pid,
+      logFile: path.join(tmp, `${name}-1.jsonl`),
+      retry: {
+        attempt: 2,
+        attempts: 3,
+        error: 'API Error: Stream idle timeout',
+        stoppedAt: minutesFromNow(-6),
+        continuesAt: minutesFromNow(continuesIn),
+        continuesSession: true,
+      },
+    });
+    writeRunRecord(run);
+    return run;
+  };
+  const due = writeRetryingRun('retry-due', -1);
+  const waiting = writeRetryingRun('retry-waiting', 3);
+
+  assert.deepEqual(tick(now).continued, ['retry-due']);
+  const getActionFile = (run: RunRecord) =>
+    path.join(stateDir, 'runs', run.routine, `${run.id}.wait`);
+  assert.equal(fs.readFileSync(getActionFile(due), 'utf8'), 'continue');
+  assert.equal(fs.existsSync(getActionFile(waiting)), false);
+  for (const run of [due, waiting]) writeRunRecord({ ...run, status: 'succeeded' });
 });
 
 test('a run that waits for a usage limit keeps its routine busy but takes no slot', () => {

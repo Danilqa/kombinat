@@ -9,6 +9,8 @@ import {
   getTranscriptEmptyLabel,
   getTranscriptResultLabel,
   getTurnsLabel,
+  getRetryNextLabel,
+  getRetryStopLabel,
   getUsageLimitLabel,
   getUsageLimitPauseLabel,
 } from 'domains/transcript/utils';
@@ -191,6 +193,17 @@ function itemLines(
           text('‖ ', S.blue),
           text(`Paused at the ${getUsageLimitLabel(pause.limit)}`, S.bold),
           text(`  ${getUsageLimitPauseLabel(pause)}`, S.dim),
+        ],
+        width,
+        2,
+      ),
+    )
+    .with({ kind: 'retry' }, retry =>
+      wrapLine(
+        [
+          text('↻ ', S.blue),
+          text(sanitize(getRetryStopLabel(retry)), S.bold),
+          text(`  ${getRetryNextLabel(retry)}`, S.dim),
         ],
         width,
         2,

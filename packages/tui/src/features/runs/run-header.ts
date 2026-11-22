@@ -1,6 +1,6 @@
 import { isMatching, match } from 'ts-pattern';
 
-import type { BlockedAction, RunRecord, RunWorktree } from 'domains/run/types';
+import type { BlockedAction, RunRecord, RunRetry, RunWorktree } from 'domains/run/types';
 import {
   checkIsWaitingForSlot,
   formatTokens,
@@ -11,7 +11,7 @@ import {
   getWorktreeBaseStep,
   getWorktreeChangesLabel,
 } from 'domains/run/utils';
-import { getUsageLimitLabel } from 'domains/transcript/utils';
+import { getUsageLimitLabel, toPreview } from 'domains/transcript/utils';
 import { formatDuration } from 'utils/date-time';
 
 import { detailRows, timeValue } from '../../components/detail-rows';
@@ -84,6 +84,26 @@ function worktreePairs(worktree: RunWorktree): DetailPair[] {
   ];
 }
 
+function retryPairs(run: RunRecord, retry: RunRetry, now: number): DetailPair[] {
+  const attempt = text(`${retry.attempt} of ${retry.attempts}`);
+  if (!isMatching({ status: 'retrying' }, run)) return [{ label: 'attempt', value: [attempt] }];
+  const next = retry.continuesSession ? 'continues the session' : 'starts over';
+  return [
+    {
+      label: 'attempt',
+      value: checkIsWaitingForSlot(retry, now)
+        ? [attempt, text(`  ${next} once another run finishes`, S.dim)]
+        : [attempt, text(`  ${next} `, S.dim), ...timeValue(retry.continuesAt, now)],
+      isWide: true,
+    },
+    {
+      label: 'error',
+      value: [text(sanitize(toPreview(retry.error)), S.red)],
+      isWide: true,
+    },
+  ];
+}
+
 // Claude finds a session by its folder, so a worktree that is gone comes back first, as it does for a reply.
 function getResumeFolderCommand(worktree: RunWorktree | null, cwd: string | null): string | null {
   if (worktree === null) return cwd === null ? null : `cd ${cwd}`;
@@ -133,6 +153,7 @@ export function runHeaderLines(
             isWide: true,
           },
         ]),
+    ...(run.retry === null ? [] : retryPairs(run, run.retry, now)),
     { label: 'trigger', value: [text(getTriggerLabel(run.trigger))] },
     ...(run.scheduledFor
       ? [{ label: 'scheduled', value: timeValue(run.scheduledFor, now), isWide: true }]

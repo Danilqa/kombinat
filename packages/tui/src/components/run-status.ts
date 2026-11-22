@@ -17,6 +17,7 @@ function getStatusLook(status: RunStatus): StatusLook {
   return match(status)
     .with('running', () => ({ icon: '●', style: S.yellow }))
     .with('waiting', () => ({ icon: '‖', style: S.blue }))
+    .with('retrying', () => ({ icon: '↻', style: S.blue }))
     .with('succeeded', () => ({ icon: '✓', style: S.green }))
     .with('failed', () => ({ icon: '✗', style: S.red }))
     .with('timed_out', () => ({ icon: '✗', style: S.red }))

@@ -50,6 +50,7 @@ export function getReplyNote({ routine, runId }: RunContext, source: ReplySource
     .with('dashboard', () => 'with a message from the dashboard')
     .with('webhook', () => 'with a message from a webhook')
     .with('usage_limit', () => 'after your usage limit reset')
+    .with('retry', () => 'after an error stopped your last attempt')
     .exhaustive();
   return [
     `This session continues run ${runId} of the kombinat routine "${routine.name}" ${reason}.`,

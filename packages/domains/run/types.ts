@@ -6,6 +6,7 @@ import type {
   blockedActionSchema,
   changedFileSchema,
   runRecordSchema,
+  runRetrySchema,
   runsCursorKeySchema,
   runsCursorSchema,
   runsPageSchema,
@@ -24,6 +25,7 @@ export type BlockedAction = z.infer<typeof blockedActionSchema>;
 export type RunStatus = z.infer<typeof runStatusSchema>;
 export type RunTrigger = z.infer<typeof runTriggerSchema>;
 export type RunRecord = z.infer<typeof runRecordSchema>;
+export type RunRetry = z.infer<typeof runRetrySchema>;
 export type RunsCursor = z.infer<typeof runsCursorSchema>;
 export type RunsCursorKey = z.infer<typeof runsCursorKeySchema>;
 export type RunsPage = z.infer<typeof runsPageSchema>;

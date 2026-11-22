@@ -821,6 +821,154 @@ test('a waiting run whose runner is gone is aborted and its wait ends', () => {
   assert.ok(isMatching([{ type: 'usage_limit_end', outcome: 'stopped' }], readLog(run)));
 });
 
+const STREAM_ERROR = 'API Error: Stream idle timeout - partial response received';
+
+// A routine whose claude ends with an error result, and whose resumed session finishes.
+function makeErroringRoutine(name: string, result: object, frontmatter: string) {
+  const cwd = path.join(tmp, name);
+  fs.mkdirSync(cwd, { recursive: true });
+  const toLines = (events: unknown[]) => events.map(event => JSON.stringify(event)).join('\n');
+  const init = { type: 'system', subtype: 'init', session_id: 's1' };
+  fs.writeFileSync(
+    path.join(cwd, 'limited.jsonl'),
+    toLines([
+      init,
+      { type: 'result', is_error: true, num_turns: 3, total_cost_usd: 0.5, ...result },
+    ]),
+  );
+  fs.writeFileSync(
+    path.join(cwd, 'resumed.jsonl'),
+    toLines([
+      init,
+      { type: 'result', result: 'Fixed it', is_error: false, num_turns: 2, total_cost_usd: 0.25 },
+    ]),
+  );
+  return buildRoutine(
+    path.join(tmp, `${name}.md`),
+    `---\ncwd: ${cwd}\n${frontmatter}\n---\nFix it.`,
+  );
+}
+
+test('a run that stops with an error waits and continues its session in the next attempt', async () => {
+  const runId = runIdSchema.parse('20261122T020000Z-rtry');
+  const finishing = runRoutine(
+    makeErroringRoutine('retried', { result: STREAM_ERROR }, 'retries: 2'),
+    { trigger: 'schedule', runId },
+  );
+  const retrying = await waitForStatus('retried', runId, 'retrying');
+  assert.equal(retrying.pid, process.pid);
+  assert.equal(retrying.error, null);
+  assert.equal(checkIsRunning(retrying.routine), true);
+  const { retry } = retrying;
+  assert.equal(retry?.attempt, 2);
+  assert.equal(retry.attempts, 3);
+  assert.equal(retry.error, STREAM_ERROR);
+  assert.equal(retry.continuesSession, true);
+  assert.equal(Date.parse(retry.continuesAt) - Date.parse(retry.stoppedAt), 5 * 60_000);
+  requestWaitAction(retrying, 'continue');
+
+  const finished = await finishing;
+  assert.equal(finished.status, 'succeeded');
+  assert.equal(finished.resultText, 'Fixed it');
+  assert.equal(finished.numTurns, 5);
+  assert.equal(finished.costUsd, 0.75);
+  assert.equal(finished.retry?.attempt, 2);
+  const args = fs
+    .readFileSync(path.join(tmp, 'retried', 'args.txt'), 'utf8')
+    .trim()
+    .split('\n');
+  assert.equal(args.length, 2);
+  assert.match(args[1] ?? '', /after an error stopped your last attempt.* --resume s1$/);
+  assert.deepEqual(
+    readLogTypes(finished).filter(type => type.startsWith('retry')),
+    ['retry_wait', 'retry_end'],
+  );
+});
+
+test('an attempt without a session to continue starts over with the before hook', async () => {
+  const runId = runIdSchema.parse('20261122T020000Z-over');
+  const cwd = path.join(tmp, 'started-over');
+  fs.mkdirSync(cwd, { recursive: true });
+  const finishing = runRoutine(
+    makeRoutine(
+      'started-over',
+      `cwd: ${cwd}\nretries: 1\nbefore: echo before >> hooks.txt\ncommand: if [ -f tried ]; then echo done; else touch tried; exit 3; fi`,
+    ),
+    { trigger: 'manual', runId },
+  );
+  const retrying = await waitForStatus('started-over', runId, 'retrying');
+  assert.equal(retrying.retry?.continuesSession, false);
+  assert.equal(retrying.retry.error, 'exit code 3');
+  requestWaitAction(retrying, 'continue');
+
+  const finished = await finishing;
+  assert.equal(finished.status, 'succeeded');
+  assert.equal(fs.readFileSync(path.join(cwd, 'hooks.txt'), 'utf8'), 'before\nbefore\n');
+  const { items } = buildRunTranscript(finished.agent, readRunEvents(finished));
+  assert.deepEqual(
+    items.map(item => item.kind),
+    ['hook', 'retry', 'hook', 'text'],
+  );
+});
+
+test('a run that stops retrying fails with the error of its last attempt, and the after hook runs', async () => {
+  const runId = runIdSchema.parse('20261122T020000Z-stop');
+  const finishing = runRoutine(
+    makeRoutine('retry-stop', 'retries: 2\ncommand: exit 3\nafter: echo after'),
+    { trigger: 'manual', runId },
+  );
+  requestWaitAction(await waitForStatus('retry-stop', runId, 'retrying'), 'stop');
+
+  const finished = await finishing;
+  assert.equal(finished.status, 'failed');
+  assert.equal(finished.error, 'exit code 3');
+  assert.equal(finished.retry, null);
+  const log = readLog(finished);
+  assert.ok(isMatching({ type: 'retry_end', outcome: 'stopped' }, log.at(-2)));
+  assert.ok(isMatching({ type: 'after_hook', exitCode: 0 }, log.at(-1)));
+});
+
+test('a run stopped by its budget fails without a retry', async () => {
+  const finished = await runRoutine(
+    makeErroringRoutine(
+      'over-budget',
+      { subtype: 'error_max_budget_usd', result: 'Reached the budget' },
+      'retries: 2\nmaxBudgetUsd: 1',
+    ),
+    { trigger: 'manual' },
+  );
+  assert.equal(finished.status, 'failed');
+  assert.equal(readLogTypes(finished).includes('retry_wait'), false);
+});
+
+test('a routine without retries fails at the first error', async () => {
+  const finished = await runRoutine(makeRoutine('no-retries', 'command: exit 3'), {
+    trigger: 'manual',
+  });
+  assert.equal(finished.status, 'failed');
+  assert.equal(readLogTypes(finished).includes('retry_wait'), false);
+});
+
+test('a retrying run whose runner is gone is aborted without the attempt it waited for', () => {
+  const run = makeFinishedRun('retry-gone', '20261122T020000Z-gone', {
+    status: 'retrying',
+    endedAt: null,
+    pid: spawnSync('true').pid,
+    retry: {
+      attempt: 2,
+      attempts: 3,
+      error: STREAM_ERROR,
+      stoppedAt: '2026-11-22T02:06:00Z',
+      continuesAt: '2026-11-22T02:11:00Z',
+      continuesSession: true,
+    },
+  });
+  const [reconciled] = listRuns(run.routine);
+  assert.equal(reconciled?.status, 'aborted');
+  assert.equal(reconciled.retry, null);
+  assert.ok(isMatching([{ type: 'retry_end', outcome: 'stopped' }], readLog(run)));
+});
+
 function makeGitRepo(name: string): string {
   const repo = path.join(tmp, 'repos', name);
   fs.mkdirSync(repo, { recursive: true });

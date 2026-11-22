@@ -193,6 +193,55 @@ test('a waiting run past its reset says it continues once another run finishes',
   await expect(card.getByRole('button', { name: 'Continue now' })).toBeVisible();
 });
 
+test('a run that stopped with an error says when it retries and can retry now', async ({
+  page,
+  kombinat,
+  claude,
+  time,
+}) => {
+  kombinat.addRoutine({ name: 'fix-e2e-tests' });
+  const retry = {
+    attempt: 2,
+    attempts: 3,
+    error: 'API Error: Stream idle timeout - partial response received',
+    stoppedAt: time.minutesAgo(1),
+    continuesAt: new Date(Date.now() + 4 * 60_000 + 20_000).toISOString(),
+    continuesSession: true,
+  };
+  const run = kombinat.addRun({
+    routine: 'fix-e2e-tests',
+    status: 'retrying',
+    endedAt: null,
+    exitCode: null,
+    pid: process.pid,
+    sessionId: 'b5c1e2d4',
+    resumeCommand: 'claude --resume b5c1e2d4',
+    retry,
+    events: [
+      claude.init(),
+      claude.text('The checkout test fails, running it alone.'),
+      claude.result(true),
+      { type: 'retry_wait', ...retry },
+    ],
+  });
+
+  await page.goto(`/runs/fix-e2e-tests/${run.id}`);
+
+  const card = page.getByRole('region', { name: 'Attempt 1 of 3 stopped with an error' });
+  await expect(page.getByRole('main').getByText('Retrying', { exact: true })).toBeVisible();
+  await expect(card).toContainText(
+    /partial response received\. Kombinat continues its session right where it left off at \d\d:\d\d, in 4 min\.(?!\.)/,
+  );
+  await page.getByRole('tab', { name: /Transcript & chat/ }).click();
+  await expect(page.getByText(`Attempt 1 stopped: ${retry.error}`)).toBeVisible();
+  await expect(page.getByText('Finished with error')).toBeHidden();
+
+  const retried = page.waitForResponse(response => response.url().endsWith('/wait/continue'));
+  await card.getByRole('button', { name: 'Retry now' }).click();
+  expect((await retried).status()).toBe(202);
+  await expect(card.getByRole('button', { name: 'Retrying…' })).toBeVisible();
+});
+
 test('shows why a run failed', async ({ page, kombinat, claude }) => {
   kombinat.addRoutine({ name: 'fix-e2e-tests' });
   const run = kombinat.addRun({
