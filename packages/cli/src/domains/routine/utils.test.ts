@@ -100,7 +100,7 @@ test('a check needs a schedule', () => {
   assert.equal(checked.check, 'exit 78');
   assert.throws(
     () => buildRoutine('/tmp/demo.md', routineFile('schedule: manual\ncheck: exit 78')),
-    /check needs a schedule/,
+    /check runs only at scheduled times, add a schedule or remove check/,
   );
 });
 

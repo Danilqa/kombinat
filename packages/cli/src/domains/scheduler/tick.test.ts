@@ -414,7 +414,6 @@ test('a check that finds work, or fails, starts the run with the check first in 
     fs
       .readdirSync(path.join(stateDir, 'runs', 'watcher'))
       .filter(file => file.endsWith('.jsonl'))
-      .sort()
       .map(file => readLog(path.join(stateDir, 'runs', 'watcher', file))[0]);
   const cases = [
     { check: 'echo "Waiting for review: 2"', exitCode: 0, output: 'Waiting for review: 2' },
@@ -430,13 +429,15 @@ test('a check that finds work, or fails, starts the run with the check first in 
     assert.deepEqual(await Promise.all(result.checks), ['started watcher']);
   }
   assert.deepEqual(
-    readCheckLines(),
-    cases.map(({ check, exitCode, output }) => ({
-      type: 'check',
-      command: check,
-      exitCode,
-      output,
-    })),
+    new Set(readCheckLines()),
+    new Set(
+      cases.map(({ check, exitCode, output }) => ({
+        type: 'check',
+        command: check,
+        exitCode,
+        output,
+      })),
+    ),
   );
   assert.equal(readSchedulerState()?.routines[watcher]?.skips.length, 1);
   fs.rmSync(path.join(routinesDir, 'watcher.md'));

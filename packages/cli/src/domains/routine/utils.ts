@@ -123,7 +123,7 @@ export function buildRoutine(file: string, source: string): Routine {
   if (webhookGate !== null && !webhook) throw new Error(`${file}: webhookGate needs webhook: true`);
   const check = readString(data, 'check');
   if (check !== null && schedule === null) {
-    throw new Error(`${file}: check needs a schedule, since it runs only at scheduled times`);
+    throw new Error(`${file}: check runs only at scheduled times, add a schedule or remove check`);
   }
   const memory = withFile(file, () => readBoolean(data, 'memory'));
   if (memory === true && !checkCanKeepMemory(agent)) {
