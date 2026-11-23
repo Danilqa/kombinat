@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { ArrowUpRight } from 'lucide-react';
-import { useState } from 'react';
-import { Button, EmptyState, ErrorState, LoadingState } from 'design-system/components';
+import { useEffect, useRef, useState } from 'react';
+import { EmptyState, ErrorState, LoadingState } from 'design-system/components';
 import { PageHeader } from 'design-system/layouts';
 import { GITHUB_RELEASES_PATH } from 'domains/release/constants';
 import { getChangelog } from 'domains/release/requests';
@@ -18,11 +18,29 @@ const PAGE_SIZE = 10;
 export function ChangelogPage() {
   useDocumentTitle('Changelog');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const lastReleaseRef = useRef<HTMLLIElement>(null);
   const { data, isError, isPending } = useQuery({
     queryKey: [GITHUB_RELEASES_PATH],
     queryFn: () => getChangelog(github),
     staleTime: Infinity,
   });
+  const hasOlderReleases = data !== undefined && data.length > visibleCount;
+
+  // A new observer reports at once, so a page shorter than the screen keeps filling it.
+  useEffect(() => {
+    const lastRelease = lastReleaseRef.current;
+    if (!hasOlderReleases || lastRelease === null) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) return;
+        observer.disconnect();
+        setVisibleCount(count => count + PAGE_SIZE);
+      },
+      { rootMargin: '0px 0px 100% 0px' },
+    );
+    observer.observe(lastRelease);
+    return () => observer.disconnect();
+  }, [hasOlderReleases, visibleCount]);
 
   return (
     <div>
@@ -51,26 +69,16 @@ export function ChangelogPage() {
         (data.length === 0 ? (
           <EmptyState>No releases yet.</EmptyState>
         ) : (
-          <>
-            <ol className="divide-y divide-line-faint">
-              {data.slice(0, visibleCount).map((release, index) => (
-                <li key={release.version}>
-                  <ReleaseEntry release={release} isLatest={index === 0} />
-                </li>
-              ))}
-            </ol>
-            {data.length > visibleCount && (
-              <div className="flex justify-center pt-2">
-                <Button
-                  variant="secondary"
-                  className="relative max-sm:after:absolute max-sm:after:-inset-2"
-                  onClick={() => setVisibleCount(count => count + PAGE_SIZE)}
-                >
-                  Show older releases
-                </Button>
-              </div>
-            )}
-          </>
+          <ol className="divide-y divide-line-faint">
+            {data.slice(0, visibleCount).map((release, index) => (
+              <li
+                key={release.version}
+                ref={index === visibleCount - 1 ? lastReleaseRef : undefined}
+              >
+                <ReleaseEntry release={release} isLatest={index === 0} />
+              </li>
+            ))}
+          </ol>
         ))}
     </div>
   );
