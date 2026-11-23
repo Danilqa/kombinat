@@ -702,7 +702,10 @@ export function createDemoHistory(routines: DemoRoutine[], loadedAt: Date): Demo
         : buildTranscript(run, now, getMessages(routine, id), findPause(run));
     },
     startRun(routine, now, scheduledFor) {
-      const random = createRandom(`${routine.name}:run-now:${now.toISOString()}`);
+      // Runs of one start that begin together still get ids of their own.
+      const random = createRandom(
+        `${routine.name}:run-now:${now.toISOString()}:${startedRuns.length}`,
+      );
       const outcome = { ...pickOutcome(routine, random), minutes: RUN_NOW_MINUTES };
       const trigger = scheduledFor === undefined ? 'manual' : 'schedule';
       const run = createRun(routine, outcome, trigger, scheduledFor ?? null, now, random);

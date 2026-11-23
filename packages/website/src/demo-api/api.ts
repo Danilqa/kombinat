@@ -9,13 +9,17 @@ import { addReadRuns, changeNotifyLevel, listUnreadRuns } from 'domains/inbox/ut
 import type { ReleaseUpdate } from 'domains/release/types';
 import { MEMORY_MAX_LENGTH } from 'domains/routine/constants';
 import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
-import { memoryRequestSchema, oneTimeRunRequestSchema } from 'domains/routine/schemas';
+import {
+  memoryRequestSchema,
+  oneTimeRunRequestSchema,
+  startRunRequestSchema,
+} from 'domains/routine/schemas';
 import type { RoutineDetail, RoutineMemory, RoutineSummary } from 'domains/routine/types';
 import { countChangedLines } from 'domains/routine/utils';
-import { RUNS_CURSOR_ERROR } from 'domains/run/constants';
+import { MAX_RUNS, RUNS_CURSOR_ERROR } from 'domains/run/constants';
 import { runIdSchema, type RunId } from 'domains/run/ids';
 import { runMessageSchema, usageLimitWaitActionSchema } from 'domains/run/schemas';
-import type { RunRecord, TokenUsage } from 'domains/run/types';
+import type { QueuedRun, RunRecord, TokenUsage } from 'domains/run/types';
 import {
   buildAllowMessage,
   buildTokenUsages,
@@ -136,6 +140,7 @@ function toRoutineSummary(
   queue: QueuedWebhook[],
   oneTimeRuns: OneTimeRun[],
   tokenUsage: TokenUsage | null,
+  hasQueuedRuns: boolean,
   now: Date,
 ): RoutineSummary {
   const { schedule, enabled } = routine;
@@ -161,10 +166,12 @@ function toRoutineSummary(
     cwd: routine.cwd,
     timeoutMinutes: routine.timeoutMinutes,
     retries: routine.retries ?? 0,
+    runs: routine.runs ?? 1,
+    maxParallel: routine.maxParallel ?? 1,
     worktree: routine.worktree ?? false,
     maxBudgetUsd: routine.maxBudgetUsd,
     file: `routines/${routine.name}.md`,
-    running: runs.some(checkIsRunActive),
+    running: hasQueuedRuns || runs.some(checkIsRunActive),
     lastRun: runs[0] ?? null,
     lastSkip: skips.at(-1) ?? null,
     tokenUsage,
@@ -207,6 +214,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     readRuns: [],
   };
   let notify: NotifyLevels = {};
+  let queuedRuns: QueuedRun[] = [];
   let oneTimeRuns = demoRoutines
     .flatMap(routine =>
       (routine.oneTimeRuns ?? []).map(({ minutesAhead }) =>
@@ -296,6 +304,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
       listQueue(routine, now),
       listRoutineOneTimeRuns(oneTimeRuns, routine.name),
       tokenUsages.get(routine.name) ?? null,
+      queuedRuns.some(queued => queued.routine === routine.name),
       now,
     );
   }
@@ -340,6 +349,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
       queue: listQueue(routine, now),
       webhookCalls: listWebhookCalls(routine, now),
       oneTimeRuns: listRoutineOneTimeRuns(oneTimeRuns, routine.name),
+      queuedRuns: queuedRuns.filter(queued => queued.routine === routine.name),
       memoryNotes: checkHasMemory(routine) ? (memories.get(routine.name) ?? null) : null,
     };
   }
@@ -357,6 +367,18 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
       if (listRoutineRuns(routine, now).some(checkIsRunActive)) continue;
       history.startRun(routine, now, scheduledFor);
       oneTimeRuns = removeOneTimeRun(oneTimeRuns, oneTimeRun);
+    }
+  }
+
+  // The daemon's tick for the runs of a start that wait for a slot.
+  function startQueuedRuns(now: Date): void {
+    for (const queued of queuedRuns) {
+      const routine = demoRoutines.find(candidate => candidate.name === queued.routine);
+      if (routine === undefined) continue;
+      const activeCount = listRoutineRuns(routine, now).filter(checkIsRunActive).length;
+      if (activeCount >= queued.maxParallel) continue;
+      history.startRun(routine, now);
+      queuedRuns = queuedRuns.filter(candidate => candidate !== queued);
     }
   }
 
@@ -422,11 +444,40 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     return ok({ ok: true });
   }
 
-  function startRun(routine: DemoRoutine, now: Date): ApiResponse {
-    if (listRoutineRuns(routine, now).some(checkIsRunActive)) {
+  function startRun(routine: DemoRoutine, body: string, now: Date): ApiResponse {
+    const request = body === '' ? null : startRunRequestSchema.safeParse(parseJson(body));
+    if (request?.success === false) {
+      return fail(
+        400,
+        `The body must be JSON, with a prompt that isn't blank and runs and maxParallel from 1 to ${MAX_RUNS}`,
+      );
+    }
+    const runs = request?.data.runs ?? routine.runs ?? 1;
+    const maxParallel = request?.data.maxParallel ?? Math.min(routine.maxParallel ?? 1, runs);
+    if (maxParallel > runs) return fail(400, `maxParallel must be at most runs, which is ${runs}`);
+    const isQueued = queuedRuns.some(queued => queued.routine === routine.name);
+    if (isQueued || listRoutineRuns(routine, now).some(checkIsRunActive)) {
       return fail(409, `${routine.name} is already running`);
     }
-    return { status: 202, body: { ok: true, runId: history.startRun(routine, now) } };
+    const runId = history.startRun(routine, now);
+    queuedRuns = [
+      ...queuedRuns,
+      ...Array.from({ length: runs - 1 }, () => ({
+        routine: routine.name,
+        id: createRunId(now),
+        trigger: 'manual' as const,
+        scheduledFor: null,
+        maxParallel,
+        queuedAt: now.toISOString(),
+      })),
+    ];
+    startQueuedRuns(now);
+    return { status: 202, body: { ok: true, runId } };
+  }
+
+  function cancelQueuedRuns(routine: DemoRoutine): ApiResponse {
+    queuedRuns = queuedRuns.filter(queued => queued.routine !== routine.name);
+    return ok({ ok: true });
   }
 
   function sendMessage(routine: DemoRoutine, run: RunRecord, body: string, now: Date): ApiResponse {
@@ -533,7 +584,10 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
         withRoutine(routineNameSchema.parse(name), routine => ok(getRoutineDetail(routine, now))),
       )
       .with(['POST', ['routines', P.string, 'run']], ([, [, name]]) =>
-        withRoutine(routineNameSchema.parse(name), routine => startRun(routine, now)),
+        withRoutine(routineNameSchema.parse(name), routine => startRun(routine, body, now)),
+      )
+      .with(['POST', ['routines', P.string, 'queued-runs', 'cancel']], ([, [, name]]) =>
+        withRoutine(routineNameSchema.parse(name), cancelQueuedRuns),
       )
       .with(['POST', ['routines', P.string, 'one-time-runs']], ([, [, name]]) =>
         withRoutine(routineNameSchema.parse(name), routine =>
@@ -596,6 +650,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     respond(method, url, body, now = new Date()) {
       const segments = url.pathname.split('/').filter(Boolean).slice(1).map(decodeURIComponent);
       startDueOneTimeRuns(now);
+      startQueuedRuns(now);
       return routeApi([method, segments], url, body, now);
     },
   };

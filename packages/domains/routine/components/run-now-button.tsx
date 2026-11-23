@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode, type Ref } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, Loader, Play } from 'lucide-react';
+import { ChevronDown, Loader, Play, Repeat } from 'lucide-react';
+import { match } from 'ts-pattern';
 
 import { Button, DropdownMenu, Popover, Tooltip } from 'design-system/components';
 import { cn } from 'design-system/utils';
@@ -10,12 +11,16 @@ import { sameOriginApi } from 'utils/http';
 import { QUERY_KEYS_CHANGED_BY_ONE_TIME_RUNS, QUERY_KEYS_CHANGED_BY_RUN } from '../constants';
 import type { RoutineName } from '../ids';
 import { scheduleOneTimeRun, startRoutineRun } from '../requests';
+import type { StartRunRequest } from '../types';
 import { RunLaterForm } from './run-later-form';
 import { RunLaterMenuItems } from './run-later-menu-items';
+import { RunSeveralForm } from './run-several-form';
 
 const SCHEDULED_NOTE_MS = 4000;
 
 type RunNowVariant = 'primary' | 'secondary';
+
+type RunNowForm = 'later' | 'several';
 
 const MENU_TRIGGER_CLASS_NAMES: Record<RunNowVariant, string> = {
   primary: 'border-l border-page/25',
@@ -38,25 +43,31 @@ export function RunNowButton({
   ref,
 }: RunNowButtonProps) {
   const queryClient = useQueryClient();
-  const [isPickingTime, setIsPickingTime] = useState(false);
+  const [openForm, setOpenForm] = useState<RunNowForm | null>(null);
+  // Kept while the popover closes, so its content does not change under the fade.
+  const [shownForm, setShownForm] = useState<RunNowForm>('later');
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
-  const isPickerRequested = useRef(false);
+  const requestedForm = useRef<RunNowForm | null>(null);
   const invalidate = (queryKeys: string[][]) =>
     Promise.all(queryKeys.map(queryKey => queryClient.invalidateQueries({ queryKey })));
   const startRun = useMutation({
-    mutationFn: () => startRoutineRun(sameOriginApi, routine),
-    onSuccess: () => invalidate(QUERY_KEYS_CHANGED_BY_RUN),
+    mutationFn: (request?: StartRunRequest) => startRoutineRun(sameOriginApi, routine, request),
+    onSuccess: () => {
+      setOpenForm(null);
+      return invalidate(QUERY_KEYS_CHANGED_BY_RUN);
+    },
   });
   const scheduleRun = useMutation({
     mutationFn: (at: Date) => scheduleOneTimeRun(sameOriginApi, routine, at.toISOString()),
     onSuccess: () => {
-      setIsPickingTime(false);
+      setOpenForm(null);
       return invalidate(QUERY_KEYS_CHANGED_BY_ONE_TIME_RUNS);
     },
   });
   // aria-disabled instead of disabled keeps keyboard focus on the button after it is pressed.
   const isUnavailable = isRunning || startRun.isPending;
-  const error = startRun.error ?? (isPickingTime ? null : scheduleRun.error);
+  const error = openForm === null ? (startRun.error ?? scheduleRun.error) : null;
+  const startedCount = startRun.isSuccess ? (startRun.variables?.runs ?? null) : null;
   const scheduledTime = scheduleRun.isSuccess
     ? formatDayTime(scheduleRun.variables.toISOString())
     : null;
@@ -71,7 +82,14 @@ export function RunNowButton({
   function runNow() {
     if (isUnavailable) return;
     scheduleRun.reset();
-    startRun.mutate();
+    startRun.mutate(undefined);
+  }
+
+  // A routine that is running answers with why, which the form shows.
+  function runSeveral(request: StartRunRequest) {
+    if (startRun.isPending) return;
+    scheduleRun.reset();
+    startRun.mutate(request);
   }
 
   function runLater(at: Date) {
@@ -79,16 +97,20 @@ export function RunNowButton({
     scheduleRun.mutate(at);
   }
 
-  function togglePicker(isOpen: boolean) {
+  function toggleForm(form: RunNowForm | null) {
     startRun.reset();
     scheduleRun.reset();
-    setIsPickingTime(isOpen);
+    setOpenForm(form);
+    if (form !== null) setShownForm(form);
   }
 
   return (
     <div className="flex min-w-0 items-center justify-end gap-2">
       <span role="status" className="sr-only">
-        {startRun.isSuccess && `Started a run of ${routine}`}
+        {startRun.isSuccess &&
+          (startedCount === null
+            ? `Started a run of ${routine}`
+            : `Started ${startedCount} runs of ${routine}`)}
         {scheduledTime !== null && `${routine} runs once at ${scheduledTime}`}
       </span>
       {error && (
@@ -100,7 +122,12 @@ export function RunNowButton({
           {error.message}
         </span>
       )}
-      <Popover.Root open={isPickingTime} onOpenChange={togglePicker}>
+      <Popover.Root
+        open={openForm !== null}
+        onOpenChange={isOpen => {
+          if (!isOpen) toggleForm(null);
+        }}
+      >
         <Popover.Anchor asChild>
           <div className="flex">
             <Button
@@ -154,18 +181,27 @@ export function RunNowButton({
                     onClick={event => event.stopPropagation()}
                     // Opened any sooner, the picker loses the focus to the closing menu's focus trap.
                     onCloseAutoFocus={event => {
-                      if (!isPickerRequested.current) return;
-                      isPickerRequested.current = false;
+                      const form = requestedForm.current;
+                      if (form === null) return;
+                      requestedForm.current = null;
                       event.preventDefault();
-                      togglePicker(true);
+                      toggleForm(form);
                     }}
                   >
                     {menu}
+                    <DropdownMenu.Item
+                      onSelect={() => {
+                        requestedForm.current = 'several';
+                      }}
+                    >
+                      <Repeat aria-hidden="true" />
+                      Run several times…
+                    </DropdownMenu.Item>
                     <DropdownMenu.Separator />
                     <RunLaterMenuItems
                       onSchedule={runLater}
                       onPickTime={() => {
-                        isPickerRequested.current = true;
+                        requestedForm.current = 'later';
                       }}
                     />
                   </DropdownMenu.Content>
@@ -179,7 +215,10 @@ export function RunNowButton({
         </Popover.Anchor>
         <Popover.Content
           align="end"
-          aria-label={`Run ${routine} once later`}
+          aria-label={match(shownForm)
+            .with('several', () => `Run ${routine} several times`)
+            .with('later', () => `Run ${routine} once later`)
+            .exhaustive()}
           onClick={event => event.stopPropagation()}
           // It opens from the menu, which has no trigger of its own to return the focus to.
           onCloseAutoFocus={event => {
@@ -187,13 +226,26 @@ export function RunNowButton({
             menuTriggerRef.current?.focus();
           }}
         >
-          <RunLaterForm
-            routine={routine}
-            isPending={scheduleRun.isPending}
-            error={scheduleRun.error?.message ?? null}
-            onSubmit={runLater}
-            onCancel={() => togglePicker(false)}
-          />
+          {match(shownForm)
+            .with('several', () => (
+              <RunSeveralForm
+                routine={routine}
+                isPending={startRun.isPending}
+                error={startRun.error?.message ?? null}
+                onSubmit={runSeveral}
+                onCancel={() => toggleForm(null)}
+              />
+            ))
+            .with('later', () => (
+              <RunLaterForm
+                routine={routine}
+                isPending={scheduleRun.isPending}
+                error={scheduleRun.error?.message ?? null}
+                onSubmit={runLater}
+                onCancel={() => toggleForm(null)}
+              />
+            ))
+            .exhaustive()}
         </Popover.Content>
       </Popover.Root>
     </div>

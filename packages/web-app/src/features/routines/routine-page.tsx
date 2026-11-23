@@ -25,6 +25,7 @@ import { ChangePromptMenuItem } from './change-prompt-menu-item';
 import { MemoryPanel } from './memory-panel';
 import { NotifyMenu } from './notify-menu';
 import { OneTimeRunsTable } from './one-time-runs-table';
+import { QueuedRunsSection } from './queued-runs-section';
 import { TokenUsageSection } from './token-usage-section';
 import { WebhookCallsList } from './webhook-calls-list';
 
@@ -104,6 +105,11 @@ function RoutineView({ routine, runNowRef }: RoutineViewProps) {
           )}
         </Tabs.List>
         <Tabs.Content value="runs" className="space-y-10">
+          <QueuedRunsSection
+            routine={routine.name}
+            queuedRuns={routine.queuedRuns}
+            runNowRef={runNowRef}
+          />
           {routine.oneTimeRuns.length > 0 && (
             <section>
               <SectionHeader.Root aside={<OneTimeRunsNote count={routine.oneTimeRuns.length} />}>

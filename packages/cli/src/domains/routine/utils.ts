@@ -4,7 +4,7 @@ import path from 'node:path';
 import type { AgentName } from 'domains/agent/types';
 import { checkCanKeepMemory } from 'domains/agent/utils';
 import { routineNameSchema } from 'domains/routine/ids';
-import { MAX_RETRIES } from 'domains/run/constants';
+import { MAX_RETRIES, MAX_RUNS } from 'domains/run/constants';
 import { describeCron, nextCronRun, parseCron } from 'utils/cron';
 import { getErrorMessage } from 'utils/error';
 
@@ -73,6 +73,14 @@ function readRetries(data: Frontmatter): number {
   return retries;
 }
 
+function readRunCount(data: Frontmatter, key: string): number {
+  const count = Number(readString(data, key) ?? 1);
+  if (!Number.isInteger(count) || count < 1 || count > MAX_RUNS) {
+    throw new Error(`${key} must be a whole number from 1 to ${MAX_RUNS}`);
+  }
+  return count;
+}
+
 function readSchedule(data: Frontmatter): string | null {
   const schedule = readString(data, 'schedule');
   return schedule === 'manual' ? null : schedule;
@@ -125,6 +133,11 @@ export function buildRoutine(file: string, source: string): Routine {
   if (check !== null && schedule === null) {
     throw new Error(`${file}: check runs only at scheduled times, add a schedule or remove check`);
   }
+  const runs = withFile(file, () => readRunCount(data, 'runs'));
+  const maxParallel = withFile(file, () => readRunCount(data, 'maxParallel'));
+  if (maxParallel > runs) {
+    throw new Error(`${file}: maxParallel must be at most runs, which is ${runs}`);
+  }
   const memory = withFile(file, () => readBoolean(data, 'memory'));
   if (memory === true && !checkCanKeepMemory(agent)) {
     throw new Error(`${file}: agent command has no memory, use claude or codex`);
@@ -142,6 +155,8 @@ export function buildRoutine(file: string, source: string): Routine {
     timeoutMinutes:
       withFile(file, () => readNumber(data, 'timeoutMinutes')) ?? DEFAULT_TIMEOUT_MINUTES,
     retries: withFile(file, () => readRetries(data)),
+    runs,
+    maxParallel,
     memory: memory ?? false,
     worktree: withFile(file, () => readBoolean(data, 'worktree')) ?? false,
     check,

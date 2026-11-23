@@ -61,8 +61,15 @@ const { buildRoutine } = await import('../routine/utils');
 const { readMemory, readRoutineMemory, writeMemory } = await import('../routine/memory');
 const { appendLogEvent, buildRunTranscript, readRunEvents } = await import('./event-log');
 const { writeCheckError, writePayload, writePrompt } = await import('./payload');
-const { checkIsRunning, checkIsStarting, replyToRun, runRoutine, startDetachedRun } =
-  await import('./runner');
+const {
+  checkIsRunning,
+  checkIsStarting,
+  replyToRun,
+  runRoutine,
+  startDetachedRun,
+  startDetachedRuns,
+} = await import('./runner');
+const { cancelQueuedRuns, readQueuedRuns } = await import('./queued-runs');
 const { checkIsProcessAlive, listRuns, readRunRecord, writeRunRecord } = await import('./storage');
 const { requestWaitAction } = await import('./usage-limit');
 const { makeRunRecord } = await import('domains/run/mocks');
@@ -212,6 +219,27 @@ test('a started run counts as starting until its record appears or time runs out
   startDetachedRun(routine, { trigger: 'manual', runId });
   writeRunRecord(makeRunRecord({ id: runId, routine, status: 'running' }));
   assert.equal(checkIsStarting(routine), false);
+});
+
+test('a start of several runs gives each the prompt, and its queued runs keep the routine running until they are cancelled', () => {
+  const routine = routineNameSchema.parse('missing-batch');
+  const readPrompt = (id: RunId) =>
+    fs.readFileSync(path.join(config.stateDir, 'runs', routine, `${id}.prompt`), 'utf8');
+  const firstId = startDetachedRuns(
+    routine,
+    { trigger: 'manual' },
+    { count: 3, maxParallel: 1, prompt: 'Fix the oldest bug' },
+  );
+  const queuedIds = readQueuedRuns().map(({ id }) => id);
+  assert.equal(queuedIds.length, 2);
+  for (const id of [firstId, ...queuedIds]) assert.equal(readPrompt(id), 'Fix the oldest bug');
+
+  writeRunRecord(makeRunRecord({ id: firstId, routine, status: 'succeeded' }));
+  assert.equal(checkIsRunning(routine), true);
+  cancelQueuedRuns(routine);
+  assert.equal(checkIsRunning(routine), false);
+  assert.deepEqual(readQueuedRuns(), []);
+  for (const id of queuedIds) assert.throws(() => readPrompt(id), { code: 'ENOENT' });
 });
 
 test('without an after hook a run writes its record as before and logs no after hook', async t => {

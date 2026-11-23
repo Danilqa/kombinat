@@ -2,7 +2,14 @@ import { match } from 'ts-pattern';
 
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import type { RunsPage, TokenUsage } from 'domains/run/types';
-import { formatTokens, formatTokenShare, getRetriesLabel, getTokenTotal } from 'domains/run/utils';
+import {
+  formatTokens,
+  formatTokenShare,
+  getQueuedRunsLabel,
+  getRetriesLabel,
+  getRunCountLabel,
+  getTokenTotal,
+} from 'domains/run/utils';
 import { getSkipReasonLabel } from 'domains/scheduler/utils';
 import { formatDayTime, formatRelativeCompact } from 'utils/date-time';
 
@@ -164,11 +171,23 @@ export function routinePage({
     ...(routine.retries === 0
       ? []
       : [{ label: 'retries', value: [text(getRetriesLabel(routine.retries))], isWide: true }]),
+    ...(routine.runs === 1
+      ? []
+      : [
+          {
+            label: 'runs',
+            value: [text(getRunCountLabel(routine.runs, routine.maxParallel))],
+            isWide: true,
+          },
+        ]),
   ];
   const header: ContentLine[] = toContent([
     [
       text(routine.name, S.boldMagenta),
       ...(routine.running ? [text(`  ${spinner(now)} running`, S.boldYellow)] : []),
+      ...(detail === undefined || detail.queuedRuns.length === 0
+        ? []
+        : [text(`  · ${getQueuedRunsLabel(detail.queuedRuns.length)}`, S.yellow)]),
       ...(routine.queuedWebhooks > 0
         ? [text(`  · ${formatQueueLabel(routine.queuedWebhooks)}`, S.yellow)]
         : []),

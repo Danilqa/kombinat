@@ -30,6 +30,8 @@ export interface RoutineFile {
   webhookGate?: string;
   check?: string;
   timeoutMinutes?: number;
+  runs?: number;
+  maxParallel?: number;
   worktree?: boolean;
   maxBudgetUsd?: number;
   memory?: boolean;

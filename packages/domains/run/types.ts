@@ -5,6 +5,7 @@ import type { Transcript } from '../transcript/types';
 import type {
   blockedActionSchema,
   changedFileSchema,
+  queuedRunSchema,
   runRecordSchema,
   runRetrySchema,
   runsCursorKeySchema,
@@ -22,6 +23,7 @@ import type {
 } from './schemas';
 
 export type BlockedAction = z.infer<typeof blockedActionSchema>;
+export type QueuedRun = z.infer<typeof queuedRunSchema>;
 export type RunStatus = z.infer<typeof runStatusSchema>;
 export type RunTrigger = z.infer<typeof runTriggerSchema>;
 export type RunRecord = z.infer<typeof runRecordSchema>;

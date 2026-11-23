@@ -123,6 +123,8 @@ timeoutMinutes: 55
 - `agent` is `claude` (default), `codex` or `command`.
 - `timeoutMinutes` stops the run after this time. Default 55.
 - `retries` is how many more attempts a run gets when it fails or times out, 5 minutes apart. Default 0, at most 10. See [Retries](#retries).
+- `runs` is how many runs each start makes, such as 3 to work on three issues. Default 1, at most 20. See [Several runs](#several-runs).
+- `maxParallel` is how many of those runs work at once. Default 1, one after another.
 - `check` is an optional shell command that runs before each scheduled run and skips it when there is nothing to do, so the agent spends no tokens then. Exit 0 starts the run and exit 78 skips it, see [docs/hooks.md](docs/hooks.md#check).
 - `before` is an optional shell command that runs first. If it fails or takes more than 3 minutes, the run fails.
 - `after` is an optional shell command that runs last, whatever the outcome, for example to post failures to Slack. It gets the finished run on stdin and cannot change it, see [docs/hooks.md](docs/hooks.md).
@@ -137,6 +139,14 @@ Changes apply on the next check, no restart needed. Write the prompt so the agen
 With `retries: 2`, a run that stops with an error, such as a stream idle timeout or a hang that hits `timeoutMinutes`, shows Retrying and tries again 5 minutes later, up to 2 more times. The next attempt continues the agent's session where it stopped. Without a session, such as for `command` or after a failed `before`, it starts over with `before`. Each attempt gets the whole `timeoutMinutes`.
 
 The run's page shows the error and when the next attempt starts, with Retry now and Stop retrying. Its transcript marks where each attempt stopped. A run that hits its `maxBudgetUsd` or a usage limit is not retried, and neither is one whose `cwd` or agent is missing. The `after` hook and the Inbox see only how the last attempt ended.
+
+### Several runs
+
+With `runs: 3`, each scheduled time, Run now and one-time run starts 3 runs. By default they run one after another: the next one starts when the one before it ends. With `maxParallel: 3`, all three start at once. Give such a routine `worktree: true`, so the runs don't change the same checkout.
+
+The runs that wait show under Queued on the routine's page, with Cancel. They also wait while the Claude plan is at its usage limit, and start after the reset. A scheduled time is skipped while runs of the last start still wait. Webhooks start one run each.
+
+To start a routine several times just once, open the menu next to Run now and pick Run several times.
 
 ### Memory
 
@@ -168,8 +178,8 @@ A setting the agent does not support fails validation.
 
 - On macOS, the installed daemon keeps the Mac awake while it is on power. On battery the Mac sleeps as usual, and a laptop with a closed lid can still sleep. macOS has a system-wide switch that turns sleep off, `sudo pmset -a disablesleep 1`, which Kombinat does not touch.
 - If the Mac was asleep, each routine runs once for its latest missed time, up to 7 days back.
-- A routine never runs twice at the same time. If it is still running at its next time, that run is skipped. A run that waits for a usage limit to reset or for its next attempt counts as running.
-- At most 3 routines run at once. A run that waits for a usage limit or for its next attempt does not count toward this.
+- A routine never runs twice at the same time, unless its `maxParallel` allows it. If it is still running at its next time, that run is skipped. A run that waits for a usage limit to reset or for its next attempt counts as running, and so do the queued runs of a start with `runs`.
+- At most 3 runs work at once. A run that waits for a usage limit or for its next attempt does not count toward this.
 - To run a routine once at another time, such as tonight, open the menu next to Run now and pick a time, or press `L` in the terminal. The time is kept on this machine, not in the routine file. The run waits while the routine is still running, and the routine's page lists it with Cancel. After a sleep, missed one-time runs count as missed times: the routine runs once.
 - To run a one-off task, press New run on the Runs page of the dashboard, write the prompt and pick a routine. The prompt runs once in that routine's folder, with its agent and settings, and the routine file stays as it is.
 
@@ -188,7 +198,7 @@ Merged changes to your routines go live within 5 minutes. To update Kombinat, bu
 | `KOMBINAT_PORT`           | `7433`                | dashboard port                         |
 | `KOMBINAT_STATE_DIR`      | `~/.kombinat`         | logs and history                       |
 | `KOMBINAT_ROUTINES_DIR`   | `./routines`          | routine files                          |
-| `KOMBINAT_MAX_CONCURRENT` | `3`                   | routines that can run at once          |
+| `KOMBINAT_MAX_CONCURRENT` | `3`                   | runs that can work at once             |
 | `KOMBINAT_TICK_SECONDS`   | `30`                  | how often the daemon checks routines   |
 | `KOMBINAT_PULL_MINUTES`   | `5`                   | auto `git pull` interval, 0 to disable |
 | `KOMBINAT_PULL_BRANCH`    | `main`                | branch the daemon pulls                |

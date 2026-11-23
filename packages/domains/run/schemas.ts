@@ -49,6 +49,19 @@ export const blockedActionSchema = z.object({
 
 export const runTriggerSchema = z.enum(['schedule', 'manual', 'catch_up', 'webhook']);
 
+// A run of a start that makes several, waiting for a slot of its own.
+export const queuedRunSchema = z.object({
+  routine: routineNameSchema,
+  id: runIdSchema,
+  trigger: runTriggerSchema,
+  scheduledFor: z.string().nullable(),
+  // How many runs of the routine may work at once while this one waits.
+  maxParallel: z.number(),
+  queuedAt: z.string(),
+});
+
+export const queuedRunsFileSchema = z.object({ runs: z.array(queuedRunSchema) });
+
 // removed: the folder is gone and the branch stays. discarded: nothing changed, so both are gone.
 export const worktreeStateSchema = z.enum(['present', 'removed', 'discarded']);
 

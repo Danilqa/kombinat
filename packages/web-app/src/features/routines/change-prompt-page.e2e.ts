@@ -58,5 +58,8 @@ test('refuses to start a run with a blank prompt', async ({ page, kombinat }) =>
     data: { prompt: '  ' },
   });
   expect(response.status()).toBe(400);
-  expect(await response.json()).toEqual({ error: 'The body must be JSON with a prompt' });
+  expect(await response.json()).toEqual({
+    error:
+      "The body must be JSON, with a prompt that isn't blank and runs and maxParallel from 1 to 20",
+  });
 });

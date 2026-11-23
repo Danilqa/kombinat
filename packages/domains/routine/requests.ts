@@ -5,6 +5,7 @@ import type { HttpClient } from 'utils/http';
 import type { RunId } from '../run/ids';
 import type { RoutineName } from './ids';
 import {
+  cancelledQueuedRunsSchema,
   changedOneTimeRunsSchema,
   routineDetailSchema,
   routineSummarySchema,
@@ -28,10 +29,31 @@ export async function getRoutine(http: HttpClient, name: RoutineName): Promise<R
   return http.request(`/api/routines/${encodeURIComponent(name)}`, routineDetailSchema);
 }
 
-export async function startRoutineRun(http: HttpClient, name: RoutineName): Promise<void> {
-  await http.request(`/api/routines/${encodeURIComponent(name)}/run`, startedRunSchema, {
-    method: 'POST',
-  });
+// Without runs and maxParallel, the routine's own apply.
+export async function startRoutineRun(
+  http: HttpClient,
+  name: RoutineName,
+  body?: StartRunRequest,
+): Promise<void> {
+  await http.request(
+    `/api/routines/${encodeURIComponent(name)}/run`,
+    startedRunSchema,
+    body === undefined
+      ? { method: 'POST' }
+      : {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body),
+        },
+  );
+}
+
+export async function cancelQueuedRuns(http: HttpClient, name: RoutineName): Promise<void> {
+  await http.request(
+    `/api/routines/${encodeURIComponent(name)}/queued-runs/cancel`,
+    cancelledQueuedRunsSchema,
+    { method: 'POST' },
+  );
 }
 
 export async function startRoutineRunWithPrompt(
@@ -39,7 +61,8 @@ export async function startRoutineRunWithPrompt(
   name: RoutineName,
   prompt: string,
 ): Promise<RunId> {
-  const body: StartRunRequest = { prompt };
+  // A prompt written for this run runs once, whatever number of runs the routine makes.
+  const body: StartRunRequest = { prompt, runs: 1 };
   const { runId } = await http.request(
     `/api/routines/${encodeURIComponent(name)}/run`,
     startedRunWithIdSchema,

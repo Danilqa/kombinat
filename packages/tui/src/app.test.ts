@@ -73,6 +73,8 @@ function makeRoutine(name: string, overrides: Partial<RoutineSummary> = {}): Rou
     cwd: '/repo',
     timeoutMinutes: 55,
     retries: 0,
+    runs: 1,
+    maxParallel: 1,
     worktree: false,
     maxBudgetUsd: null,
     file: `routines/${name}.md`,
@@ -163,6 +165,7 @@ interface FakeOptions {
   transcript?: Transcript;
   webhookCalls?: RoutineDetail['webhookCalls'];
   memoryNotes?: RoutineDetail['memoryNotes'];
+  queuedRuns?: RoutineDetail['queuedRuns'];
 }
 
 function makeClient(overview: Overview, options: FakeOptions) {
@@ -197,6 +200,7 @@ function makeClient(overview: Overview, options: FakeOptions) {
           const [routine, at] = entry.split(' ');
           return routine === name && at !== undefined ? [{ routine: name, at }] : [];
         }),
+        queuedRuns: options.queuedRuns ?? [],
         memoryNotes: options.memoryNotes ?? null,
       };
       return Promise.resolve(detail);
@@ -659,6 +663,27 @@ test('the routines list and the queue tab show the webhooks that wait', async ()
     for (const line of app.render(width, height)) assert.equal(lineWidth(line), width);
   }
   assert.match(await press(']', ']'), /Runs 1/);
+});
+
+test('the routine page shows how many runs each start makes and the ones that wait', async () => {
+  const overview = makeOverview();
+  overview.routines = overview.routines.map(routine => ({ ...routine, runs: 3, maxParallel: 2 }));
+  const queuedRun = (id: string) => ({
+    routine: routineNameSchema.parse('on-call-monitoring'),
+    id: runIdSchema.parse(id),
+    trigger: 'manual' as const,
+    scheduledFor: null,
+    maxParallel: 2,
+    queuedAt: '2026-10-06T11:58:00Z',
+  });
+  const { app, press } = await makeApp({
+    overview,
+    queuedRuns: [queuedRun('20261006T115800Z-q001'), queuedRun('20261006T115800Z-q002')],
+  });
+  const routineScreen = await press('enter');
+  assert.match(routineScreen, /· 2 runs queued/);
+  assert.match(routineScreen, /runs\s+3 each time, 2 at once/);
+  for (const line of app.render(60, 16)) assert.equal(lineWidth(line), 60);
 });
 
 test('the webhooks tab lists the calls of a routine with what each did', async () => {
