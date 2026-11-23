@@ -29,6 +29,7 @@ const MENU_TRIGGER_CLASS_NAMES: Record<RunNowVariant, string> = {
 
 interface RunNowButtonProps {
   routine: RoutineName;
+  runs: number;
   isRunning: boolean;
   variant?: RunNowVariant;
   menu?: ReactNode;
@@ -37,6 +38,7 @@ interface RunNowButtonProps {
 
 export function RunNowButton({
   routine,
+  runs,
   isRunning,
   variant = 'primary',
   menu,
@@ -67,7 +69,7 @@ export function RunNowButton({
   // aria-disabled instead of disabled keeps keyboard focus on the button after it is pressed.
   const isUnavailable = isRunning || startRun.isPending;
   const error = openForm === null ? (startRun.error ?? scheduleRun.error) : null;
-  const startedCount = startRun.isSuccess ? (startRun.variables?.runs ?? null) : null;
+  const startedCount = startRun.isSuccess ? (startRun.variables?.runs ?? runs) : null;
   const scheduledTime = scheduleRun.isSuccess
     ? formatDayTime(scheduleRun.variables.toISOString())
     : null;
@@ -108,7 +110,7 @@ export function RunNowButton({
     <div className="flex min-w-0 items-center justify-end gap-2">
       <span role="status" className="sr-only">
         {startRun.isSuccess &&
-          (startedCount === null
+          (startedCount === 1
             ? `Started a run of ${routine}`
             : `Started ${startedCount} runs of ${routine}`)}
         {scheduledTime !== null && `${routine} runs once at ${scheduledTime}`}
@@ -190,6 +192,7 @@ export function RunNowButton({
                   >
                     {menu}
                     <DropdownMenu.Item
+                      disabled={isUnavailable}
                       onSelect={() => {
                         requestedForm.current = 'several';
                       }}

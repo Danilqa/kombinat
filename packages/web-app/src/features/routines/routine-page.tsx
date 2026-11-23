@@ -188,6 +188,7 @@ export function RoutinePage() {
               <RunNowButton
                 ref={runNowRef}
                 routine={data.name}
+                runs={data.runs}
                 isRunning={data.running}
                 menu={<ChangePromptMenuItem routine={data.name} />}
               />

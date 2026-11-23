@@ -174,7 +174,7 @@ function toTimeInputValue(date: Date): string {
   return date.toISOString().slice(0, 16);
 }
 
-test('blocks Run now while the routine runs but still schedules a run once later', async ({
+test('blocks Run now and Run several times while the routine runs but still schedules a run once later', async ({
   page,
   kombinat,
 }) => {
@@ -197,6 +197,10 @@ test('blocks Run now while the routine runs but still schedules a run once later
     - definition: "-"
   `);
   await page.getByRole('button', { name: 'More ways to run write-release-notes' }).click();
+  await expect(page.getByRole('menuitem', { name: 'Run several times…' })).toHaveAttribute(
+    'aria-disabled',
+    'true',
+  );
   await page.getByRole('menuitem', { name: /^Tonight at 02:00/ }).click();
 
   await expect(page.getByRole('heading', { name: 'Scheduled once' })).toBeVisible();
@@ -275,7 +279,7 @@ test('runs a routine several times, one after another, and cancels the runs that
   await expect(count).toBeFocused();
   await count.fill('25');
   await page.getByRole('button', { name: 'Start runs' }).click();
-  await expect(page.getByRole('alert')).toHaveText('Choose from 2 to 20 runs');
+  await expect(page.getByRole('alert')).toHaveText('Enter a number from 2 to 20');
   await count.fill('4');
   await expect(page.getByRole('radio', { name: 'One after another' })).toBeChecked();
   await page.getByRole('button', { name: 'Start 4 runs' }).click();
@@ -294,6 +298,9 @@ test('runs a routine several times, one after another, and cancels the runs that
     timeout: 15_000,
   });
   await expect(page.getByRole('tab', { name: 'Runs 1' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Run now bug-fix-pickup' }).click();
+  await expect(page.getByText('Started 3 runs of bug-fix-pickup')).toBeAttached();
 });
 
 test('starts all the runs at once when they may run in parallel', async ({ page, kombinat }) => {

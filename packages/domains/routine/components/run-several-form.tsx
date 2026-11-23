@@ -56,7 +56,7 @@ export function RunSeveralForm({
   function submit(event: SubmitEvent) {
     event.preventDefault();
     if (runs === null) {
-      setInputError(`Choose from ${MIN_RUNS} to ${MAX_RUNS} runs`);
+      setInputError(`Enter a number from ${MIN_RUNS} to ${MAX_RUNS}`);
       return;
     }
     const maxParallel = match(pace)
