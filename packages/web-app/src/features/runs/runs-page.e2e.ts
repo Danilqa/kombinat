@@ -46,6 +46,27 @@ test('shows the date and time a run started next to how long ago it was', async 
   await expect(page.getByRole('row', { name: /^triage-sentry/ })).toContainText('4 Mar, 06:05');
 });
 
+const TOKENS = { input: 1000, output: 9000, cacheWrite: 90_000, cacheRead: 1_100_000 };
+
+test('shows the tokens each run used', async ({ page, kombinat, time }) => {
+  kombinat.addRoutine({ name: 'night-agent-tasks' });
+  kombinat.addRoutine({ name: 'disk-cleanup', agent: 'command', command: 'echo done' });
+  kombinat.addRun({
+    routine: 'night-agent-tasks',
+    startedAt: time.minutesAgo(60),
+    numTurns: 12,
+    tokens: TOKENS,
+  });
+  kombinat.addRun({ routine: 'disk-cleanup', startedAt: time.minutesAgo(30) });
+  await page.goto('/runs');
+
+  await expect(page.getByRole('columnheader', { name: 'Tokens' })).toBeVisible();
+  await expect(page.getByRole('row', { name: /^night-agent-tasks/ })).toHaveAccessibleName(
+    / 12 1\.2M$/,
+  );
+  await expect(page.getByRole('row', { name: /^disk-cleanup/ })).toHaveAccessibleName(/ - -$/);
+});
+
 test('keeps runs for the chosen time, and always the last run of each routine', async ({
   page,
   kombinat,
@@ -100,4 +121,23 @@ test('keeps the page header and the table header on top as the list scrolls', as
     .locator('th', { hasText: /^Routine$/ })
     .evaluateAll(cells => cells.map(cell => cell.getBoundingClientRect().top));
   expect(headerTops.filter(top => top > titleBottom && top < titleBottom + 32)).toHaveLength(1);
+});
+
+test.describe('on a phone', () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+
+  test('shows the tokens each run used', async ({ page, kombinat, time }) => {
+    kombinat.addRoutine({ name: 'night-agent-tasks' });
+    kombinat.addRun({
+      routine: 'night-agent-tasks',
+      startedAt: time.minutesAgo(60),
+      tokens: TOKENS,
+    });
+    await page.goto('/runs');
+
+    await expect(page.getByRole('columnheader', { name: 'Tokens' })).toBeVisible();
+    await expect(page.getByRole('row', { name: /^night-agent-tasks/ })).toHaveAccessibleName(
+      /1\.2M$/,
+    );
+  });
 });
