@@ -154,7 +154,7 @@ test('a run that waits for a usage limit says when it continues and can continue
 
   const card = page.getByRole('region', { name: /Waiting for Claude.s 5-hour limit to reset/ });
   await expect(page.getByRole('main').getByText('Waiting for limit')).toBeVisible();
-  await expect(card).toContainText(/continues its session at \d\d:\d\d, in 47 min\./);
+  await expect(card).toContainText(/continues its session at (\d+ \w+, )?\d\d:\d\d, in 47 min\./);
   await page.getByRole('tab', { name: /Transcript & chat/ }).click();
   await expect(page.getByText('Paused at the 5-hour limit')).toBeVisible();
   await expect(page.getByText('Finished with error')).toBeHidden();
@@ -230,7 +230,7 @@ test('a run that stopped with an error says when it retries and can retry now', 
   const card = page.getByRole('region', { name: 'Attempt 1 of 3 stopped with an error' });
   await expect(page.getByRole('main').getByText('Retrying', { exact: true })).toBeVisible();
   await expect(card).toContainText(
-    /partial response received\. Kombinat continues its session right where it left off at \d\d:\d\d, in 4 min\.(?!\.)/,
+    /partial response received\. Kombinat continues its session right where it left off at (\d+ \w+, )?\d\d:\d\d, in 4 min\.(?!\.)/,
   );
   await page.getByRole('tab', { name: /Transcript & chat/ }).click();
   await expect(page.getByText(`Attempt 1 stopped: ${retry.error}`)).toBeVisible();
