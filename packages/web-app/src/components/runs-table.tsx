@@ -15,33 +15,66 @@ interface RunsTableProps {
   onEndReached: () => void;
 }
 
+interface ColumnWidths {
+  table: string;
+  routine: string;
+  status: string;
+  run: string;
+  trigger: string;
+  started: string;
+  duration: string;
+  turns: string;
+  tokens: string;
+}
+
+// Phones give every column a share. The min width grows by the Tokens column's, which keeps the others as wide as before.
+const ALL_RUNS_WIDTHS: ColumnWidths = {
+  table: 'min-w-[840px]',
+  routine: 'max-sm:w-[20%]',
+  // Room for the longest status, Waiting for limit, beside the routine on a phone.
+  status: 'w-[16%] max-sm:w-[20%]',
+  run: 'w-[21%] max-sm:w-[25%]',
+  trigger: 'w-[10%]',
+  started: 'w-[13%] max-sm:w-[16%]',
+  duration: 'w-[9%] max-sm:w-[11%]',
+  turns: 'w-[7%] max-sm:w-[8%]',
+  tokens: 'w-[9%] max-sm:w-[10.5%]',
+};
+
+const ROUTINE_RUNS_WIDTHS: ColumnWidths = {
+  table: 'min-w-[840px] sm:min-w-[760px]',
+  routine: '',
+  status: 'w-[16%]',
+  run: 'w-[25%]',
+  trigger: 'w-[12%]',
+  started: 'w-[13%] max-sm:w-[16%]',
+  duration: 'w-[11%]',
+  turns: 'w-[8%]',
+  tokens: 'w-[15%] max-sm:w-[8%]',
+};
+
 export function RunsTable({ runs, total, hasRoutineColumn, onEndReached }: RunsTableProps) {
   const getRowClickHandler = useRowLink();
   if (runs.length === 0) {
     return <EmptyState>No runs yet. They show up here as soon as they start.</EmptyState>;
   }
+  const widths = hasRoutineColumn ? ALL_RUNS_WIDTHS : ROUTINE_RUNS_WIDTHS;
   return (
     <Table.VirtualRoot
-      className="min-w-[760px]"
+      className={widths.table}
       data={runs}
       totalCount={total}
       onEndReached={onEndReached}
       header={
         <Table.Row>
-          {hasRoutineColumn && <Table.Head>Routine</Table.Head>}
-          {/* Room for the longest status, Waiting for limit, beside the routine on a phone. */}
-          <Table.Head className={cn('w-[16%]', hasRoutineColumn && 'max-sm:w-[20%]')}>
-            Status
-          </Table.Head>
-          <Table.Head className="w-[25%]">Run</Table.Head>
-          <Table.Head className="w-[12%] max-sm:hidden">Trigger</Table.Head>
-          <Table.Head className="w-[13%] max-sm:w-[16%]">Started</Table.Head>
-          <Table.Head className="w-[11%] text-right">Duration</Table.Head>
-          <Table.Head className="w-[8%] text-right">Turns</Table.Head>
-          {/* Only in the room a routine's own runs leave without the routine column. */}
-          {!hasRoutineColumn && (
-            <Table.Head className="w-[15%] text-right max-sm:hidden">Tokens</Table.Head>
-          )}
+          {hasRoutineColumn && <Table.Head className={widths.routine}>Routine</Table.Head>}
+          <Table.Head className={widths.status}>Status</Table.Head>
+          <Table.Head className={widths.run}>Run</Table.Head>
+          <Table.Head className={cn(widths.trigger, 'max-sm:hidden')}>Trigger</Table.Head>
+          <Table.Head className={widths.started}>Started</Table.Head>
+          <Table.Head className={cn(widths.duration, 'text-right')}>Duration</Table.Head>
+          <Table.Head className={cn(widths.turns, 'text-right')}>Turns</Table.Head>
+          <Table.Head className={cn(widths.tokens, 'text-right')}>Tokens</Table.Head>
         </Table.Row>
       }
       computeItemKey={run => `${run.routine}/${run.id}`}
@@ -92,11 +125,9 @@ export function RunsTable({ runs, total, hasRoutineColumn, onEndReached }: RunsT
             <RunDuration run={run} />
           </Table.Cell>
           <Table.Cell className="text-right text-fg tabular-nums">{run.numTurns ?? '-'}</Table.Cell>
-          {!hasRoutineColumn && (
-            <Table.Cell className="text-right text-fg tabular-nums max-sm:hidden">
-              {run.tokens === null ? '-' : formatTokens(getTokenTotal(run.tokens))}
-            </Table.Cell>
-          )}
+          <Table.Cell className="text-right text-fg tabular-nums">
+            {run.tokens === null ? '-' : formatTokens(getTokenTotal(run.tokens))}
+          </Table.Cell>
         </>
       )}
     />

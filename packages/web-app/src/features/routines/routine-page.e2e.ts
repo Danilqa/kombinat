@@ -444,6 +444,19 @@ test('notifies of the failures and findings of a routine and opens the run on a 
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 
+  test('shows the tokens each run used', async ({ page, kombinat, time }) => {
+    kombinat.addRoutine({ name: 'night-agent-tasks' });
+    kombinat.addRun({
+      routine: 'night-agent-tasks',
+      startedAt: time.minutesAgo(60),
+      tokens: { input: 1000, output: 9000, cacheWrite: 90_000, cacheRead: 1_100_000 },
+    });
+    await page.goto('/routines/night-agent-tasks');
+
+    await expect(page.getByRole('columnheader', { name: 'Tokens' })).toBeVisible();
+    await expect(page.getByRole('row', { name: /1\.2M$/ })).toHaveCount(1);
+  });
+
   test("shows a day's tokens when you tap its bar", async ({ page, kombinat, time }) => {
     kombinat.addRoutine({ name: 'night-agent-tasks' });
     kombinat.addRun({
