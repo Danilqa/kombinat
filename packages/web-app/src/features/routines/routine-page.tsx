@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useRef, type RefObject } from 'react';
-import { useParams } from 'react-router';
+import { useLocation, useParams } from 'react-router';
+import { isMatching, P } from 'ts-pattern';
 import { Card, ErrorState, LoadingState, Markdown, Tabs } from 'design-system/components';
 import { PageHeader, SectionHeader } from 'design-system/layouts';
 import {
@@ -21,6 +22,7 @@ import { ROUTINES_PATH } from '@web-app/constants/path';
 import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 import { useRuns } from '@web-app/hooks/use-runs';
 import { useTabSearchParam } from '@web-app/hooks/use-tab-search-param';
+import { AddedRoutineNotice } from './added-routine-notice';
 import { ChangePromptMenuItem } from './change-prompt-menu-item';
 import { MemoryPanel } from './memory-panel';
 import { NotifyMenu } from './notify-menu';
@@ -170,6 +172,8 @@ export function RoutinePage() {
   const name = routineNameSchema.parse(useParams<'name'>().name ?? '');
   useDocumentTitle(name);
   const runNowRef = useRef<HTMLButtonElement>(null);
+  const state: unknown = useLocation().state;
+  const addedFile = isMatching({ addedFile: P.string }, state) ? state.addedFile : null;
   const { data, error, isPending } = useQuery({
     queryKey: ['routines', name],
     queryFn: () => getRoutine(sameOriginApi, name),
@@ -197,6 +201,7 @@ export function RoutinePage() {
         }
       />
       <RoutineHeader name={name} routine={data} />
+      {addedFile !== null && <AddedRoutineNotice file={addedFile} />}
       {error && <ErrorState message={error.message} />}
       {isPending && <LoadingState />}
       {data && <RoutineView routine={data} runNowRef={runNowRef} />}

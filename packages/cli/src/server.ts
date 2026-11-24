@@ -20,10 +20,12 @@ import { releaseVersionSchema } from 'domains/release/ids';
 import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
 import { MEMORY_MAX_LENGTH } from 'domains/routine/constants';
 import {
+  addRoutineRequestSchema,
   memoryRequestSchema,
   oneTimeRunRequestSchema,
   startRunRequestSchema,
 } from 'domains/routine/schemas';
+import { findRoutineTemplate } from 'domains/routine/templates';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
 import { MAX_RUNS, RUNS_CURSOR_ERROR } from 'domains/run/constants';
 import { runIdSchema, type RunId } from 'domains/run/ids';
@@ -60,6 +62,7 @@ import { readNotifyLevels, writeNotifyLevels } from './domains/inbox/notificatio
 import { readInboxState, writeInboxState } from './domains/inbox/storage';
 import { readRoutineMemory, writeMemory } from './domains/routine/memory';
 import { loadRoutines } from './domains/routine/storage';
+import { addRoutineFromTemplate } from './domains/routine/templates';
 import type { Routine } from './domains/routine/types';
 import { describeSchedule, getNextRun } from './domains/routine/utils';
 import { buildRunTranscript, readRunEvents } from './domains/run/event-log';
@@ -261,6 +264,33 @@ function getRoutineDetail(routine: Routine): ApiResponse {
     memoryNotes: routine.memory ? readRoutineMemory(routine.name) : null,
   };
   return ok(detail);
+}
+
+function addRoutine(body: Buffer): ApiResponse {
+  const request = addRoutineRequestSchema.safeParse(parseJson(body.toString('utf8')));
+  if (!request.success) {
+    return fail(
+      400,
+      'The body must be JSON with a template, a lowercase kebab-case name, a folder and a schedule',
+    );
+  }
+  const { template: id, name, ...choices } = request.data;
+  const template = findRoutineTemplate(id);
+  if (template === null) return fail(404, `Unknown template ${id}`);
+  const added = addRoutineFromTemplate(template, {
+    ...choices,
+    name: routineNameSchema.parse(name),
+  });
+  return match(added)
+    .with({ outcome: 'invalid' }, ({ error }) => fail(400, error))
+    .with({ outcome: 'exists' }, () =>
+      fail(409, `A routine named ${name} already exists. Choose another name`),
+    )
+    .with({ outcome: 'added' }, ({ file }) => ({
+      status: 201,
+      body: { ok: true, name, file: path.relative(config.projectRoot, file) },
+    }))
+    .exhaustive();
 }
 
 function parseOneTimeRun(routine: Routine, body: Buffer): OneTimeRun | null {
@@ -528,6 +558,7 @@ function routeApi(request: ApiRequest, context: ApiContext): ApiResponse | Promi
   return match(request)
     .with(['GET', ['status']], () => ok(getStatus(startedAt)))
     .with(['GET', ['routines']], () => ok(getRoutineSummaries()))
+    .with(['POST', ['routines']], () => addRoutine(context.request.body))
     .with(['GET', ['routines', P.string]], ([, [, name]]) =>
       withRoutine(routineNameSchema.parse(name), getRoutineDetail),
     )

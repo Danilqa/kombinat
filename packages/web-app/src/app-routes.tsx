@@ -9,6 +9,8 @@ import {
   ROUTINE_RUN_PATH,
   RUNS_PATH,
   RUN_PATH,
+  TEMPLATES_PATH,
+  TEMPLATE_PATH,
 } from '@web-app/constants/path';
 import { useCustomization } from '@web-app/contexts';
 import { CalendarPage } from '@web-app/features/calendar/calendar-page';
@@ -21,6 +23,8 @@ import { RoutinesPage } from '@web-app/features/routines/routines-page';
 import { NewRunPage } from '@web-app/features/runs/new-run-page';
 import { RunPage } from '@web-app/features/runs/run-page';
 import { RunsPage } from '@web-app/features/runs/runs-page';
+import { TemplatePage } from '@web-app/features/templates/template-page';
+import { TemplatesPage } from '@web-app/features/templates/templates-page';
 
 export function AppRoutes() {
   const { routes = [] } = useCustomization();
@@ -34,6 +38,8 @@ export function AppRoutes() {
       <Route path={INSIGHTS_PATH} element={<InsightsPage />} />
       <Route path={ROUTINE_PATH} element={<RoutinePage />} />
       <Route path={ROUTINE_RUN_PATH} element={<ChangePromptPage />} />
+      <Route path={TEMPLATES_PATH} element={<TemplatesPage />} />
+      <Route path={TEMPLATE_PATH} element={<TemplatePage />} />
       <Route path={RUN_PATH} element={<RunPage />} />
       {routes.map(({ path, element }) => (
         <Route key={path} path={path} element={element} />

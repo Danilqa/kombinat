@@ -1,9 +1,12 @@
-import type { RoutineName } from 'domains/routine/ids';
+import type { RoutineName, RoutineTemplateId } from 'domains/routine/ids';
 import type { RunId } from 'domains/run/ids';
 
 export const ROUTINES_PATH = '/';
 export const ROUTINE_PATH = '/routines/:name';
 export const ROUTINE_RUN_PATH = '/routines/:name/run';
+// Not under /routines, where a routine named templates would hide the page.
+export const TEMPLATES_PATH = '/templates';
+export const TEMPLATE_PATH = '/templates/:id';
 export const CALENDAR_PATH = '/calendar';
 export const RUNS_PATH = '/runs';
 export const NEW_RUN_PATH = '/runs/new';
@@ -21,4 +24,8 @@ export function getRoutineRunPath(name: RoutineName): string {
 
 export function getRunPath(routine: RoutineName, id: RunId): string {
   return `/runs/${encodeURIComponent(routine)}/${encodeURIComponent(id)}`;
+}
+
+export function getTemplatePath(id: RoutineTemplateId): string {
+  return `${TEMPLATES_PATH}/${encodeURIComponent(id)}`;
 }

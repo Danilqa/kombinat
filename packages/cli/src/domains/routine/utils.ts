@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import type { AgentName } from 'domains/agent/types';
 import { checkCanKeepMemory } from 'domains/agent/utils';
+import { ROUTINE_NAME_PATTERN } from 'domains/routine/constants';
 import { routineNameSchema } from 'domains/routine/ids';
 import { MAX_RETRIES, MAX_RUNS } from 'domains/run/constants';
 import { parseTokenCount } from 'domains/run/utils';
@@ -125,7 +126,7 @@ export function buildRoutine(file: string, source: string): Routine {
   if (name !== fileName) {
     throw new Error(`${file}: frontmatter name "${name}" must match the file name "${fileName}"`);
   }
-  if (!/^[a-z0-9][a-z0-9-]*$/.test(name)) {
+  if (!ROUTINE_NAME_PATTERN.test(name)) {
     throw new Error(`${file}: name must be lowercase kebab-case`);
   }
   const schedule = readSchedule(data);

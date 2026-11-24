@@ -12,12 +12,14 @@ import type { ReleaseUpdate } from 'domains/release/types';
 import { MEMORY_MAX_LENGTH } from 'domains/routine/constants';
 import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
 import {
+  addRoutineRequestSchema,
   memoryRequestSchema,
   oneTimeRunRequestSchema,
   startRunRequestSchema,
 } from 'domains/routine/schemas';
+import { findRoutineTemplate } from 'domains/routine/templates';
 import type { RoutineDetail, RoutineMemory, RoutineSummary } from 'domains/routine/types';
-import { countChangedLines } from 'domains/routine/utils';
+import { countChangedLines, describeScheduleValue } from 'domains/routine/utils';
 import { MAX_RUNS, RUNS_CURSOR_ERROR } from 'domains/run/constants';
 import { runIdSchema, type RunId } from 'domains/run/ids';
 import { runMessageSchema, usageLimitWaitActionSchema } from 'domains/run/schemas';
@@ -61,6 +63,7 @@ import {
   type DemoRoutine,
   type DemoWebhookCall,
 } from './routines';
+import { toTemplateRoutine } from './templates';
 
 export interface ApiResponse {
   status: number;
@@ -207,7 +210,8 @@ function toDemoMemory(routine: DemoRoutine, runs: RunRecord[]): RoutineMemory {
 }
 
 export function createDemoApi(loadedAt = new Date()): DemoApi {
-  const history = createDemoHistory(demoRoutines, loadedAt);
+  const routines = [...demoRoutines];
+  const history = createDemoHistory(routines, loadedAt);
   const daemonStartedAt = new Date(loadedAt.getTime() - DAEMON_UPTIME_MS);
   const fromLoad = (minutes: number) =>
     new Date(loadedAt.getTime() + minutes * MINUTE_MS).toISOString();
@@ -218,7 +222,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
   };
   let notify: NotifyLevels = {};
   let queuedRuns: QueuedRun[] = [];
-  let oneTimeRuns = demoRoutines
+  let oneTimeRuns = routines
     .flatMap(routine =>
       (routine.oneTimeRuns ?? []).map(({ minutesAhead }) =>
         toOneTimeRun(routine, minutesAhead, loadedAt),
@@ -226,10 +230,10 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     )
     .reduce((runs: OneTimeRun[], run) => addOneTimeRun(runs, run), []);
   const memories = new Map(
-    demoRoutines.map(routine => [routine.name, toDemoMemory(routine, history.listRuns(loadedAt))]),
+    routines.map(routine => [routine.name, toDemoMemory(routine, history.listRuns(loadedAt))]),
   );
   const queues = new Map(
-    demoRoutines.map(routine => [
+    routines.map(routine => [
       routine.name,
       (routine.queuedWebhooks ?? []).map(webhook => toQueuedWebhook(webhook, loadedAt)),
     ]),
@@ -288,10 +292,10 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
 
   function getTokenUsages(now: Date, runs = listRuns(now)): Map<RoutineName, TokenUsage | null> {
     const usages = buildTokenUsages(
-      demoRoutines.map(routine => runs.filter(run => run.routine === routine.name)),
+      routines.map(routine => runs.filter(run => run.routine === routine.name)),
       now,
     );
-    return new Map(demoRoutines.map((routine, index) => [routine.name, usages[index] ?? null]));
+    return new Map(routines.map((routine, index) => [routine.name, usages[index] ?? null]));
   }
 
   // Takes the runs of all routines, so a list of summaries builds them once.
@@ -318,7 +322,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     name: RoutineName,
     respond: (routine: DemoRoutine) => ApiResponse,
   ): ApiResponse {
-    const routine = demoRoutines.find(candidate => candidate.name === name);
+    const routine = routines.find(candidate => candidate.name === name);
     return routine === undefined ? fail(404, `Unknown routine ${name}`) : respond(routine);
   }
 
@@ -364,7 +368,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     for (const oneTimeRun of oneTimeRuns) {
       const scheduledFor = new Date(oneTimeRun.at);
       if (scheduledFor > now) continue;
-      const routine = demoRoutines.find(candidate => candidate.name === oneTimeRun.routine);
+      const routine = routines.find(candidate => candidate.name === oneTimeRun.routine);
       if (routine === undefined || !routine.enabled) {
         oneTimeRuns = removeOneTimeRun(oneTimeRuns, oneTimeRun);
         continue;
@@ -378,7 +382,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
   // The daemon's tick for the runs of a start that wait for a slot.
   function startQueuedRuns(now: Date): void {
     for (const queued of queuedRuns) {
-      const routine = demoRoutines.find(candidate => candidate.name === queued.routine);
+      const routine = routines.find(candidate => candidate.name === queued.routine);
       if (routine === undefined) continue;
       const activeCount = listRoutineRuns(routine, now).filter(checkIsRunActive).length;
       if (activeCount >= queued.maxParallel) continue;
@@ -447,6 +451,32 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
       });
     }
     return ok({ ok: true });
+  }
+
+  function addRoutine(body: string, now: Date): ApiResponse {
+    const request = addRoutineRequestSchema.safeParse(parseJson(body));
+    if (!request.success) {
+      return fail(
+        400,
+        'The body must be JSON with a template, a lowercase kebab-case name, a folder and a schedule',
+      );
+    }
+    const { template: id, ...choices } = request.data;
+    const template = findRoutineTemplate(id);
+    if (template === null) return fail(404, `Unknown template ${id}`);
+    if (describeScheduleValue(choices.schedule) === null) {
+      return fail(400, `${choices.schedule} is not a cron schedule or manual`);
+    }
+    const name = routineNameSchema.parse(choices.name);
+    if (routines.some(routine => routine.name === name)) {
+      return fail(409, `A routine named ${name} already exists. Choose another name`);
+    }
+    const routine = toTemplateRoutine(template, { ...choices, name });
+    routines.push(routine);
+    history.addRoutine(routine, now);
+    if (template.memory)
+      memories.set(name, { text: '', file: getMemoryFile(routine), change: null });
+    return { status: 201, body: { ok: true, name, file: `routines/${name}.md` } };
   }
 
   function startRun(routine: DemoRoutine, body: string, now: Date): ApiResponse {
@@ -556,7 +586,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     if (!isValid) {
       return fail(400, `from and to must be ISO dates spanning at most ${MAX_CALENDAR_DAYS} days`);
     }
-    return ok(buildCalendar(demoRoutines, listRuns(now), oneTimeRuns, from, to, now));
+    return ok(buildCalendar(routines, listRuns(now), oneTimeRuns, from, to, now));
   }
 
   function updateSettings(body: string): ApiResponse {
@@ -590,8 +620,9 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
       .with(['GET', ['routines']], () => {
         const runs = listRuns(now);
         const tokenUsages = getTokenUsages(now, runs);
-        return ok(demoRoutines.map(routine => getSummary(routine, now, runs, tokenUsages)));
+        return ok(routines.map(routine => getSummary(routine, now, runs, tokenUsages)));
       })
+      .with(['POST', ['routines']], () => addRoutine(body, now))
       .with(['GET', ['routines', P.string]], ([, [, name]]) =>
         withRoutine(routineNameSchema.parse(name), routine => ok(getRoutineDetail(routine, now))),
       )
