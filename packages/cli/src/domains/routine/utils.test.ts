@@ -205,6 +205,21 @@ test('keeps the agent settings that the frontmatter sets', () => {
   assert.equal(codex.effort, 'high');
 });
 
+test('a claude routine can cap the tokens of a run, written in full or with k or M', () => {
+  const tokensOf = (value: string) =>
+    buildRoutine('/tmp/demo.md', routineFile(`maxBudgetTokens: ${value}`)).maxBudgetTokens;
+  assert.equal(tokensOf('3000000'), 3_000_000);
+  assert.equal(tokensOf('500k'), 500_000);
+  assert.equal(tokensOf('2M'), 2_000_000);
+  assert.equal(buildRoutine('/tmp/demo.md', routineFile('')).maxBudgetTokens, null);
+  assert.throws(() => tokensOf('lots'), /maxBudgetTokens must be a number of tokens, such as 500k/);
+  assert.throws(() => tokensOf('0'), /maxBudgetTokens must be a number of tokens/);
+  assert.throws(
+    () => buildRoutine('/tmp/demo.md', routineFile('agent: codex\nmaxBudgetTokens: 1M')),
+    /does not support maxBudgetTokens/,
+  );
+});
+
 test('a claude routine can name fallback models', () => {
   const claude = buildRoutine(
     '/tmp/demo.md',

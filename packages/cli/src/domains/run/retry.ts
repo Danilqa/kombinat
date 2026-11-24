@@ -1,7 +1,8 @@
 import { isMatching, P } from 'ts-pattern';
 
 import { RETRY_DELAY_MINUTES } from 'domains/run/constants';
-import type { RunRecord, RunRetry } from 'domains/run/types';
+import type { RunRecord, RunRetry, TokenCounts } from 'domains/run/types';
+import { formatTokenLimit, getTokenTotal } from 'domains/run/utils';
 
 export const RETRY_TEXT =
   'Your last attempt stopped with an error. Continue the task from where you stopped.';
@@ -24,16 +25,40 @@ export function getBudgetLeft(maxBudgetUsd: number | null, costUsd: number | nul
   return maxBudgetUsd === null ? null : maxBudgetUsd - (costUsd ?? 0);
 }
 
+export interface TokenBudget {
+  total: number;
+  left: number;
+}
+
+export function getTokenBudget(maxBudgetTokens: number | null): TokenBudget | null {
+  return maxBudgetTokens === null ? null : { total: maxBudgetTokens, left: maxBudgetTokens };
+}
+
+export function spendTokens(
+  budget: TokenBudget | null,
+  tokens: TokenCounts | null,
+): TokenBudget | null {
+  return budget === null
+    ? null
+    : { ...budget, left: budget.left - (tokens === null ? 0 : getTokenTotal(tokens)) };
+}
+
+export function getTokenBudgetError(maxBudgetTokens: number): string {
+  return `Reached the budget of ${formatTokenLimit(maxBudgetTokens)} tokens`;
+}
+
 export function checkShouldRetry(
   end: AttemptEnd,
   attempt: number,
   retries: number,
   budgetLeft: number | null,
+  tokenBudget: TokenBudget | null,
 ): boolean {
   return (
     end.canRetry &&
     attempt <= retries &&
     (budgetLeft === null || budgetLeft > 0) &&
+    (tokenBudget === null || tokenBudget.left > 0) &&
     isMatching({ status: P.union('failed', 'timed_out') }, end.outcome)
   );
 }

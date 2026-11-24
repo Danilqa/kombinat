@@ -5,6 +5,7 @@ import type { RunsPage, TokenUsage } from 'domains/run/types';
 import {
   formatTokens,
   formatTokenShare,
+  getBudgetLabel,
   getQueuedRunsLabel,
   getRetriesLabel,
   getRunCountLabel,
@@ -166,7 +167,7 @@ export function routinePage({
     { label: 'timeout', value: [text(`${routine.timeoutMinutes} min`)] },
     {
       label: 'budget',
-      value: [text(routine.maxBudgetUsd === null ? 'none' : `$${routine.maxBudgetUsd.toFixed(2)}`)],
+      value: [text(getBudgetLabel(routine.maxBudgetUsd, routine.maxBudgetTokens) ?? 'none')],
     },
     ...(routine.retries === 0
       ? []

@@ -95,6 +95,8 @@ const resultUsageSchema = z.object({
   cache_read_input_tokens: z.number().optional(),
 });
 
+type ResultUsage = z.infer<typeof resultUsageSchema>;
+
 const modelUsageSchema = z.object({
   inputTokens: z.number().optional(),
   outputTokens: z.number().optional(),
@@ -113,7 +115,13 @@ const claudeEventSchema = z.object({
   subtype: z.string().optional(),
   session_id: sessionIdSchema.optional(),
   parent_tool_use_id: z.string().nullable().optional(),
-  message: z.object({ content: z.unknown().optional() }).optional(),
+  message: z
+    .object({
+      id: z.string().optional(),
+      content: z.unknown().optional(),
+      usage: resultUsageSchema.optional(),
+    })
+    .optional(),
   model: z.string().optional(),
   trigger: z.string().optional(),
   original_model: z.string().optional(),
@@ -263,6 +271,15 @@ function toItems(
 }
 
 // modelUsage counts every model of the session, subagents included. usage counts only the main one.
+function toTokenCounts(usage: ResultUsage): TokenCounts {
+  return {
+    input: usage.input_tokens ?? 0,
+    output: usage.output_tokens ?? 0,
+    cacheWrite: usage.cache_creation_input_tokens ?? 0,
+    cacheRead: usage.cache_read_input_tokens ?? 0,
+  };
+}
+
 function readTokens({ usage, modelUsage }: ClaudeEvent): TokenCounts | null {
   const models = Object.values(modelUsage ?? {});
   if (models.length > 0) {
@@ -275,13 +292,7 @@ function readTokens({ usage, modelUsage }: ClaudeEvent): TokenCounts | null {
       }))
       .reduce((sum, counts) => addTokenCounts(sum, counts) ?? counts);
   }
-  if (usage === undefined) return null;
-  return {
-    input: usage.input_tokens ?? 0,
-    output: usage.output_tokens ?? 0,
-    cacheWrite: usage.cache_creation_input_tokens ?? 0,
-    cacheRead: usage.cache_read_input_tokens ?? 0,
-  };
+  return usage === undefined ? null : toTokenCounts(usage);
 }
 
 function readResult(event: ClaudeEvent): RunUpdate {
@@ -408,6 +419,14 @@ export const claudeAgent: Agent = {
       week: toUsageLimit(windows?.seven_day),
     };
     return limits.session === null && limits.week === null ? null : limits;
+  },
+
+  readCallTokens(event) {
+    const parsed = claudeEventSchema.safeParse(event);
+    if (!parsed.success || parsed.data.type !== 'assistant') return null;
+    const { id, usage } = parsed.data.message ?? {};
+    if (id === undefined || usage === undefined) return null;
+    return { id, tokens: toTokenCounts(usage) };
   },
 
   // A turn cut short by a limit ends with a synthetic message marked rate_limit. The reset comes

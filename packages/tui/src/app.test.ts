@@ -77,6 +77,7 @@ function makeRoutine(name: string, overrides: Partial<RoutineSummary> = {}): Rou
     maxParallel: 1,
     worktree: false,
     maxBudgetUsd: null,
+    maxBudgetTokens: null,
     file: `routines/${name}.md`,
     running: false,
     lastRun: null,

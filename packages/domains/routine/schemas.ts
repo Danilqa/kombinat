@@ -38,6 +38,8 @@ export const routineSummarySchema = z.object({
   // Older daemons do not send it, and tui --url may talk to one.
   worktree: z.boolean().default(false),
   maxBudgetUsd: z.number().nullable(),
+  // Older daemons do not send it, and tui --url may talk to one.
+  maxBudgetTokens: z.number().nullable().default(null),
   file: z.string(),
   running: z.boolean(),
   lastRun: runRecordSchema.nullable(),

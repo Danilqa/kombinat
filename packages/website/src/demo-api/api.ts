@@ -170,6 +170,7 @@ function toRoutineSummary(
     maxParallel: routine.maxParallel ?? 1,
     worktree: routine.worktree ?? false,
     maxBudgetUsd: routine.maxBudgetUsd,
+    maxBudgetTokens: routine.maxBudgetTokens ?? null,
     file: `routines/${routine.name}.md`,
     running: hasQueuedRuns || runs.some(checkIsRunActive),
     lastRun: runs[0] ?? null,

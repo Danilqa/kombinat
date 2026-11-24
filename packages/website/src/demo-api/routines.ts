@@ -128,6 +128,7 @@ export interface DemoRoutine {
   maxParallel?: number;
   worktree?: boolean;
   maxBudgetUsd: number | null;
+  maxBudgetTokens?: number;
   prompt: string;
   runModel: string | null;
   disabledDaysAgo?: number;
@@ -228,6 +229,7 @@ const nightAgentTasks: DemoRoutine = {
   timeoutMinutes: 240,
   retries: 2,
   maxBudgetUsd: 5,
+  maxBudgetTokens: 8_000_000,
   prompt: `Pick up the open issues labelled \`agent\` in this repo, oldest first, until the queue is empty.
 
 For each one, create a branch, implement it, add or update tests, and run \`pnpm typecheck\`, \`pnpm lint\` and \`pnpm test\`. Open a draft pull request that links the issue and explains the change. If the issue is unclear or needs a product decision, leave a question on it and move on.
@@ -1457,6 +1459,7 @@ const umbrellaCheck: DemoRoutine = {
   cwd: HOME,
   timeoutMinutes: 5,
   maxBudgetUsd: null,
+  maxBudgetTokens: 200_000,
   prompt: `Check today's weather forecast for where I am. wttr.in works without an API key.
 
 Answer in one short line: do I need an umbrella today, and why.`,

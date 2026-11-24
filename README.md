@@ -138,7 +138,7 @@ Changes apply on the next check, no restart needed. Write the prompt so the agen
 
 With `retries: 2`, a run that stops with an error, such as a stream idle timeout or a hang that hits `timeoutMinutes`, shows Retrying and tries again 5 minutes later, up to 2 more times. The next attempt continues the agent's session where it stopped. Without a session, such as for `command` or after a failed `before`, it starts over with `before`. Each attempt gets the whole `timeoutMinutes`.
 
-The run's page shows the error and when the next attempt starts, with Retry now and Stop retrying. Its transcript marks where each attempt stopped. A run that hits its `maxBudgetUsd` or a usage limit is not retried, and neither is one whose `cwd` or agent is missing. The `after` hook and the Inbox see only how the last attempt ended.
+The run's page shows the error and when the next attempt starts, with Retry now and Stop retrying. Its transcript marks where each attempt stopped. A run that hits its `maxBudgetUsd`, its `maxBudgetTokens` or a usage limit is not retried, and neither is one whose `cwd` or agent is missing. The `after` hook and the Inbox see only how the last attempt ended.
 
 ### Several runs
 
@@ -156,18 +156,20 @@ The routine's Memory tab in the dashboard shows the notes and the run that chang
 
 ### Agents
 
-| Setting          | `claude`                                                                          | `codex`                                                        | `command` |
-| ---------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------- | --------- |
-| `model`          | default `claude-opus-5-5`                                                         | default from your Codex config                                 | -         |
-| `fallbackModel`  | optional, see below                                                               | -                                                              | -         |
-| `effort`         | `low`, `medium`, `high` (default), `xhigh`, `max`                                 | `minimal`, `low`, `medium`, `high`, `xhigh`                    | -         |
-| `permissionMode` | `auto` (default), `acceptEdits`, `dontAsk`, `bypassPermissions`, `plan`, `manual` | `read-only`, `workspace-write` (default), `danger-full-access` | -         |
-| `maxBudgetUsd`   | optional                                                                          | -                                                              | -         |
-| `onUsageLimit`   | `wait` (default), `fail`                                                          | -                                                              | -         |
-| `command`        | -                                                                                 | -                                                              | required  |
+| Setting           | `claude`                                                                          | `codex`                                                        | `command` |
+| ----------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------- | --------- |
+| `model`           | default `claude-opus-5-5`                                                         | default from your Codex config                                 | -         |
+| `fallbackModel`   | optional, see below                                                               | -                                                              | -         |
+| `effort`          | `low`, `medium`, `high` (default), `xhigh`, `max`                                 | `minimal`, `low`, `medium`, `high`, `xhigh`                    | -         |
+| `permissionMode`  | `auto` (default), `acceptEdits`, `dontAsk`, `bypassPermissions`, `plan`, `manual` | `read-only`, `workspace-write` (default), `danger-full-access` | -         |
+| `maxBudgetUsd`    | optional                                                                          | -                                                              | -         |
+| `maxBudgetTokens` | optional, such as `500k`, `2M` or `3000000`                                       | -                                                              | -         |
+| `onUsageLimit`    | `wait` (default), `fail`                                                          | -                                                              | -         |
+| `command`         | -                                                                                 | -                                                              | required  |
 
 - `claude` runs `claude -p`. Anything that needs approval is denied, and the run still succeeds. The dashboard marks such a run with how many actions were blocked, files it under Needs a look and lists each action with a rule that allows it, such as `Bash(git push *)`. Allow and continue resumes the session with those rules, for that reply only. To allow them in every run, add the rules to `permissions.allow` in `.claude/settings.json` in the routine's folder.
 - `fallbackModel` is the model Claude switches to when `model` is not available, overloaded or fails, such as `claude-sonnet-5-5`. A comma-separated list is tried in order. The run's transcript says when it switched.
+- `maxBudgetTokens` caps the tokens a run uses, counted as the dashboard counts them: input, output and cache. Kombinat stops the run after the model call that reaches it. A run can end over the budget by up to one call, since each call reads the whole conversation again. The run fails with the budget it reached and is not retried. Its next attempts and its turns after a usage limit share the budget, and each reply gets the whole budget. With `maxBudgetUsd` too, the run stops at whichever it reaches first.
 - `onUsageLimit` says what a run does when it hits the 5-hour or weekly limit of the Claude plan. With `wait`, the run shows Waiting for limit, and a minute after the reset, once a run slot is free, Kombinat continues its session where it stopped. The run's page has Continue now and Stop waiting, and its transcript marks the pause. With `fail`, the run fails at the limit.
 - `codex` runs `codex exec`. `permissionMode` sets its sandbox.
 - `command` runs any other CLI, for example `command: gemini --yolo`. It gets the prompt on stdin, and its output is the result.

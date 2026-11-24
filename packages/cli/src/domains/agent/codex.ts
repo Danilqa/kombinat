@@ -225,7 +225,11 @@ export const codexAgent: Agent = {
   binaryEnv: 'CODEX_BIN',
 
   resolveSettings(raw) {
-    rejectUnsupported(raw, ['command', 'fallbackModel', 'maxBudgetUsd', 'onUsageLimit'], 'codex');
+    rejectUnsupported(
+      raw,
+      ['command', 'fallbackModel', 'maxBudgetUsd', 'maxBudgetTokens', 'onUsageLimit'],
+      'codex',
+    );
     return {
       ...raw,
       effort: pickOne(raw.effort, EFFORTS, 'effort', 'codex'),
@@ -274,6 +278,7 @@ export const codexAgent: Agent = {
   },
 
   readPlanLimits: () => null,
+  readCallTokens: () => null,
   findUsageLimitStop: () => null,
   checkIsStoppedByBudget: () => false,
   readBlockedActions: () => [],

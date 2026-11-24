@@ -277,6 +277,41 @@ export function formatTokenShare(share: number): string {
   return share > 0 && share < 0.01 ? '<1%' : shareFormatter.format(share);
 }
 
+const TOKEN_UNITS: Record<string, number> = { '': 1, k: 1e3, m: 1e6, b: 1e9 };
+
+// Reads a count of tokens such as 3000000, 500k, 2M or 1.5m. null for anything else.
+export function parseTokenCount(value: string): number | null {
+  const found = /^(?<amount>\d+(?:\.\d+)?)\s*(?<unit>[kmb]?)$/i.exec(value.trim());
+  const scale = TOKEN_UNITS[found?.groups?.['unit']?.toLowerCase() ?? ''];
+  if (found?.groups === undefined || scale === undefined) return null;
+  const count = Math.round(Number(found.groups['amount']) * scale);
+  return count > 0 ? count : null;
+}
+
+const exactTokenFormatter = new Intl.NumberFormat('en', {
+  notation: 'compact',
+  maximumFractionDigits: 2,
+});
+
+const fullTokenFormatter = new Intl.NumberFormat('en');
+
+// A limit reads short, as 2M or 1.25M, unless that would round it.
+export function formatTokenLimit(tokens: number): string {
+  const short = exactTokenFormatter.format(tokens);
+  return parseTokenCount(short) === tokens ? short : fullTokenFormatter.format(tokens);
+}
+
+export function getBudgetLabel(
+  maxBudgetUsd: number | null,
+  maxBudgetTokens: number | null,
+): string | null {
+  const limits = [
+    ...(maxBudgetUsd === null ? [] : [`$${maxBudgetUsd.toFixed(2)}`]),
+    ...(maxBudgetTokens === null ? [] : [`${formatTokenLimit(maxBudgetTokens)} tokens`]),
+  ];
+  return limits.length === 0 ? null : limits.join(' or ');
+}
+
 export function getTokenTotal(counts: TokenCounts): number {
   return counts.input + counts.output + counts.cacheWrite + counts.cacheRead;
 }
