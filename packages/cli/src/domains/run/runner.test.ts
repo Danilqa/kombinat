@@ -34,9 +34,11 @@ fs.writeFileSync(
   `#!/bin/sh
 if [ -f calls.jsonl ]; then
   cat > /dev/null
-  cat calls.jsonl
   if [ -f stopped.jsonl ]; then
     trap 'kill $! 2> /dev/null; cat stopped.jsonl; exit 0' INT
+  fi
+  cat calls.jsonl
+  if [ -f stopped.jsonl ]; then
     sleep 30 > /dev/null 2>&1 &
     wait
   fi
