@@ -195,6 +195,7 @@ export function RoutinesTable({ routines }: RoutinesTableProps) {
             <Table.Cell>
               <RunNowButton
                 routine={routine.name}
+                runs={routine.runs}
                 isRunning={routine.running}
                 variant="secondary"
                 menu={<ChangePromptMenuItem routine={routine.name} />}

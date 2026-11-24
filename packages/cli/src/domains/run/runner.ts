@@ -35,7 +35,8 @@ import type { Routine } from '../routine/types';
 import type { ChatMessage } from './event-log';
 import { appendLogEvent, readLastMessage, readRunEvents } from './event-log';
 import { getHookError, HOOK_TIMEOUT_MS, runHook } from './hooks';
-import { appendPayload, takeCheckError, takePayload, takePrompt } from './payload';
+import { appendPayload, takeCheckError, takePayload, takePrompt, writePrompt } from './payload';
+import { checkHasQueuedRuns, readQueuedRuns, writeQueuedRuns } from './queued-runs';
 import { getRunsDir, listRuns, readRunRecord, writeRunRecord } from './storage';
 import { checkShouldRetry, getBudgetLeft, planRetry, RETRY_TEXT } from './retry';
 import type { AttemptEnd } from './retry';
@@ -604,46 +605,62 @@ export async function replyToRun(routine: Routine, run: RunRecord): Promise<RunR
 }
 
 interface PendingStart {
-  runId: RunId;
+  routine: RoutineName;
   startedAt: number;
   conversation: string | null;
 }
 
 // Until a run writes its record, only this process knows it started.
-const pendingStarts = new Map<RoutineName, PendingStart>();
+const pendingStarts = new Map<RunId, PendingStart>();
+
+function listStartingRuns(routineName: RoutineName, now = Date.now()): RunId[] {
+  const runIds: RunId[] = [];
+  for (const [runId, pending] of pendingStarts) {
+    if (pending.routine !== routineName) continue;
+    const isWaiting =
+      now - pending.startedAt < PENDING_START_MS && readRunRecord(routineName, runId) === null;
+    if (isWaiting) runIds.push(runId);
+    else pendingStarts.delete(runId);
+  }
+  return runIds;
+}
+
+export function countStartingRuns(routineName: RoutineName, now = Date.now()): number {
+  return listStartingRuns(routineName, now).length;
+}
 
 export function checkIsStarting(routineName: RoutineName, now = Date.now()): boolean {
-  const pending = pendingStarts.get(routineName);
-  if (pending === undefined) return false;
-  const isWaiting =
-    now - pending.startedAt < PENDING_START_MS &&
-    readRunRecord(routineName, pending.runId) === null;
-  if (!isWaiting) pendingStarts.delete(routineName);
-  return isWaiting;
+  return countStartingRuns(routineName, now) > 0;
 }
 
 export function findStartingConversationRun(
   routineName: RoutineName,
   conversation: string,
 ): RunId | null {
-  const pending = pendingStarts.get(routineName);
-  return checkIsStarting(routineName) && pending?.conversation === conversation
-    ? pending.runId
-    : null;
+  return (
+    listStartingRuns(routineName).find(
+      runId => pendingStarts.get(runId)?.conversation === conversation,
+    ) ?? null
+  );
 }
 
+// Its queued runs keep a routine running between the runs of one start.
 export function checkIsRunning(routineName: RoutineName): boolean {
-  return checkIsStarting(routineName) || listRuns(routineName).some(checkIsRunActive);
+  return (
+    checkIsStarting(routineName) ||
+    checkHasQueuedRuns(routineName) ||
+    listRuns(routineName).some(checkIsRunActive)
+  );
 }
 
-export function startDetachedRun(routineName: RoutineName, options: RunOptions): void {
+export function startDetachedRun(routineName: RoutineName, options: RunOptions): RunId {
   const runId = options.runId ?? createRunId();
   const args = getCliArgs('run', routineName, '--trigger', options.trigger, '--run-id', runId);
   if (options.scheduledFor) args.push('--scheduled-for', options.scheduledFor);
   // With =, a key that starts with a dash is still the value.
   if (options.conversation) args.push(`--conversation=${options.conversation}`);
-  pendingStarts.set(routineName, {
-    runId,
+  pendingStarts.set(runId, {
+    routine: routineName,
     startedAt: Date.now(),
     conversation: options.conversation ?? null,
   });
@@ -653,6 +670,41 @@ export function startDetachedRun(routineName: RoutineName, options: RunOptions):
     detached: true,
     stdio: 'ignore',
   }).unref();
+  return runId;
+}
+
+export interface RunBatch {
+  count: number;
+  maxParallel: number;
+  prompt?: string | null;
+}
+
+// Starts the first run and queues the others, which the scheduler starts as slots free up.
+export function startDetachedRuns(
+  routineName: RoutineName,
+  options: RunOptions,
+  { count, maxParallel, prompt = null }: RunBatch,
+): RunId {
+  const firstId = options.runId ?? createRunId();
+  const queuedIds = Array.from({ length: count - 1 }, () => createRunId());
+  if (prompt !== null) {
+    for (const runId of [firstId, ...queuedIds]) writePrompt(routineName, runId, prompt);
+  }
+  if (queuedIds.length > 0) {
+    const queuedAt = new Date().toISOString();
+    writeQueuedRuns([
+      ...readQueuedRuns(),
+      ...queuedIds.map(id => ({
+        routine: routineName,
+        id,
+        trigger: options.trigger,
+        scheduledFor: options.scheduledFor ?? null,
+        maxParallel,
+        queuedAt,
+      })),
+    ]);
+  }
+  return startDetachedRun(routineName, { ...options, runId: firstId });
 }
 
 export function startDetachedReply(run: RunRecord, message: ChatMessage): void {

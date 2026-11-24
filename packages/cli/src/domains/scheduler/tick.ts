@@ -1,6 +1,8 @@
-import { match } from 'ts-pattern';
+import { isMatching, match, P } from 'ts-pattern';
 
+import { getCurrentUsageLimits } from 'domains/daemon/utils';
 import type { RoutineName } from 'domains/routine/ids';
+import type { QueuedRun, RunRecord } from 'domains/run/types';
 import { checkIsRunAtWork } from 'domains/run/utils';
 import type { OneTimeRun, SchedulerState, SkipReason } from 'domains/scheduler/types';
 import { getSkipReasonLabel } from 'domains/scheduler/utils';
@@ -8,10 +10,17 @@ import { cronRunsBetween } from 'utils/cron';
 import { getErrorMessage } from 'utils/error';
 
 import { config } from '../../config';
+import { readPlanUsage } from '../agent/storage';
 import { loadRoutines } from '../routine/storage';
 import type { Routine } from '../routine/types';
-import { checkIsRunning, checkIsStarting, startDetachedRun } from '../run/runner';
-import type { RunOptions } from '../run/runner';
+import { dropQueuedRun, readQueuedRuns, writeQueuedRuns } from '../run/queued-runs';
+import {
+  checkIsRunning,
+  countStartingRuns,
+  startDetachedRun,
+  startDetachedRuns,
+} from '../run/runner';
+import type { RunBatch, RunOptions } from '../run/runner';
 import { getRunningRuns } from '../run/storage';
 import { checkIsWaitOver, requestWaitAction } from '../run/usage-limit';
 import { listQueuedRoutines, takeQueuedWebhook } from '../webhook/queue';
@@ -67,6 +76,81 @@ function recordSkip(
   markScheduled(state, routine, scheduledFor);
 }
 
+const toBatch = (routine: Routine): RunBatch => ({
+  count: routine.runs,
+  maxParallel: routine.maxParallel,
+});
+
+// The runs that started and have no record yet, and the checks, which take a slot until they end.
+function countStarting(routine: RoutineName): number {
+  return countStartingRuns(routine) + (checkIsChecking(routine) ? 1 : 0);
+}
+
+function countRunsAtWork(routines: Routine[], runningRuns: RunRecord[]): number {
+  return (
+    runningRuns.filter(checkIsRunAtWork).length +
+    routines.reduce((sum, routine) => sum + countStarting(routine.name), 0)
+  );
+}
+
+// A run started at a usage limit would stop at once, so queued runs wait for the reset with the runs that hit it.
+function checkIsClaudeAtLimit(runningRuns: RunRecord[], now: Date): boolean {
+  const isRunWaiting = runningRuns.some(
+    run =>
+      isMatching({ agent: 'claude', status: 'waiting', usageLimit: P.nonNullable }, run) &&
+      new Date(run.usageLimit.continuesAt) > now,
+  );
+  const isUsedUp = getCurrentUsageLimits(readPlanUsage('claude'), now.getTime()).some(
+    limit => limit.usedRatio >= 1,
+  );
+  return isRunWaiting || isUsedUp;
+}
+
+// Oldest first, each while its routine has fewer runs at once than its start allows and a slot is free.
+function takeQueuedRuns(
+  routines: Routine[],
+  runningRuns: RunRecord[],
+  slotsTaken: number,
+  now: Date,
+): RoutineName[] {
+  const queuedRuns = readQueuedRuns();
+  if (queuedRuns.length === 0) return [];
+  const started: RoutineName[] = [];
+  const doneRuns = new Set<QueuedRun>();
+  const isClaudeAtLimit = checkIsClaudeAtLimit(runningRuns, now);
+  let runningCount = slotsTaken;
+  for (const queued of queuedRuns) {
+    const routine = routines.find(candidate => candidate.name === queued.routine);
+    if (routine === undefined) {
+      dropQueuedRun(queued);
+      doneRuns.add(queued);
+      continue;
+    }
+    if (runningCount >= config.maxConcurrentRuns) break;
+    if (isClaudeAtLimit && isMatching({ agent: 'claude' }, routine)) continue;
+    const activeCount =
+      runningRuns.filter(run => run.routine === routine.name).length + countStarting(routine.name);
+    if (activeCount >= queued.maxParallel) continue;
+    startDetachedRun(routine.name, {
+      trigger: queued.trigger,
+      scheduledFor: queued.scheduledFor,
+      runId: queued.id,
+    });
+    doneRuns.add(queued);
+    runningCount += 1;
+    started.push(routine.name);
+  }
+  if (doneRuns.size > 0) writeQueuedRuns(queuedRuns.filter(queued => !doneRuns.has(queued)));
+  return started;
+}
+
+// For a start outside the tick, so the runs it allows at once start without waiting for the next tick.
+export function startQueuedRuns(now = new Date()): RoutineName[] {
+  const routines = loadRoutines();
+  const runningRuns = getRunningRuns();
+  return takeQueuedRuns(routines, runningRuns, countRunsAtWork(routines, runningRuns), now);
+}
+
 export interface TickResult {
   started: RoutineName[];
   continued: RoutineName[];
@@ -93,10 +177,12 @@ async function startAfterCheck(
       .with({ outcome: 'skip' }, ({ output }): CheckSkip => ({ reason: 'nothing_to_do', output }))
       .with({ outcome: 'start' }, (start): CheckSkip | null => {
         if (checkIsRunning(routine.name)) return { reason: 'already_running', output: null };
-        startDetachedRun(routine.name, {
-          ...options,
-          runId: prepareCheckedRun(routine.name, start),
-        });
+        startDetachedRuns(
+          routine.name,
+          { ...options, runId: prepareCheckedRun(routine.name, start) },
+          toBatch(routine),
+        );
+        startQueuedRuns();
         return null;
       })
       .exhaustive();
@@ -121,16 +207,15 @@ export function tick(now = new Date()): TickResult {
   const lastTick = new Date(state.lastTickAt);
   const routines = loadRoutines();
   const runningRuns = getRunningRuns();
-  const startingNames = routines
-    .map(r => r.name)
-    .filter(name => checkIsStarting(name) || checkIsChecking(name));
-  const runningNames = new Set([...runningRuns.map(r => r.routine), ...startingNames]);
+  const startingNames = routines.map(r => r.name).filter(name => countStarting(name) > 0);
+  const runningNames = new Set([
+    ...runningRuns.map(r => r.routine),
+    ...startingNames,
+    ...readQueuedRuns().map(queued => queued.routine),
+  ]);
   const caughtUpNames = new Set<RoutineName>();
   // A run that waits out a usage limit or a retry keeps its routine busy but takes no slot.
-  let runningCount = new Set([
-    ...runningRuns.filter(checkIsRunAtWork).map(r => r.routine),
-    ...startingNames,
-  ]).size;
+  let runningCount = countRunsAtWork(routines, runningRuns);
 
   for (const routine of routines) {
     if (!routine.schedule) continue;
@@ -162,7 +247,7 @@ export function tick(now = new Date()): TickResult {
       scheduledFor: scheduledFor.toISOString(),
     };
     if (routine.check === null) {
-      startDetachedRun(routine.name, options);
+      startDetachedRuns(routine.name, options, toBatch(routine));
       started.push(routine.name);
     } else {
       checks.push(startAfterCheck(routine, routine.check, scheduledFor, options));
@@ -210,10 +295,11 @@ export function tick(now = new Date()): TickResult {
       skipped.push(`${routine.name} (concurrency limit, will retry)`);
       continue;
     }
-    startDetachedRun(routine.name, {
-      trigger: isLate ? 'catch_up' : 'schedule',
-      scheduledFor: oneTimeRun.at,
-    });
+    startDetachedRuns(
+      routine.name,
+      { trigger: isLate ? 'catch_up' : 'schedule', scheduledFor: oneTimeRun.at },
+      toBatch(routine),
+    );
     doneOneTimeRuns.add(oneTimeRun);
     runningCount += 1;
     runningNames.add(routine.name);
@@ -230,6 +316,11 @@ export function tick(now = new Date()): TickResult {
     runningCount += 1;
     continued.push(run.routine);
   }
+
+  const startedQueued = takeQueuedRuns(routines, runningRuns, runningCount, now);
+  started.push(...startedQueued);
+  runningCount += startedQueued.length;
+  for (const name of startedQueued) runningNames.add(name);
 
   // After the schedules, so the queue never makes one skip.
   for (const name of listQueuedRoutines()) {

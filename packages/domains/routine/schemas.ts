@@ -1,8 +1,9 @@
 import { z } from 'zod';
 
 import { agentNameSchema } from '../agent/schemas';
+import { MAX_RUNS } from '../run/constants';
 import { runIdSchema } from '../run/ids';
-import { runRecordSchema, tokenUsageSchema } from '../run/schemas';
+import { queuedRunSchema, runRecordSchema, tokenUsageSchema } from '../run/schemas';
 import { oneTimeRunSchema, skipSchema } from '../scheduler/schemas';
 import { queuedWebhookSchema, webhookCallSchema } from '../webhook/schemas';
 import { MEMORY_MAX_LENGTH } from './constants';
@@ -31,6 +32,9 @@ export const routineSummarySchema = z.object({
   timeoutMinutes: z.number(),
   // Older daemons do not send it, and tui --url may talk to one.
   retries: z.number().default(0),
+  // How many runs each start makes, and how many of them work at once. Older daemons do not send them.
+  runs: z.number().default(1),
+  maxParallel: z.number().default(1),
   // Older daemons do not send it, and tui --url may talk to one.
   worktree: z.boolean().default(false),
   maxBudgetUsd: z.number().nullable(),
@@ -69,6 +73,8 @@ export const routineDetailSchema = routineSummarySchema.extend({
   webhookCalls: z.array(webhookCallSchema).default([]),
   // Older daemons do not send it, and tui --url may talk to one.
   oneTimeRuns: z.array(oneTimeRunSchema).default([]),
+  // Older daemons do not send it, and tui --url may talk to one.
+  queuedRuns: z.array(queuedRunSchema).default([]),
   // null when the routine has no memory. Older daemons do not send it.
   memoryNotes: routineMemorySchema.nullable().default(null),
 });
@@ -77,9 +83,18 @@ export const startedRunSchema = z.object({ ok: z.literal(true) });
 
 export const startedRunWithIdSchema = startedRunSchema.extend({ runId: runIdSchema });
 
-export const startRunRequestSchema = z.object({ prompt: z.string().regex(/\S/) });
+const runCountSchema = z.int().min(1).max(MAX_RUNS);
+
+// Without runs and maxParallel, the routine's own apply.
+export const startRunRequestSchema = z.object({
+  prompt: z.string().regex(/\S/).optional(),
+  runs: runCountSchema.optional(),
+  maxParallel: runCountSchema.optional(),
+});
 
 export const oneTimeRunRequestSchema = z.object({ at: z.iso.datetime({ offset: true }) });
+
+export const cancelledQueuedRunsSchema = z.object({ ok: z.literal(true) });
 
 export const changedOneTimeRunsSchema = z.object({ ok: z.literal(true) });
 

@@ -125,6 +125,21 @@ export function getRetriesLabel(retries: number): string {
   return `${retries} after an error, ${RETRY_DELAY_MINUTES}\u00a0min apart`;
 }
 
+export function getRunCountLabel(runs: number, maxParallel: number): string {
+  const pace = match(maxParallel)
+    .with(1, () => 'one after another')
+    .when(
+      count => count >= runs,
+      () => 'all at once',
+    )
+    .otherwise(count => `${count} at once`);
+  return `${runs} each time, ${pace}`;
+}
+
+export function getQueuedRunsLabel(count: number): string {
+  return `${count} ${count === 1 ? 'run' : 'runs'} queued`;
+}
+
 export function getAttemptLabel({ attempt, attempts }: Pick<RunRetry, 'attempt' | 'attempts'>) {
   return `Attempt ${attempt} of ${attempts}`;
 }

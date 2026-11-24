@@ -70,7 +70,7 @@ function DropdownMenuItem({ className, ...props }: DropdownMenuItemProps) {
     <DropdownMenuPrimitive.Item
       data-slot="dropdown-menu-item"
       className={cn(
-        'flex h-8 cursor-pointer items-center gap-2 rounded-md px-2.5 outline-none select-none data-highlighted:bg-hover max-sm:h-11 [&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:text-fg-muted',
+        'flex h-8 cursor-pointer items-center gap-2 rounded-md px-2.5 outline-none select-none data-disabled:cursor-not-allowed data-disabled:opacity-50 data-highlighted:bg-hover max-sm:h-11 [&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:text-fg-muted',
         className,
       )}
       {...props}

@@ -82,6 +82,23 @@ test('a routine retries no errors unless the frontmatter sets retries', () => {
   }
 });
 
+test('a start makes one run unless the frontmatter sets runs, with at most that many at once', () => {
+  const single = buildRoutine('/tmp/demo.md', routineFile('schedule: manual'));
+  assert.deepEqual([single.runs, single.maxParallel], [1, 1]);
+  const batch = buildRoutine('/tmp/demo.md', routineFile('runs: 5\nmaxParallel: 2'));
+  assert.deepEqual([batch.runs, batch.maxParallel], [5, 2]);
+  for (const runs of ['0', '2.5', '21', 'three']) {
+    assert.throws(
+      () => buildRoutine('/tmp/demo.md', routineFile(`runs: ${runs}`)),
+      /runs must be a whole number from 1 to 20/,
+    );
+  }
+  assert.throws(
+    () => buildRoutine('/tmp/demo.md', routineFile('runs: 2\nmaxParallel: 3')),
+    /maxParallel must be at most runs, which is 2/,
+  );
+});
+
 test('a webhook gate needs the webhook', () => {
   const gated = buildRoutine('/tmp/demo.md', routineFile('webhook: true\nwebhookGate: check.sh'));
   assert.equal(gated.webhookGate, 'check.sh');

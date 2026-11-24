@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import { config } from '../../config';
 import { NOTIFICATIONS_FILE } from '../../domains/inbox/notifications';
+import { QUEUED_RUNS_FILE } from '../../domains/run/queued-runs';
 import { ONE_TIME_RUNS_FILE } from '../../domains/scheduler/one-time-runs';
 import { readSchedulerState } from '../../domains/scheduler/storage';
 
@@ -17,6 +18,7 @@ const STATE_ENTRIES = [
   'inbox.json',
   NOTIFICATIONS_FILE,
   ONE_TIME_RUNS_FILE,
+  QUEUED_RUNS_FILE,
   SCHEDULER_FILE,
 ];
 

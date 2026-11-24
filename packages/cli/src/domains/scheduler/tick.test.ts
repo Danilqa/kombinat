@@ -29,6 +29,8 @@ const { writeRunRecord } = await import('../run/storage');
 const { checkIsRunning, startDetachedRun } = await import('../run/runner');
 const { countQueuedWebhooks, enqueueWebhook } = await import('../webhook/queue');
 const { readOneTimeRuns, writeOneTimeRuns } = await import('./one-time-runs');
+const { readQueuedRuns, writeQueuedRuns } = await import('../run/queued-runs');
+const { writePlanUsage } = await import('../agent/storage');
 const { makeRunRecord } = await import('domains/run/mocks');
 const { sessionIdSchema } = await import('domains/agent/ids');
 
@@ -441,4 +443,132 @@ test('a check that finds work, or fails, starts the run with the check first in 
   );
   assert.equal(readSchedulerState()?.routines[watcher]?.skips.length, 1);
   fs.rmSync(path.join(routinesDir, 'watcher.md'));
+});
+
+const makeQueuedRun = (routine: string, id: string, maxParallel: number) => ({
+  routine: routineNameSchema.parse(routine),
+  id: runIdSchema.parse(id),
+  trigger: 'manual' as const,
+  scheduledFor: null,
+  maxParallel,
+  queuedAt: '2026-10-02T10:10:00Z',
+});
+
+test('a scheduled time of a routine with runs starts the runs it allows at once and queues the rest', async () => {
+  writeRoutine('queue-batch', 'schedule: "11 10 * * *"\nagent: command\ncommand: "true"\nruns: 3');
+  writeRoutine(
+    'parallel-batch',
+    'schedule: "11 10 * * *"\nagent: command\ncommand: "true"\nruns: 3\nmaxParallel: 2',
+  );
+  const queueBatch = routineNameSchema.parse('queue-batch');
+  const parallelBatch = routineNameSchema.parse('parallel-batch');
+  await waitUntilIdle();
+
+  const result = tick(new Date('2026-10-02T10:11:30'));
+  assert.deepEqual(result.started.toSorted(), [parallelBatch, parallelBatch, queueBatch]);
+  const queued = readQueuedRuns();
+  assert.deepEqual(
+    queued.map(({ routine, maxParallel, scheduledFor }) => ({
+      routine,
+      maxParallel,
+      scheduledFor,
+    })),
+    [
+      {
+        routine: parallelBatch,
+        maxParallel: 2,
+        scheduledFor: new Date('2026-10-02T10:11:00').toISOString(),
+      },
+      {
+        routine: queueBatch,
+        maxParallel: 1,
+        scheduledFor: new Date('2026-10-02T10:11:00').toISOString(),
+      },
+      {
+        routine: queueBatch,
+        maxParallel: 1,
+        scheduledFor: new Date('2026-10-02T10:11:00').toISOString(),
+      },
+    ].toSorted((a, b) => a.routine.localeCompare(b.routine)),
+  );
+  assert.equal(checkIsRunning(queueBatch), true);
+  writeQueuedRuns([]);
+  for (const name of ['queue-batch', 'parallel-batch']) {
+    fs.rmSync(path.join(routinesDir, `${name}.md`));
+  }
+});
+
+test('a queued run starts once its routine has fewer runs at work than its start allows', async () => {
+  writeRoutine('drain', 'schedule: "0 12 * * *"\nagent: command\ncommand: "true"');
+  const drain = routineNameSchema.parse('drain');
+  await waitUntilIdle();
+  const working = makeRunRecord({
+    id: runIdSchema.parse('d0'),
+    routine: drain,
+    status: 'running',
+    pid: process.pid,
+  });
+  writeRunRecord(working);
+  writeQueuedRuns([
+    makeQueuedRun('drain', '20261002T101000Z-dr01', 2),
+    makeQueuedRun('drain', '20261002T101000Z-dr02', 2),
+  ]);
+
+  assert.deepEqual(tick(new Date('2026-10-02T10:12:30')).started, [drain]);
+  assert.deepEqual(
+    readQueuedRuns().map(({ id }) => id),
+    ['20261002T101000Z-dr02'],
+  );
+  writeRunRecord({ ...working, status: 'succeeded' });
+  writeQueuedRuns([]);
+});
+
+test('a scheduled time of a routine with queued runs is skipped, as the routine is still running', async () => {
+  writeRoutine('drain', 'schedule: "13 10 * * *"\nagent: command\ncommand: "true"');
+  const drain = routineNameSchema.parse('drain');
+  await waitUntilIdle();
+  writeRunRecord(
+    makeRunRecord({
+      id: runIdSchema.parse('d1'),
+      routine: drain,
+      status: 'running',
+      pid: process.pid,
+    }),
+  );
+  writeQueuedRuns([makeQueuedRun('drain', '20261002T101000Z-dr03', 1)]);
+
+  const result = tick(new Date('2026-10-02T10:13:30'));
+  assert.deepEqual(result.started, []);
+  assert.ok(result.skipped.includes('drain (already running)'));
+  writeRunRecord(
+    makeRunRecord({ id: runIdSchema.parse('d1'), routine: drain, status: 'succeeded' }),
+  );
+  writeQueuedRuns([]);
+  fs.rmSync(path.join(routinesDir, 'drain.md'));
+});
+
+test('queued Claude runs wait while the plan is at a usage limit and start after its reset', async () => {
+  writeRoutine('limited', 'agent: claude');
+  writeRoutine('local', 'agent: command\ncommand: "true"');
+  const limited = routineNameSchema.parse('limited');
+  const local = routineNameSchema.parse('local');
+  await waitUntilIdle();
+  writePlanUsage('claude', {
+    updatedAt: '2026-10-02T10:10:00Z',
+    session: { usedRatio: 1, resetsAt: new Date('2026-10-02T11:00:00').toISOString() },
+    week: { usedRatio: 0.4, resetsAt: new Date('2026-10-05T11:00:00').toISOString() },
+  });
+  writeQueuedRuns([
+    makeQueuedRun('limited', '20261002T101000Z-li01', 1),
+    makeQueuedRun('local', '20261002T101000Z-lo01', 1),
+  ]);
+
+  assert.deepEqual(tick(new Date('2026-10-02T10:14:30')).started, [local]);
+  assert.deepEqual(
+    readQueuedRuns().map(({ routine }) => routine),
+    [limited],
+  );
+  assert.deepEqual(tick(new Date('2026-10-02T11:00:30')).started, [limited]);
+  assert.deepEqual(readQueuedRuns(), []);
+  for (const name of ['limited', 'local']) fs.rmSync(path.join(routinesDir, `${name}.md`));
 });

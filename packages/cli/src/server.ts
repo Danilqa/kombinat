@@ -23,7 +23,7 @@ import {
   startRunRequestSchema,
 } from 'domains/routine/schemas';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
-import { RUNS_CURSOR_ERROR } from 'domains/run/constants';
+import { MAX_RUNS, RUNS_CURSOR_ERROR } from 'domains/run/constants';
 import { runIdSchema, type RunId } from 'domains/run/ids';
 import { runMessageSchema, usageLimitWaitActionSchema } from 'domains/run/schemas';
 import type { RunRecord, TokenUsage } from 'domains/run/types';
@@ -34,7 +34,6 @@ import {
   checkIsRunActive,
   checkIsRunAtWork,
   checkIsRunWaiting,
-  createRunId,
   filterRuns,
   getTokenUsageStart,
   listBlockedRules,
@@ -62,13 +61,14 @@ import { loadRoutines } from './domains/routine/storage';
 import type { Routine } from './domains/routine/types';
 import { describeSchedule, getNextRun } from './domains/routine/utils';
 import { buildRunTranscript, readRunEvents } from './domains/run/event-log';
-import { writePrompt } from './domains/run/payload';
+import { cancelQueuedRuns, listRoutineQueuedRuns, readQueuedRuns } from './domains/run/queued-runs';
 import { deleteExpiredRuns, startCleanup } from './domains/run/retention';
 import {
   checkIsRunning,
   checkIsStarting,
+  countStartingRuns,
   startDetachedReply,
-  startDetachedRun,
+  startDetachedRuns,
 } from './domains/run/runner';
 import {
   checkIsProcessAlive,
@@ -83,6 +83,7 @@ import { requestWaitAction } from './domains/run/usage-limit';
 import { reconcileWorktree, removeWorktree } from './domains/run/worktree';
 import { readOneTimeRuns, writeOneTimeRuns } from './domains/scheduler/one-time-runs';
 import { getSkips, readSchedulerState } from './domains/scheduler/storage';
+import { startQueuedRuns } from './domains/scheduler/tick';
 import { readSettings, writeSettings } from './domains/settings/storage';
 import {
   deleteExpiredWebhookCalls,
@@ -144,6 +145,7 @@ function toRoutineSummary(
   runs: RunRecord[],
   oneTimeRuns: OneTimeRun[],
   tokenUsage: TokenUsage | null,
+  hasQueuedRuns: boolean,
 ): RoutineSummary {
   return {
     name: routine.name,
@@ -165,10 +167,12 @@ function toRoutineSummary(
     cwd: routine.cwd,
     timeoutMinutes: routine.timeoutMinutes,
     retries: routine.retries,
+    runs: routine.runs,
+    maxParallel: routine.maxParallel,
     worktree: routine.worktree,
     maxBudgetUsd: routine.maxBudgetUsd,
     file: path.relative(config.projectRoot, routine.file),
-    running: checkIsStarting(routine.name) || runs.some(checkIsRunActive),
+    running: checkIsStarting(routine.name) || hasQueuedRuns || runs.some(checkIsRunActive),
     lastRun: runs[0] ?? null,
     lastSkip: getSkips(routine.name).at(-1) ?? null,
     tokenUsage,
@@ -189,7 +193,7 @@ function getStatus(startedAt: Date): DaemonStatus {
     maxConcurrentRuns: config.maxConcurrentRuns,
     running:
       getRunningRuns().filter(checkIsRunAtWork).length +
-      loadRoutines().filter(routine => checkIsStarting(routine.name)).length,
+      loadRoutines().reduce((sum, routine) => sum + countStartingRuns(routine.name), 0),
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     now: new Date().toISOString(),
     disk: readDiskSpace(config.stateDir),
@@ -217,6 +221,7 @@ function withRun<T extends ApiResponse | Promise<ApiResponse>>(
 
 function getRoutineSummaries(): RoutineSummary[] {
   const oneTimeRuns = readOneTimeRuns();
+  const queuedRoutines = new Set(readQueuedRuns().map(queued => queued.routine));
   const routines = loadRoutines();
   const runsByRoutine = routines.map(routine => listRuns(routine.name));
   const tokenUsages = buildTokenUsages(runsByRoutine, new Date());
@@ -226,6 +231,7 @@ function getRoutineSummaries(): RoutineSummary[] {
       runsByRoutine[index] ?? [],
       listRoutineOneTimeRuns(oneTimeRuns, routine.name),
       tokenUsages[index] ?? null,
+      queuedRoutines.has(routine.name),
     ),
   );
 }
@@ -240,13 +246,15 @@ function getRoutineDetail(routine: Routine): ApiResponse {
     .filter(other => other.name !== routine.name)
     .map(other => listRunsSince(other.name, since));
   const [tokenUsage = null] = buildTokenUsages([runs, ...otherRuns], now);
+  const queuedRuns = listRoutineQueuedRuns(routine.name);
   const detail: RoutineDetail = {
-    ...toRoutineSummary(routine, runs, oneTimeRuns, tokenUsage),
+    ...toRoutineSummary(routine, runs, oneTimeRuns, tokenUsage, queuedRuns.length > 0),
     prompt: routine.prompt,
     skips: getSkips(routine.name),
     queue: listQueuedWebhooks(routine.name),
     webhookCalls: listWebhookCalls(routine.name),
     oneTimeRuns,
+    queuedRuns,
     memoryNotes: routine.memory ? readRoutineMemory(routine.name) : null,
   };
   return ok(detail);
@@ -306,12 +314,28 @@ function saveMemory(routine: Routine, body: Buffer): ApiResponse {
 function startRun(routine: Routine, body: Buffer): ApiResponse {
   const request =
     body.length === 0 ? null : startRunRequestSchema.safeParse(parseJson(body.toString('utf8')));
-  if (request?.success === false) return fail(400, 'The body must be JSON with a prompt');
+  if (request?.success === false) {
+    return fail(
+      400,
+      `The body must be JSON, with a prompt that isn't blank and runs and maxParallel from 1 to ${MAX_RUNS}`,
+    );
+  }
+  const runs = request?.data.runs ?? routine.runs;
+  const maxParallel = request?.data.maxParallel ?? Math.min(routine.maxParallel, runs);
+  if (maxParallel > runs) return fail(400, `maxParallel must be at most runs, which is ${runs}`);
   if (checkIsRunning(routine.name)) return fail(409, `${routine.name} is already running`);
-  const runId = createRunId();
-  if (request !== null) writePrompt(routine.name, runId, request.data.prompt);
-  startDetachedRun(routine.name, { trigger: 'manual', runId });
+  const runId = startDetachedRuns(
+    routine.name,
+    { trigger: 'manual' },
+    { count: runs, maxParallel, prompt: request?.data.prompt ?? null },
+  );
+  startQueuedRuns();
   return { status: 202, body: { ok: true, runId } };
+}
+
+function cancelRoutineQueuedRuns(routine: Routine): ApiResponse {
+  cancelQueuedRuns(routine.name);
+  return ok({ ok: true });
 }
 
 function sendMessage(routine: Routine, run: RunRecord, body: Buffer): ApiResponse {
@@ -499,6 +523,9 @@ function routeApi(request: ApiRequest, context: ApiContext): ApiResponse | Promi
       withRoutine(routineNameSchema.parse(name), routine =>
         startRun(routine, context.request.body),
       ),
+    )
+    .with(['POST', ['routines', P.string, 'queued-runs', 'cancel']], ([, [, name]]) =>
+      withRoutine(routineNameSchema.parse(name), cancelRoutineQueuedRuns),
     )
     .with(['POST', ['routines', P.string, 'one-time-runs']], ([, [, name]]) =>
       withRoutine(routineNameSchema.parse(name), routine =>

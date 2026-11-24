@@ -124,6 +124,8 @@ export interface DemoRoutine {
   cwd: string;
   timeoutMinutes: number;
   retries?: number;
+  runs?: number;
+  maxParallel?: number;
   worktree?: boolean;
   maxBudgetUsd: number | null;
   prompt: string;

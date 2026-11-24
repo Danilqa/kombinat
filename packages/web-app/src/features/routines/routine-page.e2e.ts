@@ -174,7 +174,7 @@ function toTimeInputValue(date: Date): string {
   return date.toISOString().slice(0, 16);
 }
 
-test('blocks Run now while the routine runs but still schedules a run once later', async ({
+test('blocks Run now and Run several times while the routine runs but still schedules a run once later', async ({
   page,
   kombinat,
 }) => {
@@ -197,6 +197,10 @@ test('blocks Run now while the routine runs but still schedules a run once later
     - definition: "-"
   `);
   await page.getByRole('button', { name: 'More ways to run write-release-notes' }).click();
+  await expect(page.getByRole('menuitem', { name: 'Run several times…' })).toHaveAttribute(
+    'aria-disabled',
+    'true',
+  );
   await page.getByRole('menuitem', { name: /^Tonight at 02:00/ }).click();
 
   await expect(page.getByRole('heading', { name: 'Scheduled once' })).toBeVisible();
@@ -256,6 +260,61 @@ test('schedules a run at a picked time and cancels runs scheduled once', async (
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { name: 'Scheduled once' })).toBeHidden();
   await expect(page.getByRole('button', { name: 'Run now write-release-notes' })).toBeFocused();
+});
+
+test('runs a routine several times, one after another, and cancels the runs that wait', async ({
+  page,
+  kombinat,
+}) => {
+  kombinat.addRoutine({ name: 'bug-fix-pickup', runs: 3, maxParallel: 2 });
+  await page.goto('/routines/bug-fix-pickup');
+  await expect(page.getByRole('main')).toMatchAriaSnapshot(`
+    - term: Runs
+    - definition: 3 each time, 2 at once
+  `);
+
+  await page.getByRole('button', { name: 'More ways to run bug-fix-pickup' }).click();
+  await page.getByRole('menuitem', { name: 'Run several times…' }).click();
+  const count = page.getByLabel('Run bug-fix-pickup', { exact: true });
+  await expect(count).toBeFocused();
+  await count.fill('25');
+  await page.getByRole('button', { name: 'Start runs' }).click();
+  await expect(page.getByRole('alert')).toHaveText('Enter a number from 2 to 20');
+  await count.fill('4');
+  await expect(page.getByRole('radio', { name: 'One after another' })).toBeChecked();
+  await page.getByRole('button', { name: 'Start 4 runs' }).click();
+  await expect(count).toBeHidden();
+
+  await expect(page.getByRole('heading', { name: 'Queued' })).toBeVisible();
+  await expect(page.getByText('3 runs', { exact: true })).toBeVisible();
+  await expect(page.getByText('They start one after another, as each run ends.')).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Runs 1' })).toBeVisible();
+  await page.getByRole('button', { name: 'Cancel the queued runs' }).click();
+  await expect(page.getByRole('heading', { name: 'Queued' })).toBeHidden();
+  await expect(
+    page.getByRole('button', { name: /^(Run now|Running) bug-fix-pickup$/ }),
+  ).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Run now bug-fix-pickup' })).toBeVisible({
+    timeout: 15_000,
+  });
+  await expect(page.getByRole('tab', { name: 'Runs 1' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Run now bug-fix-pickup' }).click();
+  await expect(page.getByText('Started 3 runs of bug-fix-pickup')).toBeAttached();
+});
+
+test('starts all the runs at once when they may run in parallel', async ({ page, kombinat }) => {
+  kombinat.addRoutine({ name: 'flaky-e2e-fixer' });
+  await page.goto('/routines/flaky-e2e-fixer');
+
+  await page.getByRole('button', { name: 'More ways to run flaky-e2e-fixer' }).click();
+  await page.getByRole('menuitem', { name: 'Run several times…' }).click();
+  await page.getByLabel('Run flaky-e2e-fixer', { exact: true }).fill('2');
+  await page.getByText('All at once').click();
+  await page.getByRole('button', { name: 'Start 2 runs' }).click();
+
+  await expect(page.getByRole('tab', { name: 'Runs 2' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Queued' })).toBeHidden();
 });
 
 test('logs the webhook calls of a routine with what each of them did', async ({
