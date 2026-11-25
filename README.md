@@ -10,7 +10,8 @@
 - **Schedule or webhook.** Cron, once at a time you pick, or a request from Linear, GitHub or any other app.
 - **Any agent.** Claude Code, Codex or any other CLI.
 - **Your setup.** Your logins, skills, MCP servers, browser and `CLAUDE.md`.
-- **No API bill.** Runs on your subscription. See the tokens of each run and how much of your Claude plan is left.
+- **No API bill.** Runs on your subscription.
+- **Several subscriptions.** Run routines on more than one Claude or Codex login at once, such as work and personal.
 - **Insights.** Monitor your token spending.
 - **Waits out limits.** A run that hits a Claude usage limit continues after the reset.
 - **Retries errors.** A run that stops with an error can try again a few minutes later, right where it stopped.
