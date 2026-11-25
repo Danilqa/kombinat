@@ -377,6 +377,45 @@ test('loads older runs page by page as you scroll a long history', async ({
   expect(await table.getByRole('row').count()).toBeLessThan(60);
 });
 
+test('loads older runs when the list is fetched again while they are on their way', async ({
+  page,
+  kombinat,
+  time,
+}) => {
+  kombinat.addRoutine({ name: 'inbox-triage', schedule: '*/5 * * * *' });
+  kombinat.addRoutine({ name: 'nightly-digest' });
+  for (let index = 1; index < 60; index++) {
+    kombinat.addRun({ routine: 'inbox-triage', startedAt: time.minutesAgo(index * 5) });
+  }
+  const oldest = kombinat.addRun({ routine: 'inbox-triage', startedAt: time.minutesAgo(600) });
+  await page.route(
+    /\/api\/runs\?.*cursor=/,
+    async route => {
+      await page.waitForResponse(response =>
+        response.url().endsWith('/api/runs?routine=inbox-triage'),
+      );
+      await route.continue();
+    },
+    { times: 1 },
+  );
+  const changeStream = page.waitForResponse('**/api/events');
+  await page.goto('/routines/inbox-triage');
+  await changeStream;
+  const table = page.getByRole('table');
+  await expect(table).toHaveAttribute('aria-rowcount', '61');
+
+  const olderRuns = page.waitForRequest(/cursor=/);
+  await page.keyboard.press('End');
+  await olderRuns;
+  kombinat.addRun({ routine: 'nightly-digest' });
+
+  const oldestRow = table.getByRole('row', { name: new RegExp(oldest.id) });
+  await expect(async () => {
+    await page.keyboard.press('End');
+    await expect(oldestRow).toBeVisible({ timeout: 1000 });
+  }).toPass();
+});
+
 test('explains that a routine does not exist', async ({ page, kombinat }) => {
   kombinat.addRoutine({ name: 'inbox-triage' });
   kombinat.addRun({ routine: 'inbox-triage' });

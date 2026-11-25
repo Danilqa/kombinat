@@ -1,4 +1,5 @@
 import {
+  memo,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -270,7 +271,7 @@ function CalendarBlock({ positioned, overlapLabel }: CalendarBlockProps) {
         {overlapLabel && (
           <span
             aria-hidden="true"
-            className="absolute top-1/2 -right-[3px] size-1.5 -translate-y-1/2 animate-in rounded-full bg-surface shadow-[0_0_0_1.5px_var(--negative)] duration-300 ease-out-quint zoom-in-50 fade-in"
+            className="absolute top-1/2 -right-[3px] size-1.5 -translate-y-1/2 rounded-full bg-surface shadow-[0_0_0_1.5px_var(--negative)]"
           />
         )}
       </span>
@@ -358,15 +359,16 @@ function DayPicker({ days, selectedIndex, now, onSelect }: DayPickerProps) {
 }
 
 interface DayColumnProps {
-  day: Date;
+  dayTime: number;
   entries: CalendarEntry[];
-  now: Date;
-  isToday: boolean;
+  now: Date | null;
   routinesById: Map<CalendarEntryId, RoutineName> | null;
 }
 
-function DayColumn({ day, entries, now, isToday, routinesById }: DayColumnProps) {
-  const positioned = useMemo(() => layoutDay(entries, day), [entries, day]);
+// A day gets the time only when it is today, so the other days keep their blocks as the clock ticks.
+const DayColumn = memo(function DayColumn({ dayTime, entries, now, routinesById }: DayColumnProps) {
+  const day = new Date(dayTime);
+  const positioned = useMemo(() => layoutDay(entries, new Date(dayTime)), [entries, dayTime]);
   return (
     <div
       className={cn('relative border-l border-line-faint', checkIsWeekend(day) && 'bg-hover')}
@@ -387,10 +389,10 @@ function DayColumn({ day, entries, now, isToday, routinesById }: DayColumnProps)
           ))}
         </div>
       )}
-      {isToday && <CurrentTimeLine now={now} dayStart={day} />}
+      {now && <CurrentTimeLine now={now} dayStart={day} />}
     </div>
   );
-}
+});
 
 interface LegendSwatchProps {
   variant: BlockVariant;
@@ -700,10 +702,9 @@ function CalendarPanel({
       {days.map(day => (
         <DayColumn
           key={day.toISOString()}
-          day={day}
+          dayTime={day.getTime()}
           entries={entries}
-          now={now}
-          isToday={checkIsSameDay(day, now)}
+          now={checkIsSameDay(day, now) ? now : null}
           routinesById={isHighlightingOverlaps ? routinesById : null}
         />
       ))}

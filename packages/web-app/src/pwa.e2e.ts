@@ -24,6 +24,24 @@ test('the dashboard installs as an app with a window and an icon of its own', as
   expect(iconSizes).toEqual(expect.arrayContaining(['192x192', '512x512']));
 });
 
+test('a browser gets the bundle gzipped, keeps it and asks again for the other files', async ({
+  page,
+}) => {
+  const [bundle] = await Promise.all([
+    page.waitForResponse(/\/assets\/.+\.js$/),
+    page.goto('/runs'),
+  ]);
+  expect(bundle.headers()).toMatchObject({
+    'content-encoding': 'gzip',
+    'cache-control': 'public, max-age=31536000, immutable',
+  });
+
+  for (const path of ['/runs', '/sw.js', '/manifest.webmanifest', '/assets/gone.js']) {
+    const response = await page.request.get(path);
+    expect(response.headers()['cache-control'], path).toBe('no-cache');
+  }
+});
+
 test('the icon of the installed app shows the number of unread runs', async ({
   page,
   kombinat,

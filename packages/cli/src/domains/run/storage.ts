@@ -71,24 +71,33 @@ function reconcileRecord(record: RunRecord): RunRecord {
   return reconciled;
 }
 
-function readRuns(routine: RoutineName, since: Date | null = null): RunRecord[] {
-  const dir = getRunsDir(routine);
-  if (!fs.existsSync(dir)) return [];
-  return fs
-    .readdirSync(dir)
-    .filter(entry => entry.endsWith('.json'))
-    .flatMap(entry => {
-      const file = path.join(dir, entry);
-      if (since !== null && checkIsWrittenBefore(file, since)) return [];
-      const record = readJsonFile(file, runRecordSchema);
-      return record === null ? [] : [reconcileRecord(record)];
-    });
+interface CachedRuns {
+  mtimeMs: number;
+  records: RunRecord[];
 }
 
-// A record is first written when its run starts, so an older file holds a run that started earlier.
-function checkIsWrittenBefore(file: string, since: Date): boolean {
-  const mtimeMs = fs.statSync(file, { throwIfNoEntry: false })?.mtimeMs ?? 0;
-  return mtimeMs < since.getTime();
+// A folder that changed a moment ago can change again within the same timestamp.
+const SETTLED_MS = 2000;
+const cachedRuns = new Map<string, CachedRuns>();
+
+// Records are written by a rename, never in place, so each change sets the time of their folder.
+function readRecords(dir: string): RunRecord[] {
+  const mtimeMs = fs.statSync(dir, { throwIfNoEntry: false })?.mtimeMs;
+  if (mtimeMs === undefined) return [];
+  const cached = cachedRuns.get(dir);
+  if (cached?.mtimeMs === mtimeMs) return cached.records;
+  const records = fs
+    .readdirSync(dir)
+    .filter(entry => entry.endsWith('.json'))
+    .flatMap(entry => readJsonFile(path.join(dir, entry), runRecordSchema) ?? []);
+  if (Date.now() - mtimeMs > SETTLED_MS) cachedRuns.set(dir, { mtimeMs, records });
+  return records;
+}
+
+function readRuns(routine: RoutineName, since: Date | null = null): RunRecord[] {
+  return readRecords(getRunsDir(routine))
+    .filter(record => since === null || new Date(record.startedAt) >= since)
+    .map(reconcileRecord);
 }
 
 export function listRuns(routine: RoutineName): RunRecord[] {

@@ -242,8 +242,9 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
       ),
     )
     .reduce((runs: OneTimeRun[], run) => addOneTimeRun(runs, run), []);
+  const runsAtLoad = history.listRuns(loadedAt);
   const memories = new Map(
-    routines.map(routine => [routine.name, toDemoMemory(routine, history.listRuns(loadedAt))]),
+    routines.map(routine => [routine.name, toDemoMemory(routine, runsAtLoad)]),
   );
   const queues = new Map(
     routines.map(routine => [

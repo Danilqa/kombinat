@@ -96,7 +96,8 @@ function RunView({ run, transcript }: RunViewProps) {
           )}
         </Card.Root>
       </Tabs.Content>
-      <Tabs.Content value="transcript">
+      {/* A long transcript freezes the page while it fades in, so it shows at once. */}
+      <Tabs.Content value="transcript" className="data-[state=active]:animate-none">
         <RunChat
           run={run}
           transcript={transcript}

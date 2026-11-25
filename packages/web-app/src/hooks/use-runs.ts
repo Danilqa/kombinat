@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { InfiniteData, QueryKey } from '@tanstack/react-query';
 
 import type { RoutineName } from 'domains/routine/ids';
@@ -40,6 +40,7 @@ export function useRuns(
   routine: RoutineName | null,
   latestRun: RunRecord | null = null,
 ): RunsQuery {
+  const [endReachedAt, setEndReachedAt] = useState<number | null>(null);
   const { data, error, isPending, hasNextPage, isFetchingNextPage, fetchNextPage, refetch } =
     useInfiniteQuery<RunsPage, Error, LoadedRuns, QueryKey, RunsCursor | null>({
       queryKey: routine === null ? ['runs'] : ['runs', { routine }],
@@ -54,13 +55,18 @@ export function useRuns(
   useEffect(() => {
     if (isBehind) void refetch();
   }, [isBehind, refetch]);
+  const loadedCount = data?.runs.length ?? null;
+  const isNextPageDue =
+    hasNextPage && !isFetchingNextPage && error === null && endReachedAt === loadedCount;
+  // The table reports its end once, and a refetch can drop the page on its way between two renders.
+  useEffect(() => {
+    if (isNextPageDue) void fetchNextPage();
+  });
   return {
     data,
     error,
     isPending,
     isFetchingNextPage,
-    loadNextPage: () => {
-      if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
-    },
+    loadNextPage: () => setEndReachedAt(loadedCount),
   };
 }

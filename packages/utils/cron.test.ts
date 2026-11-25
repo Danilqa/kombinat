@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { describeCron, checkMatchesCron, nextCronRun, parseCron } from './cron';
+import { describeCron, checkMatchesCron, cronRunsBetween, nextCronRun, parseCron } from './cron';
 
 const at = (iso: string) => new Date(iso);
+const toIsoTimes = (dates: Date[]) => dates.map(date => date.toISOString());
+const runsBetween = (expression: string, after: string, until: string) =>
+  toIsoTimes(cronRunsBetween(expression, at(after), at(until)));
 
 test('matches exact minute and hour', () => {
   assert.equal(checkMatchesCron('30 11 * * *', at('2026-09-30T11:30:00')), true);
@@ -45,6 +48,97 @@ test('finds the next run after a given time', () => {
     nextCronRun('30 5 * * 2', at('2026-09-30T00:00:00'))?.toISOString(),
     at('2026-10-06T05:30:00').toISOString(),
   );
+});
+
+test('lists the runs of a schedule limited to some hours over several days', () => {
+  assert.deepEqual(
+    runsBetween('30 3,15 * * *', '2026-06-08T00:00:00', '2026-06-11T00:00:00'),
+    toIsoTimes([
+      at('2026-06-08T03:30:00'),
+      at('2026-06-08T15:30:00'),
+      at('2026-06-09T03:30:00'),
+      at('2026-06-09T15:30:00'),
+      at('2026-06-10T03:30:00'),
+      at('2026-06-10T15:30:00'),
+    ]),
+  );
+});
+
+test('lists the runs between times in the middle of an hour', () => {
+  assert.deepEqual(
+    runsBetween('*/20 9-10 * * *', '2026-06-08T09:20:00', '2026-06-08T10:40:30'),
+    toIsoTimes([
+      at('2026-06-08T09:40:00'),
+      at('2026-06-08T10:00:00'),
+      at('2026-06-08T10:20:00'),
+      at('2026-06-08T10:40:00'),
+    ]),
+  );
+  assert.deepEqual(
+    runsBetween('*/20 9-10 * * *', '2026-06-08T07:45:10', '2026-06-08T11:30:00'),
+    toIsoTimes([
+      at('2026-06-08T09:00:00'),
+      at('2026-06-08T09:20:00'),
+      at('2026-06-08T09:40:00'),
+      at('2026-06-08T10:00:00'),
+      at('2026-06-08T10:20:00'),
+      at('2026-06-08T10:40:00'),
+    ]),
+  );
+  assert.deepEqual(
+    runsBetween('15 23,0 * * *', '2026-06-08T22:40:00', '2026-06-09T01:30:00'),
+    toIsoTimes([at('2026-06-08T23:15:00'), at('2026-06-09T00:15:00')]),
+  );
+});
+
+test('leaves out a run at the start of the range and keeps one at its end', () => {
+  assert.deepEqual(
+    runsBetween('30 11 * * *', '2026-06-08T11:30:00', '2026-06-09T11:30:00'),
+    toIsoTimes([at('2026-06-09T11:30:00')]),
+  );
+});
+
+test('lists the runs of a schedule that runs in every hour', () => {
+  assert.deepEqual(
+    runsBetween('*/30 * * * *', '2026-06-08T22:10:00', '2026-06-09T01:10:00'),
+    toIsoTimes([
+      at('2026-06-08T22:30:00'),
+      at('2026-06-08T23:00:00'),
+      at('2026-06-08T23:30:00'),
+      at('2026-06-09T00:00:00'),
+      at('2026-06-09T00:30:00'),
+      at('2026-06-09T01:00:00'),
+    ]),
+  );
+  const everyMinute = runsBetween('* * * * *', '2026-06-08T22:10:00', '2026-06-09T00:23:00');
+  assert.equal(everyMinute.length, 133);
+  assert.equal(everyMinute[0], at('2026-06-08T22:11:00').toISOString());
+  assert.equal(everyMinute.at(-1), at('2026-06-09T00:23:00').toISOString());
+});
+
+test('lists the same runs as a check of every minute', () => {
+  const expressions = [
+    '0 2 * * *',
+    '15 9-17/2 * * 1-5',
+    '*/7 0,23 * * *',
+    '59 23 * * 0',
+    '0 0 9 * 3',
+    '*/45 * * * *',
+  ];
+  const until = at('2026-06-10T04:12:00');
+  for (const expression of expressions) {
+    const expected: string[] = [];
+    const cursor = at('2026-06-05T13:48:00');
+    while (cursor <= until) {
+      if (checkMatchesCron(expression, cursor)) expected.push(cursor.toISOString());
+      cursor.setMinutes(cursor.getMinutes() + 1);
+    }
+    assert.deepEqual(
+      runsBetween(expression, '2026-06-05T13:47:20', '2026-06-10T04:12:00'),
+      expected,
+      expression,
+    );
+  }
 });
 
 test('describes common schedules', () => {
