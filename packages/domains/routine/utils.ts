@@ -2,10 +2,12 @@ import { match } from 'ts-pattern';
 
 import { describeCron, parseCron } from 'utils/cron';
 
+import type { AgentName } from '../agent/types';
 import type { RunId } from '../run/ids';
 import type {
   MemoryChange,
   RoutineMemory,
+  RoutineTemplate,
   RoutineTemplateCategory,
   RoutineTemplateNeed,
 } from './types';
@@ -50,6 +52,7 @@ export function countChangedLines(before: string, after: string): ChangedLines {
 export function getTemplateCategoryLabel(category: RoutineTemplateCategory): string {
   return match(category)
     .with('code', () => 'Code')
+    .with('product', () => 'Product')
     .with('watch', () => 'Watch')
     .with('reports', () => 'Reports')
     .with('home', () => 'Home')
@@ -60,6 +63,16 @@ export function getTemplateNeedLabel(need: RoutineTemplateNeed): string {
   return match(need)
     .with('git-repository', () => 'Git repository')
     .with('github-cli', () => 'GitHub CLI')
+    .with('macos', () => 'macOS')
+    .exhaustive();
+}
+
+// A command takes no prompt, model or memory, so a template never changes to one or from one.
+export function checkCanUseAgent(template: RoutineTemplate, agent: AgentName): boolean {
+  if (agent === template.agent) return true;
+  return match(agent)
+    .with('claude', 'codex', () => template.command === null)
+    .with('command', () => false)
     .exhaustive();
 }
 

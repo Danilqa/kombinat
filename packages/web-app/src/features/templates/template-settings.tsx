@@ -1,14 +1,22 @@
 import { DetailList, type DetailEntry } from 'design-system/components';
-import { getAgentLabel } from 'domains/agent/utils';
 import type { RoutineTemplate } from 'domains/routine/types';
 import { getRetriesLabel } from 'domains/run/utils';
 
-function getEntries(template: RoutineTemplate): DetailEntry[] {
+// Effort and permission mean something else to each agent, so another agent starts from its own.
+function getEntries(template: RoutineTemplate, isTemplateAgent: boolean): DetailEntry[] {
   return [
-    { label: 'Agent', value: getAgentLabel(template.agent) },
-    { label: 'Model', value: template.model, isMono: true },
-    { label: 'Effort', value: template.effort },
-    { label: 'Permission', value: template.permissionMode, isMono: true },
+    ...(template.effort === null
+      ? []
+      : [{ label: 'Effort', value: isTemplateAgent ? template.effort : 'Default' }]),
+    ...(template.permissionMode === null
+      ? []
+      : [
+          {
+            label: 'Permission',
+            value: isTemplateAgent ? template.permissionMode : 'Default',
+            isMono: isTemplateAgent,
+          },
+        ]),
     { label: 'Timeout', value: `${template.timeoutMinutes} min` },
     {
       label: 'Retries',
@@ -22,13 +30,17 @@ function getEntries(template: RoutineTemplate): DetailEntry[] {
     ...(template.check === null
       ? []
       : [{ label: 'Check', value: template.check, isMono: true, span: 'full' as const }]),
+    ...(template.command === null
+      ? []
+      : [{ label: 'Command', value: template.command, isMono: true, span: 'full' as const }]),
   ];
 }
 
 interface TemplateSettingsProps {
   template: RoutineTemplate;
+  isTemplateAgent: boolean;
 }
 
-export function TemplateSettings({ template }: TemplateSettingsProps) {
-  return <DetailList entries={getEntries(template)} />;
+export function TemplateSettings({ template, isTemplateAgent }: TemplateSettingsProps) {
+  return <DetailList entries={getEntries(template, isTemplateAgent)} />;
 }

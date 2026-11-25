@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import { isMatching, match, P } from 'ts-pattern';
 
+import type { AgentOption } from 'domains/agent/types';
 import { buildCalendar } from 'domains/calendar/utils';
 import type { DaemonStatus } from 'domains/daemon/types';
 import { NOTIFY_LEVELS } from 'domains/inbox/constants';
@@ -57,6 +58,7 @@ import { settingsSchema } from 'domains/settings/schemas';
 import { getErrorMessage } from 'utils/error';
 
 import { config } from './config';
+import { listAgentOptions } from './domains/agent/options';
 import { readPlanUsage } from './domains/agent/storage';
 import { readNotifyLevels, writeNotifyLevels } from './domains/inbox/notifications';
 import { readInboxState, writeInboxState } from './domains/inbox/storage';
@@ -266,12 +268,23 @@ function getRoutineDetail(routine: Routine): ApiResponse {
   return ok(detail);
 }
 
+// With the models this machine's routines already run, which Claude Code keeps no list of.
+function getAgentOptions(): AgentOption[] {
+  const routines = loadRoutines();
+  return listAgentOptions().map(option => {
+    const used = routines.flatMap(routine =>
+      routine.agent === option.name && routine.model !== null ? [routine.model] : [],
+    );
+    return { ...option, models: [...new Set([...option.models, ...used])] };
+  });
+}
+
 function addRoutine(body: Buffer): ApiResponse {
   const request = addRoutineRequestSchema.safeParse(parseJson(body.toString('utf8')));
   if (!request.success) {
     return fail(
       400,
-      'The body must be JSON with a template, a lowercase kebab-case name, a folder and a schedule',
+      'The body must be JSON with a template, a lowercase kebab-case name, a folder, a schedule, an agent, a model or null and a prompt',
     );
   }
   const { template: id, name, ...choices } = request.data;
@@ -597,6 +610,7 @@ function routeApi(request: ApiRequest, context: ApiContext): ApiResponse | Promi
         setNotifyLevel(routine, context.request.body),
       ),
     )
+    .with(['GET', ['agents']], () => ok(getAgentOptions()))
     .with(['GET', ['settings']], () => ok(readSettings()))
     .with(['PUT', ['settings']], () => updateSettings(context.request.body))
     .with(['GET', ['releases']], async () => ok(await getReleaseUpdate()))

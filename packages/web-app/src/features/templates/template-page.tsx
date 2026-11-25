@@ -1,8 +1,10 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router';
-import { Badge, Card, ErrorState, LoadingState, Markdown } from 'design-system/components';
-import { PageHeader, SectionHeader } from 'design-system/layouts';
+import { Badge, Card, ErrorState, LoadingState } from 'design-system/components';
+import { PageHeader } from 'design-system/layouts';
+import { getAgents } from 'domains/agent/requests';
+import type { AgentName } from 'domains/agent/types';
 import { getAgentLabel } from 'domains/agent/utils';
 import { routineTemplateIdSchema } from 'domains/routine/ids';
 import { addRoutine, getRoutines } from 'domains/routine/requests';
@@ -27,9 +29,15 @@ function TemplateView({ template }: TemplateViewProps) {
   const queryClient = useQueryClient();
   // isPending changes only after a render. Without the ref, a double click sends the request twice.
   const isSendingRef = useRef(false);
+  const [agent, setAgent] = useState(template.agent);
+  const [model, setModel] = useState(template.model);
   const routines = useQuery({
     queryKey: ['routines'],
     queryFn: () => getRoutines(sameOriginApi),
+  });
+  const agents = useQuery({
+    queryKey: ['agents'],
+    queryFn: () => getAgents(sameOriginApi),
   });
   const add = useMutation({
     mutationFn: (request: AddRoutineRequest) => addRoutine(sameOriginApi, request),
@@ -40,45 +48,66 @@ function TemplateView({ template }: TemplateViewProps) {
       void navigate(getRoutinePath(name), { state: { addedFile: file } });
     },
   });
+  const error = routines.error ?? agents.error;
+
+  // The template's model belongs to its agent. Another agent starts from its own default.
+  function changeAgent(next: AgentName) {
+    setAgent(next);
+    setModel(next === template.agent ? template.model : null);
+  }
 
   return (
-    <div className="space-y-10">
-      <Card.Root className="gap-0 py-0">
-        <TemplateSettings template={template} />
-      </Card.Root>
-      <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-6">
-        <section className="min-w-0 lg:col-start-2 lg:row-start-1">
-          <SectionHeader.Root>Add to your routines</SectionHeader.Root>
-          <Card.Root className="gap-0 p-5">
-            {routines.error && <ErrorState message={routines.error.message} />}
-            {routines.isPending && <LoadingState />}
-            {routines.data && (
-              <AddRoutineForm
-                template={template}
-                routines={routines.data}
-                isPending={add.isPending}
-                error={add.error?.message ?? null}
-                onSubmit={request => {
-                  if (isSendingRef.current) return;
-                  isSendingRef.current = true;
-                  add.mutate(request, {
-                    onError: () => {
-                      isSendingRef.current = false;
-                    },
-                  });
-                }}
-              />
-            )}
-          </Card.Root>
-        </section>
-        <section className="min-w-0 lg:col-start-1 lg:row-start-1">
-          <SectionHeader.Root>Prompt</SectionHeader.Root>
-          <Card.Root className="gap-0 p-6">
-            <Markdown source={template.prompt} minHeadingLevel={2} />
-          </Card.Root>
-        </section>
+    <>
+      <header className="mb-6 min-w-0 space-y-3">
+        <div className="space-y-1">
+          <PageHeader.Title>{template.title}</PageHeader.Title>
+          <p className="max-w-3xl text-body text-fg-secondary">{template.description}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Badge size="small">{getAgentLabel(agent)}</Badge>
+          {model !== null && (
+            <Badge size="small" className="font-mono">
+              {model}
+            </Badge>
+          )}
+          {template.needs.length > 0 && (
+            <span className="ml-1 text-body-sm text-fg-muted">Needs</span>
+          )}
+          {template.needs.map(need => (
+            <TemplateNeedBadge key={need} need={need} />
+          ))}
+        </div>
+      </header>
+      <div className="space-y-10">
+        <Card.Root className="gap-0 py-0">
+          <TemplateSettings template={template} isTemplateAgent={agent === template.agent} />
+        </Card.Root>
+        {error && <ErrorState message={error.message} />}
+        {!error && (routines.isPending || agents.isPending) && <LoadingState />}
+        {routines.data && agents.data && (
+          <AddRoutineForm
+            template={template}
+            routines={routines.data}
+            agents={agents.data}
+            agent={agent}
+            model={model}
+            isPending={add.isPending}
+            error={add.error?.message ?? null}
+            onAgentChange={changeAgent}
+            onModelChange={setModel}
+            onSubmit={request => {
+              if (isSendingRef.current) return;
+              isSendingRef.current = true;
+              add.mutate(request, {
+                onError: () => {
+                  isSendingRef.current = false;
+                },
+              });
+            }}
+          />
+        )}
       </div>
-    </div>
+    </>
   );
 }
 
@@ -98,27 +127,7 @@ export function TemplatePage() {
       {template === null ? (
         <ErrorState message={`There is no template named ${id}`} />
       ) : (
-        <>
-          <header className="mb-6 min-w-0 space-y-3">
-            <div className="space-y-1">
-              <PageHeader.Title>{template.title}</PageHeader.Title>
-              <p className="max-w-3xl text-body text-fg-secondary">{template.description}</p>
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <Badge size="small">{getAgentLabel(template.agent)}</Badge>
-              <Badge size="small" className="font-mono">
-                {template.model}
-              </Badge>
-              {template.needs.length > 0 && (
-                <span className="ml-1 text-body-sm text-fg-muted">Needs</span>
-              )}
-              {template.needs.map(need => (
-                <TemplateNeedBadge key={need} need={need} />
-              ))}
-            </div>
-          </header>
-          <TemplateView template={template} />
-        </>
+        <TemplateView key={template.id} template={template} />
       )}
     </div>
   );

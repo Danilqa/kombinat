@@ -2,8 +2,8 @@
 
 A domain is the top path of an API request, or a type that several domains share:
 
-- API paths: `/api/routines` is routine, `/api/runs` is run, `/api/calendar` is calendar, `/api/status` and `/api/events` are daemon, `/api/settings` is settings, `/api/releases` is release, `/api/inbox` is inbox and `/api/insights` is insights.
-- Shared types: agent, transcript, scheduler (skips) and webhook (queued webhooks and webhook calls).
+- API paths: `/api/routines` is routine, `/api/runs` is run, `/api/calendar` is calendar, `/api/status` and `/api/events` are daemon, `/api/settings` is settings, `/api/agents` is agent, `/api/releases` is release, `/api/inbox` is inbox and `/api/insights` is insights.
+- Shared types: transcript, scheduler (skips) and webhook (queued webhooks and webhook calls).
 
 Each domain has up to two halves with the same name:
 
@@ -14,7 +14,7 @@ Each domain has up to two halves with the same name:
 
 | Domain         | Shared half                                                                                                                                                                                                                                                                                                                                                                                                                          | Daemon half                                                                                                                                             |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **agent**      | `AgentName`, `SessionId`, agent label                                                                                                                                                                                                                                                                                                                                                                                                | claude, codex and command adapters, registry, settings validation, `AgentTask`, plan usage storage                                                      |
+| **agent**      | `AgentName`, `SessionId`, `AgentOption`, agent label, Claude's models, the request for the agents of this machine                                                                                                                                                                                                                                                                                                                    | claude, codex and command adapters, registry, settings validation, `AgentTask`, plan usage storage, the agents and models this machine has              |
 | **transcript** | item schemas and types, message source, usage limit kinds, preview rule, subagent check, tool input, result and search match count, empty, result, hook, message source, usage limit and retry labels, `TranscriptList`                                                                                                                                                                                                              | none                                                                                                                                                    |
 | **run**        | `RunRecord`, `RunId`, status and trigger, requests, labels, new ids, duration, cursor pages, active, waiting and continue rules, expired runs, blocked actions, retries and attempt labels, `QueuedRun`, run count labels, `makeRunRecord`, worktree branch and changes label, `RunStatusBadge`, `RunDetailList`, `RunOutput`, `RunMessageForm`, `UsageLimitCard`, `RetryCard`, `BlockedBadge`, `BlockedActionsCard`, `WorktreeCard` | runner, replies, hooks, usage limit waits, retries, worktrees, queued runs, record storage with orphan reconciliation, event log, transcript, retention |
 | **scheduler**  | `Skip`, `SkipReason`, `SchedulerState`, `OneTimeRun`, skip label, run later presets, one-time run rules, next run, `SkipsTable`                                                                                                                                                                                                                                                                                                      | tick loop, checks, `scheduler.json` and `one-time-runs.json` storage                                                                                    |
@@ -46,6 +46,8 @@ The CLI program that does a run's work:
 Every agent gets the prompt on stdin. An agent decides which routine settings it accepts and their defaults, how its process starts unattended, how its output becomes run updates and transcript items, and how its session is resumed: `claude --resume <id>`, `codex resume <id>`, none for command. Claude and Codex use the subscription login, so their API key variables are removed from the environment.
 
 `AgentName` is shared by routine and run.
+
+`GET /api/agents` lists `claude` and `codex` as this machine has them, for the forms that offer a choice: `isInstalled` says whether the daemon finds the binary, and `models` are the ones to choose from. Claude Code keeps no list of its models, so Claude gets the fixed list in `agent/constants.ts`. Codex gets the models in `models_cache.json` of its home folder, without the hidden ones. Both also get the models this machine's routines already use.
 
 ### transcript
 
@@ -234,11 +236,13 @@ A routine with `webhook: true` also starts from a [webhook](#webhook).
 
 #### Templates
 
-`routine/templates.ts` holds ready routines in four categories, Code, Watch, Reports and Home, each with its settings, prompt and what it needs, such as a git repository or the GitHub CLI. The dashboard lists them on New routine. `POST /api/routines` with `{ "template", "name", "cwd", "schedule" }` writes `routines/<name>.md` from the template, in `templates.ts` of the daemon half, and answers 201 with the name and the file relative to the project folder.
+`routine/templates.ts` holds ready routines in five categories, Code, Product, Watch, Reports and Home, each with its settings, prompt and what it needs, such as a git repository, the GitHub CLI or macOS. A template of the `command` agent has a `command` and no model, effort or permission mode. The dashboard lists them on New routine, where the user can pick the agent and its model and change the prompt before adding. `POST /api/routines` with `{ "template", "name", "cwd", "schedule", "agent", "model", "prompt" }` writes `routines/<name>.md` from the template, in `templates.ts` of the daemon half, and answers 201 with the name and the file relative to the project folder.
 
-- The name is lowercase kebab-case, the schedule a cron or `manual`, and `cwd` a folder that exists. It answers 400 otherwise and 404 for an unknown template.
+- The name is lowercase kebab-case, the schedule a cron or `manual`, `cwd` a folder that exists, and the prompt not blank. It answers 400 otherwise and 404 for an unknown template.
 - It never replaces a file: a name that is taken answers 409.
-- The file gets the template's title as its description, and a manual schedule drops the template's `check`, which runs only at scheduled times.
+- The agent and model come from the [agents of this machine](#agent). A null `model` leaves the choice to the agent.
+- A routine of another agent than the template's gets no `effort` and no `permissionMode`, which mean something else to each agent. A template that runs a command keeps its agent, and the request answers 400 otherwise.
+- The file gets the template's title as its description and the prompt of the request as its body, and a manual schedule drops the template's `check`, which runs only at scheduled times.
 
 #### Memory
 

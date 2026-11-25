@@ -21,16 +21,14 @@ interface ScheduleCellProps {
 
 function ScheduleCell({ routine }: ScheduleCellProps) {
   const webhookLabel = routine.schedule ? 'Also runs on webhook' : 'Runs on webhook';
-  const cron =
-    routine.schedule && !routine.scheduleHuman.includes(routine.schedule) ? routine.schedule : null;
   return (
     <div className="text-fg">
-      {cron ? (
+      {routine.schedule ? (
         <Tooltip.Root>
           <Tooltip.Trigger asChild>
             <span>{routine.scheduleHuman}</span>
           </Tooltip.Trigger>
-          <Tooltip.Content className="font-mono">{cron}</Tooltip.Content>
+          <Tooltip.Content className="font-mono">{routine.schedule}</Tooltip.Content>
         </Tooltip.Root>
       ) : (
         routine.scheduleHuman

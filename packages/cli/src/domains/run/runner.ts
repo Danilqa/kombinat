@@ -22,6 +22,7 @@ import { getErrorMessage } from 'utils/error';
 
 import { config, getCliArgs } from '../../config';
 import { parseJson } from '../../utils/json';
+import { checkIsBinaryFound } from '../agent/binary';
 import { getAgent } from '../agent/registry';
 import { writePlanUsage } from '../agent/storage';
 import type { Agent, Invocation, OutputEvent, RunContext, UsageLimitStop } from '../agent/types';
@@ -62,13 +63,6 @@ const PENDING_START_MS = HOOK_TIMEOUT_MS + 60_000;
 const KILL_GRACE_MS = 60_000;
 const STDERR_CHUNKS = 200;
 const CONTINUE_TEXT = 'The usage limit has reset. Continue the task from where you stopped.';
-
-function checkIsBinaryFound(command: string): boolean {
-  if (command.includes('/')) return fs.existsSync(command);
-  return (process.env['PATH'] ?? '')
-    .split(':')
-    .some(dir => dir !== '' && fs.existsSync(path.join(dir, command)));
-}
 
 type StopReason = 'timeout' | 'tokens';
 

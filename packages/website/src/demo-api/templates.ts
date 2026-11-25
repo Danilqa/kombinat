@@ -1,3 +1,4 @@
+import type { AgentName } from 'domains/agent/types';
 import type { RoutineName } from 'domains/routine/ids';
 import type { RoutineTemplate } from 'domains/routine/types';
 
@@ -9,6 +10,9 @@ export interface DemoTemplateChoices {
   name: RoutineName;
   cwd: string;
   schedule: string;
+  agent: AgentName;
+  model: string | null;
+  prompt: string;
 }
 
 const DEMO_RESULT =
@@ -16,10 +20,12 @@ const DEMO_RESULT =
 
 export function toTemplateRoutine(
   template: RoutineTemplate,
-  { name, cwd, schedule }: DemoTemplateChoices,
+  { name, cwd, schedule, agent, model, prompt }: DemoTemplateChoices,
 ): DemoRoutine {
   const folder = cwd.replace(/^~(?=\/|$)/, HOME);
   const isManual = schedule === 'manual';
+  const isTemplateAgent = agent === template.agent;
+  const permissionMode = isTemplateAgent ? template.permissionMode : null;
   return {
     name,
     description: template.title,
@@ -28,18 +34,18 @@ export function toTemplateRoutine(
     ...(template.check === null || isManual
       ? {}
       : { check: { command: template.check, skipsOutcome: '', skipOutput: '' } }),
-    agent: template.agent,
-    model: template.model,
-    effort: template.effort,
-    permissionMode: template.permissionMode,
-    command: null,
+    agent,
+    model,
+    effort: isTemplateAgent ? template.effort : null,
+    permissionMode,
+    command: template.command,
     cwd: folder,
     timeoutMinutes: template.timeoutMinutes,
     retries: template.retries,
     worktree: template.worktree,
     maxBudgetUsd: null,
-    prompt: template.prompt,
-    runModel: template.model,
+    prompt,
+    runModel: model,
     ...(template.memory ? { memory: { text: '', added: 0, removed: 0 } } : {}),
     outcomes: [
       {
@@ -48,15 +54,7 @@ export function toTemplateRoutine(
         status: 'succeeded',
         minutes: 2,
         resultText: DEMO_RESULT,
-        steps: [
-          init({
-            model: template.model,
-            cwd: folder,
-            toolCount: 32,
-            permissionMode: template.permissionMode,
-          }),
-          text(DEMO_RESULT),
-        ],
+        steps: [init({ model, cwd: folder, toolCount: 32, permissionMode }), text(DEMO_RESULT)],
       },
     ],
   };
