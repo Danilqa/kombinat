@@ -122,6 +122,10 @@ export function cronRunsBetween(
   cursor.setSeconds(0, 0);
   cursor.setMinutes(cursor.getMinutes() + 1);
   while (cursor <= untilInclusive) {
+    if (!fields.hour.has(cursor.getHours())) {
+      cursor.setHours(cursor.getHours() + 1, 0);
+      continue;
+    }
     if (checkMatchesFields(fields, cursor)) runs.push(new Date(cursor));
     cursor.setMinutes(cursor.getMinutes() + 1);
   }
