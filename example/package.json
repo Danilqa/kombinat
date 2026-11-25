@@ -1,6 +1,6 @@
 {
   "private": true,
   "dependencies": {
-    "kombinat": "0.9.0"
+    "kombinat": "0.10.0"
   }
 }
