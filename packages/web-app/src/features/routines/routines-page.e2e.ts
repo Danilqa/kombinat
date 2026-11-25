@@ -29,7 +29,9 @@ test('lists each routine with its schedule, agent and last run', async ({
   await expect(page.getByText('2 routines')).toBeVisible();
   const triage = page.getByRole('row', { name: /triage-sentry/ });
   await expect(triage).toContainText('Triages new Sentry issues');
-  await expect(triage).toContainText('Weekdays at 08:00');
+  await expect(triage).not.toContainText('0 8 * * 1-5');
+  await triage.getByText('Weekdays at 08:00').hover();
+  await expect(page.getByRole('tooltip')).toHaveText('0 8 * * 1-5');
   await expect(triage).toContainText('claude-sonnet-5-5');
   await expect(triage.getByRole('link', { name: /Failed/ })).toBeVisible();
   const sayHello = page.getByRole('row', { name: /say-hello/ });

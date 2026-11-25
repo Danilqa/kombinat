@@ -28,14 +28,20 @@ function PageHeaderBar({ children }: PageHeaderBarProps) {
 
 interface PageHeaderProps {
   title: string;
+  count?: ReactNode;
   aside?: ReactNode;
 }
 
-function PageHeader({ title, aside }: PageHeaderProps) {
+function PageHeader({ title, count, aside }: PageHeaderProps) {
   return (
     <PageHeaderBar>
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
-        <PageHeaderTitle>{title}</PageHeaderTitle>
+        <div className="flex min-w-0 items-baseline gap-2">
+          <PageHeaderTitle>{title}</PageHeaderTitle>
+          {count !== undefined && (
+            <span className="text-title-lg font-normal text-fg-muted tabular-nums">{count}</span>
+          )}
+        </div>
         {aside}
       </div>
     </PageHeaderBar>

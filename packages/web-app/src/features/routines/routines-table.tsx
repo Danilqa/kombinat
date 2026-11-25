@@ -21,31 +21,35 @@ interface ScheduleCellProps {
 
 function ScheduleCell({ routine }: ScheduleCellProps) {
   const webhookLabel = routine.schedule ? 'Also runs on webhook' : 'Runs on webhook';
+  const cron =
+    routine.schedule && !routine.scheduleHuman.includes(routine.schedule) ? routine.schedule : null;
   return (
-    <>
-      <div className="text-fg">
-        {routine.scheduleHuman}
-        {routine.webhook && (
-          <Tooltip.Root>
-            <Tooltip.Trigger asChild>
-              <span
-                role="img"
-                aria-label={webhookLabel}
-                className="ml-1.5 inline-flex cursor-default align-[-2px] text-fg-muted"
-              >
-                <Webhook aria-hidden="true" className="size-3.5" />
-              </span>
-            </Tooltip.Trigger>
-            <Tooltip.Content>{webhookLabel}</Tooltip.Content>
-          </Tooltip.Root>
-        )}
-      </div>
-      {routine.schedule && (
-        <div className="font-mono text-body-sm whitespace-nowrap text-fg-muted">
-          {routine.schedule}
-        </div>
+    <div className="text-fg">
+      {cron ? (
+        <Tooltip.Root>
+          <Tooltip.Trigger asChild>
+            <span>{routine.scheduleHuman}</span>
+          </Tooltip.Trigger>
+          <Tooltip.Content className="font-mono">{cron}</Tooltip.Content>
+        </Tooltip.Root>
+      ) : (
+        routine.scheduleHuman
       )}
-    </>
+      {routine.webhook && (
+        <Tooltip.Root>
+          <Tooltip.Trigger asChild>
+            <span
+              role="img"
+              aria-label={webhookLabel}
+              className="ml-1.5 inline-flex cursor-default align-[-2px] text-fg-muted"
+            >
+              <Webhook aria-hidden="true" className="size-3.5" />
+            </span>
+          </Tooltip.Trigger>
+          <Tooltip.Content>{webhookLabel}</Tooltip.Content>
+        </Tooltip.Root>
+      )}
+    </div>
   );
 }
 

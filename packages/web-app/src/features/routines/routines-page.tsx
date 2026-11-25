@@ -12,18 +12,6 @@ import { useCustomization } from '@web-app/contexts';
 import { useDocumentTitle } from '@web-app/hooks/use-document-title';
 import { RoutinesTable } from './routines-table';
 
-interface RoutinesNoteProps {
-  routines: RoutineSummary[];
-}
-
-function RoutinesNote({ routines }: RoutinesNoteProps) {
-  return (
-    <PageHeader.Aside>
-      {routines.length} {routines.length === 1 ? 'routine' : 'routines'}
-    </PageHeader.Aside>
-  );
-}
-
 function checkHasRunningRoutine(routines: RoutineSummary[] = []): boolean {
   return routines.some(routine => routine.running);
 }
@@ -41,21 +29,26 @@ export function RoutinesPage() {
     <div>
       <PageHeader.Root
         title={routinesTitle}
+        count={
+          data && (
+            <>
+              {data.length}
+              <span className="sr-only"> {data.length === 1 ? 'routine' : 'routines'}</span>
+            </>
+          )
+        }
         aside={
-          <div className="flex items-center gap-2">
-            {data && <RoutinesNote routines={data} />}
-            {/* An icon on phones keeps the count on the title's line, with a 44px tap area. */}
-            <Button
-              asChild
-              size="small"
-              className="relative max-sm:size-7 max-sm:px-0 max-sm:after:absolute max-sm:after:-inset-2"
-            >
-              <Link to={TEMPLATES_PATH}>
-                <Plus aria-hidden="true" />
-                <span className="max-sm:sr-only">New routine</span>
-              </Link>
-            </Button>
-          </div>
+          // An icon on phones keeps the button on the title's line, with a 44px tap area.
+          <Button
+            asChild
+            size="small"
+            className="relative max-sm:size-7 max-sm:px-0 max-sm:after:absolute max-sm:after:-inset-2"
+          >
+            <Link to={TEMPLATES_PATH}>
+              <Plus aria-hidden="true" />
+              <span className="max-sm:sr-only">New routine</span>
+            </Link>
+          </Button>
         }
       />
       {error && <ErrorState message={error.message} />}
