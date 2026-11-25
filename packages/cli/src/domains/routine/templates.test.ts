@@ -61,6 +61,15 @@ test('a manual routine drops the check, which runs only at scheduled times', () 
   assert.equal(routine.check, null);
 });
 
+test('keeps the home folder written as ~', () => {
+  const { routines } = makeDirs();
+  const name = routineNameSchema.parse('at-home');
+  const added = addRoutineFromTemplate(template, { name, cwd: '~', schedule: 'manual' }, routines);
+  assert.equal(added.outcome, 'added');
+  const file = path.join(routines, 'at-home.md');
+  assert.equal(buildRoutine(file, fs.readFileSync(file, 'utf8')).cwd, os.homedir());
+});
+
 test('rejects a folder that does not exist and a schedule that is not a cron', () => {
   const { routines, cwd } = makeDirs();
   const name = routineNameSchema.parse('broken');
@@ -69,7 +78,7 @@ test('rejects a folder that does not exist and a schedule that is not a cron', (
     addRoutineFromTemplate(template, { name, cwd: missing, schedule: 'manual' }, routines),
     {
       outcome: 'invalid',
-      error: `There is no folder at ${missing}`,
+      error: `There is no folder at ${missing}. Check the path, or create the folder first.`,
     },
   );
   assert.deepEqual(

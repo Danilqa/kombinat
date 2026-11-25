@@ -112,7 +112,7 @@ export function AddRoutineForm({
           className={INPUT_CLASS_NAME}
         />
       </Field>
-      <Field id={cwdId} label="Folder" hint={template.folderHint} error={cwdError}>
+      <Field id={cwdId} label="Working directory" hint={template.folderHint} error={cwdError}>
         <input
           id={cwdId}
           value={cwd}

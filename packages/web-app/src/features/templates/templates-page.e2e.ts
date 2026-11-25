@@ -18,7 +18,7 @@ test('adds a routine from a template and opens it with a reminder to commit it',
   await expect(page).toHaveURL(/\/templates\/umbrella-check$/);
 
   await expect(page.getByLabel('Name')).toHaveValue('umbrella-check');
-  await page.getByLabel('Folder').fill(daemon.root);
+  await page.getByLabel('Working directory').fill(daemon.root);
   const schedule = page.getByLabel('Schedule');
   await expect(schedule).toHaveAccessibleDescription('Weekdays at 08:00');
   await schedule.fill('*/30 * * * *');
@@ -59,9 +59,11 @@ test('never replaces a routine and explains what to fix', async ({ page, kombina
   await expect(schedule).toHaveAccessibleDescription('Manual');
 
   const missing = `${daemon.root}/missing`;
-  await page.getByLabel('Folder').fill(missing);
+  await page.getByLabel('Working directory').fill(missing);
   await page.getByRole('button', { name: 'Add routine' }).click();
-  await expect(page.getByRole('alert')).toHaveText(`There is no folder at ${missing}`);
+  await expect(page.getByRole('alert')).toHaveText(
+    `There is no folder at ${missing}. Check the path, or create the folder first.`,
+  );
   await expect(page).toHaveURL(/\/templates\/umbrella-check$/);
 });
 

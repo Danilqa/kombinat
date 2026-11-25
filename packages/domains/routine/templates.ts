@@ -107,7 +107,7 @@ Run the project's checks and fix what they report. Then push a new branch and op
     retries: 0,
     worktree: false,
     memory: true,
-    check: `gh run list --branch main --limit 1 --json conclusion --jq '.[0].conclusion' | grep -qx failure || exit 78`,
+    check: `gh run list --branch main --limit 1 --json conclusion,updatedAt --jq '.[0] | select(.conclusion == "failure" and (.updatedAt | fromdate) > now - 3600)' | grep -q . || exit 78`,
     prompt: `The latest workflow run on main failed. Find it with \`gh run list --branch main --limit 5\` and read why with \`gh run view <id> --log-failed\`.
 
 If your memory says you already reported this run, answer only "No new failures."

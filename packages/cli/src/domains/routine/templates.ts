@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 
 import type { RoutineName } from 'domains/routine/ids';
@@ -30,13 +29,13 @@ export type AddedFromTemplate = WrittenRoutine | InvalidChoices;
 
 type FrontmatterEntry = [key: string, value: string | number | boolean | null];
 
-// The schedule is quoted, since YAML reads a value that starts with * as an alias.
+// Quoted, since YAML reads a value that starts with * as an alias and a bare ~ as null.
 export function buildTemplateSource(template: RoutineTemplate, choices: TemplateChoices): string {
   const settings: FrontmatterEntry[] = [
     ['name', choices.name],
     ['description', template.title],
     ['schedule', choices.schedule === 'manual' ? 'manual' : `'${choices.schedule}'`],
-    ['cwd', choices.cwd],
+    ['cwd', `'${choices.cwd}'`],
     ['agent', template.agent],
     ['model', template.model],
     ['effort', template.effort],
@@ -51,8 +50,7 @@ export function buildTemplateSource(template: RoutineTemplate, choices: Template
   return `---\n${lines.join('\n')}\n---\n\n${template.prompt}\n`;
 }
 
-function checkIsFolder(cwd: string): boolean {
-  const folder = cwd.replace(/^~(?=\/|$)/, os.homedir());
+function checkIsFolder(folder: string): boolean {
   return fs.existsSync(folder) && fs.statSync(folder).isDirectory();
 }
 
@@ -69,15 +67,19 @@ export function addRoutineFromTemplate(
   if (describeScheduleValue(schedule) === null) {
     return { outcome: 'invalid', error: `${schedule} is not a cron schedule or manual` };
   }
-  if (!checkIsFolder(choices.cwd)) {
-    return { outcome: 'invalid', error: `There is no folder at ${choices.cwd}` };
-  }
   const file = path.join(dir, `${choices.name}.md`);
   const source = buildTemplateSource(template, { ...choices, schedule });
+  let cwd: string;
   try {
-    buildRoutine(file, source);
+    cwd = buildRoutine(file, source).cwd;
   } catch (error) {
     return { outcome: 'invalid', error: getErrorMessage(error) };
+  }
+  if (!checkIsFolder(cwd)) {
+    return {
+      outcome: 'invalid',
+      error: `There is no folder at ${choices.cwd}. Check the path, or create the folder first.`,
+    };
   }
   fs.mkdirSync(dir, { recursive: true });
   try {
