@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { sessionIdSchema } from 'domains/agent/ids';
+import { accountNameSchema, sessionIdSchema } from 'domains/agent/ids';
 import { releaseVersionSchema } from 'domains/release/ids';
 import { routineNameSchema } from 'domains/routine/ids';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
@@ -25,6 +25,7 @@ function makeRun(routine: string, id: string, overrides: Partial<RunRecord> = {}
     id: runIdSchema.parse(id),
     routine: routineNameSchema.parse(routine),
     agent: 'claude',
+    account: null,
     trigger: 'schedule',
     scheduledFor: null,
     startedAt: '2026-10-06T11:00:00Z',
@@ -66,6 +67,7 @@ function makeRoutine(name: string, overrides: Partial<RoutineSummary> = {}): Rou
     check: null,
     queuedWebhooks: 0,
     agent: 'claude',
+    account: null,
     model: 'claude-opus-5-5',
     effort: 'high',
     permissionMode: 'auto',
@@ -109,6 +111,7 @@ function makeOverview(): Overview {
       running: 0,
       timezone: 'Europe/London',
       now: '2026-10-06T12:00:00Z',
+      accounts: [],
     },
     routines: [
       makeRoutine('on-call-monitoring', { lastRun: onCallRun }),
@@ -296,6 +299,23 @@ test('the status panel grows a line with how much of the Claude plan is left', a
   const frame = app.render(WIDTH, HEIGHT);
   assert.equal(frame.length, HEIGHT);
   assert.match(frame.map(plain).join('\n'), /claude 5% left · 5-hour limit resets in 2h\s/);
+});
+
+test('with several accounts, the status panel shows the plan left of each by name', async () => {
+  const overview = makeOverview();
+  const usage = (usedRatio: number) => ({
+    updatedAt: '2026-10-06T11:50:00Z',
+    session: { usedRatio, resetsAt: '2026-10-06T14:00:00Z' },
+    week: null,
+  });
+  overview.status.accounts = [
+    { name: null, routines: 1, claudeUsage: usage(0.22) },
+    { name: accountNameSchema.parse('work'), routines: 3, claudeUsage: usage(0.93) },
+  ];
+  const { app } = await makeApp({ overview });
+  const text = app.render(WIDTH, HEIGHT).map(plain).join('\n');
+  assert.match(text, /primary 78% left · 5-hour limit resets in 2h\s/);
+  assert.match(text, /work 7% left · 5-hour limit resets in 2h\s/);
 });
 
 test('moving through the routines list changes the detail panel', async () => {

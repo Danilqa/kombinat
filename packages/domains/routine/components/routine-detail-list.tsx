@@ -1,11 +1,13 @@
 import { DetailList, RelativeTime, type DetailEntry } from 'design-system/components';
 
+import { getAccountLabel } from '../../agent/utils';
 import { getBudgetLabel, getRetriesLabel, getRunCountLabel } from '../../run/utils';
 import type { RoutineSummary } from '../types';
 import { getWebhookPath } from '../../webhook/utils';
 
-function getStatEntries(routine: RoutineSummary): DetailEntry[] {
+function getStatEntries(routine: RoutineSummary, hasAccount: boolean): DetailEntry[] {
   return [
+    ...(hasAccount ? [{ label: 'Account', value: getAccountLabel(routine.account) }] : []),
     { label: 'Next run', value: <RelativeTime iso={routine.nextRunAt} isFocusable /> },
     {
       label: 'Last run',
@@ -64,8 +66,10 @@ function getStatEntries(routine: RoutineSummary): DetailEntry[] {
 
 interface RoutineDetailListProps {
   routine: RoutineSummary;
+  // Whether to name the login it runs on, which says nothing while every routine runs on one.
+  hasAccount: boolean;
 }
 
-export function RoutineDetailList({ routine }: RoutineDetailListProps) {
-  return <DetailList entries={getStatEntries(routine)} />;
+export function RoutineDetailList({ routine, hasAccount }: RoutineDetailListProps) {
+  return <DetailList entries={getStatEntries(routine, hasAccount)} />;
 }

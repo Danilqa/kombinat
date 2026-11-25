@@ -1,6 +1,6 @@
 import type { z } from 'zod';
 
-import type { SessionId } from 'domains/agent/ids';
+import type { AccountName, SessionId } from 'domains/agent/ids';
 import type { AgentName } from 'domains/agent/types';
 import type { PlanLimits } from 'domains/daemon/types';
 import type { RoutineName } from 'domains/routine/ids';
@@ -21,6 +21,7 @@ export interface AgentSettings {
   maxBudgetUsd: number | null;
   maxBudgetTokens: number | null;
   onUsageLimit: string | null;
+  account: AccountName | null;
 }
 
 export interface AgentTask extends AgentSettings {
@@ -55,6 +56,12 @@ export interface CallTokens {
   tokens: TokenCounts;
 }
 
+// Where an agent keeps a login: the variable that points to its folder and the folder's name in the home folder.
+export interface AccountHome {
+  env: string;
+  folder: string;
+}
+
 export interface Invocation {
   command: string;
   args: string[];
@@ -83,8 +90,11 @@ export interface Agent {
   readonly name: AgentName;
   readonly output: OutputFormat;
   readonly binaryEnv: string | null;
+  readonly accountHome: AccountHome | null;
   resolveSettings(raw: AgentSettings): AgentSettings;
   buildInvocation(context: RunContext): Invocation;
+  buildLoginInvocation(account: AccountName | null): Invocation | null;
+  buildLoginStatusInvocation(account: AccountName | null): Invocation | null;
   buildReplyInvocation(
     context: RunContext,
     sessionId: SessionId,
@@ -97,5 +107,5 @@ export interface Agent {
   checkIsStoppedByBudget(events: unknown[]): boolean;
   readBlockedActions(events: unknown[]): BlockedAction[];
   buildTranscript(events: unknown[]): TranscriptItem[];
-  getResumeCommand(sessionId: SessionId): string | null;
+  getResumeCommand(sessionId: SessionId, account: AccountName | null): string | null;
 }

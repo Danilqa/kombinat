@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { accountNameSchema } from '../agent/ids';
 import { agentNameSchema } from '../agent/schemas';
 import { MAX_RUNS } from '../run/constants';
 import { runIdSchema } from '../run/ids';
@@ -22,6 +23,8 @@ export const routineSummarySchema = z.object({
   check: z.string().nullable().default(null),
   queuedWebhooks: z.number(),
   agent: agentNameSchema,
+  // null runs on the primary login. Older daemons do not send it, and tui --url may talk to one.
+  account: accountNameSchema.nullable().default(null),
   model: z.string().nullable(),
   // Older daemons do not send it, and tui --url may talk to one.
   fallbackModel: z.string().nullable().optional(),

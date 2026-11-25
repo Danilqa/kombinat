@@ -1,3 +1,5 @@
+import { accountNameSchema } from 'domains/agent/ids';
+import type { AccountName } from 'domains/agent/ids';
 import type { AgentName } from 'domains/agent/types';
 import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
 import type { BlockedAction, ChangedFile, RunStatus } from 'domains/run/types';
@@ -116,6 +118,7 @@ export interface DemoRoutine {
   webhookGate?: string;
   check?: DemoCheck;
   agent: AgentName;
+  account?: AccountName;
   model: string | null;
   fallbackModel?: string;
   effort: string | null;
@@ -143,6 +146,8 @@ export interface DemoRoutine {
 }
 
 const REPO = `${HOME}/Projects/acme-web`;
+export const WORK = accountNameSchema.parse('work');
+export const PERSONAL = accountNameSchema.parse('personal');
 const OPUS = 'claude-opus-5-5';
 const SONNET = 'claude-sonnet-5-5';
 const FABLE = 'claude-fable-5-1';
@@ -220,6 +225,7 @@ const nightAgentTasks: DemoRoutine = {
   schedule: '0 2 * * *',
   enabled: true,
   agent: 'claude',
+  account: WORK,
   model: OPUS,
   fallbackModel: SONNET,
   effort: 'xhigh',
@@ -411,6 +417,7 @@ const designUxIssues: DemoRoutine = {
   schedule: '30 3 * * *',
   enabled: true,
   agent: 'claude',
+  account: WORK,
   model: SONNET,
   effort: 'high',
   permissionMode: 'auto',
@@ -502,6 +509,7 @@ const postReleaseMonitoring: DemoRoutine = {
   schedule: '0 10,16 * * *',
   enabled: true,
   agent: 'claude',
+  account: WORK,
   model: OPUS,
   effort: 'high',
   permissionMode: 'auto',
@@ -616,6 +624,7 @@ const onCallEngineer: DemoRoutine = {
   webhook: true,
   webhookGate: 'node scripts/verify-alert.ts',
   agent: 'claude',
+  account: WORK,
   model: FABLE,
   effort: 'max',
   permissionMode: 'auto',
@@ -803,6 +812,7 @@ const writeReleaseNotes: DemoRoutine = {
   schedule: null,
   enabled: true,
   agent: 'claude',
+  account: WORK,
   model: OPUS,
   effort: 'high',
   permissionMode: 'acceptEdits',
@@ -912,6 +922,7 @@ const flakyE2eFixer: DemoRoutine = {
   schedule: '0 7 * * 1-5',
   enabled: true,
   agent: 'claude',
+  account: WORK,
   model: OPUS,
   effort: 'high',
   permissionMode: 'auto',
@@ -1030,6 +1041,7 @@ const bugFixPickup: DemoRoutine = {
   schedule: '30 11,14 * * *',
   enabled: true,
   agent: 'claude',
+  account: WORK,
   model: OPUS,
   effort: 'high',
   permissionMode: 'auto',
@@ -1140,6 +1152,7 @@ const deadCodeCleanup: DemoRoutine = {
   schedule: '0 10 * * 1',
   enabled: true,
   agent: 'codex',
+  account: WORK,
   model: null,
   effort: 'medium',
   permissionMode: 'workspace-write',
@@ -1250,6 +1263,7 @@ const supportSignals: DemoRoutine = {
   schedule: '0 18 * * *',
   enabled: true,
   agent: 'claude',
+  account: WORK,
   model: SONNET,
   effort: 'medium',
   permissionMode: 'auto',
@@ -1309,6 +1323,7 @@ const prReviewSweep: DemoRoutine = {
   schedule: '15 9-17/2 * * *',
   enabled: true,
   agent: 'claude',
+  account: WORK,
   model: OPUS,
   effort: 'high',
   check: {
@@ -1452,6 +1467,7 @@ const umbrellaCheck: DemoRoutine = {
   schedule: '0 8 * * 1-5',
   enabled: false,
   agent: 'claude',
+  account: PERSONAL,
   model: 'claude-haiku-4-5',
   effort: 'low',
   permissionMode: 'auto',

@@ -1,12 +1,16 @@
 import type { z } from 'zod';
 
+import type { AccountName } from '../agent/ids';
 import type {
+  accountStatusSchema,
   daemonStatusSchema,
   diskSpaceSchema,
   planLimitsSchema,
   planUsageSchema,
   usageLimitSchema,
 } from './schemas';
+
+export type AccountStatus = z.infer<typeof accountStatusSchema>;
 
 export type DaemonStatus = z.infer<typeof daemonStatusSchema>;
 
@@ -23,3 +27,11 @@ export interface CurrentUsageLimit extends UsageLimit {
 }
 
 export type DaemonHealth = 'healthy' | 'stale' | 'unreachable';
+
+export interface AccountLimits {
+  account: AccountName | null;
+  label: string;
+  routines: number;
+  limits: CurrentUsageLimit[];
+  updatedAt: string;
+}

@@ -14,7 +14,7 @@ Each domain has up to two halves with the same name:
 
 | Domain         | Shared half                                                                                                                                                                                                                                                                                                                                                                                                                          | Daemon half                                                                                                                                             |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **agent**      | `AgentName`, `SessionId`, `AgentOption`, agent label, Claude's models, the request for the agents of this machine                                                                                                                                                                                                                                                                                                                    | claude, codex and command adapters, registry, settings validation, `AgentTask`, plan usage storage, the agents and models this machine has              |
+| **agent**      | `AgentName`, `SessionId`, `AccountName`, `AgentOption`, agent and account labels, Claude's models, accounts in use, the request for the agents of this machine                                                                                                                                                                                                                                                                       | claude, codex and command adapters, registry, settings validation, `AgentTask`, plan usage storage, the agents and models this machine has              |
 | **transcript** | item schemas and types, message source, usage limit kinds, preview rule, subagent check, tool input, result and search match count, empty, result, hook, message source, usage limit and retry labels, `TranscriptList`                                                                                                                                                                                                              | none                                                                                                                                                    |
 | **run**        | `RunRecord`, `RunId`, status and trigger, requests, labels, new ids, duration, cursor pages, active, waiting and continue rules, expired runs, blocked actions, retries and attempt labels, `QueuedRun`, run count labels, `makeRunRecord`, worktree branch and changes label, `RunStatusBadge`, `RunDetailList`, `RunOutput`, `RunMessageForm`, `UsageLimitCard`, `RetryCard`, `BlockedBadge`, `BlockedActionsCard`, `WorktreeCard` | runner, replies, hooks, usage limit waits, retries, worktrees, queued runs, record storage with orphan reconciliation, event log, transcript, retention |
 | **scheduler**  | `Skip`, `SkipReason`, `SchedulerState`, `OneTimeRun`, skip label, run later presets, one-time run rules, next run, `SkipsTable`                                                                                                                                                                                                                                                                                                      | tick loop, checks, `scheduler.json` and `one-time-runs.json` storage                                                                                    |
@@ -43,11 +43,22 @@ The CLI program that does a run's work:
 - `codex`: `codex exec --json`;
 - `command`: any shell command, run with `/bin/sh -c`, with plain-text output.
 
-Every agent gets the prompt on stdin. An agent decides which routine settings it accepts and their defaults, how its process starts unattended, how its output becomes run updates and transcript items, and how its session is resumed: `claude --resume <id>`, `codex resume <id>`, none for command. Claude and Codex use the subscription login, so their API key variables are removed from the environment.
+Every agent gets the prompt on stdin. An agent decides which routine settings it accepts and their defaults, where it keeps a login, how its process starts unattended, how its output becomes run updates and transcript items, and how its session is resumed: `claude --resume <id>`, `codex resume <id>`, none for command. Claude and Codex use the subscription login, so their API key variables are removed from the environment.
 
 `AgentName` is shared by routine and run.
 
 `GET /api/agents` lists `claude` and `codex` as this machine has them, for the forms that offer a choice: `isInstalled` says whether the daemon finds the binary, and `models` are the ones to choose from. Claude Code keeps no list of its models, so Claude gets the fixed list in `agent/constants.ts`. Codex gets the models in `models_cache.json` of its home folder, without the hidden ones. Both also get the models this machine's routines already use.
+
+#### Accounts
+
+A routine's `account` names the login its agent runs on, `AccountName` in `agent/ids.ts`. Without it, or with `account: primary`, the routine runs on the machine's own login, which is `null` everywhere.
+
+- Claude runs with `CLAUDE_CONFIG_DIR=~/.claude-<account>` and Codex with `CODEX_HOME=~/.codex-<account>`, its runs, replies and hooks too. `command` does not support it.
+- `kombinat login <account>` runs `claude auth login`, or `codex login` with `--agent codex`, with that variable, after it creates the folder.
+- A run whose account the agent reports as signed out (`claude auth status`, `codex login status`) fails in preflight with how to sign it in, and is not retried.
+- The run record keeps its `account`, and a reply resumes the session on it, since the session lives in that folder, whatever the routine names now. The resume command starts with the variable, such as `CLAUDE_CONFIG_DIR=~/.claude-work claude --resume <id>`.
+- The plan usage of each account is `<state dir>/plan-usage/claude.<account>.json`, and the primary one's `claude.json`.
+- The name starts with a letter or digit and holds only letters, digits, `.`, `_`, `@`, `+` and `-`, at most 64 characters, so that it is safe in a folder name and a shell word.
 
 ### transcript
 
@@ -190,7 +201,7 @@ A routine's `runs`, from 1, the default, to 20, is how many runs each start make
 
 1. The start begins the first run as before and writes the others to `<state dir>/queued-runs.json` as `{ "runs": [{ "routine", "id", "trigger", "scheduledFor", "maxParallel", "queuedAt" }] }`, oldest first, with the ids they will get. A prompt for the start goes into the `.prompt` file of each id.
 2. The tick, after the waits it continues and before the webhook queue, starts each queued run while its routine has fewer active runs than its `maxParallel` and the concurrency limit has a slot. A start from the API or a check does the same at once, so the runs it allows at once start together.
-3. A queued run of a `claude` routine waits while a Claude run waits for a usage limit or the plan's latest usage says a limit is used up, until its reset.
+3. A queued run of a `claude` routine waits while a Claude run on the same account waits for a usage limit or that account's latest plan usage says a limit is used up, until its reset.
 4. `POST /api/routines/<name>/queued-runs/cancel` drops the routine's queued runs and their prompts.
 
 Invariants:
@@ -221,7 +232,7 @@ A routine can also run once at a time the user picks, such as tonight at 02:00, 
 
 ### routine
 
-A named, version-controlled unit of recurring agent work: one markdown file, `routines/<name>.md`. Its frontmatter holds scalar values only and sets `name`, `description`, `schedule`, `cwd`, `agent` and its settings, `enabled`, `webhook` with an optional `webhookGate`, `worktree`, `timeoutMinutes`, `retries`, `runs`, `maxParallel`, an optional [`check`](#checks) and optional `before` and `after` hooks. The body is the prompt.
+A named, version-controlled unit of recurring agent work: one markdown file, `routines/<name>.md`. Its frontmatter holds scalar values only and sets `name`, `description`, `schedule`, `cwd`, `agent` and its settings, among them the [`account`](#accounts), `enabled`, `webhook` with an optional `webhookGate`, `worktree`, `timeoutMinutes`, `retries`, `runs`, `maxParallel`, an optional [`check`](#checks) and optional `before` and `after` hooks. The body is the prompt.
 
 - `name` equals the file name and is lowercase kebab-case.
 - `schedule` is a 5-field cron in local time, or `manual`, which is stored as `null`.
@@ -347,6 +358,8 @@ The running kombinat service as its clients see it through `GET /api/status`: ve
 
 - Claude Code's stream-json reports it in each `rate_limit_event` as the share used and the reset time of the 5-hour and the weekly limit. The runner writes the latest one to `<state dir>/plan-usage/claude.json` with the time it came, which the status serves.
 - A limit whose reset time has passed is left out, because what was used since is unknown until the next run reports it. The dashboard and the TUI show the share left of the most used limit next to the running count.
+
+`accounts` lists the [accounts](#accounts) that `claude` and `codex` routines run on, the primary one first as `null` and the rest by name, each with its count of routines and its `claudeUsage`, `null` without a `claude` routine. With more than one, the dashboard's header names each with its share left, at most the two with the least left, and the TUI's status panel has a line for each. The Routines table and the routine's page name the account of each routine only then, since one login needs no label.
 
 `GET /api/events` is a stream of server-sent events with one `data: change` event, at most every 300 ms, after a routine file, a run record, the webhook queue, a webhook call, the memory of a routine, `inbox.json`, `notifications.json`, `one-time-runs.json`, `queued-runs.json` or the skips and last scheduled times in `scheduler.json` change. Run logs and the tick time do not count: logs grow with every agent event, and clients poll the tick time with the status. A client refetches what it shows on each event and once after it reconnects. It reconnects 5 s after the stream breaks and stops when the answer is an error, such as from an older daemon or the website's demo. The dashboard follows the stream only while its tab is visible, since browsers allow 6 connections to a host across all tabs, and refetches when the tab shows again.
 

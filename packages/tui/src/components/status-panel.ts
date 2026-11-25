@@ -1,8 +1,9 @@
-import type { DaemonStatus } from 'domains/daemon/types';
+import type { CurrentUsageLimit, DaemonStatus } from 'domains/daemon/types';
 import {
+  checkHasSeveralAccounts,
   checkIsUsageLow,
   formatUsageLeft,
-  getCurrentUsageLimits,
+  getAccountLimits,
   getMostUsedLimit,
 } from 'domains/daemon/utils';
 import { formatRelativeCompact, formatSpan } from 'utils/date-time';
@@ -12,17 +13,22 @@ import { S, text } from '../terminal/text';
 import type { Line } from '../terminal/text';
 
 function planUsageLines(status: DaemonStatus, now: number): Line[] {
-  const limit = getMostUsedLimit(getCurrentUsageLimits(status.claudeUsage, now));
-  if (limit === undefined) return [];
+  const hasSeveralAccounts = checkHasSeveralAccounts(status);
+  return getAccountLimits(status).flatMap(({ label, limits }) => {
+    const limit = getMostUsedLimit(limits);
+    if (limit === undefined) return [];
+    return [planUsageLine(hasSeveralAccounts ? label : 'claude', limit, now)];
+  });
+}
+
+function planUsageLine(label: string, limit: CurrentUsageLimit, now: number): Line {
   return [
-    [
-      text('claude '),
-      text(`${formatUsageLeft(limit)} left`, checkIsUsageLow(limit) ? S.boldYellow : S.cyan),
-      text(
-        ` · ${limit.label.toLowerCase()} resets ${formatRelativeCompact(limit.resetsAt, now)}`,
-        S.dim,
-      ),
-    ],
+    text(`${label} `),
+    text(`${formatUsageLeft(limit)} left`, checkIsUsageLow(limit) ? S.boldYellow : S.cyan),
+    text(
+      ` · ${limit.label.toLowerCase()} resets ${formatRelativeCompact(limit.resetsAt, now)}`,
+      S.dim,
+    ),
   ];
 }
 

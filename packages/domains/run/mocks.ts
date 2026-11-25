@@ -7,6 +7,7 @@ export function makeRunRecord(overrides: Partial<RunRecord> = {}): RunRecord {
     id: runIdSchema.parse('run-1'),
     routine: routineNameSchema.parse('demo'),
     agent: 'claude',
+    account: null,
     trigger: 'manual',
     scheduledFor: null,
     startedAt: '2026-10-06T11:00:00Z',

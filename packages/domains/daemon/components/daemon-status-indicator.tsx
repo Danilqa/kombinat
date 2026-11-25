@@ -142,7 +142,12 @@ export function DaemonStatusIndicator() {
           <DaemonStatusSummary health={health} status={data} />
           <span className="sr-only">, daemon status</span>
         </Popover.Trigger>
-        <Popover.Content side="bottom" align="end">
+        {/* Several accounts can be taller than a phone, so the popover scrolls. */}
+        <Popover.Content
+          side="bottom"
+          align="end"
+          className="max-h-(--radix-popover-content-available-height) overflow-y-auto"
+        >
           <p className="mb-1.5 font-medium">{appearance.label}</p>
           {appearance.hint && <p className="text-fg-muted">{appearance.hint}</p>}
           {data && <DaemonStatusDetails status={data} />}

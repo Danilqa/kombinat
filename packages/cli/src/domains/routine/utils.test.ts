@@ -139,6 +139,28 @@ test('memory is off unless the frontmatter turns it on for an agent', () => {
   );
 });
 
+test('a routine runs on the primary login unless the frontmatter names another account', () => {
+  assert.equal(buildRoutine('/tmp/demo.md', routineFile('')).account, null);
+  assert.equal(buildRoutine('/tmp/demo.md', routineFile('account: primary')).account, null);
+  assert.equal(buildRoutine('/tmp/demo.md', routineFile('account: personal')).account, 'personal');
+  assert.equal(
+    buildRoutine('/tmp/demo.md', routineFile('agent: codex\naccount: me@example.com')).account,
+    'me@example.com',
+  );
+  assert.throws(
+    () => buildRoutine('/tmp/demo.md', routineFile('account: ../work')),
+    /account must start with a letter or digit/,
+  );
+  assert.throws(
+    () => buildRoutine('/tmp/demo.md', routineFile('account: my work')),
+    /account must start with a letter or digit/,
+  );
+  assert.throws(
+    () => buildRoutine('/tmp/demo.md', routineFile('agent: command\ncommand: echo\naccount: work')),
+    /does not support account/,
+  );
+});
+
 test('manual routines have no schedule', () => {
   const r = buildRoutine(
     '/tmp/demo.md',

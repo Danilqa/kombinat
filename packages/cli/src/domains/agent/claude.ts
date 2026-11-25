@@ -12,14 +12,16 @@ import { config } from '../../config';
 import { checkIsRecord } from '../../utils/json';
 import { suggestAllowRules } from './claude-rules';
 import {
+  getAccountPrefix,
   getReplyNote,
   getUnattendedNote,
   pickOne,
   rejectUnsupported,
   splitModels,
+  withAccount,
   withoutEnv,
 } from './settings';
-import type { Agent, RunContext, RunUpdate } from './types';
+import type { AccountHome, Agent, RunContext, RunUpdate } from './types';
 
 const DEFAULT_MODEL = 'claude-opus-5-5';
 const DEFAULT_EFFORT = 'high';
@@ -41,6 +43,9 @@ const DROPPED_ENV = [
   'CLAUDECODE',
   'CLAUDE_CODE_ENTRYPOINT',
 ];
+
+// Claude Code keeps a separate login in each config folder.
+const ACCOUNT_HOME: AccountHome = { env: 'CLAUDE_CONFIG_DIR', folder: '.claude' };
 
 const PREVIEW_FIELDS: Record<string, string> = {
   Bash: 'command',
@@ -352,6 +357,7 @@ export const claudeAgent: Agent = {
   name: 'claude',
   output: 'jsonl',
   binaryEnv: 'CLAUDE_BIN',
+  accountHome: ACCOUNT_HOME,
 
   resolveSettings(raw) {
     rejectUnsupported(raw, ['command'], 'claude');
@@ -373,8 +379,26 @@ export const claudeAgent: Agent = {
     return {
       command: config.claudeBin,
       args: buildArgs(context, getUnattendedNote(context)),
-      env: withoutEnv(DROPPED_ENV),
+      env: withAccount(withoutEnv(DROPPED_ENV), ACCOUNT_HOME, context.routine.account),
       input: context.routine.prompt,
+    };
+  },
+
+  buildLoginInvocation(account) {
+    return {
+      command: config.claudeBin,
+      args: ['auth', 'login'],
+      env: withAccount(withoutEnv(DROPPED_ENV), ACCOUNT_HOME, account),
+      input: '',
+    };
+  },
+
+  buildLoginStatusInvocation(account) {
+    return {
+      command: config.claudeBin,
+      args: ['auth', 'status'],
+      env: withAccount(withoutEnv(DROPPED_ENV), ACCOUNT_HOME, account),
+      input: '',
     };
   },
 
@@ -387,7 +411,7 @@ export const claudeAgent: Agent = {
         '--resume',
         sessionId,
       ],
-      env: withoutEnv(DROPPED_ENV),
+      env: withAccount(withoutEnv(DROPPED_ENV), ACCOUNT_HOME, context.routine.account),
       input: message.text,
     };
   },
@@ -471,5 +495,6 @@ export const claudeAgent: Agent = {
     return claudeEvents.flatMap((event, index) => toItems(event, index, results));
   },
 
-  getResumeCommand: sessionId => `claude --resume ${sessionId}`,
+  getResumeCommand: (sessionId, account) =>
+    `${getAccountPrefix(ACCOUNT_HOME, account)}claude --resume ${sessionId}`,
 };

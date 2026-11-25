@@ -41,6 +41,23 @@ test('lists each routine with its schedule, agent and last run', async ({
   await expect(page.getByRole('button', { name: /daemon status/ })).toHaveText(/0 of 3 running/);
 });
 
+test('names the account of each routine once routines run on more than one', async ({
+  page,
+  kombinat,
+}) => {
+  kombinat.addRoutine({ name: 'triage-sentry' });
+  kombinat.addRoutine({ name: 'say-hello', agent: 'command', command: 'echo Hello' });
+  await page.goto('/');
+  await expect(page.getByText('2 routines')).toBeVisible();
+  await expect(page.getByText(/^Account /)).toHaveCount(0);
+
+  kombinat.addRoutine({ name: 'water-plants', agent: 'codex', account: 'personal' });
+  await expect(page.getByText('3 routines')).toBeVisible({ timeout: NEW_RUN_TIMEOUT_MS });
+  await expect(page.getByRole('row', { name: /water-plants/ })).toContainText('Account personal');
+  await expect(page.getByRole('row', { name: /triage-sentry/ })).toContainText('Account primary');
+  await expect(page.getByRole('row', { name: /say-hello/ })).not.toContainText('Account');
+});
+
 test('marks the schedule of routines that run on webhooks', async ({ page, kombinat }) => {
   kombinat.addRoutine({ name: 'triage-sentry', schedule: '0 8 * * 1-5', webhook: true });
   kombinat.addRoutine({ name: 'review-pr', webhook: true });

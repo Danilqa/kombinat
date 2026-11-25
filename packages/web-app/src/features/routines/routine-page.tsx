@@ -4,6 +4,9 @@ import { useLocation, useParams } from 'react-router';
 import { isMatching, P } from 'ts-pattern';
 import { Card, ErrorState, LoadingState, Markdown, Tabs } from 'design-system/components';
 import { PageHeader, SectionHeader } from 'design-system/layouts';
+import { checkHasAccount } from 'domains/agent/utils';
+import { getDaemonStatus } from 'domains/daemon/requests';
+import { checkHasSeveralAccounts } from 'domains/daemon/utils';
 import {
   RoutineBadges,
   RoutineDetailList,
@@ -77,6 +80,13 @@ interface RoutineViewProps {
 
 function RoutineView({ routine, runNowRef }: RoutineViewProps) {
   const runs = useRuns(routine.name, routine.lastRun);
+  const { data: status } = useQuery({
+    queryKey: ['status'],
+    queryFn: () => getDaemonStatus(sameOriginApi),
+  });
+  const hasAccount =
+    checkHasAccount(routine.agent) &&
+    (routine.account !== null || (status !== undefined && checkHasSeveralAccounts(status)));
   const memory = routine.memoryNotes;
   const [tab, setTab] = useTabSearchParam([
     'runs',
@@ -87,7 +97,7 @@ function RoutineView({ routine, runNowRef }: RoutineViewProps) {
   return (
     <div className="space-y-10">
       <Card.Root className="gap-0 py-0">
-        <RoutineDetailList routine={routine} />
+        <RoutineDetailList routine={routine} hasAccount={hasAccount} />
       </Card.Root>
       {routine.tokenUsage && <TokenUsageSection usage={routine.tokenUsage} />}
       <Tabs.Root value={tab} onValueChange={setTab} className="gap-4">
