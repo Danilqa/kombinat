@@ -66,7 +66,7 @@ Each domain has up to two halves with the same name:
 
 Each half has an order of levels. A domain imports only the domains on the levels before its own, never one on its own level. Any daemon domain may import any shared domain.
 
-- Shared: `agent`, `transcript`, `scheduler`, `daemon`, `webhook`, `settings` and `release`, then `run`, then `routine`, `calendar` and `inbox`. Besides, a shared domain may import the `ids.ts` of any other, which imports only zod.
+- Shared: `agent`, `transcript`, `scheduler`, `daemon`, `webhook`, `settings` and `release`, then `run`, then `routine`, `calendar`, `inbox` and `insights`. Besides, a shared domain may import the `ids.ts` of any other, which imports only zod.
 - Daemon: `agent`, `settings` and `inbox`, then `routine`, then `run`, then `webhook`, then `scheduler`.
 
 A shared domain can have `ids.ts`, `types.ts`, `schemas.ts` (zod), `requests.ts` (each request takes the `HttpClient` first), `constants.ts`, `utils.ts`, `mocks.ts` and `components/`. Inside `packages/domains`, files import each other by relative path. Other packages import them per file, such as `domains/run/utils`, and import components through the domain's barrel, `domains/run/components`. When a domain gets its first component, add `components/index.ts` and its key in `exports` in `packages/domains/package.json`.

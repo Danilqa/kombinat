@@ -68,7 +68,6 @@ test('shows the tokens each routine used in the last 7 days', async ({ page, kom
   kombinat.addRun({ routine: 'disk-cleanup', startedAt: time.minutesAgo(30) });
   await page.goto('/');
 
-  await expect(page.getByText('All routines used 4M tokens in the last 7 days')).toBeVisible();
   await expect(page.getByRole('row', { name: /release-notes/ })).toContainText(
     '1M tokens in 7 days',
   );

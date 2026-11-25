@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router';
 import {
   CALENDAR_PATH,
   INBOX_PATH,
+  INSIGHTS_PATH,
   NEW_RUN_PATH,
   ROUTINES_PATH,
   ROUTINE_PATH,
@@ -12,6 +13,7 @@ import {
 import { useCustomization } from '@web-app/contexts';
 import { CalendarPage } from '@web-app/features/calendar/calendar-page';
 import { InboxPage } from '@web-app/features/inbox/inbox-page';
+import { InsightsPage } from '@web-app/features/insights/insights-page';
 import { NotFoundPage } from '@web-app/features/not-found/not-found-page';
 import { ChangePromptPage } from '@web-app/features/routines/change-prompt-page';
 import { RoutinePage } from '@web-app/features/routines/routine-page';
@@ -29,6 +31,7 @@ export function AppRoutes() {
       <Route path={RUNS_PATH} element={<RunsPage />} />
       <Route path={NEW_RUN_PATH} element={<NewRunPage />} />
       <Route path={INBOX_PATH} element={<InboxPage />} />
+      <Route path={INSIGHTS_PATH} element={<InsightsPage />} />
       <Route path={ROUTINE_PATH} element={<RoutinePage />} />
       <Route path={ROUTINE_RUN_PATH} element={<ChangePromptPage />} />
       <Route path={RUN_PATH} element={<RunPage />} />

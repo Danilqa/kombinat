@@ -6,6 +6,8 @@ import { NOTIFY_LEVELS } from 'domains/inbox/constants';
 import { markReadRequestSchema, notifyRequestSchema } from 'domains/inbox/schemas';
 import type { InboxState, NotifyLevels } from 'domains/inbox/types';
 import { addReadRuns, changeNotifyLevel, listUnreadRuns } from 'domains/inbox/utils';
+import { INSIGHTS_PERIOD_ERROR } from 'domains/insights/constants';
+import { buildInsights, parseInsightsPeriod } from 'domains/insights/utils';
 import type { ReleaseUpdate } from 'domains/release/types';
 import { MEMORY_MAX_LENGTH } from 'domains/routine/constants';
 import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
@@ -247,8 +249,8 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     return listRuns(now).filter(run => run.routine === routine.name);
   }
 
-  function listQueue(routine: DemoRoutine, now: Date): QueuedWebhook[] {
-    const isRunning = listRoutineRuns(routine, now).some(checkIsRunActive);
+  function listQueue(routine: DemoRoutine, routineRuns: RunRecord[]): QueuedWebhook[] {
+    const isRunning = routineRuns.some(checkIsRunActive);
     return isRunning ? (queues.get(routine.name) ?? []) : [];
   }
 
@@ -265,7 +267,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
         ? []
         : [toWebhookCall(receivedAt, { outcome: 'started', status: 200, payload }, run.id)];
     });
-    const queued = listQueue(routine, now).map(webhook =>
+    const queued = listQueue(routine, runs).map(webhook =>
       toWebhookCall(
         new Date(webhook.queuedAt),
         { outcome: 'queued', status: 200, payload: webhook.preview },
@@ -283,8 +285,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     return calls.filter(call => !expired.has(call));
   }
 
-  function getTokenUsages(now: Date): Map<RoutineName, TokenUsage | null> {
-    const runs = listRuns(now);
+  function getTokenUsages(now: Date, runs = listRuns(now)): Map<RoutineName, TokenUsage | null> {
     const usages = buildTokenUsages(
       demoRoutines.map(routine => runs.filter(run => run.routine === routine.name)),
       now,
@@ -292,16 +293,19 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     return new Map(demoRoutines.map((routine, index) => [routine.name, usages[index] ?? null]));
   }
 
+  // Takes the runs of all routines, so a list of summaries builds them once.
   function getSummary(
     routine: DemoRoutine,
     now: Date,
-    tokenUsages = getTokenUsages(now),
+    runs = listRuns(now),
+    tokenUsages = getTokenUsages(now, runs),
   ): RoutineSummary {
+    const routineRuns = runs.filter(run => run.routine === routine.name);
     return toRoutineSummary(
       routine,
-      listRoutineRuns(routine, now),
+      routineRuns,
       history.listSkips(routine, now),
-      listQueue(routine, now),
+      listQueue(routine, routineRuns),
       listRoutineOneTimeRuns(oneTimeRuns, routine.name),
       tokenUsages.get(routine.name) ?? null,
       queuedRuns.some(queued => queued.routine === routine.name),
@@ -346,7 +350,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
       ...getSummary(routine, now),
       prompt: routine.prompt,
       skips: history.listSkips(routine, now),
-      queue: listQueue(routine, now),
+      queue: listQueue(routine, listRoutineRuns(routine, now)),
       webhookCalls: listWebhookCalls(routine, now),
       oneTimeRuns: listRoutineOneTimeRuns(oneTimeRuns, routine.name),
       queuedRuns: queuedRuns.filter(queued => queued.routine === routine.name),
@@ -534,6 +538,12 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     return withRoutine(query.routine, routine => toPage(listRoutineRuns(routine, now)));
   }
 
+  function getInsights(url: URL, now: Date): ApiResponse {
+    const days = parseInsightsPeriod(url.searchParams);
+    if (days === null) return fail(400, INSIGHTS_PERIOD_ERROR);
+    return ok(buildInsights(listRuns(now), days, now));
+  }
+
   function getCalendar(url: URL, now: Date): ApiResponse {
     const from = new Date(url.searchParams.get('from') ?? '');
     const to = new Date(url.searchParams.get('to') ?? '');
@@ -577,8 +587,9 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     return match(request)
       .with(['GET', ['status']], () => ok(getStatus(now)))
       .with(['GET', ['routines']], () => {
-        const tokenUsages = getTokenUsages(now);
-        return ok(demoRoutines.map(routine => getSummary(routine, now, tokenUsages)));
+        const runs = listRuns(now);
+        const tokenUsages = getTokenUsages(now, runs);
+        return ok(demoRoutines.map(routine => getSummary(routine, now, runs, tokenUsages)));
       })
       .with(['GET', ['routines', P.string]], ([, [, name]]) =>
         withRoutine(routineNameSchema.parse(name), routine => ok(getRoutineDetail(routine, now))),
@@ -603,6 +614,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
       .with(['GET', ['calendar']], () => getCalendar(url, now))
       .with(['GET', ['inbox']], () => ok({ runs: listUnreadRuns(listRuns(now), inbox), notify }))
       .with(['POST', ['inbox', 'read']], () => markRunsRead(body, now))
+      .with(['GET', ['insights']], () => getInsights(url, now))
       .with(['PUT', ['inbox', 'notify', P.string]], ([, [, , name]]) =>
         withRoutine(routineNameSchema.parse(name), routine => setNotifyLevel(routine, body)),
       )
