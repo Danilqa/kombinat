@@ -6,17 +6,22 @@
 
 ## ✨ Features
 
-- **Routines in git.** One markdown file each, live within 5 minutes of the merge.
-- **Schedule or webhook.** Cron, or a request from Linear, GitHub or any other app.
+- **Routines in git.** One markdown file each, live within 5 minutes of the merge. Start from a template on the dashboard.
+- **Schedule or webhook.** Cron, once at a time you pick, or a request from Linear, GitHub or any other app.
 - **Any agent.** Claude Code, Codex or any other CLI.
 - **Your setup.** Your logins, skills, MCP servers, browser and `CLAUDE.md`.
-- **No API bill.** Runs on your subscription and shows how much of the Claude plan is left.
+- **No API bill.** Runs on your subscription.
+- **Several subscriptions.** Run routines on more than one Claude or Codex login at once, such as work and personal.
+- **Insights.** Monitor your token spending.
 - **Waits out limits.** A run that hits a Claude usage limit continues after the reset.
 - **Retries errors.** A run that stops with an error can try again a few minutes later, right where it stopped.
+- **Skips idle runs.** A check command skips a scheduled run when there is nothing to do, so you spend no tokens.
+- **Several runs.** Start a routine several times in one go, such as once per issue, in a row or in parallel.
+- **Memory.** A routine can carry notes from one run to the next. Off by default.
 - **Inbox.** Unread runs, with failures and findings first, and a notification for the ones you pick.
 - **Full transcripts.** Search them, and chat to continue any run.
 - **Everywhere.** Dashboard in the browser, the terminal or as a PWA on your phone and computer.
-- **Guardrails.** Timeouts, a budget cap, no overlapping runs and catch-up after sleep.
+- **Guardrails.** Timeouts, a dollar or token budget, no overlapping runs and catch-up after sleep.
 - **Small.** One command, two dependencies, no cloud, no database, no telemetry.
 
 ## 😄 Fun fact
