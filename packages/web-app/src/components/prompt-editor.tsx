@@ -24,6 +24,7 @@ interface PromptEditorProps {
   footer?: ReactNode;
   placeholder?: string;
   autoFocus?: boolean;
+  inputClassName?: string;
   ref?: Ref<HTMLTextAreaElement>;
 }
 
@@ -36,6 +37,7 @@ export function PromptEditor({
   footer,
   placeholder,
   autoFocus,
+  inputClassName,
   ref,
 }: PromptEditorProps) {
   return (
@@ -54,7 +56,10 @@ export function PromptEditor({
         onChange={event => onChange(event.target.value)}
         onKeyDown={submitOnShortcut}
         spellCheck={false}
-        className="min-h-[60vh] w-full resize-y bg-transparent p-6 font-mono text-body-sm/relaxed text-fg outline-none placeholder:text-fg-muted focus-visible:shadow-none"
+        className={cn(
+          'min-h-[60vh] w-full resize-y bg-transparent p-6 font-mono text-body-sm/relaxed text-fg outline-none placeholder:text-fg-muted focus-visible:shadow-none',
+          inputClassName,
+        )}
       />
       {/* Phones have no shortcut, so a footer without its own content would stay empty. */}
       <div

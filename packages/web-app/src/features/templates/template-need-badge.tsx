@@ -1,4 +1,4 @@
-import { GitBranch, SquareTerminal } from 'lucide-react';
+import { GitBranch, Laptop, SquareTerminal } from 'lucide-react';
 import { match } from 'ts-pattern';
 import { Badge } from 'design-system/components';
 import type { RoutineTemplateNeed } from 'domains/routine/types';
@@ -12,6 +12,7 @@ export function TemplateNeedBadge({ need }: TemplateNeedBadgeProps) {
   const Icon = match(need)
     .with('git-repository', () => GitBranch)
     .with('github-cli', () => SquareTerminal)
+    .with('macos', () => Laptop)
     .exhaustive();
   return (
     <Badge size="small" variant="info">

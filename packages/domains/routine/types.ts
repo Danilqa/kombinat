@@ -26,11 +26,11 @@ export type MemoryRequest = z.infer<typeof memoryRequestSchema>;
 export type AddRoutineRequest = z.infer<typeof addRoutineRequestSchema>;
 export type AddedRoutine = z.infer<typeof addedRoutineSchema>;
 
-export type RoutineTemplateCategory = 'code' | 'watch' | 'reports' | 'home';
+export type RoutineTemplateCategory = 'code' | 'product' | 'watch' | 'reports' | 'home';
 
-export type RoutineTemplateNeed = 'git-repository' | 'github-cli';
+export type RoutineTemplateNeed = 'git-repository' | 'github-cli' | 'macos';
 
-// The settings a routine file gets from its template. The name, folder and schedule come from the user.
+// What a routine file starts from. The user sets the name and folder, and may change the schedule, agent, model and prompt.
 export interface RoutineTemplate {
   id: RoutineTemplateId;
   category: RoutineTemplateCategory;
@@ -41,13 +41,14 @@ export interface RoutineTemplate {
   cwd: string;
   folderHint: string;
   agent: AgentName;
-  model: string;
-  effort: string;
-  permissionMode: string;
+  model: string | null;
+  effort: string | null;
+  permissionMode: string | null;
   timeoutMinutes: number;
   retries: number;
   worktree: boolean;
   memory: boolean;
   check: string | null;
+  command: string | null;
   prompt: string;
 }

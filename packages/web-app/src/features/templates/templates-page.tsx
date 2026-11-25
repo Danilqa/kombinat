@@ -14,8 +14,9 @@ export function TemplatesPage() {
       <header className="mb-8 space-y-1">
         <PageHeader.Title>Start from a template</PageHeader.Title>
         <p className="max-w-3xl text-body text-fg-secondary">
-          Routines that work out of the box. Pick one, give it a name, folder and schedule, and it
-          lands in your routines folder as a markdown file you can change.
+          Routines that work out of the box. Pick one, give it a name, folder and schedule, choose
+          the agent and change the prompt to fit your project, and it lands in your routines folder
+          as a markdown file.
         </p>
       </header>
       <div className="space-y-10">

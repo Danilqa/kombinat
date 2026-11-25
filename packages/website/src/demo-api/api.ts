@@ -1,5 +1,7 @@
 import { match, P } from 'ts-pattern';
 
+import { CLAUDE_MODELS } from 'domains/agent/constants';
+import type { AgentOption } from 'domains/agent/types';
 import { buildCalendar } from 'domains/calendar/utils';
 import type { DaemonStatus } from 'domains/daemon/types';
 import { NOTIFY_LEVELS } from 'domains/inbox/constants';
@@ -19,7 +21,8 @@ import {
 } from 'domains/routine/schemas';
 import { findRoutineTemplate } from 'domains/routine/templates';
 import type { RoutineDetail, RoutineMemory, RoutineSummary } from 'domains/routine/types';
-import { countChangedLines, describeScheduleValue } from 'domains/routine/utils';
+import { AGENT_KIND_ERROR } from 'domains/routine/constants';
+import { checkCanUseAgent, countChangedLines, describeScheduleValue } from 'domains/routine/utils';
 import { MAX_RUNS, RUNS_CURSOR_ERROR } from 'domains/run/constants';
 import { runIdSchema, type RunId } from 'domains/run/ids';
 import { runMessageSchema, usageLimitWaitActionSchema } from 'domains/run/schemas';
@@ -90,6 +93,11 @@ function parseJson(text: string): unknown {
     return undefined;
   }
 }
+
+const AGENT_OPTIONS: AgentOption[] = [
+  { name: 'claude', isInstalled: true, models: CLAUDE_MODELS },
+  { name: 'codex', isInstalled: true, models: ['gpt-5.5', 'gpt-5.4'] },
+];
 
 // The public demo announces no update, so visitors never read of a release that does not exist.
 const RELEASE_UPDATE: ReleaseUpdate = {
@@ -458,12 +466,13 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     if (!request.success) {
       return fail(
         400,
-        'The body must be JSON with a template, a lowercase kebab-case name, a folder and a schedule',
+        'The body must be JSON with a template, a lowercase kebab-case name, a folder, a schedule, an agent, a model or null and a prompt',
       );
     }
     const { template: id, ...choices } = request.data;
     const template = findRoutineTemplate(id);
     if (template === null) return fail(404, `Unknown template ${id}`);
+    if (!checkCanUseAgent(template, choices.agent)) return fail(400, AGENT_KIND_ERROR);
     if (describeScheduleValue(choices.schedule) === null) {
       return fail(400, `${choices.schedule} is not a cron schedule or manual`);
     }
@@ -650,6 +659,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
       .with(['PUT', ['inbox', 'notify', P.string]], ([, [, , name]]) =>
         withRoutine(routineNameSchema.parse(name), routine => setNotifyLevel(routine, body)),
       )
+      .with(['GET', ['agents']], () => ok(AGENT_OPTIONS))
       .with(['GET', ['settings']], () => ok(settings))
       .with(['PUT', ['settings']], () => updateSettings(body))
       .with(['GET', ['releases']], () => ok(RELEASE_UPDATE))

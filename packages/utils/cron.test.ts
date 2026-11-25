@@ -59,3 +59,50 @@ test('describes common schedules', () => {
   assert.equal(describeCron('10 7-21/2 * * *'), 'Every 2 hours at :10, 07:10-21:10');
   assert.equal(describeCron('5 */2 * * *'), 'Every 2 hours at :05, from 00:05');
 });
+
+test('describes every schedule in words, never as the expression', () => {
+  assert.equal(describeCron('* * * * *'), 'Every minute');
+  assert.equal(describeCron('*/30 * * * *'), 'Every 30 minutes');
+  assert.equal(describeCron('*/15 9-17 * * 1-5'), 'Every 15 minutes, 09:00-17:59, on weekdays');
+  assert.equal(describeCron('0,30 * * * *'), 'At :00 and :30 of every hour');
+  assert.equal(describeCron('0-10 * * * 6,0'), 'At minutes 0-10 of every hour on weekends');
+  assert.equal(describeCron('0,30 9 * * *'), 'Daily at 09:00 and 09:30');
+  assert.equal(describeCron('0 9,17 * * 1-5'), 'Weekdays at 09:00 and 17:00');
+  assert.equal(describeCron('0 22 * * 1,3,5'), 'Monday, Wednesday, Friday at 22:00');
+  assert.equal(describeCron('0 10 * * 6,7'), 'Weekends at 10:00');
+  assert.equal(describeCron('0 * * * 1-5'), 'Hourly at :00 on weekdays');
+  assert.equal(describeCron('15 9-17/2 * * 1-5'), 'Every 2 hours at :15, 09:15-17:15, on weekdays');
+  assert.equal(describeCron('0 13,17,23,0,1,2 * * *'), 'At :00 on hours 0, 1, 2, 13, 17, 23');
+  assert.equal(describeCron('0 9 1 * *'), 'Monthly on the 1st at 09:00');
+  assert.equal(describeCron('0 9 1,15 * *'), 'At 09:00 on the 1st and 15th of the month');
+  assert.equal(describeCron('0 9 1-7 * *'), 'At 09:00 on days 1-7 of the month');
+  assert.equal(describeCron('0 9 1 * 3'), 'At 09:00 on the 1st of the month or on Wednesday');
+  assert.equal(
+    describeCron('0 9 22 1,7 *'),
+    'At 09:00 on the 22nd of the month in January and July',
+  );
+  assert.equal(describeCron('30 6 * 6-8 *'), 'At 06:30 in June, July and August');
+  assert.equal(describeCron('0 8 * 1-6 1'), 'At 08:00 on Monday in January-June');
+  assert.equal(describeCron('0 9 1 * 0-6'), 'Daily at 09:00');
+  assert.equal(describeCron('0 9 */1 * 1'), 'Daily at 09:00');
+  assert.equal(describeCron('0 9 * * 0-6'), 'Daily at 09:00');
+  assert.equal(describeCron('0 12 */2 * *'), 'At 12:00 on every 2 days of the month');
+  assert.equal(describeCron('0 12 1 */3 *'), 'At 12:00 on the 1st of the month every 3 months');
+  assert.equal(describeCron('5/20 */3 * * *'), 'At :05, :25 and :45, every 3 hours');
+});
+
+test('describes any valid expression in words', () => {
+  const minutes = ['*', '0', '*/7', '5/20', '0,15,30,45', '10-50', '1-9,30'];
+  const hours = ['*', '4', '*/3', '8-18', '8-18/5', '1,2,3,4,5', '22-23,0-3'];
+  const days = ['* * *', '13 * *', '* 2 *', '* * 0', '1-5 */2 1-3', '31 12 7'];
+  for (const minute of minutes) {
+    for (const hour of hours) {
+      for (const day of days) {
+        const expression = `${minute} ${hour} ${day}`;
+        const text = describeCron(expression);
+        assert.match(text, /^[A-Z]/, expression);
+        assert.doesNotMatch(text, /cron|\*|undefined|NaN| {2}|, ,|^$/, `${expression}: ${text}`);
+      }
+    }
+  }
+});

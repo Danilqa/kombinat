@@ -109,12 +109,15 @@ const singleLineSchema = z
   .trim()
   .regex(/^[^\r\n]+$/);
 
-// The schedule is a cron or manual, as in a routine file.
+// The schedule is a cron or manual, as in a routine file. A null model leaves the choice to the agent.
 export const addRoutineRequestSchema = z.object({
   template: routineTemplateIdSchema,
   name: z.string().regex(ROUTINE_NAME_PATTERN),
   cwd: singleLineSchema,
   schedule: singleLineSchema,
+  agent: agentNameSchema,
+  model: singleLineSchema.nullable(),
+  prompt: z.string().trim().min(1),
 });
 
 export const addedRoutineSchema = z.object({
