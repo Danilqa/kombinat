@@ -14,8 +14,8 @@ import { describeCron } from 'utils/cron';
 import { config, DEFAULT_PORT } from './config';
 import { getAgent, parseAccountName, parseAgentName } from './domains/agent/registry';
 import { getAccountFolder } from './domains/agent/settings';
-import { getRoutine, loadRoutines } from './domains/routine/storage';
-import { getNextRun } from './domains/routine/utils';
+import { getRoutine, listRoutineFiles, loadRoutines } from './domains/routine/storage';
+import { getNextRun, listRoutineProblems } from './domains/routine/utils';
 import { replyToRun, runRoutine } from './domains/run/runner';
 import { ensureStateDirs, listRuns, readRunRecord } from './domains/run/storage';
 import { readSchedulerState } from './domains/scheduler/storage';
@@ -47,7 +47,8 @@ const USAGE = `kombinat, run from the folder that holds routines/ (init, connect
                             routines with account: <account> run on its plan, for example
                             login personal; login primary signs in the machine's own account
   list                      show routines from ./routines with next run and last status
-  validate                  parse every routine file and report errors
+  validate                  check every routine file and report all errors, unknown settings
+                            and settings set twice
   readme                    regenerate the routines table in README.md
   run <name>                run one routine now in the foreground (what the scheduler spawns)
   reply <name> <run id>     continue the run's agent session with the last message sent to it
@@ -152,6 +153,17 @@ function listRoutines(): void {
       ].join(' '),
     );
   }
+}
+
+function validateRoutines(): void {
+  const files = listRoutineFiles(config.routinesDir);
+  const problems = files.flatMap(file => listRoutineProblems(file, fs.readFileSync(file, 'utf8')));
+  if (problems.length === 0) {
+    console.log(`${files.length} routine(s) ok`);
+    return;
+  }
+  for (const problem of problems) console.error(problem);
+  process.exitCode = 1;
 }
 
 async function runOne(name: string | undefined, options: CliOptions): Promise<void> {
@@ -342,7 +354,7 @@ async function main(): Promise<void> {
     .with('connect', () => connectTo(name, options))
     .with('login', () => login(name, options))
     .with('list', listRoutines)
-    .with('validate', () => console.log(`${loadRoutines().length} routine(s) ok`))
+    .with('validate', validateRoutines)
     .with('readme', () =>
       console.log(updateReadme() ? 'README.md updated' : 'README.md already up to date'),
     )

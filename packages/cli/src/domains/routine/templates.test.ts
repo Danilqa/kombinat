@@ -9,7 +9,7 @@ import { routineNameSchema } from 'domains/routine/ids';
 import { ROUTINE_TEMPLATES } from 'domains/routine/templates';
 
 import { addRoutineFromTemplate } from './templates';
-import { buildRoutine } from './utils';
+import { buildRoutine, listRoutineProblems } from './utils';
 
 const [template] = ROUTINE_TEMPLATES;
 if (template === undefined) throw new Error('There are no templates');
@@ -32,7 +32,9 @@ for (const each of ROUTINE_TEMPLATES) {
     );
     assert.equal(added.outcome, 'added');
     const file = path.join(routines, `${name}.md`);
-    const routine = buildRoutine(file, fs.readFileSync(file, 'utf8'));
+    const source = fs.readFileSync(file, 'utf8');
+    assert.deepEqual(listRoutineProblems(file, source), []);
+    const routine = buildRoutine(file, source);
     assert.equal(routine.schedule, each.schedule);
     assert.equal(routine.cwd, cwd);
     assert.equal(routine.model, each.model);

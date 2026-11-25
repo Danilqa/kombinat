@@ -4,7 +4,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 
 import { EXAMPLE_ROUTINES } from './examples';
-import { buildRoutine } from './utils';
+import { buildRoutine, listRoutineProblems } from './utils';
 
 const REPO_ROUTINES = path.resolve(import.meta.dirname, '../../../../../example/routines');
 
@@ -22,7 +22,9 @@ for (const example of EXAMPLE_ROUTINES) {
   });
 
   test(`${example.name} is a valid routine`, () => {
-    const routine = buildRoutine(`/tmp/routines/${example.name}.md`, example.source);
+    const file = `/tmp/routines/${example.name}.md`;
+    assert.deepEqual(listRoutineProblems(file, example.source), []);
+    const routine = buildRoutine(file, example.source);
     assert.equal(routine.name, example.name);
     assert.equal(routine.agent, 'claude');
     assert.equal(routine.timeoutMinutes, 5);

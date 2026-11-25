@@ -97,7 +97,7 @@ Run them from the folder with `routines/`. With npm, use `npx kombinat` instead 
 pnpm kombinat init [folder]  # add the missing package.json, example routines, README and .gitignore
 pnpm kombinat list           # routines, next run, last status
 pnpm kombinat run <name>     # run a routine now, in the foreground
-pnpm kombinat validate       # check all routine files
+pnpm kombinat validate       # check all routine files, including misspelled settings
 pnpm kombinat tui            # dashboard in the terminal, works over ssh
 pnpm kombinat status         # daemon and scheduler state
 pnpm kombinat readme         # update the routines table in README.md
@@ -140,6 +140,8 @@ To start from a ready routine instead, click New routine on the dashboard's Rout
 - `enabled: false` keeps the file but stops the schedule.
 - `webhook: true` lets other apps start the routine with a request, see [docs/webhook.md](docs/webhook.md).
 - `memory: true` keeps notes that carry over between runs, see below. Off by default.
+
+`kombinat validate` lists every problem in every file, including settings it does not know, such as `scheduel`, and settings set twice. The daemon ignores those, so check with `validate` after you edit a routine.
 
 Changes apply on the next check, no restart needed. Write the prompt so the agent never has to ask a question: nobody will answer. When there is nothing to do, have it start its answer with "No" or "Nothing", such as "No open incidents.", so the dashboard's Inbox files the run under Nothing to report.
 

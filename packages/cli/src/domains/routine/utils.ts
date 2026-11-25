@@ -21,9 +21,41 @@ type Frontmatter = Record<string, FrontmatterValue>;
 interface ParsedFrontmatter {
   data: Frontmatter;
   body: string;
+  repeatedKeys: string[];
 }
 
 const DEFAULT_TIMEOUT_MINUTES = 55;
+
+const ROUTINE_SETTINGS = [
+  'name',
+  'description',
+  'schedule',
+  'cwd',
+  'agent',
+  'account',
+  'model',
+  'fallbackModel',
+  'effort',
+  'permissionMode',
+  'command',
+  'maxBudgetUsd',
+  'maxBudgetTokens',
+  'onUsageLimit',
+  'enabled',
+  'webhook',
+  'webhookGate',
+  'timeoutMinutes',
+  'retries',
+  'runs',
+  'maxParallel',
+  'memory',
+  'worktree',
+  'check',
+  'before',
+  'after',
+];
+
+const MAX_TYPO_DISTANCE = 2;
 
 function parseScalar(raw: string): FrontmatterValue {
   const value = raw.trim();
@@ -39,13 +71,16 @@ export function parseFrontmatter(source: string): ParsedFrontmatter {
   const found = /^---\r?\n(?<head>[\s\S]*?)\r?\n---\r?\n?(?<body>[\s\S]*)$/.exec(source);
   if (!found?.groups) throw new Error('must start with a frontmatter block between --- lines');
   const data: Frontmatter = {};
+  const repeatedKeys: string[] = [];
   for (const line of (found.groups['head'] ?? '').split(/\r?\n/)) {
     if (!line.trim() || line.trim().startsWith('#')) continue;
     const separator = line.indexOf(':');
     if (separator === -1) throw new Error(`frontmatter line "${line}" must look like key: value`);
-    data[line.slice(0, separator).trim()] = parseScalar(line.slice(separator + 1));
+    const key = line.slice(0, separator).trim();
+    if (Object.hasOwn(data, key) && !repeatedKeys.includes(key)) repeatedKeys.push(key);
+    data[key] = parseScalar(line.slice(separator + 1));
   }
-  return { data, body: (found.groups['body'] ?? '').trim() };
+  return { data, body: (found.groups['body'] ?? '').trim(), repeatedKeys };
 }
 
 function readString(data: Frontmatter, key: string): string | null {
@@ -180,6 +215,56 @@ export function buildRoutine(file: string, source: string): Routine {
     prompt: body,
     file,
   };
+}
+
+function getEditDistance(from: string, to: string): number {
+  let previous = Array.from({ length: to.length + 1 }, (_, index) => index);
+  for (let i = 1; i <= from.length; i += 1) {
+    const current = [i];
+    for (let j = 1; j <= to.length; j += 1) {
+      const substitution = (previous[j - 1] ?? 0) + (from[i - 1] === to[j - 1] ? 0 : 1);
+      current.push(Math.min((previous[j] ?? 0) + 1, (current[j - 1] ?? 0) + 1, substitution));
+    }
+    previous = current;
+  }
+  return previous[to.length] ?? 0;
+}
+
+function findSimilarSetting(key: string): string | null {
+  let similar: string | null = null;
+  let similarDistance = MAX_TYPO_DISTANCE + 1;
+  for (const setting of ROUTINE_SETTINGS) {
+    const distance = getEditDistance(key.toLowerCase(), setting.toLowerCase());
+    if (distance < similarDistance) {
+      similar = setting;
+      similarDistance = distance;
+    }
+  }
+  return similar;
+}
+
+function describeUnknownSetting(file: string, key: string): string {
+  const similar = findSimilarSetting(key);
+  const hint = similar === null ? '' : `, did you mean ${similar}?`;
+  return `${file}: unknown setting ${key}${hint}`;
+}
+
+// The daemon ignores unknown and repeated settings, so only validate reports them.
+export function listRoutineProblems(file: string, source: string): string[] {
+  const problems: string[] = [];
+  try {
+    const { data, repeatedKeys } = withFile(file, () => parseFrontmatter(source));
+    problems.push(
+      ...Object.keys(data)
+        .filter(key => !ROUTINE_SETTINGS.includes(key))
+        .map(key => describeUnknownSetting(file, key)),
+      ...repeatedKeys.map(key => `${file}: ${key} is set more than once, the last one wins`),
+    );
+    buildRoutine(file, source);
+  } catch (error) {
+    problems.push(getErrorMessage(error));
+  }
+  return problems;
 }
 
 export function describeSchedule(routine: Routine): string {
