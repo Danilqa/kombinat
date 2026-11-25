@@ -13,7 +13,8 @@ import { getErrorMessage } from 'utils/error';
 
 import { getAgent, parseAccountName, parseAgentName } from '../agent/registry';
 import type { AgentSettings } from '../agent/types';
-import type { Routine } from './types';
+import { ROUTINE_SETTINGS } from './constants';
+import type { Routine, RoutineSetting } from './types';
 
 type FrontmatterValue = string | number | boolean;
 type Frontmatter = Record<string, FrontmatterValue>;
@@ -21,9 +22,12 @@ type Frontmatter = Record<string, FrontmatterValue>;
 interface ParsedFrontmatter {
   data: Frontmatter;
   body: string;
+  repeatedKeys: string[];
 }
 
 const DEFAULT_TIMEOUT_MINUTES = 55;
+
+const MAX_TYPO_DISTANCE = 2;
 
 function parseScalar(raw: string): FrontmatterValue {
   const value = raw.trim();
@@ -39,21 +43,30 @@ export function parseFrontmatter(source: string): ParsedFrontmatter {
   const found = /^---\r?\n(?<head>[\s\S]*?)\r?\n---\r?\n?(?<body>[\s\S]*)$/.exec(source);
   if (!found?.groups) throw new Error('must start with a frontmatter block between --- lines');
   const data: Frontmatter = {};
+  const repeatedKeys: string[] = [];
   for (const line of (found.groups['head'] ?? '').split(/\r?\n/)) {
     if (!line.trim() || line.trim().startsWith('#')) continue;
     const separator = line.indexOf(':');
-    if (separator === -1) throw new Error(`frontmatter line "${line}" must look like key: value`);
-    data[line.slice(0, separator).trim()] = parseScalar(line.slice(separator + 1));
+    const key = line.slice(0, separator).trim();
+    if (separator === -1 || !key) {
+      throw new Error(`frontmatter line "${line}" must look like key: value`);
+    }
+    if (Object.hasOwn(data, key) && !repeatedKeys.includes(key)) repeatedKeys.push(key);
+    data[key] = parseScalar(line.slice(separator + 1));
   }
-  return { data, body: (found.groups['body'] ?? '').trim() };
+  return { data, body: (found.groups['body'] ?? '').trim(), repeatedKeys };
 }
 
-function readString(data: Frontmatter, key: string): string | null {
-  const value = data[key];
+function readValue(data: Frontmatter, key: RoutineSetting): FrontmatterValue | undefined {
+  return data[key];
+}
+
+function readString(data: Frontmatter, key: RoutineSetting): string | null {
+  const value = readValue(data, key);
   return value === undefined || value === '' ? null : String(value);
 }
 
-function readNumber(data: Frontmatter, key: string): number | null {
+function readNumber(data: Frontmatter, key: RoutineSetting): number | null {
   const value = readString(data, key);
   if (value === null) return null;
   const number = Number(value);
@@ -61,7 +74,7 @@ function readNumber(data: Frontmatter, key: string): number | null {
   return number;
 }
 
-function readTokenCount(data: Frontmatter, key: string): number | null {
+function readTokenCount(data: Frontmatter, key: RoutineSetting): number | null {
   const value = readString(data, key);
   if (value === null) return null;
   const count = parseTokenCount(value);
@@ -71,8 +84,8 @@ function readTokenCount(data: Frontmatter, key: string): number | null {
   return count;
 }
 
-function readBoolean(data: Frontmatter, key: string): boolean | null {
-  const value = data[key];
+function readBoolean(data: Frontmatter, key: RoutineSetting): boolean | null {
+  const value = readValue(data, key);
   if (value === undefined || value === '') return null;
   if (typeof value !== 'boolean') throw new Error(`${key} must be true or false`);
   return value;
@@ -86,7 +99,7 @@ function readRetries(data: Frontmatter): number {
   return retries;
 }
 
-function readRunCount(data: Frontmatter, key: string): number {
+function readRunCount(data: Frontmatter, key: RoutineSetting): number {
   const count = Number(readString(data, key) ?? 1);
   if (!Number.isInteger(count) || count < 1 || count > MAX_RUNS) {
     throw new Error(`${key} must be a whole number from 1 to ${MAX_RUNS}`);
@@ -157,6 +170,7 @@ export function buildRoutine(file: string, source: string): Routine {
   if (memory === true && !checkCanKeepMemory(agent)) {
     throw new Error(`${file}: agent command has no memory, use claude or codex`);
   }
+  const enabled = readValue(data, 'enabled');
   return {
     name: routineNameSchema.parse(name),
     description: readString(data, 'description') ?? '',
@@ -164,7 +178,7 @@ export function buildRoutine(file: string, source: string): Routine {
     cwd: cwd.replace(/^~(?=\/|$)/, os.homedir()),
     agent,
     ...withFile(file, () => readAgentSettings(data, agent)),
-    enabled: data['enabled'] === undefined ? true : Boolean(data['enabled']),
+    enabled: enabled === undefined ? true : Boolean(enabled),
     webhook,
     webhookGate,
     timeoutMinutes:
@@ -180,6 +194,60 @@ export function buildRoutine(file: string, source: string): Routine {
     prompt: body,
     file,
   };
+}
+
+function getEditDistance(from: string, to: string): number {
+  let previous = Array.from({ length: to.length + 1 }, (_, index) => index);
+  for (let i = 1; i <= from.length; i += 1) {
+    const current = [i];
+    for (let j = 1; j <= to.length; j += 1) {
+      const substitution = (previous[j - 1] ?? 0) + (from[i - 1] === to[j - 1] ? 0 : 1);
+      current.push(Math.min((previous[j] ?? 0) + 1, (current[j - 1] ?? 0) + 1, substitution));
+    }
+    previous = current;
+  }
+  return previous[to.length] ?? 0;
+}
+
+function checkIsRoutineSetting(key: string): key is RoutineSetting {
+  return ROUTINE_SETTINGS.some(setting => setting === key);
+}
+
+function findSimilarSetting(key: string): RoutineSetting | null {
+  let similar: RoutineSetting | null = null;
+  let similarDistance = MAX_TYPO_DISTANCE + 1;
+  for (const setting of ROUTINE_SETTINGS) {
+    const distance = getEditDistance(key.toLowerCase(), setting.toLowerCase());
+    if (distance < similarDistance) {
+      similar = setting;
+      similarDistance = distance;
+    }
+  }
+  return similar;
+}
+
+function describeUnknownSetting(file: string, key: string): string {
+  const similar = findSimilarSetting(key);
+  const hint = similar === null ? '' : `, did you mean ${similar}?`;
+  return `${file}: unknown setting ${key}${hint}`;
+}
+
+// The daemon ignores unknown and repeated settings, so only validate reports them.
+export function listRoutineProblems(file: string, source: string): string[] {
+  const problems: string[] = [];
+  try {
+    const { data, repeatedKeys } = withFile(file, () => parseFrontmatter(source));
+    problems.push(
+      ...Object.keys(data)
+        .filter(key => !checkIsRoutineSetting(key))
+        .map(key => describeUnknownSetting(file, key)),
+      ...repeatedKeys.map(key => `${file}: ${key} is set more than once, the last one wins`),
+    );
+    buildRoutine(file, source);
+  } catch (error) {
+    problems.push(getErrorMessage(error));
+  }
+  return problems;
 }
 
 export function describeSchedule(routine: Routine): string {

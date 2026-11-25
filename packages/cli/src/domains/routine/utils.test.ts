@@ -2,7 +2,13 @@ import assert from 'node:assert/strict';
 import os from 'node:os';
 import { test } from 'node:test';
 
-import { buildRoutine, describeSchedule, getNextRun, parseFrontmatter } from './utils';
+import {
+  buildRoutine,
+  describeSchedule,
+  getNextRun,
+  listRoutineProblems,
+  parseFrontmatter,
+} from './utils';
 
 const routineFile = (frontmatter: string): string =>
   `---\nname: demo\ncwd: /tmp\n${frontmatter}\n---\nHello`;
@@ -278,4 +284,44 @@ test('rejects settings the agent does not support', () => {
     () => buildRoutine('/tmp/demo.md', routineFile('timeoutMinutes: soon')),
     /timeoutMinutes must be a number/,
   );
+});
+
+test('a valid routine has no problems', () => {
+  assert.deepEqual(listRoutineProblems('/tmp/demo.md', routineFile('schedule: 0 9 * * *')), []);
+});
+
+test('unknown settings are problems, with the setting they look like', () => {
+  assert.deepEqual(
+    listRoutineProblems('/tmp/demo.md', routineFile('scheduel: 0 9 * * *\ntimeoutminutes: 20')),
+    [
+      '/tmp/demo.md: unknown setting scheduel, did you mean schedule?',
+      '/tmp/demo.md: unknown setting timeoutminutes, did you mean timeoutMinutes?',
+    ],
+  );
+  assert.deepEqual(listRoutineProblems('/tmp/demo.md', routineFile('slackChannel: ops')), [
+    '/tmp/demo.md: unknown setting slackChannel',
+  ]);
+});
+
+test('a setting set twice is a problem', () => {
+  assert.deepEqual(
+    listRoutineProblems('/tmp/demo.md', routineFile('schedule: manual\nschedule: 0 9 * * *')),
+    ['/tmp/demo.md: schedule is set more than once, the last one wins'],
+  );
+});
+
+test('lists the unknown settings and the error of a routine together', () => {
+  assert.deepEqual(listRoutineProblems('/tmp/demo.md', routineFile('retrys: 2\nretries: 99')), [
+    '/tmp/demo.md: unknown setting retrys, did you mean retries?',
+    '/tmp/demo.md: retries must be a whole number from 0 to 10',
+  ]);
+  assert.deepEqual(listRoutineProblems('/tmp/demo.md', 'Hello'), [
+    '/tmp/demo.md: must start with a frontmatter block between --- lines',
+  ]);
+});
+
+test('a frontmatter line without a key is a problem', () => {
+  assert.deepEqual(listRoutineProblems('/tmp/demo.md', routineFile(': ops')), [
+    '/tmp/demo.md: frontmatter line ": ops" must look like key: value',
+  ]);
 });

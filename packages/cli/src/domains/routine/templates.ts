@@ -9,6 +9,7 @@ import { checkCanUseAgent, describeScheduleValue } from 'domains/routine/utils';
 import { getErrorMessage } from 'utils/error';
 
 import { config } from '../../config';
+import type { RoutineSetting } from './types';
 import { buildRoutine } from './utils';
 
 export interface TemplateChoices {
@@ -32,7 +33,7 @@ interface InvalidChoices {
 
 export type AddedFromTemplate = WrittenRoutine | InvalidChoices;
 
-type FrontmatterEntry = [key: string, value: string | number | boolean | null];
+type FrontmatterEntry = [key: RoutineSetting, value: string | number | boolean | null];
 
 // Quoted, since YAML reads a value that starts with * as an alias and a bare ~ as null.
 export function buildTemplateSource(template: RoutineTemplate, choices: TemplateChoices): string {

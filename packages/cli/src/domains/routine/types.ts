@@ -2,6 +2,7 @@ import type { AgentName } from 'domains/agent/types';
 import type { RoutineName } from 'domains/routine/ids';
 
 import type { AgentSettings } from '../agent/types';
+import type { ROUTINE_SETTINGS } from './constants';
 
 export interface Routine extends AgentSettings {
   name: RoutineName;
@@ -24,3 +25,5 @@ export interface Routine extends AgentSettings {
   prompt: string;
   file: string;
 }
+
+export type RoutineSetting = (typeof ROUTINE_SETTINGS)[number];
