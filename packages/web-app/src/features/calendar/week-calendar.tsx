@@ -271,7 +271,7 @@ function CalendarBlock({ positioned, overlapLabel }: CalendarBlockProps) {
         {overlapLabel && (
           <span
             aria-hidden="true"
-            className="absolute top-1/2 -right-[3px] size-1.5 -translate-y-1/2 animate-in rounded-full bg-surface shadow-[0_0_0_1.5px_var(--negative)] duration-300 ease-out-quint zoom-in-50 fade-in"
+            className="absolute top-1/2 -right-[3px] size-1.5 -translate-y-1/2 rounded-full bg-surface shadow-[0_0_0_1.5px_var(--negative)]"
           />
         )}
       </span>
