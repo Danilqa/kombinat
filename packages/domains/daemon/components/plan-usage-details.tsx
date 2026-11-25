@@ -81,7 +81,7 @@ export function PlanUsageDetails({ status, className }: PlanUsageDetailsProps) {
         </div>
       ))}
       <p className="text-fg-muted">
-        To run a routine on another login, add{' '}
+        To run a routine on another account, add{' '}
         <code className="font-mono whitespace-nowrap">account: &lt;name&gt;</code> to it and run{' '}
         <code className="font-mono whitespace-nowrap">kombinat login &lt;name&gt;</code>.
       </p>

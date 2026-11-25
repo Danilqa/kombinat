@@ -28,10 +28,15 @@ fs.writeFileSync(
 // In a folder with limited.jsonl, it stops at a usage limit and its resumed session finishes.
 // In a folder with answer.jsonl, it keeps its prompt in prompt.txt and answers with the file.
 // In a folder with calls.jsonl, it writes the file, and with stopped.jsonl it then waits for Ctrl-C.
+// Accounts whose name starts with signed-out are signed out, whether their folder exists or not.
 const fakeClaude = path.join(tmp, 'fake-claude');
 fs.writeFileSync(
   fakeClaude,
   `#!/bin/sh
+if [ "$*" = "auth status" ]; then
+  case "$CLAUDE_CONFIG_DIR" in */.claude-signed-out*) exit 1 ;; esac
+  exit 0
+fi
 if [ -f calls.jsonl ]; then
   cat > /dev/null
   if [ -f stopped.jsonl ]; then
@@ -392,8 +397,8 @@ test('the after hook runs when the agent binary is missing', async () => {
   assert.deepEqual(hook.stdin, record);
 });
 
-test('a run on an account that was never signed in fails with how to sign it in, without a retry', async () => {
-  const account = `kombinat-test-${process.pid}`;
+test('a run on a signed-out account fails with how to sign it in, without a retry', async () => {
+  const account = `signed-out-${process.pid}`;
   const routine = buildRoutine(
     path.join(tmp, 'signed-out.md'),
     `---\ncwd: ${tmp}\naccount: ${account}\nretries: 2\n---\nDo it.`,
@@ -404,8 +409,19 @@ test('a run on an account that was never signed in fails with how to sign it in,
   assert.equal(record.retry, null);
   assert.equal(
     record.error,
-    `The account ${account} is not signed in to claude yet. Run kombinat login ${account} in your routines folder, then run the routine again.`,
+    `The account ${account} is not signed in to Claude. Run kombinat login ${account} in your routines folder, then run the routine again.`,
   );
+});
+
+test('a run on a signed-in account goes on, wherever the agent keeps its login', async () => {
+  const account = `signed-in-${process.pid}`;
+  const routine = buildRoutine(
+    path.join(tmp, 'signed-in.md'),
+    `---\ncwd: ${tmp}\naccount: ${account}\n---\nDo it.`,
+  );
+  const record = await runRoutine(routine, { trigger: 'manual' });
+  assert.equal(record.status, 'succeeded');
+  assert.equal(record.account, account);
 });
 
 test('the after hook runs when the before hook fails', async () => {

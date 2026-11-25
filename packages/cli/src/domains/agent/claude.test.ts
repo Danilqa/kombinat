@@ -282,7 +282,7 @@ test('passes the routine settings to claude -p', () => {
   assert.equal(args[args.indexOf('--max-budget-usd') + 1], '2');
 });
 
-test("a routine on an account runs, resumes and signs in with that account's config folder", () => {
+test("a routine on an account runs, resumes, signs in and checks its login with that account's config folder", () => {
   const work = accountNameSchema.parse('work');
   const context = {
     routine: makeAgentTask({ account: work }),
@@ -300,6 +300,9 @@ test("a routine on an account runs, resumes and signs in with that account's con
   const login = claudeAgent.buildLoginInvocation(work) ?? assert.fail('claude has a login');
   assert.deepEqual(login.args, ['auth', 'login']);
   assert.equal(login.env['CLAUDE_CONFIG_DIR'], folder);
+  const status = claudeAgent.buildLoginStatusInvocation(work) ?? assert.fail('claude has a login');
+  assert.deepEqual(status.args, ['auth', 'status']);
+  assert.equal(status.env['CLAUDE_CONFIG_DIR'], folder);
   assert.equal(
     claudeAgent.getResumeCommand(sessionIdSchema.parse('s1'), work),
     'CLAUDE_CONFIG_DIR=~/.claude-work claude --resume s1',

@@ -45,7 +45,7 @@ const USAGE = `kombinat, run from the folder that holds routines/ (init, connect
                             there (default ${DEFAULT_PORT}), for example connect admin@mac-mini --tui
   login <account>           sign an account in to Claude, or to Codex with --agent codex, so that
                             routines with account: <account> run on its plan, for example
-                            login personal; login primary signs in the machine's own login
+                            login personal; login primary signs in the machine's own account
   list                      show routines from ./routines with next run and last status
   validate                  parse every routine file and report errors
   readme                    regenerate the routines table in README.md
@@ -197,7 +197,7 @@ async function login(name: string | undefined, options: CliOptions): Promise<voi
     child.on('close', code => resolve(code ?? 1));
   });
   if (exitCode === 0 && account !== null) {
-    console.log(`\nSigned in. Add "account: ${account}" to a routine to run it on this login.`);
+    console.log(`\nSigned in. Add "account: ${account}" to a routine to run it on this account.`);
   }
   process.exitCode = exitCode;
 }

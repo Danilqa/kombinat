@@ -94,6 +94,7 @@ export interface Agent {
   resolveSettings(raw: AgentSettings): AgentSettings;
   buildInvocation(context: RunContext): Invocation;
   buildLoginInvocation(account: AccountName | null): Invocation | null;
+  buildLoginStatusInvocation(account: AccountName | null): Invocation | null;
   buildReplyInvocation(
     context: RunContext,
     sessionId: SessionId,

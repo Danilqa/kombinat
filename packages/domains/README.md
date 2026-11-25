@@ -55,7 +55,7 @@ A routine's `account` names the login its agent runs on, `AccountName` in `agent
 
 - Claude runs with `CLAUDE_CONFIG_DIR=~/.claude-<account>` and Codex with `CODEX_HOME=~/.codex-<account>`, its runs, replies and hooks too. `command` does not support it.
 - `kombinat login <account>` runs `claude auth login`, or `codex login` with `--agent codex`, with that variable, after it creates the folder.
-- A run whose account folder does not exist fails in preflight with how to sign it in, and is not retried.
+- A run whose account the agent reports as signed out (`claude auth status`, `codex login status`) fails in preflight with how to sign it in, and is not retried.
 - The run record keeps its `account`, and a reply resumes the session on it, since the session lives in that folder, whatever the routine names now. The resume command starts with the variable, such as `CLAUDE_CONFIG_DIR=~/.claude-work claude --resume <id>`.
 - The plan usage of each account is `<state dir>/plan-usage/claude.<account>.json`, and the primary one's `claude.json`.
 - The name starts with a letter or digit and holds only letters, digits, `.`, `_`, `@`, `+` and `-`, at most 64 characters, so that it is safe in a folder name and a shell word.

@@ -46,6 +46,7 @@ export const commandAgent: Agent = {
   },
 
   buildLoginInvocation: () => null,
+  buildLoginStatusInvocation: () => null,
   buildReplyInvocation: () => null,
 
   readEvent(event, record) {

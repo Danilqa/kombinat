@@ -393,6 +393,15 @@ export const claudeAgent: Agent = {
     };
   },
 
+  buildLoginStatusInvocation(account) {
+    return {
+      command: config.claudeBin,
+      args: ['auth', 'status'],
+      env: withAccount(withoutEnv(DROPPED_ENV), ACCOUNT_HOME, account),
+      input: '',
+    };
+  },
+
   buildReplyInvocation(context, sessionId, message) {
     return {
       command: config.claudeBin,

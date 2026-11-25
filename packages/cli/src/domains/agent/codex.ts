@@ -261,6 +261,15 @@ export const codexAgent: Agent = {
     };
   },
 
+  buildLoginStatusInvocation(account) {
+    return {
+      command: config.codexBin,
+      args: ['login', 'status'],
+      env: withAccount(withoutEnv(DROPPED_ENV), ACCOUNT_HOME, account),
+      input: '',
+    };
+  },
+
   buildReplyInvocation(context, sessionId, message) {
     return {
       command: config.codexBin,

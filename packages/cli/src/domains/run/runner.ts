@@ -6,7 +6,8 @@ import readline from 'node:readline';
 
 import { isMatching, match } from 'ts-pattern';
 
-import { getAccountLabel } from 'domains/agent/utils';
+import type { AccountName } from 'domains/agent/ids';
+import { getAccountLabel, getAgentLabel } from 'domains/agent/utils';
 import type { RoutineName } from 'domains/routine/ids';
 import type { RunId } from 'domains/run/ids';
 import type { RunRecord, RunTrigger, RunWorktree, TokenCounts } from 'domains/run/types';
@@ -25,7 +26,6 @@ import { config, getCliArgs } from '../../config';
 import { parseJson } from '../../utils/json';
 import { checkIsBinaryFound } from '../agent/binary';
 import { getAgent } from '../agent/registry';
-import { getAccountFolder } from '../agent/settings';
 import { writePlanUsage } from '../agent/storage';
 import type { Agent, Invocation, OutputEvent, RunContext, UsageLimitStop } from '../agent/types';
 import {
@@ -65,6 +65,22 @@ const PENDING_START_MS = HOOK_TIMEOUT_MS + 60_000;
 const KILL_GRACE_MS = 60_000;
 const STDERR_CHUNKS = 200;
 const CONTINUE_TEXT = 'The usage limit has reset. Continue the task from where you stopped.';
+const LOGIN_STATUS_TIMEOUT_MS = 30_000;
+
+// Only a clear "signed out" stops the run. A check that hangs or can't start lets the agent report its own error.
+function checkIsSignedIn(agent: Agent, account: AccountName): Promise<boolean> {
+  const invocation = agent.buildLoginStatusInvocation(account);
+  if (invocation === null) return Promise.resolve(true);
+  return new Promise(resolve => {
+    const child = spawn(invocation.command, invocation.args, {
+      env: invocation.env,
+      stdio: 'ignore',
+      timeout: LOGIN_STATUS_TIMEOUT_MS,
+    });
+    child.on('error', () => resolve(true));
+    child.on('close', code => resolve(code === null || code === 0));
+  });
+}
 
 type StopReason = 'timeout' | 'tokens';
 
@@ -166,13 +182,12 @@ async function runAgent({
         : ` (set ${agent.binaryEnv} to its path before kombinat serve or install)`;
     return failSetup(`${agent.name} binary not found at ${invocation.command}${hint}`);
   }
-  const accountFolder = getAccountFolder(agent.accountHome, routine.account);
-  if (accountFolder !== null && !fs.existsSync(accountFolder)) {
+  if (routine.account !== null && !(await checkIsSignedIn(agent, routine.account))) {
     const flag = match(agent.name)
       .with('claude', () => '')
       .otherwise(name => ` --agent ${name}`);
     return failSetup(
-      `The account ${getAccountLabel(routine.account)} is not signed in to ${agent.name} yet. Run kombinat login ${getAccountLabel(routine.account)}${flag} in your routines folder, then run the routine again.`,
+      `The account ${getAccountLabel(routine.account)} is not signed in to ${getAgentLabel(agent.name)}. Run kombinat login ${getAccountLabel(routine.account)}${flag} in your routines folder, then run the routine again.`,
     );
   }
   if (routine.before !== null) {

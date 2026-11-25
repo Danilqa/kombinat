@@ -161,7 +161,7 @@ kombinat login personal                # signs in to Claude in ~/.claude-persona
 kombinat login personal --agent codex  # signs in to Codex in ~/.codex-personal
 ```
 
-Run it once in your routines folder, then add `account: personal` to a routine. It runs `claude` with `CLAUDE_CONFIG_DIR=~/.claude-personal`, or `codex` with `CODEX_HOME=~/.codex-personal`, and replies to its runs use the same login. An account name holds letters, digits, `.`, `_`, `@`, `+` and `-`, such as `work` or `me@example.com`. A run on an account that was never signed in fails and says how to sign it in. Kombinat never moves a routine to another account by itself.
+Run it once in your routines folder, then add `account: personal` to a routine. It runs `claude` with `CLAUDE_CONFIG_DIR=~/.claude-personal`, or `codex` with `CODEX_HOME=~/.codex-personal`, and replies to its runs use the same login. An account name holds letters, digits, `.`, `_`, `@`, `+` and `-`, such as `work` or `me@example.com`. A run on an account that is not signed in, or whose login expired, fails and says how to sign it in. Kombinat never moves a routine to another account by itself.
 
 Each account has its own plan. The dashboard's header shows how much of each is left, and its popover lists the limits of each account. A run waits only for the limit of its own account. Once routines run on more than one account, the Routines table and the routine's page show the account of each.
 
