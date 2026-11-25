@@ -659,7 +659,6 @@ export function createDemoHistory(initialRoutines: DemoRoutine[], loadedAt: Date
     routine.disabledDaysAgo === undefined
       ? null
       : new Date(loadedAt.getTime() - routine.disabledDaysAgo * DAY_MS);
-  // The times before the page loaded never change, so their runs and skips are built once.
   const eventsBeforeLoad = new Map(
     routines.map(routine => {
       const slots =

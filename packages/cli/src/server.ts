@@ -701,7 +701,6 @@ function serveStatic(req: http.IncomingMessage, res: http.ServerResponse, url: U
     fs.statSync(candidate).isFile();
   const file = isFile ? candidate : path.join(config.webAppDist, 'index.html');
   const extension = path.extname(file);
-  // Vite names the files in assets by their content, so a name never gets other content.
   const isHashed = path.dirname(file) === path.join(config.webAppDist, 'assets');
   const isGzipped =
     GZIPPED_EXTENSIONS.has(extension) && /\bgzip\b/.test(req.headers['accept-encoding'] ?? '');
@@ -712,7 +711,6 @@ function serveStatic(req: http.IncomingMessage, res: http.ServerResponse, url: U
     vary: 'accept-encoding',
   });
   const content = fs.createReadStream(file);
-  // Closes the file when the browser leaves early, and the connection when the file cannot be read.
   pipeline(isGzipped ? [content, zlib.createGzip(), res] : [content, res], () => undefined);
 }
 

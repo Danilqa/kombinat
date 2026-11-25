@@ -388,7 +388,6 @@ test('loads older runs when the list is fetched again while they are on their wa
     kombinat.addRun({ routine: 'inbox-triage', startedAt: time.minutesAgo(index * 5) });
   }
   const oldest = kombinat.addRun({ routine: 'inbox-triage', startedAt: time.minutesAgo(600) });
-  // Holds the first request for older runs until the newest ones are fetched again.
   await page.route(
     /\/api\/runs\?.*cursor=/,
     async route => {

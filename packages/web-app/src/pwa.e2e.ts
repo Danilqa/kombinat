@@ -36,7 +36,6 @@ test('a browser gets the bundle gzipped, keeps it and asks again for the other f
     'cache-control': 'public, max-age=31536000, immutable',
   });
 
-  // A tab of an older build asks for a bundle that is gone and gets the page instead.
   for (const path of ['/runs', '/sw.js', '/manifest.webmanifest', '/assets/gone.js']) {
     const response = await page.request.get(path);
     expect(response.headers()['cache-control'], path).toBe('no-cache');

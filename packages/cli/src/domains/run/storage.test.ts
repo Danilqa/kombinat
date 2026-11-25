@@ -27,7 +27,6 @@ function addRun(routine: RoutineName, id: string, overrides: Partial<RunRecord> 
   return record;
 }
 
-// The runs of a folder stay in memory once its last change is a while ago.
 function listSettledRuns(routine: RoutineName): RunRecord[] {
   const longAgo = new Date(Date.now() - 60_000);
   fs.utimesSync(getRunsDir(routine), longAgo, longAgo);
