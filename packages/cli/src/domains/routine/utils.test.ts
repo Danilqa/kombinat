@@ -319,3 +319,9 @@ test('lists the unknown settings and the error of a routine together', () => {
     '/tmp/demo.md: must start with a frontmatter block between --- lines',
   ]);
 });
+
+test('a frontmatter line without a key is a problem', () => {
+  assert.deepEqual(listRoutineProblems('/tmp/demo.md', routineFile(': ops')), [
+    '/tmp/demo.md: frontmatter line ": ops" must look like key: value',
+  ]);
+});

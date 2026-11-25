@@ -141,7 +141,7 @@ To start from a ready routine instead, click New routine on the dashboard's Rout
 - `webhook: true` lets other apps start the routine with a request, see [docs/webhook.md](docs/webhook.md).
 - `memory: true` keeps notes that carry over between runs, see below. Off by default.
 
-`kombinat validate` lists every problem in every file, including settings it does not know, such as `scheduel`, and settings set twice. The daemon ignores those, so check with `validate` after you edit a routine.
+`kombinat validate` checks every routine file. It reports settings it does not know, such as `scheduel`, settings set twice and the first wrong value in each file. The daemon doesn't warn about unknown or repeated settings. Run `validate` after you edit a routine.
 
 Changes apply on the next check, no restart needed. Write the prompt so the agent never has to ask a question: nobody will answer. When there is nothing to do, have it start its answer with "No" or "Nothing", such as "No open incidents.", so the dashboard's Inbox files the run under Nothing to report.
 

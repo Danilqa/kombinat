@@ -47,8 +47,8 @@ const USAGE = `kombinat, run from the folder that holds routines/ (init, connect
                             routines with account: <account> run on its plan, for example
                             login personal; login primary signs in the machine's own account
   list                      show routines from ./routines with next run and last status
-  validate                  check every routine file and report all errors, unknown settings
-                            and settings set twice
+  validate                  check every routine file: unknown settings, settings set twice
+                            and the first error in each file
   readme                    regenerate the routines table in README.md
   run <name>                run one routine now in the foreground (what the scheduler spawns)
   reply <name> <run id>     continue the run's agent session with the last message sent to it

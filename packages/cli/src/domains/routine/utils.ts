@@ -47,8 +47,10 @@ export function parseFrontmatter(source: string): ParsedFrontmatter {
   for (const line of (found.groups['head'] ?? '').split(/\r?\n/)) {
     if (!line.trim() || line.trim().startsWith('#')) continue;
     const separator = line.indexOf(':');
-    if (separator === -1) throw new Error(`frontmatter line "${line}" must look like key: value`);
     const key = line.slice(0, separator).trim();
+    if (separator === -1 || !key) {
+      throw new Error(`frontmatter line "${line}" must look like key: value`);
+    }
     if (Object.hasOwn(data, key) && !repeatedKeys.includes(key)) repeatedKeys.push(key);
     data[key] = parseScalar(line.slice(separator + 1));
   }
