@@ -655,32 +655,30 @@ export function createDemoHistory(initialRoutines: DemoRoutine[], loadedAt: Date
   const findPause = (run: DemoRun) =>
     getPause(run, waitActions.get(`${run.routine.name}/${run.id}`));
   const removedWorktrees = new Set<string>();
-  const slotsBeforeLoad = new Map(
-    routines.map(routine => [
-      routine.name,
-      routine.schedule === null ? [] : cronRunsBetween(routine.schedule, historyStart, loadedAt),
-    ]),
+  const getDisabledAt = (routine: DemoRoutine) =>
+    routine.disabledDaysAgo === undefined
+      ? null
+      : new Date(loadedAt.getTime() - routine.disabledDaysAgo * DAY_MS);
+  // The times before the page loaded never change, so their runs and skips are built once.
+  const eventsBeforeLoad = new Map(
+    routines.map(routine => {
+      const slots =
+        routine.schedule === null ? [] : cronRunsBetween(routine.schedule, historyStart, loadedAt);
+      const pins = getPinsBySlot(routine, slots);
+      return [routine.name, buildScheduledEvents(routine, slots, pins, getDisabledAt(routine))];
+    }),
   );
 
   // Times after the page loaded become runs too, so a tab left open keeps a live history.
   function getScheduledEvents(routine: DemoRoutine, now: Date): ScheduledEvents {
-    const before = slotsBeforeLoad.get(routine.name) ?? [];
+    const before = eventsBeforeLoad.get(routine.name);
     const from = addedAt.get(routine.name) ?? loadedAt;
-    const after =
+    const slots =
       routine.schedule === null || now <= from ? [] : cronRunsBetween(routine.schedule, from, now);
-    const disabledAt =
-      routine.disabledDaysAgo === undefined
-        ? null
-        : new Date(loadedAt.getTime() - routine.disabledDaysAgo * DAY_MS);
-    const events = buildScheduledEvents(
-      routine,
-      [...before, ...after],
-      getPinsBySlot(routine, before),
-      disabledAt,
-    );
+    const after = buildScheduledEvents(routine, slots, new Map(), getDisabledAt(routine));
     return {
-      runs: events.runs.filter(run => run.startedAt <= now),
-      skips: events.skips.filter(skip => new Date(skip.at) <= now),
+      runs: [...(before?.runs ?? []), ...after.runs].filter(run => run.startedAt <= now),
+      skips: [...(before?.skips ?? []), ...after.skips].filter(skip => new Date(skip.at) <= now),
     };
   }
 
