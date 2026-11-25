@@ -6,17 +6,23 @@
 
 ## ✨ Features
 
-- **Routines in git.** One markdown file each, live within 5 minutes of the merge.
-- **Schedule or webhook.** Cron, or a request from Linear, GitHub or any other app.
+- **Routines in git.** One markdown file each, live within 5 minutes of the merge. Or start from a template on the dashboard.
+- **Schedule or webhook.** Cron, a one-time run at a time you pick, or a request from Linear, GitHub or any other app.
 - **Any agent.** Claude Code, Codex or any other CLI.
 - **Your setup.** Your logins, skills, MCP servers, browser and `CLAUDE.md`.
-- **No API bill.** Runs on your subscription and shows how much of the Claude plan is left.
+- **No API bill.** Runs on your subscription and shows the tokens of each run and how much of the Claude plan is left.
+- **Insights.** Tokens and runs per day over 7 or 30 days, and the routines that use the most.
 - **Waits out limits.** A run that hits a Claude usage limit continues after the reset.
 - **Retries errors.** A run that stops with an error can try again a few minutes later, right where it stopped.
+- **Several runs.** One start can make several runs, such as one per issue, one after another or at once.
+- **Own worktree.** Each run can work in a git worktree of its own, so your checkout stays as it is.
+- **Memory.** Optional notes that a routine carries from one run to the next.
 - **Inbox.** Unread runs, with failures and findings first, and a notification for the ones you pick.
-- **Full transcripts.** Search them, and chat to continue any run.
+- **Blocked actions.** See what a run was not allowed to do, then allow it and let the run continue.
+- **Full transcripts.** Search them, chat to continue any run, or start a new run with any prompt.
 - **Everywhere.** Dashboard in the browser, the terminal or as a PWA on your phone and computer.
-- **Guardrails.** Timeouts, a budget cap, no overlapping runs and catch-up after sleep.
+- **Guardrails.** Timeouts, a dollar or token budget, no overlapping runs and catch-up after sleep.
+- **No idle runs.** A check command skips a scheduled run when there is nothing to do, so it spends no tokens.
 - **Small.** One command, two dependencies, no cloud, no database, no telemetry.
 
 ## 😄 Fun fact
