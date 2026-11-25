@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
+import { pipeline } from 'node:stream';
+import zlib from 'node:zlib';
 
 import { isMatching, match, P } from 'ts-pattern';
 
@@ -141,6 +143,8 @@ const MIME: Record<string, string> = {
   '.webmanifest': 'application/manifest+json; charset=utf-8',
   '.woff2': 'font/woff2',
 };
+
+const GZIPPED_EXTENSIONS = new Set(['.html', '.js', '.css', '.svg', '.json', '.webmanifest']);
 
 const MAX_CALENDAR_DAYS = 32;
 const MAX_BODY_KB = 256;
@@ -683,7 +687,7 @@ function sendJson(res: http.ServerResponse, { status, body }: ApiResponse): void
   res.end(JSON.stringify(body));
 }
 
-function serveStatic(res: http.ServerResponse, url: URL): void {
+function serveStatic(req: http.IncomingMessage, res: http.ServerResponse, url: URL): void {
   if (!fs.existsSync(config.webAppDist)) {
     res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' });
     res.end('kombinat API is up. Run `pnpm build` to get the dashboard here.\n');
@@ -696,8 +700,20 @@ function serveStatic(res: http.ServerResponse, url: URL): void {
     fs.existsSync(candidate) &&
     fs.statSync(candidate).isFile();
   const file = isFile ? candidate : path.join(config.webAppDist, 'index.html');
-  res.writeHead(200, { 'content-type': MIME[path.extname(file)] ?? 'application/octet-stream' });
-  fs.createReadStream(file).pipe(res);
+  const extension = path.extname(file);
+  // Vite names the files in assets by their content, so a name never gets other content.
+  const isHashed = path.dirname(file) === path.join(config.webAppDist, 'assets');
+  const isGzipped =
+    GZIPPED_EXTENSIONS.has(extension) && /\bgzip\b/.test(req.headers['accept-encoding'] ?? '');
+  if (isGzipped) res.setHeader('content-encoding', 'gzip');
+  res.writeHead(200, {
+    'content-type': MIME[extension] ?? 'application/octet-stream',
+    'cache-control': isHashed ? 'public, max-age=31536000, immutable' : 'no-cache',
+    vary: 'accept-encoding',
+  });
+  const content = fs.createReadStream(file);
+  // Closes the file when the browser leaves early, and the connection when the file cannot be read.
+  pipeline(isGzipped ? [content, zlib.createGzip(), res] : [content, res], () => undefined);
 }
 
 // There is no login, so pages from other sites must not start runs through the browser.
@@ -751,7 +767,7 @@ export function startServer(log: (line: string) => void): http.Server {
     const url = new URL(req.url ?? '/', `http://localhost:${config.port}`);
     const [root, ...segments] = url.pathname.split('/').filter(Boolean);
     const respond = async (): Promise<void> => {
-      if (root !== 'api') serveStatic(res, url);
+      if (root !== 'api') serveStatic(req, res, url);
       else if (req.method === 'GET' && url.pathname === '/api/events') liveUpdates.follow(req, res);
       else sendJson(res, await handleApi(req, segments, { url, startedAt, log }));
     };
