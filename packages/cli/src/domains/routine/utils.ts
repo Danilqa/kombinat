@@ -13,7 +13,8 @@ import { getErrorMessage } from 'utils/error';
 
 import { getAgent, parseAccountName, parseAgentName } from '../agent/registry';
 import type { AgentSettings } from '../agent/types';
-import type { Routine } from './types';
+import { ROUTINE_SETTINGS } from './constants';
+import type { Routine, RoutineSetting } from './types';
 
 type FrontmatterValue = string | number | boolean;
 type Frontmatter = Record<string, FrontmatterValue>;
@@ -25,35 +26,6 @@ interface ParsedFrontmatter {
 }
 
 const DEFAULT_TIMEOUT_MINUTES = 55;
-
-const ROUTINE_SETTINGS = [
-  'name',
-  'description',
-  'schedule',
-  'cwd',
-  'agent',
-  'account',
-  'model',
-  'fallbackModel',
-  'effort',
-  'permissionMode',
-  'command',
-  'maxBudgetUsd',
-  'maxBudgetTokens',
-  'onUsageLimit',
-  'enabled',
-  'webhook',
-  'webhookGate',
-  'timeoutMinutes',
-  'retries',
-  'runs',
-  'maxParallel',
-  'memory',
-  'worktree',
-  'check',
-  'before',
-  'after',
-];
 
 const MAX_TYPO_DISTANCE = 2;
 
@@ -83,12 +55,16 @@ export function parseFrontmatter(source: string): ParsedFrontmatter {
   return { data, body: (found.groups['body'] ?? '').trim(), repeatedKeys };
 }
 
-function readString(data: Frontmatter, key: string): string | null {
-  const value = data[key];
+function readValue(data: Frontmatter, key: RoutineSetting): FrontmatterValue | undefined {
+  return data[key];
+}
+
+function readString(data: Frontmatter, key: RoutineSetting): string | null {
+  const value = readValue(data, key);
   return value === undefined || value === '' ? null : String(value);
 }
 
-function readNumber(data: Frontmatter, key: string): number | null {
+function readNumber(data: Frontmatter, key: RoutineSetting): number | null {
   const value = readString(data, key);
   if (value === null) return null;
   const number = Number(value);
@@ -96,7 +72,7 @@ function readNumber(data: Frontmatter, key: string): number | null {
   return number;
 }
 
-function readTokenCount(data: Frontmatter, key: string): number | null {
+function readTokenCount(data: Frontmatter, key: RoutineSetting): number | null {
   const value = readString(data, key);
   if (value === null) return null;
   const count = parseTokenCount(value);
@@ -106,8 +82,8 @@ function readTokenCount(data: Frontmatter, key: string): number | null {
   return count;
 }
 
-function readBoolean(data: Frontmatter, key: string): boolean | null {
-  const value = data[key];
+function readBoolean(data: Frontmatter, key: RoutineSetting): boolean | null {
+  const value = readValue(data, key);
   if (value === undefined || value === '') return null;
   if (typeof value !== 'boolean') throw new Error(`${key} must be true or false`);
   return value;
@@ -121,7 +97,7 @@ function readRetries(data: Frontmatter): number {
   return retries;
 }
 
-function readRunCount(data: Frontmatter, key: string): number {
+function readRunCount(data: Frontmatter, key: RoutineSetting): number {
   const count = Number(readString(data, key) ?? 1);
   if (!Number.isInteger(count) || count < 1 || count > MAX_RUNS) {
     throw new Error(`${key} must be a whole number from 1 to ${MAX_RUNS}`);
@@ -192,6 +168,7 @@ export function buildRoutine(file: string, source: string): Routine {
   if (memory === true && !checkCanKeepMemory(agent)) {
     throw new Error(`${file}: agent command has no memory, use claude or codex`);
   }
+  const enabled = readValue(data, 'enabled');
   return {
     name: routineNameSchema.parse(name),
     description: readString(data, 'description') ?? '',
@@ -199,7 +176,7 @@ export function buildRoutine(file: string, source: string): Routine {
     cwd: cwd.replace(/^~(?=\/|$)/, os.homedir()),
     agent,
     ...withFile(file, () => readAgentSettings(data, agent)),
-    enabled: data['enabled'] === undefined ? true : Boolean(data['enabled']),
+    enabled: enabled === undefined ? true : Boolean(enabled),
     webhook,
     webhookGate,
     timeoutMinutes:
@@ -230,8 +207,12 @@ function getEditDistance(from: string, to: string): number {
   return previous[to.length] ?? 0;
 }
 
-function findSimilarSetting(key: string): string | null {
-  let similar: string | null = null;
+function checkIsRoutineSetting(key: string): key is RoutineSetting {
+  return ROUTINE_SETTINGS.some(setting => setting === key);
+}
+
+function findSimilarSetting(key: string): RoutineSetting | null {
+  let similar: RoutineSetting | null = null;
   let similarDistance = MAX_TYPO_DISTANCE + 1;
   for (const setting of ROUTINE_SETTINGS) {
     const distance = getEditDistance(key.toLowerCase(), setting.toLowerCase());
@@ -256,7 +237,7 @@ export function listRoutineProblems(file: string, source: string): string[] {
     const { data, repeatedKeys } = withFile(file, () => parseFrontmatter(source));
     problems.push(
       ...Object.keys(data)
-        .filter(key => !ROUTINE_SETTINGS.includes(key))
+        .filter(key => !checkIsRoutineSetting(key))
         .map(key => describeUnknownSetting(file, key)),
       ...repeatedKeys.map(key => `${file}: ${key} is set more than once, the last one wins`),
     );
