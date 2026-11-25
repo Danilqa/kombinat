@@ -105,9 +105,9 @@ test('leaves out the change when the runs before the period are deleted', async 
 
   await page.getByRole('tab', { name: '30 days' }).click();
 
-  await expect(stats).toContainText('Tokens1MOlder runs are deleted after 1 month');
-  await expect(stats).toContainText('Runs1Older runs are deleted after 1 month');
-  await expect(stats).toContainText('Average run time5m 0sOlder runs are deleted after 1 month');
+  await expect(stats).toContainText('Tokens1MRuns kept for 1 month');
+  await expect(stats).toContainText('Runs1Runs kept for 1 month');
+  await expect(stats).toContainText('Average run time5m 0sRuns kept for 1 month');
 });
 
 test.describe('on a phone', () => {

@@ -151,7 +151,7 @@ export function formatInsightsChange(
 }
 
 export function formatRetentionNote(retentionDays: number | null): string {
-  return `Older runs are deleted after ${getRunRetentionLabel(retentionDays).toLowerCase()}`;
+  return `Runs kept for ${getRunRetentionLabel(retentionDays).toLowerCase()}`;
 }
 
 export function formatFailedShare({ failed, finished }: InsightsTotals): string {

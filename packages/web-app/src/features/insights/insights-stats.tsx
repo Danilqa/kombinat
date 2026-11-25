@@ -47,7 +47,7 @@ export function InsightsStats({ insights }: InsightsStatsProps) {
               ? getChange(current.averageRunMs, totals => totals.averageRunMs)
               : current.finished === 0
                 ? 'No finished runs'
-                : 'Aborted runs are left out'
+                : 'Only aborted runs'
           }
         />
       </dl>
