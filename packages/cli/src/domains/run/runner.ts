@@ -42,13 +42,12 @@ import { getRunsDir, listRuns, readRunRecord, writeRunRecord } from './storage';
 import {
   checkShouldRetry,
   getBudgetLeft,
-  getTokenBudget,
   getTokenBudgetError,
   planRetry,
   RETRY_TEXT,
   spendTokens,
 } from './retry';
-import type { AttemptEnd, TokenBudget } from './retry';
+import type { AttemptEnd } from './retry';
 import { planUsageLimitWait, waitForAction } from './usage-limit';
 import { createWorktree, refreshWorktree, restoreWorktree, settleWorktree } from './worktree';
 
@@ -127,8 +126,8 @@ interface AgentRun {
   record: RunRecord;
   hookTimeoutMs: number;
   timeoutMs: number;
-  // left is what this process may use before it is stopped.
-  tokenBudget: TokenBudget | null;
+  // What this process may use before it is stopped.
+  tokensLeft: number | null;
   persist: (record: RunRecord) => void;
 }
 
@@ -158,7 +157,7 @@ async function runAgent({
   record,
   hookTimeoutMs,
   timeoutMs,
-  tokenBudget,
+  tokensLeft,
   persist,
 }: AgentRun): Promise<AgentExit> {
   if (!fs.existsSync(routine.cwd)) {
@@ -225,7 +224,7 @@ async function runAgent({
     const reported = callTokens.get(call.id);
     callTokens.set(call.id, call.tokens);
     usedTokens += getTokenTotal(call.tokens) - (reported ? getTokenTotal(reported) : 0);
-    if (tokenBudget !== null && usedTokens >= tokenBudget.left) stopper.stop('tokens');
+    if (tokensLeft !== null && usedTokens >= tokensLeft) stopper.stop('tokens');
   });
 
   // A command that ignores the prompt can exit before it is written. Its exit code decides the run.
@@ -255,11 +254,11 @@ async function runAgent({
 
   const stopExit = match(stopper.getReason())
     .with('tokens', (): AgentExit | null =>
-      tokenBudget === null
+      routine.maxBudgetTokens === null
         ? null
         : {
             ...exitWith(
-              { status: 'failed', exitCode, error: getTokenBudgetError(tokenBudget.total) },
+              { status: 'failed', exitCode, error: getTokenBudgetError(routine.maxBudgetTokens) },
               workedMs,
             ),
             canRetry: false,
@@ -348,13 +347,13 @@ async function runWaitingOutLimits(run: LimitedRun): Promise<AttemptEnd> {
       return { outcome: exit.outcome, canRetry: exit.canRetry && exit.usageLimitStop === null };
     }
     // A session continues after a usage limit only with tokens left in the run's budget.
-    const tokenBudget = spendTokens(run.tokenBudget, record.tokens);
-    if (tokenBudget !== null && tokenBudget.left <= 0) {
+    const tokensLeft = spendTokens(run.tokensLeft, record.tokens);
+    if (routine.maxBudgetTokens !== null && tokensLeft !== null && tokensLeft <= 0) {
       return {
         outcome: {
           ...exit.outcome,
           status: 'failed',
-          error: getTokenBudgetError(tokenBudget.total),
+          error: getTokenBudgetError(routine.maxBudgetTokens),
         },
         canRetry: false,
       };
@@ -398,7 +397,7 @@ async function runWaitingOutLimits(run: LimitedRun): Promise<AttemptEnd> {
         routine: { ...routine, before: null },
         invocation,
         timeoutMs: routine.timeoutMinutes * 60_000 - workedMs,
-        tokenBudget,
+        tokensLeft,
       }),
     );
     workedMs += exit.workedMs;
@@ -410,12 +409,11 @@ async function runWaitingOutLimits(run: LimitedRun): Promise<AttemptEnd> {
 async function runRetryingErrors(run: LimitedRun): Promise<Partial<RunRecord>> {
   const { routine, agent, record } = run;
   const getRunBudgetLeft = () => getBudgetLeft(routine.maxBudgetUsd, record.costUsd);
-  const getRunTokenBudget = () =>
-    spendTokens(getTokenBudget(routine.maxBudgetTokens), record.tokens);
+  const getRunTokensLeft = () => spendTokens(routine.maxBudgetTokens, record.tokens);
   let end = await runWaitingOutLimits(run);
   for (
     let attempt = 1;
-    checkShouldRetry(end, attempt, routine.retries, getRunBudgetLeft(), getRunTokenBudget());
+    checkShouldRetry(end, attempt, routine.retries, getRunBudgetLeft(), getRunTokensLeft());
     attempt += 1
   ) {
     const context: RunContext = {
@@ -458,13 +456,13 @@ async function runRetryingErrors(run: LimitedRun): Promise<Partial<RunRecord>> {
     record.retry = retry;
     // The runner's own pid keeps the run from being reconciled as aborted until its agent starts.
     writeRunRecord({ ...record, pid: process.pid });
-    const tokenBudget = getRunTokenBudget();
+    const tokensLeft = getRunTokensLeft();
     end = await addingSpend(record, () =>
       runWaitingOutLimits({
         ...run,
         routine: sessionInvocation === null ? routine : { ...routine, before: null },
         invocation: sessionInvocation ?? agent.buildInvocation(context),
-        tokenBudget,
+        tokensLeft,
         context,
       }),
     );
@@ -550,7 +548,7 @@ export async function runRoutine(
           record,
           hookTimeoutMs,
           timeoutMs: routine.timeoutMinutes * 60_000,
-          tokenBudget: getTokenBudget(routine.maxBudgetTokens),
+          tokensLeft: routine.maxBudgetTokens,
           persist: writeRunRecord,
           context,
         })
@@ -657,7 +655,7 @@ export async function replyToRun(routine: Routine, run: RunRecord): Promise<RunR
               record: session,
               hookTimeoutMs: HOOK_TIMEOUT_MS,
               timeoutMs: routine.timeoutMinutes * 60_000,
-              tokenBudget: getTokenBudget(routine.maxBudgetTokens),
+              tokensLeft: routine.maxBudgetTokens,
               persist: ({ sessionId, resumeCommand }) =>
                 writeRunRecord({ ...replying, sessionId, resumeCommand }),
             })

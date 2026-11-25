@@ -25,26 +25,12 @@ export function getBudgetLeft(maxBudgetUsd: number | null, costUsd: number | nul
   return maxBudgetUsd === null ? null : maxBudgetUsd - (costUsd ?? 0);
 }
 
-export interface TokenBudget {
-  total: number;
-  left: number;
-}
-
-export function getTokenBudget(maxBudgetTokens: number | null): TokenBudget | null {
-  return maxBudgetTokens === null ? null : { total: maxBudgetTokens, left: maxBudgetTokens };
-}
-
-export function spendTokens(
-  budget: TokenBudget | null,
-  tokens: TokenCounts | null,
-): TokenBudget | null {
-  return budget === null
-    ? null
-    : { ...budget, left: budget.left - (tokens === null ? 0 : getTokenTotal(tokens)) };
+export function spendTokens(left: number | null, tokens: TokenCounts | null): number | null {
+  return left === null || tokens === null ? left : left - getTokenTotal(tokens);
 }
 
 export function getTokenBudgetError(maxBudgetTokens: number): string {
-  return `Reached the budget of ${formatTokenLimit(maxBudgetTokens)} tokens`;
+  return `Reached the budget of ${formatTokenLimit(maxBudgetTokens)} tokens. Raise maxBudgetTokens in the routine to give its runs more.`;
 }
 
 export function checkShouldRetry(
@@ -52,13 +38,13 @@ export function checkShouldRetry(
   attempt: number,
   retries: number,
   budgetLeft: number | null,
-  tokenBudget: TokenBudget | null,
+  tokensLeft: number | null,
 ): boolean {
   return (
     end.canRetry &&
     attempt <= retries &&
     (budgetLeft === null || budgetLeft > 0) &&
-    (tokenBudget === null || tokenBudget.left > 0) &&
+    (tokensLeft === null || tokensLeft > 0) &&
     isMatching({ status: P.union('failed', 'timed_out') }, end.outcome)
   );
 }

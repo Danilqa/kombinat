@@ -865,7 +865,10 @@ test('a run that used its token budget before a usage limit fails instead of wai
     trigger: 'manual',
   });
   assert.equal(finished.status, 'failed');
-  assert.equal(finished.error, 'Reached the budget of 3K tokens');
+  assert.equal(
+    finished.error,
+    'Reached the budget of 3K tokens. Raise maxBudgetTokens in the routine to give its runs more.',
+  );
   assert.equal(readLogTypes(finished).includes('usage_limit_wait'), false);
 });
 
@@ -1088,7 +1091,10 @@ test('a run that reaches its token budget is stopped and fails without a retry',
   );
   assert.ok(Date.now() - started < 10_000);
   assert.equal(finished.status, 'failed');
-  assert.equal(finished.error, 'Reached the budget of 1K tokens');
+  assert.equal(
+    finished.error,
+    'Reached the budget of 1K tokens. Raise maxBudgetTokens in the routine to give its runs more.',
+  );
   assert.deepEqual(finished.tokens, { input: 10, output: 5, cacheWrite: 0, cacheRead: 1100 });
   assert.equal(readLogTypes(finished).includes('retry_wait'), false);
 });
@@ -1111,7 +1117,10 @@ test('a stopped run counts the call its result left out', async () => {
     { trigger: 'manual' },
   );
   assert.equal(finished.status, 'failed');
-  assert.equal(finished.error, 'Reached the budget of 2M tokens');
+  assert.equal(
+    finished.error,
+    'Reached the budget of 2M tokens. Raise maxBudgetTokens in the routine to give its runs more.',
+  );
   assert.deepEqual(finished.tokens, { input: 4, output: 300, cacheWrite: 0, cacheRead: 2_000_000 });
 });
 
