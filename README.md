@@ -11,17 +11,14 @@
 - **Any agent.** Claude Code, Codex or any other CLI.
 - **Your setup.** Your logins, skills, MCP servers, browser and `CLAUDE.md`.
 - **No API bill.** Runs on your subscription. See the tokens of each run and how much of your Claude plan is left.
-- **Insights.** Tokens and runs per day for the last 7 or 30 days, and which routines use the most tokens.
+- **Insights.** Monitor your token spending.
 - **Waits out limits.** A run that hits a Claude usage limit continues after the reset.
 - **Retries errors.** A run that stops with an error can try again a few minutes later, right where it stopped.
 - **Skips idle runs.** A check command skips a scheduled run when there is nothing to do, so you spend no tokens.
 - **Several runs.** Start a routine several times in one go, such as once per issue, in a row or in parallel.
-- **Worktree per run.** Give each run its own git worktree, so your checkout stays untouched.
 - **Memory.** A routine can carry notes from one run to the next. Off by default.
 - **Inbox.** Unread runs, with failures and findings first, and a notification for the ones you pick.
-- **Blocked actions.** See what a run was not allowed to do. Allow it, and the run continues.
 - **Full transcripts.** Search them, and chat to continue any run.
-- **One-off runs.** Run any prompt once, with the folder, agent and settings of a routine you pick.
 - **Everywhere.** Dashboard in the browser, the terminal or as a PWA on your phone and computer.
 - **Guardrails.** Timeouts, a dollar or token budget, no overlapping runs and catch-up after sleep.
 - **Small.** One command, two dependencies, no cloud, no database, no telemetry.
