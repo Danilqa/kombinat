@@ -33,7 +33,8 @@ import { createRandom, randomId, randomInt, randomUuid, type Random } from './ra
 import type { DemoOutcome, DemoPin, DemoRoutine, DemoStartedRun } from './routines';
 import { check } from './transcript';
 
-const HISTORY_DAYS = 14;
+// Twice the longest period of the Insights page, so it has the days before to compare with.
+const HISTORY_DAYS = 60;
 const DAY_MS = 86_400_000;
 const MAX_SKIPS = 50;
 // Short enough to watch a run started with Run now finish.

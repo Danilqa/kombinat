@@ -294,20 +294,20 @@ export function addTokenCounts(
   };
 }
 
-function toLocalDate(date: Date): string {
+export function toLocalDate(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${date.getFullYear()}-${month}-${day}`;
 }
 
-export function getTokenUsageStart(now: Date): Date {
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate() - TOKEN_USAGE_DAYS + 1);
+export function getTokenUsageStart(now: Date, days = TOKEN_USAGE_DAYS): Date {
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate() - days + 1);
 }
 
 // Today and the days before it, oldest first, in the local time zone.
-export function getTokenUsageDates(now: Date): string[] {
-  const start = getTokenUsageStart(now);
-  return Array.from({ length: TOKEN_USAGE_DAYS }, (_, index) =>
+export function getTokenUsageDates(now: Date, days = TOKEN_USAGE_DAYS): string[] {
+  const start = getTokenUsageStart(now, days);
+  return Array.from({ length: days }, (_, index) =>
     toLocalDate(new Date(start.getFullYear(), start.getMonth(), start.getDate() + index)),
   );
 }

@@ -61,6 +61,7 @@ The daemon serves a dashboard at http://localhost:7433.
 - Routines
 - Calendar
 - Runs
+- Insights
 - Inbox
 - Daemon status
 - Search

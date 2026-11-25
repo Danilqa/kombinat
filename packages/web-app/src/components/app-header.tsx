@@ -6,7 +6,7 @@ import { BrandMark } from 'design-system/icons';
 import { cn, useHeightProperty } from 'design-system/utils';
 import { DaemonStatusIndicator, PlanUsageIndicator } from 'domains/daemon/components';
 import { navItems, type NavItem } from '@web-app/constants/nav-items';
-import { INBOX_PATH, ROUTINES_PATH } from '@web-app/constants/path';
+import { INBOX_PATH, INSIGHTS_PATH, ROUTINES_PATH } from '@web-app/constants/path';
 import { useInbox } from '@web-app/hooks/use-inbox';
 import {
   SEARCH_SHORTCUT_ARIA,
@@ -45,7 +45,7 @@ function NavLinkItem({ item, pathname, unreadCount }: NavLinkItemProps) {
       )}
     >
       <Icon aria-hidden="true" className="size-3.5 shrink-0" />
-      {item.label}
+      <span className={cn(item.to === INSIGHTS_PATH && 'max-sm:sr-only')}>{item.label}</span>
       {unreadCount > 0 && <UnreadBadge count={unreadCount} className="ml-0.5" />}
     </Link>
   );
@@ -58,8 +58,8 @@ export function AppHeader() {
   const unreadCount = useInbox().data?.runs.length ?? 0;
   useHeightProperty(headerRef, '--app-header-height');
   useSearchShortcut(() => setIsSearchOpen(isOpen => !isOpen));
-  // Below lg the nav takes a row of its own. Four tabs don't fit it on phones, so there the Inbox
-  // moves up beside the search.
+  // Below lg the nav takes a row of its own. Five tabs don't fit it on phones, so there the Inbox
+  // moves up beside the search and Insights keeps only its icon.
   return (
     <header
       ref={headerRef}

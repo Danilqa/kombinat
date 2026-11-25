@@ -14,6 +14,8 @@ import {
   keepNotifyLevelsOf,
   listUnreadRuns,
 } from 'domains/inbox/utils';
+import { INSIGHTS_PERIOD_ERROR } from 'domains/insights/constants';
+import { buildInsights, parseInsightsPeriod } from 'domains/insights/utils';
 import { releaseVersionSchema } from 'domains/release/ids';
 import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
 import { MEMORY_MAX_LENGTH } from 'domains/routine/constants';
@@ -465,6 +467,15 @@ function getCalendar(url: URL): ApiResponse {
   return ok(buildCalendar(loadRoutines(), listAllRuns(), readOneTimeRuns(), from, to));
 }
 
+function getInsights(url: URL): ApiResponse {
+  const days = parseInsightsPeriod(url.searchParams);
+  if (days === null) return fail(400, INSIGHTS_PERIOD_ERROR);
+  const now = new Date();
+  const since = getTokenUsageStart(now, days * 2);
+  const runs = loadRoutines().flatMap(routine => listRunsSince(routine.name, since));
+  return ok(buildInsights(runs, days, now, readSettings().runRetentionDays));
+}
+
 function getRunsPage(url: URL): ApiResponse {
   const query = parseRunsPageQuery(url.searchParams);
   if (query === null) return fail(400, RUNS_CURSOR_ERROR);
@@ -547,6 +558,7 @@ function routeApi(request: ApiRequest, context: ApiContext): ApiResponse | Promi
     )
     .with(['GET', ['calendar']], () => getCalendar(url))
     .with(['GET', ['inbox']], () => getInbox())
+    .with(['GET', ['insights']], () => getInsights(url))
     .with(['POST', ['inbox', 'read']], () => markRunsRead(context.request.body))
     .with(['PUT', ['inbox', 'notify', P.string]], ([, [, , name]]) =>
       withRoutine(routineNameSchema.parse(name), routine =>
