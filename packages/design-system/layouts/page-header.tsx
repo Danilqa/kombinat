@@ -44,7 +44,7 @@ function PageHeader({ title, count, aside }: PageHeaderProps) {
   return (
     <PageHeaderBar>
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
-        <div className="flex min-w-0 items-baseline gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           <PageHeaderTitle>{title}</PageHeaderTitle>
           {count !== undefined && <PageHeaderAside>{count}</PageHeaderAside>}
         </div>
