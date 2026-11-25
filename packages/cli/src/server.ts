@@ -473,7 +473,7 @@ function getInsights(url: URL): ApiResponse {
   const now = new Date();
   const since = getTokenUsageStart(now, days * 2);
   const runs = loadRoutines().flatMap(routine => listRunsSince(routine.name, since));
-  return ok(buildInsights(runs, days, now));
+  return ok(buildInsights(runs, days, now, readSettings().runRetentionDays));
 }
 
 function getRunsPage(url: URL): ApiResponse {

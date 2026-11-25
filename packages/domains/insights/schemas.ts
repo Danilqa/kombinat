@@ -31,8 +31,10 @@ export const insightsRoutineSchema = z.object({
 
 export const insightsSchema = z.object({
   days: insightsPeriodSchema,
+  retentionDays: z.number().nullable(),
   current: insightsTotalsSchema,
-  previous: insightsTotalsSchema,
+  // null when the run retention has deleted the runs of the days before the period.
+  previous: insightsTotalsSchema.nullable(),
   daily: z.array(insightsDaySchema),
   routines: z.array(insightsRoutineSchema),
 });

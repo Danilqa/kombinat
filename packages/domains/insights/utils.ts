@@ -10,6 +10,7 @@ import {
   getTokenUsageStart,
   toLocalDate,
 } from '../run/utils';
+import { getRunRetentionLabel } from '../settings/utils';
 import { INSIGHTS_PERIODS } from './constants';
 import { insightsPeriodSchema } from './schemas';
 import type { Insights, InsightsPeriod, InsightsRoutine, InsightsTotals } from './types';
@@ -40,20 +41,24 @@ function sumRuns(runs: RunRecord[]): InsightsTotals {
   let finished = 0;
   let failed = 0;
   let tokens = 0;
+  let timed = 0;
   let runMs = 0;
   for (const run of runs) {
     if (run.tokens !== null) tokens += getTokenTotal(run.tokens);
     if (!checkIsRunFinished(run)) continue;
     finished += 1;
-    runMs += getRunDurationMs(run);
     if (checkIsRunFailed(run)) failed += 1;
+    // An aborted run ends when the daemon next notices its runner is gone, maybe hours later.
+    if (isMatching({ status: 'aborted' }, run)) continue;
+    timed += 1;
+    runMs += getRunDurationMs(run);
   }
   return {
     runs: runs.length,
     finished,
     failed,
     tokens,
-    averageRunMs: finished === 0 ? null : Math.round(runMs / finished),
+    averageRunMs: timed === 0 ? null : Math.round(runMs / timed),
   };
 }
 
@@ -96,7 +101,12 @@ function shiftDays(date: Date, days: number): Date {
 
 // The runs that started today and the days before it, by day in the local time zone. Today has not
 // ended yet, so the period before stops at this time of day too, to compare like with like.
-export function buildInsights(runs: RunRecord[], days: InsightsPeriod, now: Date): Insights {
+export function buildInsights(
+  runs: RunRecord[],
+  days: InsightsPeriod,
+  now: Date,
+  retentionDays: number | null,
+): Insights {
   const start = getTokenUsageStart(now, days).getTime();
   const previousStart = getTokenUsageStart(now, days * 2).getTime();
   const previousEnd = shiftDays(now, days).getTime();
@@ -118,10 +128,12 @@ export function buildInsights(runs: RunRecord[], days: InsightsPeriod, now: Date
     if (run.tokens !== null) day.tokens += getTokenTotal(run.tokens);
   }
   const currentTotals = sumRuns(current);
+  const isPreviousDeleted = retentionDays !== null && retentionDays < days * 2;
   return {
     days,
+    retentionDays,
     current: currentTotals,
-    previous: sumRuns(previous),
+    previous: isPreviousDeleted ? null : sumRuns(previous),
     daily,
     routines: listRoutines(current, currentTotals.tokens),
   };
@@ -136,6 +148,10 @@ export function formatInsightsChange(
   if (previous === null || previous === 0) return `None in ${before}`;
   const change = changeFormatter.format((current - previous) / previous);
   return change === '0%' ? `Same as ${before}` : `${change} vs ${before}`;
+}
+
+export function formatRetentionNote(retentionDays: number | null): string {
+  return `Older runs are deleted after ${getRunRetentionLabel(retentionDays).toLowerCase()}`;
 }
 
 export function formatFailedShare({ failed, finished }: InsightsTotals): string {

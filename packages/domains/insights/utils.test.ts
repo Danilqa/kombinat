@@ -55,6 +55,7 @@ test('sums the runs of the period and of the days before it apart', () => {
     ],
     7,
     NOW,
+    null,
   );
 
   assert.deepEqual(insights.current, {
@@ -78,20 +79,49 @@ test('compares today so far with the same hours of the day it is compared with',
     [run('triage', 7, 'succeeded', 50, 10, 11), run('triage', 7, 'succeeded', 70, 10, 15)],
     7,
     NOW,
+    null,
   );
 
+  assert.ok(insights.previous);
   assert.equal(insights.previous.runs, 1);
   assert.equal(insights.previous.tokens, 50);
 });
 
 test('counts a run at work in the runs, but not in the failed or the average run', () => {
   const working = { ...run('triage', 0, 'running', null), endedAt: null };
-  const insights = buildInsights([working, run('triage', 0, 'aborted', null, 4)], 7, NOW);
+  const insights = buildInsights([working, run('triage', 0, 'timed_out', null, 4)], 7, NOW, null);
 
   assert.equal(insights.current.runs, 2);
   assert.equal(insights.current.finished, 1);
   assert.equal(insights.current.failed, 1);
   assert.equal(insights.current.averageRunMs, 4 * MINUTE_MS);
+});
+
+test('counts an aborted run as failed, but not in the average run, since it ends when noticed', () => {
+  const insights = buildInsights(
+    [
+      run('triage', 1, 'succeeded', null, 5),
+      run('triage', 1, 'succeeded', null, 5),
+      run('triage', 1, 'succeeded', null, 5),
+      run('triage', 1, 'aborted', null, 9 * 60),
+    ],
+    7,
+    NOW,
+    null,
+  );
+
+  assert.equal(insights.current.finished, 4);
+  assert.equal(insights.current.failed, 1);
+  assert.equal(insights.current.averageRunMs, 5 * MINUTE_MS);
+});
+
+test('compares with no days before the period when the run retention has deleted them', () => {
+  const runs = [run('triage', 0, 'succeeded', 300), run('triage', 8, 'succeeded', 100)];
+
+  assert.equal(buildInsights(runs, 7, NOW, 7).previous, null);
+  assert.equal(buildInsights(runs, 30, NOW, 30).previous, null);
+  assert.equal(buildInsights(runs, 7, NOW, 30).previous?.tokens, 100);
+  assert.equal(buildInsights(runs, 30, NOW, 90).previous?.tokens, 0);
 });
 
 test('puts each run on the day it started, oldest day first', () => {
@@ -103,6 +133,7 @@ test('puts each run on the day it started, oldest day first', () => {
     ],
     30,
     NOW,
+    null,
   );
 
   assert.equal(insights.daily.length, 30);
@@ -127,6 +158,7 @@ test('lists routines by tokens, then by runs, with their share of all tokens', (
     ],
     7,
     NOW,
+    null,
   );
 
   assert.deepEqual(

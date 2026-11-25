@@ -75,7 +75,9 @@ test('keeps the period in the URL', async ({ page, kombinat, time }) => {
   kombinat.addRoutine({ name: 'triage-sentry' });
   kombinat.addRun({ routine: 'triage-sentry', startedAt: time.minutesAgo(20 * DAY_MINUTES) });
   await page.goto('/insights');
-  await expect(page.getByText('No runs in the last 7 days.')).toBeVisible();
+  await expect(
+    page.getByText('No runs in the last 7 days. Run a routine with Run now to see it here.'),
+  ).toBeVisible();
 
   await page.getByRole('tab', { name: '30 days' }).click();
 
@@ -87,6 +89,25 @@ test('keeps the period in the URL', async ({ page, kombinat, time }) => {
     'Runs1None in prior 30 days',
   );
   expect((await page.request.get('/api/insights?days=14')).status()).toBe(400);
+});
+
+test('leaves out the change when the runs before the period are deleted', async ({
+  page,
+  kombinat,
+  time,
+}) => {
+  kombinat.addRoutine({ name: 'triage-sentry' });
+  kombinat.addRun({ routine: 'triage-sentry', startedAt: time.minutesAgo(30), tokens: tokens(1) });
+  await page.request.put('/api/settings', { data: { runRetentionDays: 30 } });
+  await page.goto('/insights');
+  const stats = page.getByRole('main').locator('dl').first();
+  await expect(stats).toContainText('Runs1None in prior 7 days');
+
+  await page.getByRole('tab', { name: '30 days' }).click();
+
+  await expect(stats).toContainText('Tokens1MOlder runs are deleted after 1 month');
+  await expect(stats).toContainText('Runs1Older runs are deleted after 1 month');
+  await expect(stats).toContainText('Average run time5m 0sOlder runs are deleted after 1 month');
 });
 
 test.describe('on a phone', () => {
@@ -101,6 +122,8 @@ test.describe('on a phone', () => {
       .tap();
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Insights');
-    await expect(page.getByText('No runs in the last 7 days.')).toBeVisible();
+    await expect(
+      page.getByText('No runs in the last 7 days. Run a routine with Run now to see it here.'),
+    ).toBeVisible();
   });
 });

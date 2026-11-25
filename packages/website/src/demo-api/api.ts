@@ -541,7 +541,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
   function getInsights(url: URL, now: Date): ApiResponse {
     const days = parseInsightsPeriod(url.searchParams);
     if (days === null) return fail(400, INSIGHTS_PERIOD_ERROR);
-    return ok(buildInsights(listRuns(now), days, now));
+    return ok(buildInsights(listRuns(now), days, now, settings.runRetentionDays));
   }
 
   function getCalendar(url: URL, now: Date): ApiResponse {

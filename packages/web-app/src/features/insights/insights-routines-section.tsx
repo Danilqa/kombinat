@@ -75,7 +75,9 @@ export function InsightsRoutinesSection({ insights }: InsightsRoutinesSectionPro
       <SectionHeader.Root>Routines by tokens</SectionHeader.Root>
       <Card.Root className="gap-0 overflow-visible py-0">
         {routines.length === 0 ? (
-          <EmptyState>No runs in the last {days} days.</EmptyState>
+          <EmptyState>
+            No runs in the last {days} days. Run a routine with Run now to see it here.
+          </EmptyState>
         ) : (
           <Table.Root>
             <Table.Header>

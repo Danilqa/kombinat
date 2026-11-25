@@ -316,9 +316,9 @@ The week view's read model, `GET /api/calendar?from&to` for a range of at most 3
 
 The Insights page's read model, `GET /api/insights?days`, for a period of 7 days, the default, or 30. It answers 400 for any other.
 
-- The period is today and the days before it, in the daemon's time zone, and its runs are those of the routines that exist that started in it. `previous` sums the same number of days before it, up to the time of day it is now, so today so far compares with the same hours.
+- The period is today and the days before it, in the daemon's time zone, and its runs are those of the routines that exist that started in it. `previous` sums the same number of days before it, up to the time of day it is now, so today so far compares with the same hours. `previous` is `null` when `retentionDays`, the run retention it also returns, is shorter than twice the period: the retention has deleted those runs, and the page says so in place of a change.
 - A run is finished once it succeeded, failed, timed out or was aborted, and failed in the last three cases. A run at work or waiting counts in `runs` only.
-- `averageRunMs` is the average time from start to end of the finished runs, `null` without any.
+- `averageRunMs` is the average time from start to end of the finished runs, aborted runs left out, `null` without any. An aborted run ends when the daemon notices its runner is gone, which can be hours after it stopped, such as after the Mac slept.
 - `tokens` add up the [tokens](#tokens) of every run that reported them. `daily` holds the runs, failed runs and tokens of each day of the period, oldest first.
 - `routines` holds each routine that ran in the period with the same totals and its share of the tokens, most tokens first, then most runs. A routine whose runs reported no tokens, such as a command, has `null` tokens and comes after those that did.
 
