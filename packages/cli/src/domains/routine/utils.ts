@@ -5,6 +5,7 @@ import type { AgentName } from 'domains/agent/types';
 import { checkCanKeepMemory } from 'domains/agent/utils';
 import { routineNameSchema } from 'domains/routine/ids';
 import { MAX_RETRIES, MAX_RUNS } from 'domains/run/constants';
+import { parseTokenCount } from 'domains/run/utils';
 import { describeCron, nextCronRun, parseCron } from 'utils/cron';
 import { getErrorMessage } from 'utils/error';
 
@@ -58,6 +59,16 @@ function readNumber(data: Frontmatter, key: string): number | null {
   return number;
 }
 
+function readTokenCount(data: Frontmatter, key: string): number | null {
+  const value = readString(data, key);
+  if (value === null) return null;
+  const count = parseTokenCount(value);
+  if (count === null) {
+    throw new Error(`${key} must be a number of tokens, such as 500k, 2M or 3000000`);
+  }
+  return count;
+}
+
 function readBoolean(data: Frontmatter, key: string): boolean | null {
   const value = data[key];
   if (value === undefined || value === '') return null;
@@ -102,6 +113,7 @@ function readAgentSettings(data: Frontmatter, agent: AgentName): AgentSettings {
     permissionMode: readString(data, 'permissionMode'),
     command: readString(data, 'command'),
     maxBudgetUsd: readNumber(data, 'maxBudgetUsd'),
+    maxBudgetTokens: readTokenCount(data, 'maxBudgetTokens'),
     onUsageLimit: readString(data, 'onUsageLimit'),
   });
 }

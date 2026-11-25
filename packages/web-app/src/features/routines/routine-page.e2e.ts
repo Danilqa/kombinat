@@ -9,6 +9,7 @@ test("shows a routine's settings, runs, skipped runs and prompt", async ({ page,
     effort: 'medium',
     timeoutMinutes: 30,
     maxBudgetUsd: 2,
+    maxBudgetTokens: '1.5M',
     webhook: true,
     prompt: '## Steps\n\nFix the issue that affects the most users.',
   });
@@ -27,7 +28,7 @@ test("shows a routine's settings, runs, skipped runs and prompt", async ({ page,
     - term: Timeout
     - definition: 30 min
     - term: Budget
-    - definition: $2.00
+    - definition: $2.00 or 1.5M tokens
     - term: File
     - definition: routines/triage-sentry.md
     - term: Webhook

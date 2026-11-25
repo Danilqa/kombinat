@@ -34,6 +34,7 @@ export interface RoutineFile {
   maxParallel?: number;
   worktree?: boolean;
   maxBudgetUsd?: number;
+  maxBudgetTokens?: number | string;
   memory?: boolean;
   prompt?: string;
 }

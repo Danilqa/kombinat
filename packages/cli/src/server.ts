@@ -173,6 +173,7 @@ function toRoutineSummary(
     maxParallel: routine.maxParallel,
     worktree: routine.worktree,
     maxBudgetUsd: routine.maxBudgetUsd,
+    maxBudgetTokens: routine.maxBudgetTokens,
     file: path.relative(config.projectRoot, routine.file),
     running: checkIsStarting(routine.name) || hasQueuedRuns || runs.some(checkIsRunActive),
     lastRun: runs[0] ?? null,

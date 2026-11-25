@@ -8,11 +8,12 @@ import { isMatching, match } from 'ts-pattern';
 
 import type { RoutineName } from 'domains/routine/ids';
 import type { RunId } from 'domains/run/ids';
-import type { RunRecord, RunTrigger, RunWorktree } from 'domains/run/types';
+import type { RunRecord, RunTrigger, RunWorktree, TokenCounts } from 'domains/run/types';
 import {
   addTokenCounts,
   checkIsRunActive,
   createRunId,
+  getTokenTotal,
   mergeBlockedActions,
 } from 'domains/run/utils';
 import type { RetryOutcome, UsageLimitOutcome } from 'domains/transcript/types';
@@ -38,7 +39,14 @@ import { getHookError, HOOK_TIMEOUT_MS, runHook } from './hooks';
 import { appendPayload, takeCheckError, takePayload, takePrompt, writePrompt } from './payload';
 import { checkHasQueuedRuns, readQueuedRuns, writeQueuedRuns } from './queued-runs';
 import { getRunsDir, listRuns, readRunRecord, writeRunRecord } from './storage';
-import { checkShouldRetry, getBudgetLeft, planRetry, RETRY_TEXT } from './retry';
+import {
+  checkShouldRetry,
+  getBudgetLeft,
+  getTokenBudgetError,
+  planRetry,
+  RETRY_TEXT,
+  spendTokens,
+} from './retry';
 import type { AttemptEnd } from './retry';
 import { planUsageLimitWait, waitForAction } from './usage-limit';
 import { createWorktree, refreshWorktree, restoreWorktree, settleWorktree } from './worktree';
@@ -62,20 +70,39 @@ function checkIsBinaryFound(command: string): boolean {
     .some(dir => dir !== '' && fs.existsSync(path.join(dir, command)));
 }
 
-interface KillTimer {
-  clear: () => void;
-  checkHasFired: () => boolean;
+type StopReason = 'timeout' | 'tokens';
+
+interface Stopper {
+  stop: (reason: StopReason) => void;
+  getReason: () => StopReason | null;
 }
 
 // Ctrl-C first so the agent can wrap up, SIGTERM if it is still around a minute later.
-function killAfter(child: ChildProcess, ms: number): KillTimer {
-  let fired = false;
-  const timer = setTimeout(() => {
-    fired = true;
-    child.kill('SIGINT');
-    setTimeout(() => child.kill('SIGTERM'), KILL_GRACE_MS).unref();
-  }, ms);
-  return { clear: () => clearTimeout(timer), checkHasFired: () => fired };
+function createStopper(child: ChildProcess): Stopper {
+  let stoppedFor: StopReason | null = null;
+  return {
+    stop: reason => {
+      if (stoppedFor !== null) return;
+      stoppedFor = reason;
+      child.kill('SIGINT');
+      setTimeout(() => child.kill('SIGTERM'), KILL_GRACE_MS).unref();
+    },
+    getReason: () => stoppedFor,
+  };
+}
+
+// Both fall short: a result leaves out a call that was cut short, and a streamed call its last output.
+function takeLargerCounts(
+  reported: TokenCounts | null,
+  streamed: TokenCounts | null,
+): TokenCounts | null {
+  if (reported === null || streamed === null) return reported ?? streamed;
+  return {
+    input: Math.max(reported.input, streamed.input),
+    output: Math.max(reported.output, streamed.output),
+    cacheWrite: Math.max(reported.cacheWrite, streamed.cacheWrite),
+    cacheRead: Math.max(reported.cacheRead, streamed.cacheRead),
+  };
 }
 
 function toEvent(agent: Agent, line: string): unknown {
@@ -99,6 +126,8 @@ interface AgentRun {
   record: RunRecord;
   hookTimeoutMs: number;
   timeoutMs: number;
+  // What this process may use before it is stopped.
+  tokensLeft: number | null;
   persist: (record: RunRecord) => void;
 }
 
@@ -128,6 +157,7 @@ async function runAgent({
   record,
   hookTimeoutMs,
   timeoutMs,
+  tokensLeft,
   persist,
 }: AgentRun): Promise<AgentExit> {
   if (!fs.existsSync(routine.cwd)) {
@@ -163,6 +193,10 @@ async function runAgent({
   });
   record.pid = child.pid ?? null;
   persist(record);
+  const stopper = createStopper(child);
+  const timeoutTimer = setTimeout(() => stopper.stop('timeout'), timeoutMs);
+  const callTokens = new Map<string, TokenCounts>();
+  let usedTokens = 0;
 
   const log = fs.createWriteStream(record.logFile, { flags: 'a' });
   const stderrChunks: string[] = [];
@@ -185,9 +219,13 @@ async function runAgent({
       record.resumeCommand = agent.getResumeCommand(update.sessionId);
       persist(record);
     }
+    const call = agent.readCallTokens(event);
+    if (call === null) return;
+    const reported = callTokens.get(call.id);
+    callTokens.set(call.id, call.tokens);
+    usedTokens += getTokenTotal(call.tokens) - (reported ? getTokenTotal(reported) : 0);
+    if (tokensLeft !== null && usedTokens >= tokensLeft) stopper.stop('tokens');
   });
-
-  const killTimer = killAfter(child, timeoutMs);
 
   // A command that ignores the prompt can exit before it is written. Its exit code decides the run.
   child.stdin.on('error', () => undefined);
@@ -200,9 +238,13 @@ async function runAgent({
       resolve(-1);
     });
   });
-  killTimer.clear();
+  clearTimeout(timeoutTimer);
   await new Promise<void>(resolve => log.end(resolve));
   const workedMs = Date.now() - spawnedAt;
+  record.tokens = takeLargerCounts(
+    record.tokens,
+    [...callTokens.values()].reduce<TokenCounts | null>(addTokenCounts, null),
+  );
   const events = readRunEvents(record, logStart);
   // Each process reports its own: the run's first, each after a usage limit and each reply.
   record.blockedActions = mergeBlockedActions(
@@ -210,12 +252,27 @@ async function runAgent({
     agent.readBlockedActions(events),
   );
 
-  if (killTimer.checkHasFired()) {
-    return exitWith(
-      { status: 'timed_out', exitCode, error: `Killed after ${routine.timeoutMinutes} minutes` },
-      workedMs,
-    );
-  }
+  const stopExit = match(stopper.getReason())
+    .with('tokens', (): AgentExit | null =>
+      routine.maxBudgetTokens === null
+        ? null
+        : {
+            ...exitWith(
+              { status: 'failed', exitCode, error: getTokenBudgetError(routine.maxBudgetTokens) },
+              workedMs,
+            ),
+            canRetry: false,
+          },
+    )
+    .with('timeout', () =>
+      exitWith(
+        { status: 'timed_out', exitCode, error: `Killed after ${routine.timeoutMinutes} minutes` },
+        workedMs,
+      ),
+    )
+    .with(null, () => null)
+    .exhaustive();
+  if (stopExit !== null) return stopExit;
   const usageLimitStop = agent.findUsageLimitStop(events);
   const canRetry = !agent.checkIsStoppedByBudget(events);
   if (exitCode !== 0) {
@@ -289,6 +346,18 @@ async function runWaitingOutLimits(run: LimitedRun): Promise<AttemptEnd> {
     if (wait === null || invocation === null) {
       return { outcome: exit.outcome, canRetry: exit.canRetry && exit.usageLimitStop === null };
     }
+    // A session continues after a usage limit only with tokens left in the run's budget.
+    const tokensLeft = spendTokens(run.tokensLeft, record.tokens);
+    if (routine.maxBudgetTokens !== null && tokensLeft !== null && tokensLeft <= 0) {
+      return {
+        outcome: {
+          ...exit.outcome,
+          status: 'failed',
+          error: getTokenBudgetError(routine.maxBudgetTokens),
+        },
+        canRetry: false,
+      };
+    }
 
     appendLogEvent(record, { type: 'usage_limit_wait', ...wait });
     writeRunRecord({
@@ -328,6 +397,7 @@ async function runWaitingOutLimits(run: LimitedRun): Promise<AttemptEnd> {
         routine: { ...routine, before: null },
         invocation,
         timeoutMs: routine.timeoutMinutes * 60_000 - workedMs,
+        tokensLeft,
       }),
     );
     workedMs += exit.workedMs;
@@ -339,10 +409,11 @@ async function runWaitingOutLimits(run: LimitedRun): Promise<AttemptEnd> {
 async function runRetryingErrors(run: LimitedRun): Promise<Partial<RunRecord>> {
   const { routine, agent, record } = run;
   const getRunBudgetLeft = () => getBudgetLeft(routine.maxBudgetUsd, record.costUsd);
+  const getRunTokensLeft = () => spendTokens(routine.maxBudgetTokens, record.tokens);
   let end = await runWaitingOutLimits(run);
   for (
     let attempt = 1;
-    checkShouldRetry(end, attempt, routine.retries, getRunBudgetLeft());
+    checkShouldRetry(end, attempt, routine.retries, getRunBudgetLeft(), getRunTokensLeft());
     attempt += 1
   ) {
     const context: RunContext = {
@@ -385,11 +456,13 @@ async function runRetryingErrors(run: LimitedRun): Promise<Partial<RunRecord>> {
     record.retry = retry;
     // The runner's own pid keeps the run from being reconciled as aborted until its agent starts.
     writeRunRecord({ ...record, pid: process.pid });
+    const tokensLeft = getRunTokensLeft();
     end = await addingSpend(record, () =>
       runWaitingOutLimits({
         ...run,
         routine: sessionInvocation === null ? routine : { ...routine, before: null },
         invocation: sessionInvocation ?? agent.buildInvocation(context),
+        tokensLeft,
         context,
       }),
     );
@@ -475,6 +548,7 @@ export async function runRoutine(
           record,
           hookTimeoutMs,
           timeoutMs: routine.timeoutMinutes * 60_000,
+          tokensLeft: routine.maxBudgetTokens,
           persist: writeRunRecord,
           context,
         })
@@ -581,6 +655,7 @@ export async function replyToRun(routine: Routine, run: RunRecord): Promise<RunR
               record: session,
               hookTimeoutMs: HOOK_TIMEOUT_MS,
               timeoutMs: routine.timeoutMinutes * 60_000,
+              tokensLeft: routine.maxBudgetTokens,
               persist: ({ sessionId, resumeCommand }) =>
                 writeRunRecord({ ...replying, sessionId, resumeCommand }),
             })

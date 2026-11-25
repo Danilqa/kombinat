@@ -1,7 +1,8 @@
 import { isMatching, P } from 'ts-pattern';
 
 import { RETRY_DELAY_MINUTES } from 'domains/run/constants';
-import type { RunRecord, RunRetry } from 'domains/run/types';
+import type { RunRecord, RunRetry, TokenCounts } from 'domains/run/types';
+import { formatTokenLimit, getTokenTotal } from 'domains/run/utils';
 
 export const RETRY_TEXT =
   'Your last attempt stopped with an error. Continue the task from where you stopped.';
@@ -24,16 +25,26 @@ export function getBudgetLeft(maxBudgetUsd: number | null, costUsd: number | nul
   return maxBudgetUsd === null ? null : maxBudgetUsd - (costUsd ?? 0);
 }
 
+export function spendTokens(left: number | null, tokens: TokenCounts | null): number | null {
+  return left === null || tokens === null ? left : left - getTokenTotal(tokens);
+}
+
+export function getTokenBudgetError(maxBudgetTokens: number): string {
+  return `Reached the budget of ${formatTokenLimit(maxBudgetTokens)} tokens. Raise maxBudgetTokens in the routine to give its runs more.`;
+}
+
 export function checkShouldRetry(
   end: AttemptEnd,
   attempt: number,
   retries: number,
   budgetLeft: number | null,
+  tokensLeft: number | null,
 ): boolean {
   return (
     end.canRetry &&
     attempt <= retries &&
     (budgetLeft === null || budgetLeft > 0) &&
+    (tokensLeft === null || tokensLeft > 0) &&
     isMatching({ status: P.union('failed', 'timed_out') }, end.outcome)
   );
 }

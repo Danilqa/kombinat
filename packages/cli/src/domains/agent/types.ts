@@ -5,7 +5,7 @@ import type { AgentName } from 'domains/agent/types';
 import type { PlanLimits } from 'domains/daemon/types';
 import type { RoutineName } from 'domains/routine/ids';
 import type { RunId } from 'domains/run/ids';
-import type { BlockedAction, RunRecord, RunTrigger } from 'domains/run/types';
+import type { BlockedAction, RunRecord, RunTrigger, TokenCounts } from 'domains/run/types';
 import type { MessageSource, TranscriptItem, UsageLimitKind } from 'domains/transcript/types';
 
 import type { outputEventSchema } from './schemas';
@@ -19,6 +19,7 @@ export interface AgentSettings {
   permissionMode: string | null;
   command: string | null;
   maxBudgetUsd: number | null;
+  maxBudgetTokens: number | null;
   onUsageLimit: string | null;
 }
 
@@ -46,6 +47,12 @@ export interface ReplyMessage {
 export interface UsageLimitStop {
   limit: UsageLimitKind;
   resetsAt: string;
+}
+
+// The tokens of one model call, which the agent may report again as its message streams.
+export interface CallTokens {
+  id: string;
+  tokens: TokenCounts;
 }
 
 export interface Invocation {
@@ -85,6 +92,7 @@ export interface Agent {
   ): Invocation | null;
   readEvent(event: unknown, record: Readonly<RunRecord>): RunUpdate;
   readPlanLimits(event: unknown): PlanLimits | null;
+  readCallTokens(event: unknown): CallTokens | null;
   findUsageLimitStop(events: unknown[]): UsageLimitStop | null;
   checkIsStoppedByBudget(events: unknown[]): boolean;
   readBlockedActions(events: unknown[]): BlockedAction[];

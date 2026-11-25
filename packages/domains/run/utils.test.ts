@@ -13,6 +13,7 @@ import {
   encodeRunsCursor,
   filterRuns,
   findExpiredRuns,
+  getBudgetLabel,
   getRunDurationMs,
   getTokenUsageDates,
   listBlockedRules,
@@ -22,6 +23,7 @@ import {
   getWorktreeChangesLabel,
   paginateRuns,
   parseRunsPageQuery,
+  parseTokenCount,
 } from './utils';
 
 const run = (routine: string, minute: number, id = `run-${minute}`): RunRecord =>
@@ -180,6 +182,26 @@ test("sums the tokens of the last 7 days by local day, with each routine's share
   });
   assert.equal(release?.share, 0.75);
   assert.equal(shell, null);
+});
+
+test('reads a count of tokens written in full or with k, M or B', () => {
+  assert.equal(parseTokenCount('3000000'), 3_000_000);
+  assert.equal(parseTokenCount('500k'), 500_000);
+  assert.equal(parseTokenCount('2M'), 2_000_000);
+  assert.equal(parseTokenCount(' 1.5 m '), 1_500_000);
+  assert.equal(parseTokenCount('1b'), 1_000_000_000);
+  for (const value of ['', '0', '0k', '-5k', '2 million', '1,000', '1T', 'k']) {
+    assert.equal(parseTokenCount(value), null, value);
+  }
+});
+
+test('a budget says its dollars, its tokens or both, and a token limit never reads rounded', () => {
+  assert.equal(getBudgetLabel(null, null), null);
+  assert.equal(getBudgetLabel(2, null), '$2.00');
+  assert.equal(getBudgetLabel(null, 2_000_000), '2M tokens');
+  assert.equal(getBudgetLabel(1.5, 750_000), '$1.50 or 750K tokens');
+  assert.equal(getBudgetLabel(null, 1_250_000), '1.25M tokens');
+  assert.equal(getBudgetLabel(null, 1_234_567), '1,234,567 tokens');
 });
 
 test('merging blocked actions keeps one of each action and one of each rule', () => {

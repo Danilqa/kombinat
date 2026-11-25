@@ -1,6 +1,6 @@
 import { DetailList, RelativeTime, type DetailEntry } from 'design-system/components';
 
-import { getRetriesLabel, getRunCountLabel } from '../../run/utils';
+import { getBudgetLabel, getRetriesLabel, getRunCountLabel } from '../../run/utils';
 import type { RoutineSummary } from '../types';
 import { getWebhookPath } from '../../webhook/utils';
 
@@ -20,7 +20,7 @@ function getStatEntries(routine: RoutineSummary): DetailEntry[] {
       : [{ label: 'Runs', value: getRunCountLabel(routine.runs, routine.maxParallel) }]),
     {
       label: 'Budget',
-      value: routine.maxBudgetUsd === null ? 'None' : `$${routine.maxBudgetUsd.toFixed(2)}`,
+      value: getBudgetLabel(routine.maxBudgetUsd, routine.maxBudgetTokens) ?? 'None',
     },
     { label: 'Working directory', value: routine.cwd, isMono: true, span: 'wide' },
     ...(routine.worktree

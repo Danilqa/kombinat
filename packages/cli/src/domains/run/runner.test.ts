@@ -27,10 +27,23 @@ fs.writeFileSync(
 );
 // In a folder with limited.jsonl, it stops at a usage limit and its resumed session finishes.
 // In a folder with answer.jsonl, it keeps its prompt in prompt.txt and answers with the file.
+// In a folder with calls.jsonl, it writes the file, and with stopped.jsonl it then waits for Ctrl-C.
 const fakeClaude = path.join(tmp, 'fake-claude');
 fs.writeFileSync(
   fakeClaude,
   `#!/bin/sh
+if [ -f calls.jsonl ]; then
+  cat > /dev/null
+  if [ -f stopped.jsonl ]; then
+    trap 'kill $! 2> /dev/null; cat stopped.jsonl; exit 0' INT
+  fi
+  cat calls.jsonl
+  if [ -f stopped.jsonl ]; then
+    sleep 30 > /dev/null 2>&1 &
+    wait
+  fi
+  exit 0
+fi
 if [ -f answer.jsonl ]; then
   cat > prompt.txt
   cat answer.jsonl
@@ -847,6 +860,18 @@ test('a routine with onUsageLimit: fail fails at the limit without waiting', asy
   assert.equal(readLogTypes(finished).includes('usage_limit_wait'), false);
 });
 
+test('a run that used its token budget before a usage limit fails instead of waiting', async () => {
+  const finished = await runRoutine(makeLimitedRoutine('limited-tokens', 'maxBudgetTokens: 3k'), {
+    trigger: 'manual',
+  });
+  assert.equal(finished.status, 'failed');
+  assert.equal(
+    finished.error,
+    'Reached the budget of 3K tokens. Raise maxBudgetTokens in the routine to give its runs more.',
+  );
+  assert.equal(readLogTypes(finished).includes('usage_limit_wait'), false);
+});
+
 test('a waiting run whose runner is gone is aborted and its wait ends', () => {
   const run = makeFinishedRun('limited-gone', '20261119T070000Z-gone', {
     status: 'waiting',
@@ -1008,6 +1033,114 @@ test('a run that spent its whole budget fails without a retry', async () => {
   );
   assert.equal(finished.status, 'failed');
   assert.equal(readLogTypes(finished).includes('retry_wait'), false);
+});
+
+test('a run that spent its whole token budget fails without a retry', async () => {
+  const finished = await runRoutine(
+    makeErroringRoutine(
+      'tokens-spent',
+      { result: STREAM_ERROR, usage: { input_tokens: 10, cache_read_input_tokens: 990 } },
+      'retries: 2\nmaxBudgetTokens: 1k',
+    ),
+    { trigger: 'manual' },
+  );
+  assert.equal(finished.status, 'failed');
+  assert.equal(finished.error, STREAM_ERROR);
+  assert.equal(readLogTypes(finished).includes('retry_wait'), false);
+});
+
+const CLAUDE_INIT = { type: 'system', subtype: 'init', session_id: 's1' };
+
+function claudeCall(id: string, usage: object) {
+  return { type: 'assistant', message: { id, content: [{ type: 'text', text: id }], usage } };
+}
+
+// A routine whose claude makes the calls, then waits to be stopped when stopped is given.
+function makeCallingRoutine(
+  name: string,
+  calls: unknown[],
+  stopped: unknown[] | null,
+  frontmatter: string,
+) {
+  const cwd = path.join(tmp, name);
+  fs.mkdirSync(cwd, { recursive: true });
+  const toLines = (events: unknown[]) => events.map(event => `${JSON.stringify(event)}\n`).join('');
+  fs.writeFileSync(path.join(cwd, 'calls.jsonl'), toLines(calls));
+  if (stopped !== null) fs.writeFileSync(path.join(cwd, 'stopped.jsonl'), toLines(stopped));
+  return buildRoutine(
+    path.join(tmp, `${name}.md`),
+    `---\ncwd: ${cwd}\n${frontmatter}\n---\nFix it.`,
+  );
+}
+
+test('a run that reaches its token budget is stopped and fails without a retry', async () => {
+  const started = Date.now();
+  const finished = await runRoutine(
+    makeCallingRoutine(
+      'over-tokens',
+      [
+        CLAUDE_INIT,
+        claudeCall('m1', { input_tokens: 10, cache_read_input_tokens: 400 }),
+        claudeCall('m1', { input_tokens: 10, cache_read_input_tokens: 400 }),
+        claudeCall('m2', { output_tokens: 5, cache_read_input_tokens: 700 }),
+      ],
+      [],
+      'retries: 2\nmaxBudgetTokens: 1k',
+    ),
+    { trigger: 'manual' },
+  );
+  assert.ok(Date.now() - started < 10_000);
+  assert.equal(finished.status, 'failed');
+  assert.equal(
+    finished.error,
+    'Reached the budget of 1K tokens. Raise maxBudgetTokens in the routine to give its runs more.',
+  );
+  assert.deepEqual(finished.tokens, { input: 10, output: 5, cacheWrite: 0, cacheRead: 1100 });
+  assert.equal(readLogTypes(finished).includes('retry_wait'), false);
+});
+
+test('a stopped run counts the call its result left out', async () => {
+  const finished = await runRoutine(
+    makeCallingRoutine(
+      'over-tokens-result',
+      [CLAUDE_INIT, claudeCall('m1', { cache_read_input_tokens: 2_000_000 })],
+      [
+        {
+          type: 'result',
+          subtype: 'error_during_execution',
+          is_error: true,
+          usage: { input_tokens: 4, output_tokens: 300, cache_read_input_tokens: 1_500_000 },
+        },
+      ],
+      'maxBudgetTokens: 2M',
+    ),
+    { trigger: 'manual' },
+  );
+  assert.equal(finished.status, 'failed');
+  assert.equal(
+    finished.error,
+    'Reached the budget of 2M tokens. Raise maxBudgetTokens in the routine to give its runs more.',
+  );
+  assert.deepEqual(finished.tokens, { input: 4, output: 300, cacheWrite: 0, cacheRead: 2_000_000 });
+});
+
+test('a run counts each call once, however many events report it', async () => {
+  const finished = await runRoutine(
+    makeCallingRoutine(
+      'tokens-once',
+      [
+        CLAUDE_INIT,
+        claudeCall('m1', { input_tokens: 600 }),
+        claudeCall('m1', { input_tokens: 600 }),
+        { type: 'result', result: 'Done', is_error: false, usage: { input_tokens: 600 } },
+      ],
+      null,
+      'maxBudgetTokens: 1000',
+    ),
+    { trigger: 'manual' },
+  );
+  assert.equal(finished.status, 'succeeded');
+  assert.equal(finished.resultText, 'Done');
 });
 
 test('a routine without retries fails at the first error', async () => {

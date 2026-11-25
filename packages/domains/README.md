@@ -108,7 +108,10 @@ A run's `tokens` are the input, output, cache write and cache read tokens its ag
 
 - Claude reports them in the result of each process, in `modelUsage` for every model of the session, subagents included, or in `usage` for the main one. Codex reports the session's total so far with each `turn.completed`, its cached input counted inside its input, so the latest one counts and the cache read is taken out of the input.
 - The turns of a session that continued after a usage limit add up, like its cost. Replies keep the run's tokens, as they keep its cost.
+- Claude also streams the usage of each call with its message, a subagent's too. Each count of a process is the larger of its result's and the sum of its streamed calls, each call counted once: a result leaves out a call that a stop cut short, or is missing when the process was killed, and a streamed call misses its last output tokens.
 - A routine's `tokenUsage` sums its runs that started today or in the 6 days before, in the daemon's time zone, and reported tokens: their count, the counts, the total of each day and the routine's share of the total of all routines. It is `null` without such runs.
+
+A routine's `maxBudgetTokens` caps a run's total of all four. Claude has no flag for it. The runner adds up the usage of each message as Claude streams it and stops the process the way a timeout does once the total reaches what the run has left. A run can end over the budget by up to one call, which reads the whole conversation again. Such a run fails with `Reached the budget of <tokens> tokens. Raise maxBudgetTokens in the routine to give its runs more.` and is not retried. Its next attempts and its turns after a usage limit get what is left of the budget, and each reply gets the whole budget, as each gets the whole `maxBudgetUsd`. Codex does not support it, since it reports tokens only when its turn ends.
 
 #### Waiting out a usage limit
 
@@ -129,7 +132,7 @@ Invariants:
 
 A routine with `retries: <n>`, from 0, the default, to 10, gives a run up to n more attempts when one fails or times out, in `retry.ts` and the runner:
 
-1. An attempt is retried when it ended as `failed` or `timed_out`, unless its `cwd` or agent binary is missing, the agent stopped at its budget (Claude's `error_max_budget_usd` result) or at a usage limit, or the user stopped waiting for a usage limit. A failed before hook is retried.
+1. An attempt is retried when it ended as `failed` or `timed_out`, unless its `cwd` or agent binary is missing, the agent stopped at its budget (Claude's `error_max_budget_usd` result), Kombinat stopped it at its token budget or a usage limit stopped it, or the user stopped waiting for a usage limit. A failed before hook is retried.
 2. The runner appends `{"type":"retry_wait","attempt":2,"attempts":3,"error":"…","stoppedAt":"…","continuesAt":"…","continuesSession":true}` to the event log and writes the record as `retrying`, with its own pid and the same object in `retry`. `attempt` is the next attempt, `attempts` all of them, `error` why the last one stopped, and `continuesAt` 5 minutes after the stop.
 3. It waits as for a usage limit: on `<id>.wait`, written by the scheduler from `continuesAt` while a slot is free, by `POST /api/runs/<routine>/<id>/wait/continue` and `/wait/stop`, or by the runner itself when the scheduler does not tick.
 4. It appends `{"type":"retry_end","at":"…","outcome":"retried"}`, or `"stopped"`. Retried, the run is `running` again and keeps `retry`. With a session that its agent resumes, the next attempt continues it with a note that an error stopped the last attempt, without the before hook: `continuesSession` is true. Without one, such as for `command` or after a failed before hook, it starts over with the before hook and the prompt. Each attempt gets the whole `timeoutMinutes`, and the turns, cost, duration and tokens add up. Stopped, the run ends as the attempt did.
