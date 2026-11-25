@@ -1,8 +1,9 @@
-import { Webhook } from 'lucide-react';
+import { UserRound, Webhook } from 'lucide-react';
 import { Link } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { Badge, EmptyState, RelativeTime, Table, Tooltip } from 'design-system/components';
 import { cn } from 'design-system/utils';
+import { checkHasAccount, getAccountLabel, listAccounts } from 'domains/agent/utils';
 import { getDaemonStatus } from 'domains/daemon/requests';
 import { RunNowButton, WebhookQueueButton } from 'domains/routine/components';
 import type { RoutineSummary } from 'domains/routine/types';
@@ -48,6 +49,42 @@ function ScheduleCell({ routine }: ScheduleCellProps) {
         </Tooltip.Root>
       )}
     </div>
+  );
+}
+
+interface AgentCellProps {
+  routine: RoutineSummary;
+  hasSeveralAccounts: boolean;
+}
+
+function AgentCell({ routine, hasSeveralAccounts }: AgentCellProps) {
+  const account = getAccountLabel(routine.account);
+  return (
+    <>
+      <div
+        className="max-w-44 truncate font-mono text-body-sm text-fg"
+        title={routine.model ?? routine.command ?? routine.agent}
+      >
+        {routine.model ?? routine.command ?? routine.agent}
+      </div>
+      <div className="text-body-sm text-fg-muted">
+        {routine.agent}
+        {routine.effort !== null && ` · effort ${routine.effort}`}
+      </div>
+      {/* One login needs no label, so the account shows once routines run on more than one. */}
+      {hasSeveralAccounts && checkHasAccount(routine.agent) && (
+        <Badge
+          size="small"
+          variant="ghost"
+          className="mt-1 max-w-44"
+          title={`Runs on the ${account} account`}
+        >
+          <UserRound aria-hidden="true" />
+          <span className="sr-only">Account </span>
+          <span className="truncate">{account}</span>
+        </Badge>
+      )}
+    </>
   );
 }
 
@@ -121,6 +158,7 @@ interface RoutinesTableProps {
 export function RoutinesTable({ routines }: RoutinesTableProps) {
   const getRowClickHandler = useRowLink();
   if (routines.length === 0) return <NoRoutinesState />;
+  const hasSeveralAccounts = listAccounts(routines).length > 1;
   const maxTokenTotal = Math.max(
     0,
     ...routines.map(({ tokenUsage }) => (tokenUsage ? getTokenTotal(tokenUsage.counts) : 0)),
@@ -180,16 +218,7 @@ export function RoutinesTable({ routines }: RoutinesTableProps) {
               <RelativeTime iso={routine.nextRunAt} />
             </Table.Cell>
             <Table.Cell>
-              <div
-                className="max-w-44 truncate font-mono text-body-sm text-fg"
-                title={routine.model ?? routine.command ?? routine.agent}
-              >
-                {routine.model ?? routine.command ?? routine.agent}
-              </div>
-              <div className="text-body-sm text-fg-muted">
-                {routine.agent}
-                {routine.effort !== null && ` · effort ${routine.effort}`}
-              </div>
+              <AgentCell routine={routine} hasSeveralAccounts={hasSeveralAccounts} />
             </Table.Cell>
             <Table.Cell>
               <LastRunCell routine={routine} />

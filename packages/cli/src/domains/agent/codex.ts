@@ -8,19 +8,23 @@ import { toPreview } from 'domains/transcript/utils';
 
 import { config } from '../../config';
 import {
+  getAccountPrefix,
   getReplyNote,
   getUnattendedNote,
   pickOne,
   rejectUnsupported,
+  withAccount,
   withoutEnv,
 } from './settings';
-import type { Agent, RunContext, RunUpdate } from './types';
+import type { AccountHome, Agent, RunContext, RunUpdate } from './types';
 
 const DEFAULT_SANDBOX = 'workspace-write';
 const EFFORTS = ['minimal', 'low', 'medium', 'high', 'xhigh'] as const;
 const SANDBOX_MODES = ['read-only', 'workspace-write', 'danger-full-access'] as const;
 // Runs use the ChatGPT login, never an API key.
 const DROPPED_ENV = ['OPENAI_API_KEY', 'CODEX_API_KEY'];
+// Codex keeps its login, sessions and config in CODEX_HOME.
+const ACCOUNT_HOME: AccountHome = { env: 'CODEX_HOME', folder: '.codex' };
 
 const codexErrorSchema = z.object({ message: z.string().optional() });
 
@@ -223,6 +227,7 @@ export const codexAgent: Agent = {
   name: 'codex',
   output: 'jsonl',
   binaryEnv: 'CODEX_BIN',
+  accountHome: ACCOUNT_HOME,
 
   resolveSettings(raw) {
     rejectUnsupported(
@@ -242,8 +247,17 @@ export const codexAgent: Agent = {
     return {
       command: config.codexBin,
       args: [...buildExecArgs(context), '-'],
-      env: withoutEnv(DROPPED_ENV),
+      env: withAccount(withoutEnv(DROPPED_ENV), ACCOUNT_HOME, context.routine.account),
       input: `${getUnattendedNote(context)}\n\n${context.routine.prompt}`,
+    };
+  },
+
+  buildLoginInvocation(account) {
+    return {
+      command: config.codexBin,
+      args: ['login'],
+      env: withAccount(withoutEnv(DROPPED_ENV), ACCOUNT_HOME, account),
+      input: '',
     };
   },
 
@@ -251,7 +265,7 @@ export const codexAgent: Agent = {
     return {
       command: config.codexBin,
       args: [...buildExecArgs(context), 'resume', sessionId, '-'],
-      env: withoutEnv(DROPPED_ENV),
+      env: withAccount(withoutEnv(DROPPED_ENV), ACCOUNT_HOME, context.routine.account),
       input: `${getReplyNote(context, message.source)}\n\n${message.text}`,
     };
   },
@@ -329,5 +343,6 @@ export const codexAgent: Agent = {
     return items;
   },
 
-  getResumeCommand: sessionId => `codex resume ${sessionId}`,
+  getResumeCommand: (sessionId, account) =>
+    `${getAccountPrefix(ACCOUNT_HOME, account)}codex resume ${sessionId}`,
 };

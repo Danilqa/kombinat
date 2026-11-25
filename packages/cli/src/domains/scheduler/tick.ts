@@ -1,5 +1,6 @@
 import { isMatching, match, P } from 'ts-pattern';
 
+import type { AccountName } from 'domains/agent/ids';
 import { getCurrentUsageLimits } from 'domains/daemon/utils';
 import type { RoutineName } from 'domains/routine/ids';
 import type { QueuedRun, RunRecord } from 'domains/run/types';
@@ -93,14 +94,20 @@ function countRunsAtWork(routines: Routine[], runningRuns: RunRecord[]): number 
   );
 }
 
-// A run started at a usage limit would stop at once, so queued runs wait for the reset with the runs that hit it.
-function checkIsClaudeAtLimit(runningRuns: RunRecord[], now: Date): boolean {
+// A run started at a usage limit would stop at once, so queued runs wait for the reset with the runs
+// that hit it. Each account has a plan of its own, so only its own runs wait.
+function checkIsClaudeAtLimit(
+  runningRuns: RunRecord[],
+  account: AccountName | null,
+  now: Date,
+): boolean {
   const isRunWaiting = runningRuns.some(
     run =>
       isMatching({ agent: 'claude', status: 'waiting', usageLimit: P.nonNullable }, run) &&
+      run.account === account &&
       new Date(run.usageLimit.continuesAt) > now,
   );
-  const isUsedUp = getCurrentUsageLimits(readPlanUsage('claude'), now.getTime()).some(
+  const isUsedUp = getCurrentUsageLimits(readPlanUsage('claude', account), now.getTime()).some(
     limit => limit.usedRatio >= 1,
   );
   return isRunWaiting || isUsedUp;
@@ -117,7 +124,6 @@ function takeQueuedRuns(
   if (queuedRuns.length === 0) return [];
   const started: RoutineName[] = [];
   const doneRuns = new Set<QueuedRun>();
-  const isClaudeAtLimit = checkIsClaudeAtLimit(runningRuns, now);
   let runningCount = slotsTaken;
   for (const queued of queuedRuns) {
     const routine = routines.find(candidate => candidate.name === queued.routine);
@@ -127,7 +133,12 @@ function takeQueuedRuns(
       continue;
     }
     if (runningCount >= config.maxConcurrentRuns) break;
-    if (isClaudeAtLimit && isMatching({ agent: 'claude' }, routine)) continue;
+    if (
+      isMatching({ agent: 'claude' }, routine) &&
+      checkIsClaudeAtLimit(runningRuns, routine.account, now)
+    ) {
+      continue;
+    }
     const activeCount =
       runningRuns.filter(run => run.routine === routine.name).length + countStarting(routine.name);
     if (activeCount >= queued.maxParallel) continue;

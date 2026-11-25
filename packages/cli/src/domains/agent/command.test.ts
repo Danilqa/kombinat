@@ -46,5 +46,5 @@ test('collects the output lines as the result and the transcript', () => {
   assert.deepEqual(commandAgent.buildTranscript([first, second]), [
     { kind: 'text', key: 'output', text: '# Report\nAll good', isSubagent: false },
   ]);
-  assert.equal(commandAgent.getResumeCommand(sessionIdSchema.parse('x')), null);
+  assert.equal(commandAgent.getResumeCommand(sessionIdSchema.parse('x'), null), null);
 });

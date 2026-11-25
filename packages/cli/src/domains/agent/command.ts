@@ -8,6 +8,7 @@ export const commandAgent: Agent = {
   name: 'command',
   output: 'text',
   binaryEnv: null,
+  accountHome: null,
 
   resolveSettings(raw) {
     rejectUnsupported(
@@ -20,6 +21,7 @@ export const commandAgent: Agent = {
         'maxBudgetUsd',
         'maxBudgetTokens',
         'onUsageLimit',
+        'account',
       ],
       'command',
     );
@@ -43,6 +45,7 @@ export const commandAgent: Agent = {
     };
   },
 
+  buildLoginInvocation: () => null,
   buildReplyInvocation: () => null,
 
   readEvent(event, record) {

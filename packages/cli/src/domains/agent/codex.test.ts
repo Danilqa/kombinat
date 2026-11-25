@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
+import os from 'node:os';
+import path from 'node:path';
 import { test } from 'node:test';
 
-import { sessionIdSchema } from 'domains/agent/ids';
+import { accountNameSchema, sessionIdSchema } from 'domains/agent/ids';
 import { runIdSchema } from 'domains/run/ids';
 import { makeRunRecord } from 'domains/run/mocks';
 
@@ -108,8 +110,12 @@ test('reads the thread, the last message, turns and failures into the run record
     error: 'x',
   });
   assert.equal(
-    codexAgent.getResumeCommand(sessionIdSchema.parse('thread-1')),
+    codexAgent.getResumeCommand(sessionIdSchema.parse('thread-1'), null),
     'codex resume thread-1',
+  );
+  assert.equal(
+    codexAgent.getResumeCommand(sessionIdSchema.parse('thread-1'), accountNameSchema.parse('work')),
+    'CODEX_HOME=~/.codex-work codex resume thread-1',
   );
 });
 
@@ -133,6 +139,15 @@ test('passes the routine settings to codex exec', () => {
   ]);
   assert.match(input, /unattended by the kombinat scheduler[\s\S]*\n\nHello$/);
   assert.equal(env['OPENAI_API_KEY'], undefined);
+});
+
+test("a routine on an account runs codex with that account's CODEX_HOME", () => {
+  const { env } = codexAgent.buildInvocation({
+    routine: makeAgentTask({ account: accountNameSchema.parse('work') }),
+    runId: runIdSchema.parse('r1'),
+    trigger: 'schedule',
+  });
+  assert.equal(env['CODEX_HOME'], path.join(os.homedir(), '.codex-work'));
 });
 
 test('resumes the thread with the exec options before the resume subcommand', () => {

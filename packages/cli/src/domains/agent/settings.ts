@@ -1,8 +1,12 @@
+import os from 'node:os';
+import path from 'node:path';
+
 import { match } from 'ts-pattern';
 
+import type { AccountName } from 'domains/agent/ids';
 import type { AgentName } from 'domains/agent/types';
 
-import type { AgentSettings, ReplySource, RunContext } from './types';
+import type { AccountHome, AgentSettings, ReplySource, RunContext } from './types';
 
 export function pickOne<T extends string>(
   value: string | null,
@@ -36,6 +40,29 @@ export function rejectUnsupported(
 
 export function withoutEnv(names: readonly string[]): NodeJS.ProcessEnv {
   return Object.fromEntries(Object.entries(process.env).filter(([name]) => !names.includes(name)));
+}
+
+// The primary login stays wherever the agent keeps it, so it needs no folder of its own.
+export function getAccountFolder(
+  home: AccountHome | null,
+  account: AccountName | null,
+): string | null {
+  if (home === null || account === null) return null;
+  return path.join(os.homedir(), `${home.folder}-${account}`);
+}
+
+export function withAccount(
+  env: NodeJS.ProcessEnv,
+  home: AccountHome | null,
+  account: AccountName | null,
+): NodeJS.ProcessEnv {
+  const folder = getAccountFolder(home, account);
+  return home === null || folder === null ? env : { ...env, [home.env]: folder };
+}
+
+// What a command needs in front to use the account's login, such as CLAUDE_CONFIG_DIR=~/.claude-work.
+export function getAccountPrefix(home: AccountHome | null, account: AccountName | null): string {
+  return home === null || account === null ? '' : `${home.env}=~/${home.folder}-${account} `;
 }
 
 export function getUnattendedNote({ routine, runId, trigger }: RunContext): string {

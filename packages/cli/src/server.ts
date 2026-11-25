@@ -5,8 +5,9 @@ import path from 'node:path';
 import { isMatching, match, P } from 'ts-pattern';
 
 import type { AgentOption } from 'domains/agent/types';
+import { checkHasAccount, listAccounts } from 'domains/agent/utils';
 import { buildCalendar } from 'domains/calendar/utils';
-import type { DaemonStatus } from 'domains/daemon/types';
+import type { AccountStatus, DaemonStatus } from 'domains/daemon/types';
 import { NOTIFY_LEVELS } from 'domains/inbox/constants';
 import { markReadRequestSchema, notifyRequestSchema } from 'domains/inbox/schemas';
 import {
@@ -166,6 +167,7 @@ function toRoutineSummary(
     check: routine.check,
     queuedWebhooks: countQueuedWebhooks(routine.name),
     agent: routine.agent,
+    account: routine.account,
     model: routine.model,
     fallbackModel: routine.fallbackModel,
     effort: routine.effort,
@@ -188,7 +190,23 @@ function toRoutineSummary(
   };
 }
 
+function getAccountStatuses(routines: Routine[]): AccountStatus[] {
+  return listAccounts(routines).map(account => {
+    const users = routines.filter(
+      routine => checkHasAccount(routine.agent) && routine.account === account,
+    );
+    return {
+      name: account,
+      routines: users.length,
+      claudeUsage: users.some(isMatching({ agent: 'claude' }))
+        ? readPlanUsage('claude', account)
+        : null,
+    };
+  });
+}
+
 function getStatus(startedAt: Date): DaemonStatus {
+  const routines = loadRoutines();
   return {
     version: config.version,
     pid: process.pid,
@@ -201,12 +219,13 @@ function getStatus(startedAt: Date): DaemonStatus {
     maxConcurrentRuns: config.maxConcurrentRuns,
     running:
       getRunningRuns().filter(checkIsRunAtWork).length +
-      loadRoutines().reduce((sum, routine) => sum + countStartingRuns(routine.name), 0),
+      routines.reduce((sum, routine) => sum + countStartingRuns(routine.name), 0),
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     now: new Date().toISOString(),
     disk: readDiskSpace(config.stateDir),
     cpuLoad: readCpuLoad(),
-    claudeUsage: readPlanUsage('claude'),
+    claudeUsage: readPlanUsage('claude', null),
+    accounts: getAccountStatuses(routines),
   };
 }
 

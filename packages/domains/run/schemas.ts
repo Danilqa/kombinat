@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { sessionIdSchema } from '../agent/ids';
+import { accountNameSchema, sessionIdSchema } from '../agent/ids';
 import { agentNameSchema } from '../agent/schemas';
 import { routineNameSchema } from '../routine/ids';
 import { usageLimitKindSchema } from '../transcript/schemas';
@@ -98,6 +98,8 @@ export const runRecordSchema = z.object({
   id: runIdSchema,
   routine: routineNameSchema,
   agent: agentNameSchema,
+  // The login the run works on, null for the primary one, which older records ran on.
+  account: accountNameSchema.nullable().default(null),
   trigger: runTriggerSchema,
   scheduledFor: z.string().nullable(),
   startedAt: z.string(),

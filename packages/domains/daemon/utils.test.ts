@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
+import { accountNameSchema } from '../agent/ids';
+import type { DaemonStatus, PlanUsage } from './types';
+
 import {
   checkIsDiskLow,
   checkIsUsageLow,
@@ -8,6 +11,7 @@ import {
   formatCpuLoad,
   formatDiskSpace,
   formatUsageLeft,
+  getAccountLimits,
   getCurrentUsageLimits,
   getMostUsedLimit,
 } from './utils';
@@ -73,4 +77,54 @@ test('usage reads as the share left, which is low under 10%', () => {
   assert.equal(formatUsageLeft({ usedRatio: 1.2, resetsAt: '' }), '0%');
   assert.equal(checkIsUsageLow({ usedRatio: 0.95, resetsAt: '' }), true);
   assert.equal(checkIsUsageLow({ usedRatio: 0.5, resetsAt: '' }), false);
+});
+
+const makeStatus = (overrides: Partial<DaemonStatus>): DaemonStatus => ({
+  pid: 1,
+  startedAt: '2026-10-06T09:00:00Z',
+  lastTickAt: '2026-10-06T11:59:50Z',
+  routinesDir: '/routines',
+  stateDir: '/state',
+  claudeBin: 'claude',
+  codexBin: 'codex',
+  maxConcurrentRuns: 3,
+  running: 0,
+  timezone: 'UTC',
+  now: '2026-10-06T12:00:00Z',
+  accounts: [],
+  ...overrides,
+});
+
+const makeUsage = (usedRatio: number, resetsAt: string): PlanUsage => ({
+  updatedAt: '2026-10-06T11:00:00Z',
+  session: { usedRatio, resetsAt },
+  week: null,
+});
+
+test('each account shows its own limits, and one without a current limit is left out', () => {
+  const work = accountNameSchema.parse('work');
+  const limits = getAccountLimits(
+    makeStatus({
+      claudeUsage: makeUsage(0.5, '2026-10-06T13:00:00Z'),
+      accounts: [
+        { name: null, routines: 2, claudeUsage: makeUsage(0.9, '2026-10-06T11:00:00Z') },
+        { name: work, routines: 3, claudeUsage: makeUsage(0.4, '2026-10-06T14:00:00Z') },
+        { name: accountNameSchema.parse('codex-only'), routines: 1, claudeUsage: null },
+      ],
+    }),
+  );
+  assert.deepEqual(
+    limits.map(({ account, routines, limits: [limit] }) => [account, routines, limit?.usedRatio]),
+    [[work, 3, 0.4]],
+  );
+});
+
+test('an older daemon without accounts shows the plan of the primary login', () => {
+  const limits = getAccountLimits(
+    makeStatus({ claudeUsage: makeUsage(0.5, '2026-10-06T13:00:00Z') }),
+  );
+  assert.deepEqual(
+    limits.map(({ account, limits: [limit] }) => [account, limit?.usedRatio]),
+    [[null, 0.5]],
+  );
 });

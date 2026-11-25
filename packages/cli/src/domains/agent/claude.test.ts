@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
+import os from 'node:os';
+import path from 'node:path';
 import { test } from 'node:test';
 
-import { sessionIdSchema } from 'domains/agent/ids';
+import { accountNameSchema, sessionIdSchema } from 'domains/agent/ids';
 import { runIdSchema } from 'domains/run/ids';
 import { makeRunRecord } from 'domains/run/mocks';
 
@@ -93,7 +95,10 @@ test('reads the session and the result into the run record', () => {
       error: 'nope',
     },
   );
-  assert.equal(claudeAgent.getResumeCommand(sessionIdSchema.parse('s1')), 'claude --resume s1');
+  assert.equal(
+    claudeAgent.getResumeCommand(sessionIdSchema.parse('s1'), null),
+    'claude --resume s1',
+  );
 });
 
 test('reads the calls nobody could approve into blocked actions, with the rules that allow them', () => {
@@ -275,6 +280,32 @@ test('passes the routine settings to claude -p', () => {
   assert.equal(args[args.indexOf('--effort') + 1], 'low');
   assert.equal(args[args.indexOf('--permission-mode') + 1], 'auto');
   assert.equal(args[args.indexOf('--max-budget-usd') + 1], '2');
+});
+
+test("a routine on an account runs, resumes and signs in with that account's config folder", () => {
+  const work = accountNameSchema.parse('work');
+  const context = {
+    routine: makeAgentTask({ account: work }),
+    runId: runIdSchema.parse('r1'),
+    trigger: 'manual' as const,
+  };
+  const folder = path.join(os.homedir(), '.claude-work');
+  assert.equal(claudeAgent.buildInvocation(context).env['CLAUDE_CONFIG_DIR'], folder);
+  const reply =
+    claudeAgent.buildReplyInvocation(context, sessionIdSchema.parse('s1'), {
+      text: 'Go on',
+      source: 'dashboard',
+    }) ?? assert.fail('claude continues sessions');
+  assert.equal(reply.env['CLAUDE_CONFIG_DIR'], folder);
+  const login = claudeAgent.buildLoginInvocation(work) ?? assert.fail('claude has a login');
+  assert.deepEqual(login.args, ['auth', 'login']);
+  assert.equal(login.env['CLAUDE_CONFIG_DIR'], folder);
+  assert.equal(
+    claudeAgent.getResumeCommand(sessionIdSchema.parse('s1'), work),
+    'CLAUDE_CONFIG_DIR=~/.claude-work claude --resume s1',
+  );
+  const primary = claudeAgent.buildInvocation({ ...context, routine: makeAgentTask() });
+  assert.equal(primary.env['CLAUDE_CONFIG_DIR'], process.env['CLAUDE_CONFIG_DIR']);
 });
 
 test('passes the fallback models to claude -p', () => {

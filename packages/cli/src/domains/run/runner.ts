@@ -6,6 +6,7 @@ import readline from 'node:readline';
 
 import { isMatching, match } from 'ts-pattern';
 
+import { getAccountLabel } from 'domains/agent/utils';
 import type { RoutineName } from 'domains/routine/ids';
 import type { RunId } from 'domains/run/ids';
 import type { RunRecord, RunTrigger, RunWorktree, TokenCounts } from 'domains/run/types';
@@ -24,6 +25,7 @@ import { config, getCliArgs } from '../../config';
 import { parseJson } from '../../utils/json';
 import { checkIsBinaryFound } from '../agent/binary';
 import { getAgent } from '../agent/registry';
+import { getAccountFolder } from '../agent/settings';
 import { writePlanUsage } from '../agent/storage';
 import type { Agent, Invocation, OutputEvent, RunContext, UsageLimitStop } from '../agent/types';
 import {
@@ -164,6 +166,15 @@ async function runAgent({
         : ` (set ${agent.binaryEnv} to its path before kombinat serve or install)`;
     return failSetup(`${agent.name} binary not found at ${invocation.command}${hint}`);
   }
+  const accountFolder = getAccountFolder(agent.accountHome, routine.account);
+  if (accountFolder !== null && !fs.existsSync(accountFolder)) {
+    const flag = match(agent.name)
+      .with('claude', () => '')
+      .otherwise(name => ` --agent ${name}`);
+    return failSetup(
+      `The account ${getAccountLabel(routine.account)} is not signed in to ${agent.name} yet. Run kombinat login ${getAccountLabel(routine.account)}${flag} in your routines folder, then run the routine again.`,
+    );
+  }
   if (routine.before !== null) {
     const result = await runHook({
       type: 'before_hook',
@@ -205,12 +216,15 @@ async function runAgent({
     if (event === undefined) return;
     const limits = agent.readPlanLimits(event);
     if (limits !== null) {
-      writePlanUsage(agent.name, { ...limits, updatedAt: new Date().toISOString() });
+      writePlanUsage(agent.name, routine.account, {
+        ...limits,
+        updatedAt: new Date().toISOString(),
+      });
     }
     const update = agent.readEvent(event, record);
     Object.assign(record, update);
     if (update.sessionId !== undefined && update.sessionId !== null) {
-      record.resumeCommand = agent.getResumeCommand(update.sessionId);
+      record.resumeCommand = agent.getResumeCommand(update.sessionId, routine.account);
       persist(record);
     }
     const call = agent.readCallTokens(event);
@@ -493,6 +507,7 @@ export async function runRoutine(
     id,
     routine: routine.name,
     agent: routine.agent,
+    account: routine.account,
     trigger: options.trigger,
     scheduledFor: options.scheduledFor ?? null,
     startedAt: new Date().toISOString(),
@@ -612,7 +627,12 @@ export async function replyToRun(routine: Routine, run: RunRecord): Promise<RunR
     worktree,
   };
   writeRunRecord(replying);
-  const workRoutine = worktree === null ? routine : { ...routine, cwd: worktree.cwd };
+  // The session lives in the login the run started on, whatever the routine names now.
+  const workRoutine = {
+    ...routine,
+    account: run.account,
+    cwd: worktree === null ? routine.cwd : worktree.cwd,
+  };
   const message = readLastMessage(run);
   const invocation =
     routine.agent === run.agent && run.sessionId !== null && message !== null

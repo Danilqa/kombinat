@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import { sessionIdSchema } from 'domains/agent/ids';
 import type { AgentName } from 'domains/agent/types';
+import type { PlanUsage } from 'domains/daemon/types';
 import type { InboxState } from 'domains/inbox/types';
 import { routineNameSchema } from 'domains/routine/ids';
 import type { MemoryChange } from 'domains/routine/types';
@@ -20,6 +21,7 @@ export interface RoutineFile {
   description?: string;
   schedule?: string;
   agent?: AgentName;
+  account?: string;
   model?: string;
   fallbackModel?: string;
   effort?: string;
@@ -62,6 +64,8 @@ export interface Kombinat {
   inspectWorktree: (worktree: RunWorktree) => WorktreeOnDisk;
   lookAtInbox: (at: string) => void;
   stallScheduler: () => void;
+  // The plan usage of an account's latest Claude run, null for the primary login.
+  addPlanUsage: (account: string | null, usage: PlanUsage) => void;
 }
 
 function toRoutineSource({ prompt = 'Do the routine.', ...settings }: RoutineFile, cwd: string) {
@@ -164,6 +168,12 @@ export function createKombinat(root: string): Kombinat {
     stallScheduler: () => {
       scheduler.lastTickAt = minutesAgo(10);
       saveScheduler();
+    },
+    addPlanUsage: (account, usage) => {
+      const dir = path.join(stateDir, 'plan-usage');
+      fs.mkdirSync(dir, { recursive: true });
+      const file = account === null ? 'claude.json' : `claude.${account}.json`;
+      fs.writeFileSync(path.join(dir, file), JSON.stringify(usage));
     },
   };
 }

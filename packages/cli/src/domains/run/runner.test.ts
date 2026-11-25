@@ -392,6 +392,22 @@ test('the after hook runs when the agent binary is missing', async () => {
   assert.deepEqual(hook.stdin, record);
 });
 
+test('a run on an account that was never signed in fails with how to sign it in, without a retry', async () => {
+  const account = `kombinat-test-${process.pid}`;
+  const routine = buildRoutine(
+    path.join(tmp, 'signed-out.md'),
+    `---\ncwd: ${tmp}\naccount: ${account}\nretries: 2\n---\nDo it.`,
+  );
+  const record = await runRoutine(routine, { trigger: 'manual' });
+  assert.equal(record.status, 'failed');
+  assert.equal(record.account, account);
+  assert.equal(record.retry, null);
+  assert.equal(
+    record.error,
+    `The account ${account} is not signed in to claude yet. Run kombinat login ${account} in your routines folder, then run the routine again.`,
+  );
+});
+
 test('the after hook runs when the before hook fails', async () => {
   const record = await runRoutine(
     makeRoutine('after-before-fails', `before: exit 4\n${makeRecordingHook('before')}`),

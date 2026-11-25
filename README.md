@@ -124,6 +124,7 @@ To start from a ready routine instead, click New routine on the dashboard's Rout
 - `cwd` is where the agent starts.
 - `worktree: true` gives each run a git worktree of its own, on a new branch, so the agent never touches your checkout in `cwd`, see [docs/worktrees.md](docs/worktrees.md).
 - `agent` is `claude` (default), `codex` or `command`.
+- `account` is the login the agent runs on, such as `personal`, so the routine uses that plan and its limits. Without it, the routine runs on the machine's own login, called `primary`. See [Accounts](#accounts).
 - `timeoutMinutes` stops the run after this time. Default 55.
 - `retries` is how many more attempts a run gets when it fails or times out, 5 minutes apart. Default 0, at most 10. See [Retries](#retries).
 - `runs` is how many runs each start makes, such as 3 to work on three issues. Default 1, at most 20. See [Several runs](#several-runs).
@@ -147,9 +148,22 @@ The run's page shows the error and when the next attempt starts, with Retry now 
 
 With `runs: 3`, each scheduled time, Run now and one-time run starts 3 runs. By default they run one after another: the next one starts when the one before it ends. With `maxParallel: 3`, all three start at once. Give such a routine `worktree: true`, so the runs don't change the same checkout.
 
-The runs that wait show under Queued on the routine's page, with Cancel. They also wait while the Claude plan is at its usage limit, and start after the reset. A scheduled time is skipped while runs of the last start still wait. Webhooks start one run each.
+The runs that wait show under Queued on the routine's page, with Cancel. They also wait while the Claude plan of their account is at its usage limit, and start after the reset. A scheduled time is skipped while runs of the last start still wait. Webhooks start one run each.
 
 To start a routine several times just once, open the menu next to Run now and pick Run several times.
+
+### Accounts
+
+With a work and a personal Claude or Codex login, give each routine the one it should use, so home routines don't use up the work plan:
+
+```bash
+kombinat login personal                # signs in to Claude in ~/.claude-personal
+kombinat login personal --agent codex  # signs in to Codex in ~/.codex-personal
+```
+
+Run it once in your routines folder, then add `account: personal` to a routine. It runs `claude` with `CLAUDE_CONFIG_DIR=~/.claude-personal`, or `codex` with `CODEX_HOME=~/.codex-personal`, and replies to its runs use the same login. An account name holds letters, digits, `.`, `_`, `@`, `+` and `-`, such as `work` or `me@example.com`. A run on an account that was never signed in fails and says how to sign it in. Kombinat never moves a routine to another account by itself.
+
+Each account has its own plan. The dashboard's header shows how much of each is left, and its popover lists the limits of each account. A run waits only for the limit of its own account. Once routines run on more than one account, the Routines table and the routine's page show the account of each.
 
 ### Memory
 

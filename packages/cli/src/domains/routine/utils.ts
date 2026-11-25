@@ -1,6 +1,7 @@
 import os from 'node:os';
 import path from 'node:path';
 
+import { PRIMARY_ACCOUNT } from 'domains/agent/ids';
 import type { AgentName } from 'domains/agent/types';
 import { checkCanKeepMemory } from 'domains/agent/utils';
 import { ROUTINE_NAME_PATTERN } from 'domains/routine/constants';
@@ -10,7 +11,7 @@ import { parseTokenCount } from 'domains/run/utils';
 import { describeCron, nextCronRun, parseCron } from 'utils/cron';
 import { getErrorMessage } from 'utils/error';
 
-import { getAgent, parseAgentName } from '../agent/registry';
+import { getAgent, parseAccountName, parseAgentName } from '../agent/registry';
 import type { AgentSettings } from '../agent/types';
 import type { Routine } from './types';
 
@@ -116,6 +117,7 @@ function readAgentSettings(data: Frontmatter, agent: AgentName): AgentSettings {
     maxBudgetUsd: readNumber(data, 'maxBudgetUsd'),
     maxBudgetTokens: readTokenCount(data, 'maxBudgetTokens'),
     onUsageLimit: readString(data, 'onUsageLimit'),
+    account: parseAccountName(readString(data, 'account') ?? PRIMARY_ACCOUNT),
   });
 }
 

@@ -1,5 +1,7 @@
+import { PRIMARY_ACCOUNT } from '../agent/ids';
 import { LOW_DISK_BYTES, LOW_USAGE_LEFT, STALE_TICK_MS } from './constants';
 import type {
+  AccountLimits,
   CurrentUsageLimit,
   DaemonHealth,
   DaemonStatus,
@@ -65,8 +67,23 @@ export function getCurrentUsageLimits(
   );
 }
 
-export function getClaudeLimits(status: DaemonStatus): CurrentUsageLimit[] {
-  return getCurrentUsageLimits(status.claudeUsage, new Date(status.now).getTime());
+export function checkHasSeveralAccounts(status: DaemonStatus): boolean {
+  return status.accounts.length > 1;
+}
+
+// The Claude limits of each login that has some left to show. An older daemon reports the primary one only.
+export function getAccountLimits(status: DaemonStatus): AccountLimits[] {
+  const now = new Date(status.now).getTime();
+  const accounts =
+    status.accounts.length > 0
+      ? status.accounts
+      : [{ name: null, routines: 0, claudeUsage: status.claudeUsage ?? null }];
+  return accounts.flatMap(({ name, routines, claudeUsage }) => {
+    const limits = getCurrentUsageLimits(claudeUsage, now);
+    if (claudeUsage === null || limits.length === 0) return [];
+    const label = name ?? PRIMARY_ACCOUNT;
+    return [{ account: name, label, routines, limits, updatedAt: claudeUsage.updatedAt }];
+  });
 }
 
 export function getMostUsedLimit(limits: CurrentUsageLimit[]): CurrentUsageLimit | undefined {

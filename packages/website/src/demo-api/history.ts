@@ -1,6 +1,6 @@
 import { isMatching, match, P } from 'ts-pattern';
 
-import { sessionIdSchema, type SessionId } from 'domains/agent/ids';
+import { sessionIdSchema, type AccountName, type SessionId } from 'domains/agent/ids';
 import type { AgentName } from 'domains/agent/types';
 import type { RoutineName } from 'domains/routine/ids';
 import { runIdSchema, type RunId } from 'domains/run/ids';
@@ -222,10 +222,16 @@ function getExitCode(outcome: DemoOutcome): number | null {
     .exhaustive();
 }
 
-function getResumeCommand(agent: AgentName, sessionId: SessionId): string | null {
+function getResumeCommand(
+  agent: AgentName,
+  account: AccountName | null,
+  sessionId: SessionId,
+): string | null {
+  const prefix = (env: string, folder: string) =>
+    account === null ? '' : `${env}=~/${folder}-${account} `;
   return match(agent)
-    .with('claude', () => `claude --resume ${sessionId}`)
-    .with('codex', () => `codex resume ${sessionId}`)
+    .with('claude', () => `${prefix('CLAUDE_CONFIG_DIR', '.claude')}claude --resume ${sessionId}`)
+    .with('codex', () => `${prefix('CODEX_HOME', '.codex')}codex resume ${sessionId}`)
     .with('command', () => null)
     .exhaustive();
 }
@@ -335,6 +341,7 @@ function toRunRecord(
     id: run.id,
     routine: routine.name,
     agent: routine.agent,
+    account: routine.account ?? null,
     trigger: run.trigger,
     scheduledFor: run.scheduledFor?.toISOString() ?? null,
     startedAt: run.startedAt.toISOString(),
@@ -343,7 +350,10 @@ function toRunRecord(
     pid: run.pid,
     exitCode: isStopped ? 1 : isRunning ? null : getExitCode(outcome),
     sessionId,
-    resumeCommand: sessionId === null ? null : getResumeCommand(routine.agent, sessionId),
+    resumeCommand:
+      sessionId === null
+        ? null
+        : getResumeCommand(routine.agent, routine.account ?? null, sessionId),
     model: hasSession ? (outcome.model ?? routine.runModel) : null,
     costUsd: isFinished ? (outcome.costUsd ?? null) : null,
     numTurns: isFinished ? (outcome.numTurns ?? null) : null,

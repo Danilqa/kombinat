@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import fs from 'node:fs';
 import { parseArgs } from 'node:util';
 
 import { isMatching, match } from 'ts-pattern';
@@ -11,6 +12,8 @@ import { runTui } from 'tui';
 import { describeCron } from 'utils/cron';
 
 import { config, DEFAULT_PORT } from './config';
+import { getAgent, parseAccountName, parseAgentName } from './domains/agent/registry';
+import { getAccountFolder } from './domains/agent/settings';
 import { getRoutine, loadRoutines } from './domains/routine/storage';
 import { getNextRun } from './domains/routine/utils';
 import { replyToRun, runRoutine } from './domains/run/runner';
@@ -40,6 +43,9 @@ const USAGE = `kombinat, run from the folder that holds routines/ (init, connect
   connect <destination>     dashboard of a daemon on another machine through an ssh tunnel, in the
                             browser or with --tui in the terminal; --port is the daemon port
                             there (default ${DEFAULT_PORT}), for example connect admin@mac-mini --tui
+  login <account>           sign an account in to Claude, or to Codex with --agent codex, so that
+                            routines with account: <account> run on its plan, for example
+                            login personal; login primary signs in the machine's own login
   list                      show routines from ./routines with next run and last status
   validate                  parse every routine file and report errors
   readme                    regenerate the routines table in README.md
@@ -72,6 +78,7 @@ interface CliOptions {
   remotePort: number;
   tui: boolean;
   install: boolean;
+  agent: string;
 }
 
 function log(line: string): void {
@@ -169,6 +176,30 @@ async function replyOne(name: string | undefined, runId: string | undefined): Pr
   if (run === null) throw new Error(`${name} has no run ${runId}`);
   const record = await replyToRun(routine, run);
   console.log(JSON.stringify(record, null, 2));
+}
+
+async function login(name: string | undefined, options: CliOptions): Promise<void> {
+  if (name === undefined)
+    throw new Error('login needs an account name, for example login personal');
+  const account = parseAccountName(name);
+  const agent = getAgent(parseAgentName(options.agent));
+  const invocation = agent.buildLoginInvocation(account);
+  if (invocation === null) throw new Error(`agent ${agent.name} has no login`);
+  const folder = getAccountFolder(agent.accountHome, account);
+  // Codex refuses a CODEX_HOME that does not exist yet.
+  if (folder !== null) fs.mkdirSync(folder, { recursive: true });
+  const child = spawn(invocation.command, invocation.args, {
+    env: invocation.env,
+    stdio: 'inherit',
+  });
+  const exitCode = await new Promise<number>((resolve, reject) => {
+    child.on('error', reject);
+    child.on('close', code => resolve(code ?? 1));
+  });
+  if (exitCode === 0 && account !== null) {
+    console.log(`\nSigned in. Add "account: ${account}" to a routine to run it on this login.`);
+  }
+  process.exitCode = exitCode;
 }
 
 function serve(options: CliOptions): void {
@@ -279,6 +310,7 @@ async function main(): Promise<void> {
       port: { type: 'string' },
       tui: { type: 'boolean', default: false },
       'no-install': { type: 'boolean', default: false },
+      agent: { type: 'string', default: 'claude' },
     },
   });
   const [command, name, runId] = positionals;
@@ -287,6 +319,7 @@ async function main(): Promise<void> {
   checkFlag(values.port !== undefined, 'port', command, 'connect');
   checkFlag(values.tui, 'tui', command, 'connect');
   checkFlag(values['no-install'], 'no-install', command, 'init');
+  checkFlag(values.agent !== 'claude', 'agent', command, 'login');
   const options: CliOptions = {
     trigger: parseTrigger(values.trigger),
     scheduledFor: values['scheduled-for'] ?? null,
@@ -298,6 +331,7 @@ async function main(): Promise<void> {
     remotePort: parsePort(values.port ?? String(DEFAULT_PORT)),
     tui: values.tui,
     install: !values['no-install'],
+    agent: values.agent,
   };
 
   await match(command)
@@ -306,6 +340,7 @@ async function main(): Promise<void> {
     })
     .with('tui', () => showTui(options))
     .with('connect', () => connectTo(name, options))
+    .with('login', () => login(name, options))
     .with('list', listRoutines)
     .with('validate', () => console.log(`${loadRoutines().length} routine(s) ok`))
     .with('readme', () =>

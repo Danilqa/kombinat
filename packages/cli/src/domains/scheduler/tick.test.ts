@@ -32,7 +32,7 @@ const { readOneTimeRuns, writeOneTimeRuns } = await import('./one-time-runs');
 const { readQueuedRuns, writeQueuedRuns } = await import('../run/queued-runs');
 const { writePlanUsage } = await import('../agent/storage');
 const { makeRunRecord } = await import('domains/run/mocks');
-const { sessionIdSchema } = await import('domains/agent/ids');
+const { accountNameSchema, sessionIdSchema } = await import('domains/agent/ids');
 
 const makeWebhook = (runId: string, payload: string, conversation: string | null = null) => ({
   runId: runIdSchema.parse(runId),
@@ -78,6 +78,7 @@ test('a routine that is still running is skipped and not started twice', () => {
     id: runIdSchema.parse('r1'),
     routine: everyMinute,
     agent: 'claude',
+    account: null,
     trigger: 'manual',
     scheduledFor: null,
     startedAt: new Date().toISOString(),
@@ -553,7 +554,7 @@ test('queued Claude runs wait while the plan is at a usage limit and start after
   const limited = routineNameSchema.parse('limited');
   const local = routineNameSchema.parse('local');
   await waitUntilIdle();
-  writePlanUsage('claude', {
+  writePlanUsage('claude', null, {
     updatedAt: '2026-10-02T10:10:00Z',
     session: { usedRatio: 1, resetsAt: new Date('2026-10-02T11:00:00').toISOString() },
     week: { usedRatio: 0.4, resetsAt: new Date('2026-10-05T11:00:00').toISOString() },
@@ -571,4 +572,29 @@ test('queued Claude runs wait while the plan is at a usage limit and start after
   assert.deepEqual(tick(new Date('2026-10-02T11:00:30')).started, [limited]);
   assert.deepEqual(readQueuedRuns(), []);
   for (const name of ['limited', 'local']) fs.rmSync(path.join(routinesDir, `${name}.md`));
+});
+
+test('queued Claude runs wait only for the limit of their own account', async () => {
+  writeRoutine('home', 'agent: claude');
+  writeRoutine('office', 'agent: claude\naccount: work');
+  const home = routineNameSchema.parse('home');
+  const office = routineNameSchema.parse('office');
+  await waitUntilIdle();
+  writePlanUsage('claude', accountNameSchema.parse('work'), {
+    updatedAt: '2026-10-03T10:10:00Z',
+    session: { usedRatio: 1, resetsAt: new Date('2026-10-03T11:00:00').toISOString() },
+    week: null,
+  });
+  writeQueuedRuns([
+    makeQueuedRun('office', '20261003T101000Z-of01', 1),
+    makeQueuedRun('home', '20261003T101000Z-ho01', 1),
+  ]);
+
+  assert.deepEqual(tick(new Date('2026-10-03T10:14:30')).started, [home]);
+  assert.deepEqual(
+    readQueuedRuns().map(({ routine }) => routine),
+    [office],
+  );
+  assert.deepEqual(tick(new Date('2026-10-03T11:00:30')).started, [office]);
+  for (const name of ['home', 'office']) fs.rmSync(path.join(routinesDir, `${name}.md`));
 });
