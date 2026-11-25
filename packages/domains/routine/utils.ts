@@ -1,7 +1,14 @@
 import { match } from 'ts-pattern';
 
+import { describeCron, parseCron } from 'utils/cron';
+
 import type { RunId } from '../run/ids';
-import type { MemoryChange, RoutineMemory } from './types';
+import type {
+  MemoryChange,
+  RoutineMemory,
+  RoutineTemplateCategory,
+  RoutineTemplateNeed,
+} from './types';
 
 interface ChangedLines {
   added: number;
@@ -38,4 +45,32 @@ function countNewLines(text: string, comparedTo: string): number {
 // Blank lines do not count, and a moved line counts as kept.
 export function countChangedLines(before: string, after: string): ChangedLines {
   return { added: countNewLines(after, before), removed: countNewLines(before, after) };
+}
+
+export function getTemplateCategoryLabel(category: RoutineTemplateCategory): string {
+  return match(category)
+    .with('code', () => 'Code')
+    .with('watch', () => 'Watch')
+    .with('reports', () => 'Reports')
+    .with('home', () => 'Home')
+    .exhaustive();
+}
+
+export function getTemplateNeedLabel(need: RoutineTemplateNeed): string {
+  return match(need)
+    .with('git-repository', () => 'Git repository')
+    .with('github-cli', () => 'GitHub CLI')
+    .exhaustive();
+}
+
+// A schedule as a routine file writes it: a cron, or manual. null when it is neither.
+export function describeScheduleValue(schedule: string): string | null {
+  const value = schedule.trim();
+  if (value === 'manual') return 'Manual';
+  try {
+    parseCron(value);
+  } catch {
+    return null;
+  }
+  return describeCron(value);
 }

@@ -102,6 +102,8 @@ export interface DemoHistory {
   allowBlockedActions(routine: RoutineName, id: RunId, text: string, now: Date): void;
   sendWaitAction(routine: RoutineName, id: RunId, action: UsageLimitWaitAction, now: Date): void;
   removeWorktree(routine: RoutineName, id: RunId): void;
+  // A routine added from a template runs from the time it was added.
+  addRoutine(routine: DemoRoutine, now: Date): void;
 }
 
 function fail(message: string): never {
@@ -619,7 +621,9 @@ function buildScheduledEvents(
   return { runs, skips };
 }
 
-export function createDemoHistory(routines: DemoRoutine[], loadedAt: Date): DemoHistory {
+export function createDemoHistory(initialRoutines: DemoRoutine[], loadedAt: Date): DemoHistory {
+  const routines = [...initialRoutines];
+  const addedAt = new Map<RoutineName, Date>();
   const historyStart = new Date(loadedAt.getTime() - HISTORY_DAYS * DAY_MS);
   const toStartedRuns = (
     routine: DemoRoutine,
@@ -651,10 +655,9 @@ export function createDemoHistory(routines: DemoRoutine[], loadedAt: Date): Demo
   // Times after the page loaded become runs too, so a tab left open keeps a live history.
   function getScheduledEvents(routine: DemoRoutine, now: Date): ScheduledEvents {
     const before = slotsBeforeLoad.get(routine.name) ?? [];
+    const from = addedAt.get(routine.name) ?? loadedAt;
     const after =
-      routine.schedule === null || now <= loadedAt
-        ? []
-        : cronRunsBetween(routine.schedule, loadedAt, now);
+      routine.schedule === null || now <= from ? [] : cronRunsBetween(routine.schedule, from, now);
     const disabledAt =
       routine.disabledDaysAgo === undefined
         ? null
@@ -733,6 +736,10 @@ export function createDemoHistory(routines: DemoRoutine[], loadedAt: Date): Demo
     },
     removeWorktree(routine, id) {
       removedWorktrees.add(`${routine}/${id}`);
+    },
+    addRoutine(routine, now) {
+      routines.push(routine);
+      addedAt.set(routine.name, now);
     },
   };
 }

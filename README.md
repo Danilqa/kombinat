@@ -117,6 +117,8 @@ timeoutMinutes: 55
 1. Open the latest failed e2e run on GitHub ...
 ```
 
+To start from a ready routine instead, click New routine on the dashboard's Routines page, pick a template, and set its name, folder and schedule. It writes the file for you. Commit it to keep it in git.
+
 - `name` must match the file name.
 - `schedule` is a 5-field cron in local time, or `manual` to run only on demand.
 - `cwd` is where the agent starts.

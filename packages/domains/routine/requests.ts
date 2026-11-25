@@ -5,6 +5,7 @@ import type { HttpClient } from 'utils/http';
 import type { RunId } from '../run/ids';
 import type { RoutineName } from './ids';
 import {
+  addedRoutineSchema,
   cancelledQueuedRunsSchema,
   changedOneTimeRunsSchema,
   routineDetailSchema,
@@ -14,6 +15,8 @@ import {
   startedRunWithIdSchema,
 } from './schemas';
 import type {
+  AddRoutineRequest,
+  AddedRoutine,
   MemoryRequest,
   OneTimeRunRequest,
   RoutineDetail,
@@ -23,6 +26,15 @@ import type {
 
 export async function getRoutines(http: HttpClient): Promise<RoutineSummary[]> {
   return http.request('/api/routines', z.array(routineSummarySchema));
+}
+
+// Writes routines/<name>.md from the template, and never replaces a file that exists.
+export async function addRoutine(http: HttpClient, body: AddRoutineRequest): Promise<AddedRoutine> {
+  return http.request('/api/routines', addedRoutineSchema, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
 }
 
 export async function getRoutine(http: HttpClient, name: RoutineName): Promise<RoutineDetail> {

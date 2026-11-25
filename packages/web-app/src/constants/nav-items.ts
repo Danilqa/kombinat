@@ -6,6 +6,7 @@ import {
   INSIGHTS_PATH,
   ROUTINES_PATH,
   RUNS_PATH,
+  TEMPLATES_PATH,
 } from '@web-app/constants/path';
 
 export interface NavItem {
@@ -20,7 +21,10 @@ export const navItems: NavItem[] = [
     label: 'Routines',
     to: ROUTINES_PATH,
     icon: Workflow,
-    checkIsActive: pathname => pathname === ROUTINES_PATH || pathname.startsWith('/routines/'),
+    checkIsActive: pathname =>
+      pathname === ROUTINES_PATH ||
+      pathname.startsWith('/routines/') ||
+      pathname.startsWith(TEMPLATES_PATH),
   },
   {
     label: 'Calendar',

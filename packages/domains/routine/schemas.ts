@@ -6,8 +6,8 @@ import { runIdSchema } from '../run/ids';
 import { queuedRunSchema, runRecordSchema, tokenUsageSchema } from '../run/schemas';
 import { oneTimeRunSchema, skipSchema } from '../scheduler/schemas';
 import { queuedWebhookSchema, webhookCallSchema } from '../webhook/schemas';
-import { MEMORY_MAX_LENGTH } from './constants';
-import { routineNameSchema } from './ids';
+import { MEMORY_MAX_LENGTH, ROUTINE_NAME_PATTERN } from './constants';
+import { routineNameSchema, routineTemplateIdSchema } from './ids';
 
 export const routineSummarySchema = z.object({
   name: routineNameSchema,
@@ -103,3 +103,22 @@ export const changedOneTimeRunsSchema = z.object({ ok: z.literal(true) });
 export const memoryRequestSchema = z.object({ text: z.string().max(MEMORY_MAX_LENGTH) });
 
 export const savedMemorySchema = z.object({ ok: z.literal(true) });
+
+const singleLineSchema = z
+  .string()
+  .trim()
+  .regex(/^[^\r\n]+$/);
+
+// The schedule is a cron or manual, as in a routine file.
+export const addRoutineRequestSchema = z.object({
+  template: routineTemplateIdSchema,
+  name: z.string().regex(ROUTINE_NAME_PATTERN),
+  cwd: singleLineSchema,
+  schedule: singleLineSchema,
+});
+
+export const addedRoutineSchema = z.object({
+  ok: z.literal(true),
+  name: routineNameSchema,
+  file: z.string(),
+});
