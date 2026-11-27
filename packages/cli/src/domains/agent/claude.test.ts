@@ -3,6 +3,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 
+import { isMatching } from 'ts-pattern';
+
 import { accountNameSchema, sessionIdSchema } from 'domains/agent/ids';
 import { runIdSchema } from 'domains/run/ids';
 import { makeRunRecord } from 'domains/run/mocks';
@@ -262,6 +264,18 @@ test('waits out usage limits unless the routine says fail', () => {
   );
 });
 
+test('a run succeeds when its agent gives up, unless the routine says fail', () => {
+  assert.equal(claudeAgent.resolveSettings(makeAgentTask()).onAgentGiveUp, 'succeed');
+  assert.equal(
+    claudeAgent.resolveSettings(makeAgentTask({ onAgentGiveUp: 'fail' })).onAgentGiveUp,
+    'fail',
+  );
+  assert.throws(
+    () => claudeAgent.resolveSettings(makeAgentTask({ onAgentGiveUp: 'retry' })),
+    /onAgentGiveUp must be one of succeed, fail/,
+  );
+});
+
 test('passes the routine settings to claude -p', () => {
   const { args, input, env } = claudeAgent.buildInvocation({
     routine: makeAgentTask({
@@ -397,4 +411,115 @@ test('a model fallback switches the model of the run and shows in the transcript
     to: 'claude-sonnet-5-5',
     reason: 'overloaded',
   });
+});
+
+const failedResult = {
+  type: 'result',
+  subtype: 'success',
+  is_error: false,
+  result: '{"status":"failed","result":"The query failed: column d.ocr_data does not exist."}',
+  structured_output: {
+    status: 'failed',
+    result: 'The query failed: column d.ocr_data does not exist.',
+  },
+  num_turns: 3,
+};
+
+test('onAgentGiveUp: fail asks claude -p for a status, in the run and in replies', () => {
+  const context = {
+    routine: makeAgentTask({ onAgentGiveUp: 'fail' }),
+    runId: runIdSchema.parse('r1'),
+    trigger: 'schedule' as const,
+  };
+  const { args } = claudeAgent.buildInvocation(context);
+  const schema: unknown = JSON.parse(args[args.indexOf('--json-schema') + 1] ?? '');
+  assert.ok(
+    isMatching(
+      {
+        $schema: 'http://json-schema.org/draft-07/schema#',
+        type: 'object',
+        properties: { status: { enum: ['succeeded', 'failed'] }, result: { type: 'string' } },
+        required: ['status', 'result'],
+      },
+      schema,
+    ),
+  );
+  assert.match(args[args.indexOf('--append-system-prompt') + 1] ?? '', /set it to failed/);
+  const reply =
+    claudeAgent.buildReplyInvocation(context, sessionIdSchema.parse('s1'), {
+      text: 'Try again',
+      source: 'dashboard',
+    }) ?? assert.fail('claude continues sessions');
+  assert.equal(reply.args.includes('--json-schema'), true);
+
+  const plain = claudeAgent.buildInvocation({
+    ...context,
+    routine: makeAgentTask({ onAgentGiveUp: 'succeed' }),
+  }).args;
+  assert.equal(plain.includes('--json-schema'), false);
+  assert.doesNotMatch(plain[plain.indexOf('--append-system-prompt') + 1] ?? '', /failed/);
+});
+
+test('an agent that gives up fails the run with its answer as the error and no retry', () => {
+  const record = makeRunRecord();
+  const answer = 'The query failed: column d.ocr_data does not exist.';
+  assert.deepEqual(claudeAgent.readEvent(failedResult, record), {
+    resultText: answer,
+    costUsd: null,
+    numTurns: 3,
+    durationMs: null,
+    tokens: null,
+    error: answer,
+  });
+  assert.equal(claudeAgent.checkHasAgentGivenUp([failedResult]), true);
+
+  const succeeded = {
+    ...failedResult,
+    result: '{"status":"succeeded","result":"Tagged 3 alerts."}',
+    structured_output: { status: 'succeeded', result: 'Tagged 3 alerts.' },
+  };
+  const update = claudeAgent.readEvent(succeeded, record);
+  assert.equal(update.resultText, 'Tagged 3 alerts.');
+  assert.equal(update.error, undefined);
+  assert.equal(claudeAgent.checkHasAgentGivenUp([succeeded]), false);
+  assert.equal(claudeAgent.checkHasAgentGivenUp(events), false);
+});
+
+test('the transcript shows the status answer as the result, without its tool call', () => {
+  const items = claudeAgent.buildTranscript([
+    {
+      type: 'assistant',
+      message: {
+        content: [
+          { type: 'text', text: 'The query failed.' },
+          {
+            type: 'tool_use',
+            id: 't9',
+            name: 'StructuredOutput',
+            input: failedResult.structured_output,
+          },
+        ],
+      },
+    },
+    {
+      type: 'user',
+      message: {
+        content: [
+          {
+            type: 'tool_result',
+            tool_use_id: 't9',
+            content: 'Structured output provided successfully',
+          },
+        ],
+      },
+    },
+    failedResult,
+  ]);
+  assert.deepEqual(
+    items.map(item => item.kind),
+    ['text', 'result'],
+  );
+  const result = expectResult(items[1]);
+  assert.equal(result.text, 'The query failed: column d.ocr_data does not exist.');
+  assert.equal(result.isError, true);
 });

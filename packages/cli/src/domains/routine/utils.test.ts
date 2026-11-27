@@ -265,6 +265,26 @@ test('a claude routine can name fallback models', () => {
   );
 });
 
+test('a claude routine can fail the run when its agent gives up', () => {
+  const readGiveUp = (frontmatter: string) =>
+    buildRoutine('/tmp/demo.md', routineFile(frontmatter)).onAgentGiveUp;
+  assert.equal(readGiveUp('onAgentGiveUp: fail'), 'fail');
+  assert.equal(readGiveUp(''), 'succeed');
+  assert.equal(readGiveUp('agent: codex'), null);
+  assert.throws(
+    () => readGiveUp('onAgentGiveUp: stop'),
+    /onAgentGiveUp must be one of succeed, fail/,
+  );
+  assert.throws(
+    () => readGiveUp('agent: codex\nonAgentGiveUp: fail'),
+    /does not support onAgentGiveUp/,
+  );
+  assert.throws(
+    () => readGiveUp('agent: command\ncommand: echo hi\nonAgentGiveUp: fail'),
+    /does not support onAgentGiveUp/,
+  );
+});
+
 test('rejects settings the agent does not support', () => {
   assert.throws(() => buildRoutine('/tmp/demo.md', routineFile('agent: gemini')), /agent must be/);
   assert.throws(

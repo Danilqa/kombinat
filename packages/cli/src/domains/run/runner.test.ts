@@ -994,6 +994,39 @@ test('a run stopped by its budget fails without a retry', async () => {
   assert.equal(readLogTypes(finished).includes('retry_wait'), false);
 });
 
+test('a run whose agent gives up fails without a retry with onAgentGiveUp: fail, and the after hook sees it', async () => {
+  const cwd = path.join(tmp, 'agent-failed');
+  fs.mkdirSync(cwd, { recursive: true });
+  const answer = 'The query failed: column d.ocr_data does not exist.';
+  fs.writeFileSync(
+    path.join(cwd, 'answer.jsonl'),
+    [
+      { type: 'system', subtype: 'init', session_id: 's1' },
+      {
+        type: 'result',
+        is_error: false,
+        result: JSON.stringify({ status: 'failed', result: answer }),
+        structured_output: { status: 'failed', result: answer },
+        num_turns: 2,
+      },
+    ]
+      .map(event => JSON.stringify(event))
+      .join('\n'),
+  );
+  const routine = buildRoutine(
+    path.join(tmp, 'agent-failed.md'),
+    `---\ncwd: ${cwd}\nonAgentGiveUp: fail\nretries: 2\nafter: echo $KOMBINAT_RUN_STATUS > status.txt\n---\nTag the alerts.`,
+  );
+  const finished = await runRoutine(routine, { trigger: 'manual' });
+  assert.equal(finished.status, 'failed');
+  assert.equal(finished.exitCode, 0);
+  assert.equal(finished.error, answer);
+  assert.equal(finished.resultText, answer);
+  assert.equal(finished.retry, null);
+  assert.equal(readLogTypes(finished).includes('retry_wait'), false);
+  assert.equal(fs.readFileSync(path.join(cwd, 'status.txt'), 'utf8'), 'failed\n');
+});
+
 test('the next attempt gets only what is left of the budget', async () => {
   const runId = runIdSchema.parse('20261122T020000Z-bdgt');
   const finishing = runRoutine(

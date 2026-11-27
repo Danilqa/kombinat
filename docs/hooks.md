@@ -32,7 +32,7 @@ Run now, runs scheduled once, webhooks and `kombinat run` start the agent withou
 
 ## After
 
-`after` runs once the run has ended, for example to send its result or its failure somewhere. It runs after every run that ends as `succeeded`, `failed` or `timed_out`. A failed run includes one that never started its agent: the `cwd` is missing, the agent binary is not found or `before` failed. A run that waits for a usage limit to reset runs it once, when it ends after it continued or stopped waiting. A run with `retries` runs it once too, after its last attempt.
+`after` runs once the run has ended, for example to send its result or its failure somewhere. It runs after every run that ends as `succeeded`, `failed` or `timed_out`. A failed run includes one that never started its agent: the `cwd` is missing, the agent binary is not found or `before` failed. It also includes one whose agent gave up with [`onAgentGiveUp: fail`](../README.md#agents). A run that waits for a usage limit to reset runs it once, when it ends after it continued or stopped waiting. A run with `retries` runs it once too, after its last attempt.
 
 It does not run when the run is `aborted`, which means the runner itself stopped, for example when the Mac restarted. A schedule time that was skipped has no run, so nothing runs either.
 
