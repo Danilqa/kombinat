@@ -1,0 +1,7 @@
+{
+  "extends": "../../tsconfig.browser.json",
+  "compilerOptions": {
+    "types": ["node", "vite/client"]
+  },
+  "include": [".storybook/*.ts", ".storybook/*.tsx", "stories"]
+}

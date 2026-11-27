@@ -1,0 +1,26 @@
+{
+  "name": "design-system-storybook",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "storybook dev --port 6006 --no-open",
+    "build": "storybook build --output-dir dist",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "design-system": "workspace:*",
+    "lucide-react": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@storybook/addon-a11y": "10.6.9",
+    "@storybook/addon-docs": "10.6.9",
+    "@storybook/react-vite": "10.6.9",
+    "@tailwindcss/vite": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "storybook": "10.6.9",
+    "vite": "catalog:"
+  }
+}

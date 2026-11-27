@@ -14,6 +14,7 @@ Kombinat runs routines, markdown files in `routines/`, with AI agents on a sched
 | `design-system` | Tailwind tokens and styles, and the components that know no domain: shadcn/radix and generic layout pieces                                                                           |
 | `utils`         | Business-agnostic helpers that more than one package uses: api, error, date-time, cron and search                                                                                    |
 | `e2e`           | Playwright config and fixtures. The specs live in `web-app` as `*.e2e.ts`, next to the page or component they cover                                                                  |
+| `storybook`     | Storybook of the design-system components, deployed with the website at https://kombinat.tech/storybook/                                                                             |
 | `promo`         | Source of the promo video and the README's dashboard GIF: scenes drawn with React, tours of the website and the scripts that record them, see [its README](packages/promo/README.md) |
 
 ## Package manager
@@ -32,6 +33,7 @@ pnpm test:e2e                      # Playwright against a real daemon from this 
 pnpm --filter e2e run web-app:ui   # the same in Playwright's UI mode
 pnpm cli <command>                 # the CLI from source, with example/routines as the routines folder
 pnpm --filter website dev          # the demo site at http://localhost:5174/
+pnpm --filter design-system-storybook dev   # the Storybook at http://localhost:6006/
 pnpm --filter promo record          # the promo video in packages/promo/out, see its README
 ```
 
@@ -41,7 +43,7 @@ The checkout scripts (`cli`, `serve`, `dev`, `tui` and their `:local` variants) 
 
 To release, bump `version` in `packages/cli/package.json` and the `kombinat` version in `example/package.json`, and run `npm publish` in `packages/cli`. npm copies `package.json` as it is, so the `dependencies` of `cli` keep exact versions instead of `catalog:`.
 
-`.github/workflows/ci.yml` runs each check of `pnpm validate`, the website build, the npm package check and the e2e tests as parallel jobs on every PR. The ruleset of `main` requires every job by its name, so a PR merges only once they all pass. When you add or rename a job, update the ruleset too.
+`.github/workflows/ci.yml` runs each check of `pnpm validate`, the website and Storybook builds, the npm package check and the e2e tests as parallel jobs on every PR. The ruleset of `main` requires every job by its name, so a PR merges only once they all pass. When you add or rename a job, update the ruleset too.
 
 ## Structure
 
@@ -85,6 +87,7 @@ packages/
     pages/  domains/<domain>/  layout/
     demo-api/                     The daemon's API, answered in the browser.
   promo/                          The promo video: src/ draws it, scripts/ record it.
+  storybook/                      The Storybook of design-system: .storybook/ configures it, stories/ shows the components.
   e2e/web-app/                    playwright.config.ts, index.ts and fixtures/.
 ```
 
@@ -112,7 +115,7 @@ A part that two components use gets a folder of its own.
 
 ### Dependency rules
 
-Packages, bottom to top: `utils` → `design-system` → `domains` → `web-app` and `tui` → `cli` and `website`. A package imports only the packages below it, by name. `e2e` is tooling beside them: it imports `domains` and reaches `packages/cli` by relative path. `promo` is tooling too: its scenes import `design-system`, and it records the website from its build, never by import.
+Packages, bottom to top: `utils` → `design-system` → `domains` → `web-app` and `tui` → `cli` and `website`. A package imports only the packages below it, by name. `e2e` is tooling beside them: it imports `domains` and reaches `packages/cli` by relative path. `promo` is tooling too: its scenes import `design-system`, and it records the website from its build, never by import. So is `storybook`, which imports only `design-system`.
 
 - `domains` and `utils` never import `cli`, its config, env, `node:*`, react-router or React. `domains` never imports `design-system`.
 - Only `web-app` and `website` import react-router.
@@ -171,7 +174,14 @@ The domain map, definitions and invariants are in [packages/domains/README.md](p
 - `src/demo-api/` answers the dashboard's `/api` requests in the browser, as `cli/src/api/` does: `install.ts` puts it in front of `fetch`, `api.ts` holds the state and the route table, and `history.ts` builds runs and skips from the schedules relative to now. `sample/` holds the sample data: one file per routine in `routines/`, with its run outcomes and transcripts, the types, the values several routines share and the builders of transcript steps.
 - `public/og-image.gif` is the link preview image. `index.html` names it by its full URL in the Open Graph tags, since apps that unfurl links do not resolve relative paths.
 - The changelog page reads the releases from the GitHub API in the browser, so a new release shows there without a deploy, and draws them with the components of `src/domains/release/`. Only the website has it: the dashboard shows newer releases in its update card.
-- `.github/workflows/website.yml` deploys it on every push to `main`.
+- `.github/workflows/website.yml` deploys it on every push to `main`, with the Storybook build copied into `dist/storybook/`.
+
+### storybook
+
+- `stories/` holds one `<component>.stories.tsx` for each folder of `design-system`, titled `Components/<Component>`, and the token pages under `Foundations/`. A new design-system component gets its stories here.
+- Stories import the components from `design-system`, like any other package. Docs pages come from the components' props, so a story sets `component`, and `subcomponents` for the parts of a namespace.
+- `.storybook/preview.css` imports the design-system stylesheet and scans `stories/` for the classes of the stories. `.storybook/theme.ts` repeats the dashboard's tokens for Storybook's own UI, which the stylesheet does not reach, and `public/kombinat-logo.svg` is the logo of its sidebar.
+- The build goes to `dist/`, which the website workflow publishes at `/storybook/`.
 
 ### promo
 
