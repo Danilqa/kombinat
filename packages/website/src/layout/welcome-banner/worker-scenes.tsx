@@ -18,6 +18,9 @@ import { Hand, Mark, Tool, Worker } from './workers';
 // and all that is under it. The corner sits at 160, 260 of the box and is rounded by 12.
 const AROUND_BOTTOM_LEFT_CORNER = "path('M0 0H160V248A12 12 0 0 0 172 260H280V300H0Z')";
 
+// What stands in the gap between the text and the panel needs a card this wide, or it covers the text.
+const HIDDEN_WITHOUT_ROOM_BESIDE_PANEL_CLASS = '@max-[1104px]:hidden';
+
 interface PanelSceneProps {
   className?: string;
   behind: ReactNode;
@@ -59,7 +62,11 @@ interface FromBottomLeftCornerProps {
 
 // Its top left corner is the bottom left corner of the panel, whatever the height of the panel.
 function FromBottomLeftCorner({ children }: FromBottomLeftCornerProps) {
-  return <div className="absolute bottom-0 left-0 max-xl:hidden">{children}</div>;
+  return (
+    <div className={cn('absolute bottom-0 left-0', HIDDEN_WITHOUT_ROOM_BESIDE_PANEL_CLASS)}>
+      {children}
+    </div>
+  );
 }
 
 interface HidingWorkersProps {
@@ -91,7 +98,10 @@ export function HidingWorkers({ children }: HidingWorkersProps) {
             />
           </AboveTopEdge>
           <div
-            className="absolute -bottom-10 -left-40 h-75 w-70 max-xl:hidden"
+            className={cn(
+              'absolute -bottom-10 -left-40 h-75 w-70',
+              HIDDEN_WITHOUT_ROOM_BESIDE_PANEL_CLASS,
+            )}
             style={{ clipPath: AROUND_BOTTOM_LEFT_CORNER }}
           >
             <Worker
@@ -135,18 +145,18 @@ export function AlertedWorker({ children }: AlertedWorkerProps) {
             width={135}
             facing="left"
             peeksFrom="below"
-            delay={600}
+            delay={0}
             className="bottom-3.75 left-21"
           />
         </AboveTopEdge>
       }
       inFront={
         <>
-          <Hand delay={500} className="-top-0.75 left-33" />
-          <div className="max-xl:hidden">
-            <Mark drawing={bolt} delay={0} className="top-6.5 -left-11.5 w-16 -rotate-14" />
-            <Mark drawing={burst} delay={150} className="top-23 -left-21 w-13.5 rotate-8" />
-            <Mark drawing={sparks} delay={300} className="top-39.5 -left-10.5 w-14.5 -rotate-70" />
+          <Hand delay={0} className="-top-0.75 left-33" />
+          <div className={HIDDEN_WITHOUT_ROOM_BESIDE_PANEL_CLASS}>
+            <Mark drawing={bolt} delay={150} className="top-6.5 -left-11.5 w-16 -rotate-14" />
+            <Mark drawing={burst} delay={250} className="top-23 -left-21 w-13.5 rotate-8" />
+            <Mark drawing={sparks} delay={350} className="top-39.5 -left-10.5 w-14.5 -rotate-70" />
           </div>
         </>
       }
@@ -299,15 +309,15 @@ export function HidingWorkersOnPhone() {
 export function AlertedWorkerOnPhone() {
   return (
     <PhoneScene className="h-23">
-      <Mark drawing={bolt} delay={0} className="top-9 left-[16%] w-14 -rotate-14" />
-      <Mark drawing={burst} delay={150} className="top-14 left-[36%] w-11 rotate-8" />
-      <Mark drawing={sparks} delay={300} className="top-9 left-[88%] w-12 rotate-30" />
+      <Mark drawing={bolt} delay={150} className="top-9 left-[16%] w-14 -rotate-14" />
+      <Mark drawing={burst} delay={250} className="top-14 left-[36%] w-11 rotate-8" />
+      <Mark drawing={sparks} delay={350} className="top-9 left-[88%] w-12 rotate-30" />
       <Worker
         drawing={cyclops}
         width={150}
         facing="left"
         peeksFrom="below"
-        delay={500}
+        delay={0}
         className="top-18 left-[62%]"
       />
     </PhoneScene>

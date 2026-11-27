@@ -44,7 +44,7 @@ export function WelcomeCard({
   scene,
 }: WelcomeCardProps) {
   return (
-    <div className="relative h-full overflow-hidden rounded-2xl border border-line bg-surface shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+    <div className="@container relative h-full overflow-hidden rounded-2xl border border-line bg-surface shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
       <div
         aria-hidden="true"
         className={cn(ORBIT_CLASS, 'translate-x-full animate-glow-orbit', PLAY_WHILE_ACTIVE_CLASS)}
