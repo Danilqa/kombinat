@@ -23,9 +23,19 @@ import {
   startRunRequestSchema,
 } from 'domains/routine/schemas';
 import { findRoutineTemplate } from 'domains/routine/templates';
-import type { RoutineDetail, RoutineMemory, RoutineSummary } from 'domains/routine/types';
+import type {
+  ChainLink,
+  RoutineDetail,
+  RoutineMemory,
+  RoutineSummary,
+} from 'domains/routine/types';
 import { AGENT_KIND_ERROR } from 'domains/routine/constants';
-import { checkCanUseAgent, countChangedLines, describeScheduleValue } from 'domains/routine/utils';
+import {
+  checkCanUseAgent,
+  countChangedLines,
+  describeScheduleValue,
+  listChain,
+} from 'domains/routine/utils';
 import { MAX_RUNS, RUNS_CURSOR_ERROR } from 'domains/run/constants';
 import { runIdSchema, type RunId } from 'domains/run/ids';
 import { runMessageSchema, usageLimitWaitActionSchema } from 'domains/run/schemas';
@@ -190,6 +200,8 @@ function toRoutineSummary(
     lastSkip: skips.at(-1) ?? null,
     tokenUsage,
     memory: checkHasMemory(routine),
+    startsAfter: routine.startsAfter ?? null,
+    startsWhen: routine.startsAfter === undefined ? null : (routine.startsWhen ?? 'succeeds'),
   };
 }
 
@@ -392,9 +404,22 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     };
   }
 
+  function getChain(routine: DemoRoutine, now: Date, runs: RunRecord[]): ChainLink[] {
+    const tokenUsages = getTokenUsages(now, runs);
+    const summaries = routines.map(candidate => getSummary(candidate, now, runs, tokenUsages));
+    return listChain(summaries, routine.name).map(link => ({
+      name: link.name,
+      scheduleHuman: link.scheduleHuman,
+      startsAfter: link.startsAfter,
+      startsWhen: link.startsWhen,
+      lastRun: link.lastRun,
+    }));
+  }
+
   function getRoutineDetail(routine: DemoRoutine, now: Date): RoutineDetail {
+    const runs = listRuns(now);
     return {
-      ...getSummary(routine, now),
+      ...getSummary(routine, now, runs),
       prompt: routine.prompt,
       skips: history.listSkips(routine, now),
       queue: listQueue(routine, listRoutineRuns(routine, now)),
@@ -402,6 +427,7 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
       oneTimeRuns: listRoutineOneTimeRuns(oneTimeRuns, routine.name),
       queuedRuns: queuedRuns.filter(queued => queued.routine === routine.name),
       memoryNotes: checkHasMemory(routine) ? (memories.get(routine.name) ?? null) : null,
+      chain: getChain(routine, now, runs),
     };
   }
 

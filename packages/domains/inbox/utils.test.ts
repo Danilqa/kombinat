@@ -10,7 +10,6 @@ import {
   addReadRuns,
   buildRunNotifications,
   changeNotifyLevel,
-  checkHasNothingToReport,
   groupInboxRuns,
   keepNotifyLevelsOf,
   listRunsToNotify,
@@ -116,13 +115,6 @@ test('the notification of a blocked run counts what was blocked', () => {
     [notification?.title, notification?.body],
     ['triage needs a look', 'Succeeded, 1 blocked: Fixed #331 on a branch.'],
   );
-});
-
-test('a result reports nothing when it starts with the word no or nothing', () => {
-  assert.equal(checkHasNothingToReport('Nothing to report.'), true);
-  assert.equal(checkHasNothingToReport('**No** pull requests wait for my review.'), true);
-  assert.equal(checkHasNothingToReport('Notified #product about 3 signals.'), false);
-  assert.equal(checkHasNothingToReport('Fixed #331. No tests failed.'), false);
 });
 
 test('notifies of the runs that came into the inbox since the last look, as each routine asks', () => {

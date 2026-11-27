@@ -8,6 +8,7 @@ import { runIdSchema, type RunId } from './ids';
 import { runsCursorKeySchema, runsCursorSchema } from './schemas';
 import type {
   BlockedAction,
+  ChainCondition,
   RunRecord,
   RunRetry,
   RunsCursor,
@@ -31,6 +32,8 @@ const tokenFormatter = new Intl.NumberFormat('en', {
 });
 
 const shareFormatter = new Intl.NumberFormat('en', { style: 'percent', maximumFractionDigits: 0 });
+
+const NOTHING_TO_REPORT = /^[\s#*_>`-]*(no|nothing)\b/i;
 
 // The scheduler, which ticks every 30 s, continues a run at its first tick after the reset.
 const CONTINUE_GRACE_MS = 60_000;
@@ -61,6 +64,49 @@ export function checkIsRunWaiting(run: Pick<RunRecord, 'status'>): boolean {
 // A run is active while its agent is at work, waits out a usage limit or a retry, or replies to a message.
 export function checkIsRunActive(run: Pick<RunRecord, 'status' | 'replyPid'>): boolean {
   return isMatching({ status: 'running' }, run) || checkIsRunWaiting(run) || run.replyPid !== null;
+}
+
+// A replying run has ended too: a reply keeps the status and the end of the run.
+export function checkHasRunEnded(run: Pick<RunRecord, 'status'>): boolean {
+  return !isMatching({ status: 'running' }, run) && !checkIsRunWaiting(run);
+}
+
+// Agents that found nothing tend to say so first, such as "No open incidents.".
+export function checkHasNothingToReport(resultText: string | null): boolean {
+  return resultText === null || resultText.trim() === '' || NOTHING_TO_REPORT.test(resultText);
+}
+
+// A run that was blocked from an action did less than it was asked to, whatever its status says.
+export function checkHasFindings(
+  run: Pick<RunRecord, 'status' | 'resultText' | 'blockedActions'>,
+): boolean {
+  return (
+    isMatching({ status: 'succeeded' }, run) &&
+    run.blockedActions.length === 0 &&
+    !checkHasNothingToReport(run.resultText)
+  );
+}
+
+export function checkMeetsChainCondition(
+  run: Pick<RunRecord, 'status' | 'resultText' | 'blockedActions'>,
+  condition: ChainCondition,
+): boolean {
+  return match(condition)
+    .with('finishes', () => checkHasRunEnded(run))
+    .with('succeeds', () => isMatching({ status: 'succeeded' }, run))
+    .with('fails', () => checkHasRunEnded(run) && !isMatching({ status: 'succeeded' }, run))
+    .with('has-findings', () => checkHasFindings(run))
+    .exhaustive();
+}
+
+// The subject is the routine the run belongs to, or "it" where the routine is clear.
+export function getChainConditionLabel(condition: ChainCondition, subject = 'it'): string {
+  return match(condition)
+    .with('finishes', () => `when ${subject} finishes`)
+    .with('succeeds', () => `when ${subject} succeeds`)
+    .with('fails', () => `when ${subject} fails`)
+    .with('has-findings', () => `when ${subject} has findings`)
+    .exhaustive();
 }
 
 // A waiting run uses neither the Mac nor the plan, so it takes no slot.
@@ -188,6 +234,7 @@ export function getTriggerLabel(trigger: RunTrigger): string {
     .with('manual', () => 'Manual')
     .with('catch_up', () => 'Catch-up')
     .with('webhook', () => 'Webhook')
+    .with('chain', () => 'Chain')
     .exhaustive();
 }
 

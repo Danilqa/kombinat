@@ -3,9 +3,15 @@ import { isMatching, match, P } from 'ts-pattern';
 import type { AccountName } from 'domains/agent/ids';
 import { getCurrentUsageLimits } from 'domains/daemon/utils';
 import type { RoutineName } from 'domains/routine/ids';
+import { listChainLoops } from 'domains/routine/utils';
 import type { QueuedRun, RunRecord } from 'domains/run/types';
 import { checkIsRunAtWork } from 'domains/run/utils';
-import type { OneTimeRun, SchedulerState, SkipReason } from 'domains/scheduler/types';
+import type {
+  OneTimeRun,
+  SchedulerRoutineState,
+  SchedulerState,
+  SkipReason,
+} from 'domains/scheduler/types';
 import { getSkipReasonLabel } from 'domains/scheduler/utils';
 import { cronRunsBetween } from 'utils/cron';
 import { getErrorMessage } from 'utils/error';
@@ -21,12 +27,14 @@ import {
   startDetachedRuns,
 } from '../run/launcher';
 import type { RunBatch } from '../run/launcher';
+import { appendChainedRun } from '../run/payload';
 import { dropQueuedRun, readQueuedRuns, writeQueuedRuns } from '../run/queued-runs';
 import type { RunOptions } from '../run/runner';
-import { getRunningRuns } from '../run/storage';
+import { getRunningRuns, listRuns } from '../run/storage';
 import { checkIsWaitOver, requestWaitAction } from '../run/usage-limit';
 import { listQueuedRoutines, takeQueuedWebhook } from '../webhook/queue';
 import { startWebhook } from '../webhook/start';
+import { findChainStart } from './chain';
 import { checkIsChecking, prepareCheckedRun, runCheck } from './check';
 import {
   readOneTimeRuns,
@@ -45,6 +53,16 @@ function loadState(now: Date): SchedulerState {
   );
 }
 
+function getEntry(state: SchedulerState, routine: Routine): SchedulerRoutineState {
+  const entry = state.routines[routine.name] ?? {
+    lastScheduledFor: null,
+    skips: [],
+    chainedAfter: null,
+  };
+  state.routines[routine.name] = entry;
+  return entry;
+}
+
 function addSkip(
   state: SchedulerState,
   routine: Routine,
@@ -53,12 +71,11 @@ function addSkip(
   now: Date,
   checkOutput: string | null = null,
 ): void {
-  const entry = state.routines[routine.name] ?? { lastScheduledFor: null, skips: [] };
+  const entry = getEntry(state, routine);
   entry.skips = [
     ...entry.skips.slice(-49),
     { at: now.toISOString(), scheduledFor: scheduledFor.toISOString(), reason, checkOutput },
   ];
-  state.routines[routine.name] = entry;
 }
 
 function checkIsLate(scheduledFor: Date, now: Date): boolean {
@@ -66,9 +83,7 @@ function checkIsLate(scheduledFor: Date, now: Date): boolean {
 }
 
 function markScheduled(state: SchedulerState, routine: Routine, scheduledFor: Date): void {
-  const entry = state.routines[routine.name] ?? { lastScheduledFor: null, skips: [] };
-  entry.lastScheduledFor = scheduledFor.toISOString();
-  state.routines[routine.name] = entry;
+  getEntry(state, routine).lastScheduledFor = scheduledFor.toISOString();
 }
 
 function recordSkip(
@@ -323,6 +338,39 @@ export function tick(now = new Date()): TickResult {
   }
   if (doneOneTimeRuns.size > 0) {
     writeOneTimeRuns(oneTimeRuns.filter(oneTimeRun => !doneOneTimeRuns.has(oneTimeRun)));
+  }
+
+  // Unlike a scheduled time, a chained start waits while its routine runs instead of being skipped.
+  const loopedNames = new Set(listChainLoops(routines).flat());
+  for (const routine of routines) {
+    const { startsAfter, startsWhen } = routine;
+    if (startsAfter === null || startsWhen === null || loopedNames.has(routine.name)) continue;
+    const entry = getEntry(state, routine);
+    // Runs that ended before the routine started after this one are not its to start after.
+    if (entry.chainedAfter?.routine !== startsAfter) {
+      entry.chainedAfter = { routine: startsAfter, endedAt: now.toISOString() };
+      continue;
+    }
+    const start = findChainStart(listRuns(startsAfter), entry.chainedAfter.endedAt, startsWhen);
+    if (start === null) continue;
+    if (start.run === null || !routine.enabled) {
+      entry.chainedAfter = { routine: startsAfter, endedAt: start.endedAt };
+      continue;
+    }
+    if (runningNames.has(routine.name)) continue;
+    if (runningCount >= config.maxConcurrentRuns) {
+      skipped.push(`${routine.name} (concurrency limit, will retry)`);
+      continue;
+    }
+    startDetachedRuns(
+      routine.name,
+      { trigger: 'chain' },
+      { ...toBatch(routine), prompt: appendChainedRun(routine.prompt, start.run) },
+    );
+    entry.chainedAfter = { routine: startsAfter, endedAt: start.endedAt };
+    runningCount += 1;
+    runningNames.add(routine.name);
+    started.push(routine.name);
   }
 
   // After the schedules, so a run that waited out a usage limit or a retry never makes one skip.

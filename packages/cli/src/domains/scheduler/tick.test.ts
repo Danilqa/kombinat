@@ -26,7 +26,7 @@ const chat = routineNameSchema.parse('chat');
 const { tick } = await import('./tick');
 const { readOneTimeRuns, readSchedulerState, writeOneTimeRuns, writeSchedulerState } =
   await import('./storage');
-const { writeRunRecord } = await import('../run/storage');
+const { listRuns, writeRunRecord } = await import('../run/storage');
 const { checkIsRunning, startDetachedRun } = await import('../run/launcher');
 const { countQueuedWebhooks, enqueueWebhook } = await import('../webhook/queue');
 const { makeWebhook } = await import('../webhook/mocks');
@@ -592,4 +592,74 @@ test('queued Claude runs wait only for the limit of their own account', async ()
   );
   assert.deepEqual(tick(new Date('2026-10-03T11:00:30')).started, [office]);
   for (const name of ['home', 'office']) fs.rmSync(path.join(routinesDir, `${name}.md`));
+});
+
+test('a routine starts after the newest run of the one before it that ended as it asks, with its result', async () => {
+  writeRoutine('night-tasks', 'agent: command\ncommand: "true"');
+  writeRoutine('review', 'startsAfter: night-tasks\nagent: command\ncommand: cat');
+  const nightTasks = routineNameSchema.parse('night-tasks');
+  const review = routineNameSchema.parse('review');
+  const writeNightRun = (id: string, endedAt: string, overrides: Partial<RunRecord> = {}) =>
+    writeRunRecord(
+      makeRunRecord({
+        id: runIdSchema.parse(id),
+        routine: nightTasks,
+        status: 'succeeded',
+        endedAt: new Date(endedAt).toISOString(),
+        resultText: `Opened pull requests in ${id}.`,
+        ...overrides,
+      }),
+    );
+  await waitUntilIdle();
+  writeNightRun('n0', '2026-10-04T01:00:00');
+
+  assert.equal(tick(new Date('2026-10-04T02:00:00')).started.includes(review), false);
+  writeNightRun('n1', '2026-10-04T02:10:00', { status: 'failed' });
+  assert.equal(tick(new Date('2026-10-04T02:10:30')).started.includes(review), false);
+
+  writeNightRun('n2', '2026-10-04T02:20:00');
+  writeNightRun('n3', '2026-10-04T02:21:00', { status: 'timed_out' });
+  assert.ok(tick(new Date('2026-10-04T02:21:30')).started.includes(review));
+  assert.equal(tick(new Date('2026-10-04T02:22:00')).started.includes(review), false);
+  await waitUntilIdle();
+  const chained = listRuns(review)[0];
+  assert.equal(chained?.trigger, 'chain');
+  assert.match(
+    chained.resultText ?? '',
+    /This run started after run n2 of night-tasks ended as succeeded\. Its result:\n\n```\nOpened pull requests in n2\.\n```/,
+  );
+});
+
+test('a routine waits while it runs to start after a run, and loops start nothing', async () => {
+  const nightTasks = routineNameSchema.parse('night-tasks');
+  const review = routineNameSchema.parse('review');
+  writeRoutine('loop-a', 'startsAfter: loop-b\nagent: command\ncommand: "true"');
+  writeRoutine('loop-b', 'startsAfter: loop-a\nagent: command\ncommand: "true"');
+  await waitUntilIdle();
+  const working = makeRunRecord({
+    id: runIdSchema.parse('r-working'),
+    routine: review,
+    status: 'running',
+    pid: process.pid,
+  });
+  writeRunRecord(working);
+  for (const routine of [nightTasks, routineNameSchema.parse('loop-a')]) {
+    writeRunRecord(
+      makeRunRecord({
+        id: runIdSchema.parse(`${routine}-done`),
+        routine,
+        status: 'succeeded',
+        endedAt: new Date('2026-10-04T03:00:00').toISOString(),
+        resultText: 'Done.',
+      }),
+    );
+  }
+
+  assert.deepEqual(tick(new Date('2026-10-04T03:00:30')).started, []);
+  writeRunRecord({ ...working, status: 'succeeded' });
+  assert.deepEqual(tick(new Date('2026-10-04T03:01:00')).started, [review]);
+  await waitUntilIdle();
+  for (const name of ['night-tasks', 'review', 'loop-a', 'loop-b']) {
+    fs.rmSync(path.join(routinesDir, `${name}.md`));
+  }
 });

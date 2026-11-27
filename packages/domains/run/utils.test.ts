@@ -4,11 +4,13 @@ import { test } from 'node:test';
 import { routineNameSchema } from '../routine/ids';
 import { runIdSchema } from './ids';
 import { makeRunRecord } from './mocks';
-import type { RunRecord, RunsPage } from './types';
+import type { ChainCondition, RunRecord, RunsPage } from './types';
 import {
   buildTokenUsages,
+  checkHasNothingToReport,
   checkIsRunActive,
   checkIsRunAtWork,
+  checkMeetsChainCondition,
   decodeRunsCursor,
   encodeRunsCursor,
   filterRuns,
@@ -277,4 +279,31 @@ test('a change reaches the next worktrees by the step their base needs', () => {
     verb: 'commit',
     branch: null,
   });
+});
+
+test('a result reports nothing when it starts with the word no or nothing', () => {
+  assert.equal(checkHasNothingToReport('Nothing to report.'), true);
+  assert.equal(checkHasNothingToReport('**No** pull requests wait for my review.'), true);
+  assert.equal(checkHasNothingToReport('Notified #product about 3 signals.'), false);
+  assert.equal(checkHasNothingToReport('Fixed #331. No tests failed.'), false);
+});
+
+test('the routine after a run starts only when the run ended as its condition asks', () => {
+  const ended = (overrides: Partial<RunRecord>) =>
+    makeRunRecord({ status: 'succeeded', resultText: 'Opened 2 pull requests.', ...overrides });
+  const findings = ended({});
+  const quiet = ended({ resultText: 'Nothing to review.' });
+  const blocked = ended({ blockedActions: [{ tool: 'Bash', preview: 'git push', rules: [] }] });
+  const failed = ended({ status: 'failed', resultText: null });
+  const timedOut = ended({ status: 'timed_out' });
+  const waiting = ended({ status: 'waiting' });
+  const meeting = (condition: ChainCondition) =>
+    [findings, quiet, blocked, failed, timedOut, waiting].map(candidate =>
+      checkMeetsChainCondition(candidate, condition),
+    );
+
+  assert.deepEqual(meeting('finishes'), [true, true, true, true, true, false]);
+  assert.deepEqual(meeting('succeeds'), [true, true, true, false, false, false]);
+  assert.deepEqual(meeting('fails'), [false, false, false, true, true, false]);
+  assert.deepEqual(meeting('has-findings'), [true, false, false, false, false, false]);
 });

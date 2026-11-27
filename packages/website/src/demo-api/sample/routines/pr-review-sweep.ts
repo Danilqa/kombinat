@@ -21,6 +21,7 @@ export const prReviewSweep: DemoRoutine = {
   account: WORK,
   model: OPUS,
   effort: 'high',
+  startsAfter: routineNameSchema.parse('night-agent-tasks'),
   check: {
     command:
       'n=$(gh pr list --search review-requested:@me --json number --jq length); echo "Waiting for review: $n"; [ "$n" -gt 0 ] || exit 78',

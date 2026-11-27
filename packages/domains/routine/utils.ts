@@ -4,7 +4,9 @@ import { describeCron, parseCron } from 'utils/cron';
 
 import type { AgentName } from '../agent/types';
 import type { RunId } from '../run/ids';
+import type { RoutineName } from './ids';
 import type {
+  ChainedRoutine,
   MemoryChange,
   RoutineMemory,
   RoutineTemplate,
@@ -86,4 +88,52 @@ export function describeScheduleValue(schedule: string): string | null {
     return null;
   }
   return describeCron(value);
+}
+
+function findChainStart(routines: ChainedRoutine[], name: RoutineName): RoutineName {
+  const parents = new Map(routines.map(routine => [routine.name, routine.startsAfter]));
+  const visited = new Set<RoutineName>();
+  let start = name;
+  let parent = parents.get(start);
+  while (parent !== undefined && parent !== null && parents.has(parent) && !visited.has(parent)) {
+    visited.add(start);
+    start = parent;
+    parent = parents.get(start);
+  }
+  return start;
+}
+
+// From the first routine of the chain, each one before the routines that start after it. Empty
+// when no routine starts after this one or before it.
+export function listChain<T extends ChainedRoutine>(routines: T[], name: RoutineName): T[] {
+  const chain: T[] = [];
+  const visit = (current: RoutineName) => {
+    const routine = routines.find(candidate => candidate.name === current);
+    if (routine === undefined || chain.includes(routine)) return;
+    chain.push(routine);
+    for (const next of routines) if (next.startsAfter === current) visit(next.name);
+  };
+  visit(findChainStart(routines, name));
+  return chain.length > 1 ? chain : [];
+}
+
+// Each loop once, in the order its routines would start: [b, a] when a starts after b and b after a.
+export function listChainLoops(routines: ChainedRoutine[]): RoutineName[][] {
+  const parents = new Map(routines.map(routine => [routine.name, routine.startsAfter]));
+  const looped = new Set<RoutineName>();
+  const loops: RoutineName[][] = [];
+  for (const routine of routines) {
+    const path: RoutineName[] = [];
+    let current: RoutineName | null | undefined = routine.name;
+    while (current !== undefined && current !== null && !path.includes(current)) {
+      if (looped.has(current)) break;
+      path.push(current);
+      current = parents.get(current);
+    }
+    if (current === undefined || current === null || looped.has(current)) continue;
+    const loop = path.slice(path.indexOf(current)).toReversed();
+    for (const name of loop) looped.add(name);
+    loops.push(loop);
+  }
+  return loops;
 }

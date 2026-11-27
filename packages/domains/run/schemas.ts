@@ -47,7 +47,10 @@ export const blockedActionSchema = z.object({
   rules: z.array(z.string()),
 });
 
-export const runTriggerSchema = z.enum(['schedule', 'manual', 'catch_up', 'webhook']);
+export const runTriggerSchema = z.enum(['schedule', 'manual', 'catch_up', 'webhook', 'chain']);
+
+// How the run of a routine ended for the routine that starts after it to start.
+export const chainConditionSchema = z.enum(['finishes', 'succeeds', 'fails', 'has-findings']);
 
 // A run of a start that makes several, waiting for a slot of its own.
 export const queuedRunSchema = z.object({

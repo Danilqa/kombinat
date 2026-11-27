@@ -1,7 +1,7 @@
 import type { AccountName } from 'domains/agent/ids';
 import type { AgentName } from 'domains/agent/types';
 import type { RoutineName } from 'domains/routine/ids';
-import type { BlockedAction, ChangedFile, RunStatus } from 'domains/run/types';
+import type { BlockedAction, ChainCondition, ChangedFile, RunStatus } from 'domains/run/types';
 import type { SkipReason } from 'domains/scheduler/types';
 import type { UsageLimitKind } from 'domains/transcript/types';
 import type { WebhookCallOutcome } from 'domains/webhook/types';
@@ -126,4 +126,7 @@ export interface DemoRoutine {
   webhookCalls?: DemoWebhookCall[];
   oneTimeRuns?: DemoOneTimeRun[];
   memory?: DemoMemory;
+  startsAfter?: RoutineName;
+  // Without it, a routine that starts after another one starts when that one succeeds.
+  startsWhen?: ChainCondition;
 }

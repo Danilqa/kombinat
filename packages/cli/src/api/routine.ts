@@ -11,7 +11,8 @@ import {
   startRunRequestSchema,
 } from 'domains/routine/schemas';
 import { findRoutineTemplate } from 'domains/routine/templates';
-import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
+import type { ChainLink, RoutineDetail, RoutineSummary } from 'domains/routine/types';
+import { listChain } from 'domains/routine/utils';
 import { MAX_RUNS } from 'domains/run/constants';
 import type { RunRecord, TokenUsage } from 'domains/run/types';
 import { buildTokenUsages, checkIsRunActive, getTokenUsageStart } from 'domains/run/utils';
@@ -85,7 +86,19 @@ function toRoutineSummary(
     lastSkip: getSkips(routine.name).at(-1) ?? null,
     tokenUsage,
     memory: routine.memory,
+    startsAfter: routine.startsAfter,
+    startsWhen: routine.startsWhen,
   };
+}
+
+function getChain(routine: Routine, routines: Routine[]): ChainLink[] {
+  return listChain(routines, routine.name).map(link => ({
+    name: link.name,
+    scheduleHuman: describeSchedule(link),
+    startsAfter: link.startsAfter,
+    startsWhen: link.startsWhen,
+    lastRun: listRuns(link.name)[0] ?? null,
+  }));
 }
 
 export function getRoutineSummaries(): RoutineSummary[] {
@@ -110,8 +123,9 @@ export function getRoutineDetail(routine: Routine): ApiResponse {
   const runs = listRuns(routine.name);
   const now = new Date();
   const since = getTokenUsageStart(now);
+  const routines = loadRoutines();
   // The share needs the tokens of every other routine too.
-  const otherRuns = loadRoutines()
+  const otherRuns = routines
     .filter(other => other.name !== routine.name)
     .map(other => listRunsSince(other.name, since));
   const [tokenUsage = null] = buildTokenUsages([runs, ...otherRuns], now);
@@ -125,6 +139,7 @@ export function getRoutineDetail(routine: Routine): ApiResponse {
     oneTimeRuns,
     queuedRuns,
     memoryNotes: routine.memory ? readRoutineMemory(routine.name) : null,
+    chain: getChain(routine, routines),
   };
   return ok(detail);
 }

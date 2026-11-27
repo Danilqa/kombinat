@@ -1,5 +1,6 @@
 export * from './add-routine-form';
 export * from './added-routine-notice';
+export * from './chain-section';
 export * from './change-prompt-menu-item';
 export * from './memory-panel';
 export * from './one-time-runs-table';

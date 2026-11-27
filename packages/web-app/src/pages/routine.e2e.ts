@@ -40,6 +40,65 @@ test("shows a routine's settings, runs, skipped runs and prompt", async ({ page,
   await expect(page.getByRole('heading', { name: 'Steps' })).toBeVisible();
 });
 
+test('shows the routines that start before and after a routine, in a chain with their last runs', async ({
+  page,
+  kombinat,
+  time,
+}) => {
+  kombinat.addRoutine({ name: 'night-agent-tasks', schedule: '0 2 * * *' });
+  kombinat.addRoutine({ name: 'pr-review-sweep', startsAfter: 'night-agent-tasks' });
+  kombinat.addRoutine({
+    name: 'write-release-notes',
+    startsAfter: 'pr-review-sweep',
+    startsWhen: 'has-findings',
+  });
+  kombinat.addRun({
+    routine: 'night-agent-tasks',
+    status: 'succeeded',
+    startedAt: time.minutesAgo(90),
+    endedAt: time.minutesAgo(60),
+    resultText: 'Opened 3 pull requests.',
+  });
+  await page.goto('/routines/pr-review-sweep');
+
+  await expect(page.getByRole('main')).toMatchAriaSnapshot(`
+    - term: Starts after
+    - definition:
+      - link "night-agent-tasks"
+      - text: ", when it succeeds"
+    - term: Then runs
+    - definition:
+      - link "write-release-notes"
+      - text: ", when it has findings"
+  `);
+  const chain = page.getByRole('list', { name: 'Routines in the order they start' });
+  await expect(chain).toMatchAriaSnapshot(`
+    - listitem:
+      - link "night-agent-tasks Daily at 02:00"
+    - listitem:
+      - text: when it succeeds pr-review-sweep After night-agent-tasks
+    - listitem:
+      - text: when it has findings
+      - link "write-release-notes After pr-review-sweep"
+  `);
+  const lastRuns = page.getByRole('list', { name: 'Last runs' });
+  await expect(lastRuns.getByRole('link', { name: /night-agent-tasks Succeeded/ })).toContainText(
+    'Opened 3 pull requests.',
+  );
+  await expect(lastRuns.getByRole('listitem').filter({ hasText: 'pr-review-sweep' })).toHaveText(
+    'pr-review-sweepNo runs yet',
+  );
+
+  await chain.getByRole('link', { name: /write-release-notes/ }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('write-release-notes');
+  await expect(page.getByRole('main')).toMatchAriaSnapshot(`
+    - term: Starts after
+    - definition:
+      - link "pr-review-sweep"
+      - text: ", when it has findings"
+  `);
+});
+
 test('shows the tokens each routine used in the last 7 days', async ({ page, kombinat, time }) => {
   const tokens = (scale: number) => ({
     input: 1000 * scale,

@@ -2,6 +2,7 @@ import type { z } from 'zod';
 
 import type {
   oneTimeRunSchema,
+  schedulerRoutineStateSchema,
   schedulerStateSchema,
   skipReasonSchema,
   skipSchema,
@@ -10,6 +11,7 @@ import type {
 export type SkipReason = z.infer<typeof skipReasonSchema>;
 export type Skip = z.infer<typeof skipSchema>;
 export type SchedulerState = z.infer<typeof schedulerStateSchema>;
+export type SchedulerRoutineState = z.infer<typeof schedulerRoutineStateSchema>;
 export type OneTimeRun = z.infer<typeof oneTimeRunSchema>;
 
 export interface RunLaterPreset {

@@ -25,4 +25,6 @@ export const ROUTINE_SETTINGS = [
   'check',
   'before',
   'after',
+  'startsAfter',
+  'startsWhen',
 ] as const;

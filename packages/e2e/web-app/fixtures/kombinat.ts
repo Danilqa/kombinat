@@ -41,6 +41,8 @@ export interface RoutineFile {
   maxBudgetUsd?: number;
   maxBudgetTokens?: number | string;
   memory?: boolean;
+  startsAfter?: string;
+  startsWhen?: string;
   prompt?: string;
 }
 
@@ -177,6 +179,7 @@ export function createKombinat(root: string, daemonUrl: string): Kombinat {
       const entry = (scheduler.routines[routineNameSchema.parse(routine)] ??= {
         lastScheduledFor: null,
         skips: [],
+        chainedAfter: null,
       });
       entry.skips.push({
         at: minutesAgo(30),

@@ -38,13 +38,13 @@ It does not run when the run is `aborted`, which means the runner itself stopped
 
 It runs in the routine's `cwd`, or in the folder with `routines/` when `cwd` does not exist, with these variables:
 
-| Variable              | Value                                         |
-| --------------------- | --------------------------------------------- |
-| `KOMBINAT_ROUTINE`    | The routine's name                            |
-| `KOMBINAT_RUN_ID`     | The run's id                                  |
-| `KOMBINAT_TRIGGER`    | `schedule`, `catch_up`, `manual` or `webhook` |
-| `KOMBINAT_RUN_STATUS` | `succeeded`, `failed` or `timed_out`          |
-| `KOMBINAT_REPO`       | The folder with `routines/`                   |
+| Variable              | Value                                                  |
+| --------------------- | ------------------------------------------------------ |
+| `KOMBINAT_ROUTINE`    | The routine's name                                     |
+| `KOMBINAT_RUN_ID`     | The run's id                                           |
+| `KOMBINAT_TRIGGER`    | `schedule`, `catch_up`, `manual`, `webhook` or `chain` |
+| `KOMBINAT_RUN_STATUS` | `succeeded`, `failed` or `timed_out`                   |
+| `KOMBINAT_REPO`       | The folder with `routines/`                            |
 
 On stdin it gets the finished run as one line of JSON, the same object that `kombinat run` prints: `status`, `error`, `resultText`, `exitCode`, `costUsd`, `tokens`, `durationMs`, `startedAt`, `endedAt` and the rest.
 

@@ -2,10 +2,13 @@ import assert from 'node:assert/strict';
 import os from 'node:os';
 import { test } from 'node:test';
 
+import { routineNameSchema } from 'domains/routine/ids';
+
 import {
   buildRoutine,
   describeSchedule,
   getNextRun,
+  listChainProblems,
   listRoutineProblems,
   parseFrontmatter,
 } from './utils';
@@ -324,4 +327,51 @@ test('a frontmatter line without a key is a problem', () => {
   assert.deepEqual(listRoutineProblems('/tmp/demo.md', routineFile(': ops')), [
     '/tmp/demo.md: frontmatter line ": ops" must look like key: value',
   ]);
+});
+
+test('a routine starts after another one when it succeeds, unless startsWhen says otherwise', () => {
+  const after = buildRoutine('/tmp/demo.md', routineFile('startsAfter: night-tasks'));
+  assert.deepEqual([after.startsAfter, after.startsWhen], ['night-tasks', 'succeeds']);
+  const onFindings = buildRoutine(
+    '/tmp/demo.md',
+    routineFile('startsAfter: night-tasks\nstartsWhen: has-findings'),
+  );
+  assert.equal(onFindings.startsWhen, 'has-findings');
+  const alone = buildRoutine('/tmp/demo.md', routineFile('schedule: manual'));
+  assert.deepEqual([alone.startsAfter, alone.startsWhen], [null, null]);
+});
+
+test('startsWhen needs startsAfter, and both need values a routine file can have', () => {
+  assert.throws(
+    () => buildRoutine('/tmp/demo.md', routineFile('startsWhen: fails')),
+    /startsWhen needs startsAfter/,
+  );
+  assert.throws(
+    () => buildRoutine('/tmp/demo.md', routineFile('startsAfter: night\nstartsWhen: done')),
+    /startsWhen must be one of finishes, succeeds, fails, has-findings/,
+  );
+  assert.throws(
+    () => buildRoutine('/tmp/demo.md', routineFile('startsAfter: Night Tasks')),
+    /startsAfter must be the name of a routine/,
+  );
+});
+
+test('a chain is a problem when it names a missing routine or makes a loop', () => {
+  const chained = (name: string, startsAfter: string) =>
+    buildRoutine(
+      `/tmp/${name}.md`,
+      `---\nname: ${name}\ncwd: /tmp\nstartsAfter: ${startsAfter}\n---\nHello`,
+    );
+  const routines = [
+    chained('review', 'notes'),
+    chained('notes', 'review'),
+    chained('tidy', 'gone'),
+  ];
+  const names = ['review', 'notes', 'tidy', 'broken'].map(name => routineNameSchema.parse(name));
+
+  assert.deepEqual(listChainProblems(routines, names), [
+    '/tmp/tidy.md: startsAfter names gone, but there is no routines/gone.md',
+    '/tmp/review.md, /tmp/notes.md: startsAfter makes a loop, notes → review → notes. Remove startsAfter from one of them',
+  ]);
+  assert.deepEqual(listChainProblems([chained('tidy', 'broken')], names), []);
 });
