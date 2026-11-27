@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 
 import { getErrorMessage } from 'utils/error';
 
-export interface ShellCommand {
+interface ShellCommand {
   command: string;
   cwd: string;
   env: NodeJS.ProcessEnv;

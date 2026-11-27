@@ -1,4 +1,3 @@
-import fs from 'node:fs';
 import path from 'node:path';
 
 import type { AccountName } from 'domains/agent/ids';
@@ -22,6 +21,5 @@ export function writePlanUsage(
   account: AccountName | null,
   usage: PlanUsage,
 ): void {
-  fs.mkdirSync(planUsageDir(), { recursive: true });
   writeJsonFile(planUsageFile(agent, account), usage);
 }

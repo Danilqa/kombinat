@@ -5,12 +5,12 @@ import path from 'node:path';
 import { test } from 'node:test';
 
 import { PACKAGE_NAME } from '../../config';
-import { EXAMPLE_ROUTINES } from '../../domains/routine/examples';
 import { loadRoutines } from '../../domains/routine/storage';
 import { detectPackageManager } from '../../utils/package-manager';
 import type { PackageManager } from '../../utils/package-manager';
 import { renderRoutinesTable, updateReadme } from '../readme/readme';
-import type { ShellCommand } from './commands';
+import type { InstallCommand } from './commands';
+import { EXAMPLE_ROUTINES } from './examples';
 import { formatInitSummary, initFolder } from './init';
 import type { InitOptions } from './init';
 
@@ -23,7 +23,7 @@ const ROUTINE_FILES = [
 ];
 
 interface InstallCall {
-  command: ShellCommand;
+  command: InstallCommand;
   cwd: string;
 }
 

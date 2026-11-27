@@ -165,7 +165,7 @@ function runGit(args: string[]): string {
   ).trim();
 }
 
-export interface PullResult {
+interface PullResult {
   status: 'updated' | 'up_to_date' | 'skipped' | 'failed';
   detail: string;
 }

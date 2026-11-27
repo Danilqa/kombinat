@@ -7,9 +7,11 @@ import type { RoutineName } from '../routine/ids';
 import type { RunRecord } from '../run/types';
 import type { OneTimeRun } from '../scheduler/types';
 import { getRunStatusLabel } from '../run/utils';
+import { MAX_CALENDAR_DAYS } from './constants';
 import { calendarEntryIdSchema, type CalendarEntryId } from './ids';
 import type {
   CalendarEntry,
+  CalendarRange,
   PlannedCalendarEntry,
   PlannedLength,
   RunCalendarEntry,
@@ -18,6 +20,18 @@ import type {
 
 const DEFAULT_PLANNED_MINUTES = 20;
 const MIN_BLOCK_MINUTES = 10;
+const DAY_MS = 86_400_000;
+
+export function parseCalendarRange(params: URLSearchParams): CalendarRange | null {
+  const from = new Date(params.get('from') ?? '');
+  const to = new Date(params.get('to') ?? '');
+  const isValid =
+    !Number.isNaN(from.getTime()) &&
+    !Number.isNaN(to.getTime()) &&
+    to > from &&
+    to.getTime() - from.getTime() <= MAX_CALENDAR_DAYS * DAY_MS;
+  return isValid ? { from, to } : null;
+}
 
 function getDurationMinutes(entry: CalendarEntry): number {
   return Math.round((new Date(entry.end).getTime() - new Date(entry.start).getTime()) / 60_000);

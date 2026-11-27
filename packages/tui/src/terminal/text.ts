@@ -119,7 +119,7 @@ function checkIsInRanges(code: number, ranges: Array<[number, number]>): boolean
   return false;
 }
 
-export function charWidth(char: string): number {
+function charWidth(char: string): number {
   const code = char.codePointAt(0) ?? 0;
   if (code === 0x200d || checkIsInRanges(code, ZERO_WIDTH)) return 0;
   return checkIsInRanges(code, WIDE) ? 2 : 1;

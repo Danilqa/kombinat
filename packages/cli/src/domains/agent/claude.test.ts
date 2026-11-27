@@ -8,7 +8,7 @@ import { runIdSchema } from 'domains/run/ids';
 import { makeRunRecord } from 'domains/run/mocks';
 
 import { claudeAgent } from './claude';
-import { expectInit, expectResult, expectText, expectTool, makeAgentTask } from './testing';
+import { expectInit, expectResult, expectText, expectTool, makeAgentTask } from './mocks';
 
 const events = [
   {

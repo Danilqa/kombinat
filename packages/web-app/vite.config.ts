@@ -4,6 +4,8 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
 const webAppRoot = import.meta.dirname;
+// `kombinat dev` starts Vite with its own environment, so the proxy follows the daemon's port.
+const daemonPort = process.env['KOMBINAT_PORT'] ?? '7433';
 
 export default defineConfig({
   root: webAppRoot,
@@ -21,7 +23,7 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': 'http://localhost:7433',
+      '/api': `http://localhost:${daemonPort}`,
     },
   },
 });

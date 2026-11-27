@@ -1,7 +1,1 @@
 @import 'design-system/styles.css';
-
-@theme inline {
-  --color-brand-violet: #b9a8ff;
-  --color-brand-pink: #e3a7c9;
-  --color-brand-peach: #f5b08a;
-}

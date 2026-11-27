@@ -1,7 +1,4 @@
 {
-  "extends": "../../tsconfig.json",
-  "compilerOptions": {
-    "lib": ["ES2023", "DOM", "DOM.Iterable"]
-  },
+  "extends": "../../tsconfig.browser.json",
   "include": ["**/*.ts"]
 }

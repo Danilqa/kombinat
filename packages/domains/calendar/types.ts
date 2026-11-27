@@ -18,6 +18,11 @@ export interface ScheduledRoutine {
   timeoutMinutes: number;
 }
 
+export interface CalendarRange {
+  from: Date;
+  to: Date;
+}
+
 export interface PlannedLength {
   minutes: number;
   estimated: boolean;

@@ -9,7 +9,12 @@ import { makeRunRecord } from '../run/mocks';
 import type { RunRecord, RunStatus } from '../run/types';
 import { calendarEntryIdSchema } from './ids';
 import type { ScheduledRoutine } from './types';
-import { buildCalendar, countOverlapPairs, estimatePlannedMinutes } from './utils';
+import {
+  buildCalendar,
+  countOverlapPairs,
+  estimatePlannedMinutes,
+  parseCalendarRange,
+} from './utils';
 
 const routine = (name: string, schedule: string | null, timeoutMinutes = 55): ScheduledRoutine => ({
   name: routineNameSchema.parse(name),
@@ -138,4 +143,19 @@ test('one-time runs are planned blocks too, but only ahead of now and for enable
       },
     ],
   );
+});
+
+test('a calendar range needs two ISO dates in order, at most 32 days apart', () => {
+  const parse = (query: string) => parseCalendarRange(new URLSearchParams(query));
+  assert.deepEqual(parse('from=2026-11-02T00:00:00Z&to=2026-11-09T00:00:00Z'), {
+    from: new Date('2026-11-02T00:00:00Z'),
+    to: new Date('2026-11-09T00:00:00Z'),
+  });
+  assert.notEqual(parse('from=2026-11-01T00:00:00Z&to=2026-12-03T00:00:00Z'), null);
+  assert.equal(parse('from=2026-11-01T00:00:00Z&to=2026-12-03T00:00:01Z'), null);
+  assert.equal(parse('from=2026-11-09T00:00:00Z&to=2026-11-09T00:00:00Z'), null);
+  assert.equal(parse('from=2026-11-09T00:00:00Z&to=2026-11-02T00:00:00Z'), null);
+  assert.equal(parse('from=monday&to=2026-11-09T00:00:00Z'), null);
+  assert.equal(parse('from=2026-11-02T00:00:00Z'), null);
+  assert.equal(parse(''), null);
 });

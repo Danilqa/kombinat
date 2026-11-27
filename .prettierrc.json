@@ -2,5 +2,8 @@
   "arrowParens": "avoid",
   "printWidth": 100,
   "singleQuote": true,
-  "trailingComma": "all"
+  "trailingComma": "all",
+  "plugins": ["prettier-plugin-tailwindcss"],
+  "tailwindStylesheet": "./packages/website/src/index.css",
+  "tailwindFunctions": ["cn", "cva"]
 }

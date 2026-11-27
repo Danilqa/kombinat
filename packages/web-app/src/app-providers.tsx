@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router';
-import { Tooltip } from 'design-system/components';
-import { CustomizationProvider, type Customization } from '@web-app/contexts';
+import { Tooltip } from 'design-system';
+import { CustomizationProvider, type Customization } from '@web-app/customization';
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 

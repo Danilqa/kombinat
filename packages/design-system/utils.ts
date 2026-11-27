@@ -2,18 +2,44 @@ import { clsx, type ClassValue } from 'clsx';
 import { useEffect, useLayoutEffect, useState, useSyncExternalStore, type RefObject } from 'react';
 import { extendTailwindMerge } from 'tailwind-merge';
 
+// Without its name here, tailwind-merge takes a custom class for a colour or does not know it at
+// all, and keeps both of two classes that set the same property.
 const twMerge = extendTailwindMerge({
   extend: {
+    // The custom keys of each @theme namespace in the stylesheets.
     theme: {
-      ease: ['out-quint'],
-    },
-    classGroups: {
-      'font-size': [
-        {
-          text: ['title-lg', 'title-md', 'title-sm', 'body', 'body-sm', 'caption', 'nav', 'nav-sm'],
-        },
+      animate: [
+        'soft-pulse',
+        'smoke-drift',
+        'status-pop',
+        'hand-wave',
+        'scale-tip',
+        'webhook-spin',
+        'icon-pop',
+        'cursor-blink',
+        'bucket-hop',
+        'title-flow',
+        'glow-orbit',
+        'glow-orbit-offset',
       ],
-      shadow: [{ shadow: ['popover', 'focus'] }],
+      container: ['page'],
+      ease: ['out-quint'],
+      shadow: [
+        'popover',
+        'focus',
+        'stripe-positive',
+        'stripe-negative',
+        'stripe-warning',
+        'stripe-info',
+        'stripe-neutral',
+        'outline-negative',
+      ],
+      text: ['title-lg', 'title-md', 'title-sm', 'body', 'body-sm', 'caption', 'nav', 'nav-sm'],
+    },
+    // The @utility classes of the stylesheet and of tw-animate-css.
+    classGroups: {
+      animate: [{ animate: ['in', 'out'] }],
+      top: [{ top: ['below-page-header', 'below-headers'] }],
     },
   },
 });

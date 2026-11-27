@@ -12,8 +12,8 @@
   },
   "iconLibrary": "lucide",
   "aliases": {
-    "components": "design-system/components",
+    "components": "design-system",
     "utils": "design-system/utils",
-    "ui": "design-system/components"
+    "ui": "design-system"
   }
 }

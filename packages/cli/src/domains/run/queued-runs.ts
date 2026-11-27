@@ -7,7 +7,6 @@ import type { QueuedRun } from 'domains/run/types';
 import { config } from '../../config';
 import { readJsonFile, writeJsonFile } from '../../utils/json';
 import { takePrompt } from './payload';
-import { ensureStateDirs } from './storage';
 
 export const QUEUED_RUNS_FILE = 'queued-runs.json';
 
@@ -18,7 +17,6 @@ export function readQueuedRuns(): QueuedRun[] {
 }
 
 export function writeQueuedRuns(runs: QueuedRun[]): void {
-  ensureStateDirs();
   writeJsonFile(queuedRunsFile(), { runs });
 }
 

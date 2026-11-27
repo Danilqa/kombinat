@@ -28,7 +28,7 @@ The daemon runs `git pull` every 5 minutes and installs dependencies when the lo
 
 ## Network
 
-Kombinat has no telemetry. The daemon makes no network calls of its own. Only the tools it starts do: git, your package manager, the agents and your routines' commands. The dashboard loads its fonts from Google Fonts.
+Kombinat has no telemetry. The daemon makes one network call of its own: installed from npm, it asks the GitHub API for newer releases, at most once an hour. Everything else comes from the tools it starts: git, your package manager, the agents and your routines' commands. The dashboard loads its fonts from Google Fonts.
 
 ## Shared logins
 

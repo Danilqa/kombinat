@@ -8,7 +8,7 @@ import { runIdSchema } from 'domains/run/ids';
 import { makeRunRecord } from 'domains/run/mocks';
 
 import { codexAgent } from './codex';
-import { expectResult, expectText, expectTool, makeAgentTask } from './testing';
+import { expectResult, expectText, expectTool, makeAgentTask } from './mocks';
 
 const events = [
   { type: 'thread.started', thread_id: 'thread-1' },

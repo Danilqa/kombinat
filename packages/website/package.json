@@ -16,14 +16,14 @@
     "lucide-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "react-router": "7.18.4",
+    "react-router": "catalog:",
     "ts-pattern": "catalog:",
     "utils": "workspace:*",
     "web-app": "workspace:*"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "4.3.3",
-    "@vitejs/plugin-react": "6.1.1",
-    "vite": "8.3.1"
+    "@tailwindcss/vite": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "vite": "catalog:"
   }
 }

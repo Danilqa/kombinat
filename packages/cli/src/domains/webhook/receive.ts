@@ -4,7 +4,7 @@ import type { RunId } from 'domains/run/ids';
 import { createRunId } from 'domains/run/utils';
 
 import type { Routine } from '../routine/types';
-import { checkIsRunning } from '../run/runner';
+import { checkIsRunning } from '../run/launcher';
 import { decideWebhook } from './gate';
 import type { WebhookRequest } from './gate';
 import { countQueuedWebhooks, enqueueWebhook } from './queue';

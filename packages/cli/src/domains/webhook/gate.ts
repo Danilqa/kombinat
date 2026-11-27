@@ -11,8 +11,8 @@ import { runShell } from '../run/shell';
 
 export const WEBHOOK_GATE_TIMEOUT_MS = 3_000;
 // EX_CONFIG: crashes exit with 1 or 2, never with this.
-export const WEBHOOK_GATE_IGNORE_EXIT_CODE = 78;
-export const WEBHOOK_GATE_CONTINUE_EXIT_CODE = 79;
+const WEBHOOK_GATE_IGNORE_EXIT_CODE = 78;
+const WEBHOOK_GATE_CONTINUE_EXIT_CODE = 79;
 
 const continueOutputSchema = z.object({
   conversation: z.string().trim().min(1),
@@ -49,7 +49,7 @@ interface TimeoutDecision {
   outcome: 'timeout';
 }
 
-export type WebhookGateDecision =
+type WebhookGateDecision =
   RunDecision | ContinueDecision | IgnoreDecision | RejectDecision | TimeoutDecision;
 
 function toContinueDecision(stdout: string): WebhookGateDecision {

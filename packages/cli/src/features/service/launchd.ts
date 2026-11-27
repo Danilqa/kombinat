@@ -7,8 +7,10 @@ import { config, getCliArgs } from '../../config';
 import type { InstallResult } from './daemon-setup';
 import { buildDaemonEnv, ensureInstallable } from './daemon-setup';
 
+const LAUNCHD_LABEL = 'com.kombinat.daemon';
+
 const plistPath = () =>
-  path.join(os.homedir(), 'Library', 'LaunchAgents', `${config.launchdLabel}.plist`);
+  path.join(os.homedir(), 'Library', 'LaunchAgents', `${LAUNCHD_LABEL}.plist`);
 const domain = () => `gui/${os.userInfo().uid}`;
 
 function escapeXml(value: string): string {
@@ -34,7 +36,7 @@ export function renderPlist(): string {
 <plist version="1.0">
   <dict>
     <key>Label</key>
-    <string>${config.launchdLabel}</string>
+    <string>${LAUNCHD_LABEL}</string>
     <key>ProgramArguments</key>
     <array>
 ${programArguments}
@@ -93,7 +95,7 @@ function bootstrapWithRetry(attempts = 5): void {
 
 export function checkIsLoaded(): boolean {
   try {
-    execFileSync('launchctl', ['print', `${domain()}/${config.launchdLabel}`], { stdio: 'pipe' });
+    execFileSync('launchctl', ['print', `${domain()}/${LAUNCHD_LABEL}`], { stdio: 'pipe' });
     return true;
   } catch {
     return false;
@@ -101,7 +103,7 @@ export function checkIsLoaded(): boolean {
 }
 
 export function stop(): void {
-  runLaunchctl(['bootout', `${domain()}/${config.launchdLabel}`], true);
+  runLaunchctl(['bootout', `${domain()}/${LAUNCHD_LABEL}`], true);
   waitUntilUnloaded();
 }
 
@@ -137,7 +139,7 @@ export function uninstall(): string {
 
 function printService(): string {
   try {
-    return execFileSync('launchctl', ['print', `${domain()}/${config.launchdLabel}`], {
+    return execFileSync('launchctl', ['print', `${domain()}/${LAUNCHD_LABEL}`], {
       stdio: 'pipe',
     }).toString();
   } catch {

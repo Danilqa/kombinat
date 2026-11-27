@@ -12,8 +12,6 @@ import { runTui } from 'tui';
 import { describeCron } from 'utils/cron';
 
 import { config, DEFAULT_PORT } from './config';
-import { getAgent, parseAccountName, parseAgentName } from './domains/agent/registry';
-import { getAccountFolder } from './domains/agent/settings';
 import { getRoutine, listRoutineFiles, loadRoutines } from './domains/routine/storage';
 import { getNextRun, listRoutineProblems } from './domains/routine/utils';
 import { replyToRun, runRoutine } from './domains/run/runner';
@@ -23,6 +21,7 @@ import { startSchedulerLoop } from './domains/scheduler/tick';
 import { connect } from './features/connect/connect';
 import { runInit } from './features/init/init';
 import { startKeepAwake } from './features/keep-awake/keep-awake';
+import { login } from './features/login/login';
 import { updateReadme } from './features/readme/readme';
 import {
   buildWebAppIfStale,
@@ -190,28 +189,10 @@ async function replyOne(name: string | undefined, runId: string | undefined): Pr
   console.log(JSON.stringify(record, null, 2));
 }
 
-async function login(name: string | undefined, options: CliOptions): Promise<void> {
+async function loginTo(name: string | undefined, options: CliOptions): Promise<void> {
   if (name === undefined)
     throw new Error('login needs an account name, for example login personal');
-  const account = parseAccountName(name);
-  const agent = getAgent(parseAgentName(options.agent));
-  const invocation = agent.buildLoginInvocation(account);
-  if (invocation === null) throw new Error(`agent ${agent.name} has no login`);
-  const folder = getAccountFolder(agent.accountHome, account);
-  // Codex refuses a CODEX_HOME that does not exist yet.
-  if (folder !== null) fs.mkdirSync(folder, { recursive: true });
-  const child = spawn(invocation.command, invocation.args, {
-    env: invocation.env,
-    stdio: 'inherit',
-  });
-  const exitCode = await new Promise<number>((resolve, reject) => {
-    child.on('error', reject);
-    child.on('close', code => resolve(code ?? 1));
-  });
-  if (exitCode === 0 && account !== null) {
-    console.log(`\nSigned in. Add "account: ${account}" to a routine to run it on this account.`);
-  }
-  process.exitCode = exitCode;
+  process.exitCode = await login(name, options.agent);
 }
 
 function serve(options: CliOptions): void {
@@ -352,7 +333,7 @@ async function main(): Promise<void> {
     })
     .with('tui', () => showTui(options))
     .with('connect', () => connectTo(name, options))
-    .with('login', () => login(name, options))
+    .with('login', () => loginTo(name, options))
     .with('list', listRoutines)
     .with('validate', validateRoutines)
     .with('readme', () =>

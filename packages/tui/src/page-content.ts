@@ -3,13 +3,13 @@ import type { RunId } from 'domains/run/ids';
 
 import type { Line } from './terminal/text';
 
-export interface OpenRunAction {
+interface OpenRunAction {
   kind: 'open-run';
   routine: RoutineName;
   id: RunId;
 }
 
-export interface ToggleAction {
+interface ToggleAction {
   kind: 'toggle';
   key: string;
 }
@@ -24,7 +24,7 @@ export interface ContentLine {
 }
 
 // select: the cursor jumps between lines with an action. scroll: no cursor. line: the cursor moves line by line.
-export type CursorMode = 'select' | 'scroll' | 'line';
+type CursorMode = 'select' | 'scroll' | 'line';
 
 export interface PageContent {
   lines: ContentLine[];

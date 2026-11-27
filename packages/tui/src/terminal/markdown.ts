@@ -5,7 +5,7 @@ const HEADING_STYLES = [S.boldMagenta, S.boldBlue, S.boldCyan, S.bold, S.bold, S
 
 const INLINE = /(\*\*[^*]+\*\*|__[^_]+__|`[^`]+`|\[[^\]]+\]\([^)\s]+\)|~~[^~]+~~)/g;
 
-export function renderInline(text: string, baseStyle?: string): Line {
+function renderInline(text: string, baseStyle?: string): Line {
   const spans: Line = [];
   const withBase = (style: string) => (baseStyle ? `${baseStyle};${style}` : style);
   const pushPlain = (value: string) =>

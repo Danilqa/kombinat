@@ -9,7 +9,7 @@ import { findDependencies } from '../../utils/package-manager';
 import { checkAreDepsStale, installDepsBeforeRestart, checkIsWebAppStale } from './reload';
 
 function makeRepo(): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ba-reload-'));
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'kombinat-reload-'));
   fs.mkdirSync(path.join(root, 'packages', 'web-app', 'src'), { recursive: true });
   fs.mkdirSync(path.join(root, 'packages', 'cli', 'dist', 'web-app'), { recursive: true });
   fs.mkdirSync(path.join(root, 'node_modules'), { recursive: true });

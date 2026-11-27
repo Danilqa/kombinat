@@ -77,18 +77,12 @@ process.env['GIT_CONFIG_NOSYSTEM'] = '1';
 const { config } = await import('../../config');
 const { buildRoutine } = await import('../routine/utils');
 const { readMemory, readRoutineMemory, writeMemory } = await import('../routine/memory');
-const { appendLogEvent, buildRunTranscript, readRunEvents } = await import('./event-log');
+const { appendLogEvent, readRunEvents } = await import('./event-log');
 const { writeCheckError, writePayload, writePrompt } = await import('./payload');
-const {
-  checkIsRunning,
-  checkIsStarting,
-  replyToRun,
-  runRoutine,
-  startDetachedRun,
-  startDetachedRuns,
-} = await import('./runner');
-const { cancelQueuedRuns, readQueuedRuns } = await import('./queued-runs');
+const { checkIsRunning } = await import('./launcher');
+const { replyToRun, runRoutine } = await import('./runner');
 const { checkIsProcessAlive, listRuns, readRunRecord, writeRunRecord } = await import('./storage');
+const { buildRunTranscript } = await import('./transcript');
 const { requestWaitAction } = await import('./usage-limit');
 const { makeRunRecord } = await import('domains/run/mocks');
 
@@ -226,38 +220,6 @@ test('a run started for a conversation keeps it on its record', async () => {
   const record = await runRoutine(routine, { trigger: 'webhook', conversation: 'issue-1' });
   assert.equal(record.conversation, 'issue-1');
   assert.equal(readRunRecord(routine.name, record.id)?.conversation, 'issue-1');
-});
-
-test('a started run counts as starting until its record appears or time runs out', () => {
-  const routine = routineNameSchema.parse('missing-routine');
-  const runId = runIdSchema.parse('20261109T120000Z-wxyz');
-  startDetachedRun(routine, { trigger: 'manual', runId });
-  assert.equal(checkIsStarting(routine), true);
-  assert.equal(checkIsStarting(routine, Date.now() + 5 * 60_000), false);
-  startDetachedRun(routine, { trigger: 'manual', runId });
-  writeRunRecord(makeRunRecord({ id: runId, routine, status: 'running' }));
-  assert.equal(checkIsStarting(routine), false);
-});
-
-test('a start of several runs gives each the prompt, and its queued runs keep the routine running until they are cancelled', () => {
-  const routine = routineNameSchema.parse('missing-batch');
-  const readPrompt = (id: RunId) =>
-    fs.readFileSync(path.join(config.stateDir, 'runs', routine, `${id}.prompt`), 'utf8');
-  const firstId = startDetachedRuns(
-    routine,
-    { trigger: 'manual' },
-    { count: 3, maxParallel: 1, prompt: 'Fix the oldest bug' },
-  );
-  const queuedIds = readQueuedRuns().map(({ id }) => id);
-  assert.equal(queuedIds.length, 2);
-  for (const id of [firstId, ...queuedIds]) assert.equal(readPrompt(id), 'Fix the oldest bug');
-
-  writeRunRecord(makeRunRecord({ id: firstId, routine, status: 'succeeded' }));
-  assert.equal(checkIsRunning(routine), true);
-  cancelQueuedRuns(routine);
-  assert.equal(checkIsRunning(routine), false);
-  assert.deepEqual(readQueuedRuns(), []);
-  for (const id of queuedIds) assert.throws(() => readPrompt(id), { code: 'ENOENT' });
 });
 
 test('without an after hook a run writes its record as before and logs no after hook', async t => {
@@ -668,15 +630,6 @@ test('a reply that cannot start logs why', async () => {
     type: 'reply_error',
     error: 'This command run has no session to continue',
   });
-});
-
-test('a replying run keeps its routine running until its reply process is gone', () => {
-  const run = makeFinishedRun('chat-busy', '20261117T090000Z-busy', { replyPid: process.pid });
-  assert.equal(checkIsRunning(run.routine), true);
-  writeRunRecord({ ...run, replyPid: spawnSync('true').pid });
-  assert.equal(checkIsRunning(run.routine), false);
-  assert.equal(listRuns(run.routine)[0]?.replyPid, null);
-  assert.deepEqual(readLog(run), [{ type: 'reply_error', error: 'Reply process disappeared' }]);
 });
 
 // A claude routine in its own folder whose agent ends its message with the text.

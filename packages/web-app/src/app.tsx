@@ -1,15 +1,15 @@
 import { useLocation } from 'react-router';
-import { UpdateCard } from 'domains/release/components';
 import { AppProviders } from '@web-app/app-providers';
 import { AppRoutes } from '@web-app/app-routes';
-import { AppFooter } from '@web-app/components/app-footer';
-import { AppHeader } from '@web-app/components/app-header';
-import { useCustomization, type Customization } from '@web-app/contexts';
+import { useCustomization, type Customization } from '@web-app/customization';
+import { useLiveUpdates } from '@web-app/domains/daemon/queries';
+import { useInbox } from '@web-app/domains/inbox/queries';
+import { useRunNotifications } from '@web-app/domains/inbox/use-run-notifications';
+import { UpdateCard } from '@web-app/domains/release/update-card';
 import { useAppBadge } from '@web-app/hooks/use-app-badge';
 import { useFocusMainOnNavigate } from '@web-app/hooks/use-focus-main-on-navigate';
-import { useInbox } from '@web-app/hooks/use-inbox';
-import { useLiveUpdates } from '@web-app/hooks/use-live-updates';
-import { useRunNotifications } from '@web-app/hooks/use-run-notifications';
+import { AppFooter } from '@web-app/layout/app-footer';
+import { AppHeader } from '@web-app/layout/app-header';
 
 const MAIN_ID = 'main';
 
@@ -32,7 +32,7 @@ function AppLayout() {
         <main
           id={MAIN_ID}
           tabIndex={-1}
-          className="mx-auto max-w-[1180px] px-4 outline-none focus-visible:shadow-none sm:px-6"
+          className="mx-auto max-w-page px-4 outline-none focus-visible:shadow-none sm:px-6"
         >
           <div key={pathname} className="animate-in duration-150 ease-out-quint fade-in">
             <AppRoutes />

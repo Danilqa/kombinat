@@ -17,14 +17,16 @@ export function getRunsDir(routine: RoutineName): string {
   return path.join(config.stateDir, 'runs', routine);
 }
 
+export function getRunLogFile(routine: RoutineName, id: RunId): string {
+  return path.join(getRunsDir(routine), `${id}.jsonl`);
+}
+
 export function ensureStateDirs(): void {
   fs.mkdirSync(path.join(config.stateDir, 'runs'), { recursive: true });
 }
 
 export function writeRunRecord(record: RunRecord): void {
-  const dir = getRunsDir(record.routine);
-  fs.mkdirSync(dir, { recursive: true });
-  writeJsonFile(path.join(dir, `${record.id}.json`), record);
+  writeJsonFile(path.join(getRunsDir(record.routine), `${record.id}.json`), record);
 }
 
 export function readRunRecord(routine: RoutineName, id: RunId): RunRecord | null {

@@ -7,7 +7,6 @@ import { z } from 'zod';
 import { GITHUB_REPO_URL } from 'domains/release/constants';
 
 import { config, DEFAULT_PORT, PACKAGE_NAME } from '../../config';
-import { EXAMPLE_ROUTINES, HELLO_EXAMPLE_ROUTINE } from '../../domains/routine/examples';
 import { listRoutineFiles, loadRoutines } from '../../domains/routine/storage';
 import { readJsonFile } from '../../utils/json';
 import { detectPackageManager, findDependencies } from '../../utils/package-manager';
@@ -20,7 +19,8 @@ import {
   quoteShellArg,
   runInstall,
 } from './commands';
-import type { Installer, ShellCommand } from './commands';
+import type { Installer, InstallCommand } from './commands';
+import { EXAMPLE_ROUTINES, HELLO_EXAMPLE_ROUTINE } from './examples';
 
 export interface InitOptions {
   install: boolean;
@@ -32,17 +32,17 @@ export interface InitOptions {
 
 interface InstallDone {
   status: 'installed';
-  command: ShellCommand;
+  command: InstallCommand;
 }
 
 interface InstallSkipped {
   status: 'skipped';
-  command: ShellCommand;
+  command: InstallCommand;
 }
 
 interface InstallFailed {
   status: 'failed';
-  command: ShellCommand;
+  command: InstallCommand;
   error: string;
 }
 
@@ -50,9 +50,9 @@ interface InstallNotNeeded {
   status: 'already_installed';
 }
 
-export type InstallStep = InstallDone | InstallSkipped | InstallFailed | InstallNotNeeded;
+type InstallStep = InstallDone | InstallSkipped | InstallFailed | InstallNotNeeded;
 
-export interface InitResult {
+interface InitResult {
   folder: string;
   manager: PackageManager;
   created: string[];
@@ -115,7 +115,7 @@ function planInstall(
   hadPackageJson: boolean,
   manager: PackageManager,
   version: string | undefined,
-): ShellCommand | null {
+): InstallCommand | null {
   if (!hadPackageJson) return getInstallCommand(manager, null);
   if (!checkListsKombinat(path.join(folder, 'package.json'))) {
     return getInstallCommand(manager, `${PACKAGE_NAME}@${getVersionSpec(version)}`);

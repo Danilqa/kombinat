@@ -3,8 +3,8 @@ import type { RoutineName } from 'domains/routine/ids';
 import type { RoutineTemplate } from 'domains/routine/types';
 
 import { HOME } from './constants';
-import type { DemoRoutine } from './routines';
-import { init, text } from './transcript';
+import { init, text } from './sample/steps';
+import type { DemoRoutine } from './sample/types';
 
 export interface DemoTemplateChoices {
   name: RoutineName;

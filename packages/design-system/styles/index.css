@@ -1,8 +1,10 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
-@plugin "@tailwindcss/typography";
+@plugin '@tailwindcss/typography';
 /* Apps scan only their own folder for class names. */
 @source '..';
+/* utils.ts lists token names for tailwind-merge, and some of them read as classes. */
+@source not '../utils.ts';
 
 @custom-variant dark (&:is(.dark *));
 /* Matches controls that can be used: neither disabled nor aria-disabled (which stays focusable). */
@@ -58,10 +60,6 @@
   --font-size-caption: 11px;
   --line-height-caption: 14px;
 
-  --popover-shadow-value: 0 12px 32px -8px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--line);
-  --focus-ring-value: 0 0 0 1px var(--page), 0 0 0 3px rgba(255, 255, 255, 0.5);
-  --ease-out-quint-value: cubic-bezier(0.22, 1, 0.36, 1);
-
   --background: var(--page);
   --foreground: var(--fg);
   --card: var(--surface);
@@ -99,7 +97,8 @@
   }
 }
 
-@theme inline {
+/* Tokens with a value of their own. Utilities read them through their variable. */
+@theme {
   --spacing: 4px;
   --radius-xs: 2px;
   --radius-sm: 4px;
@@ -108,90 +107,24 @@
   --radius-xl: 12px;
   --radius-2xl: 16px;
 
-  --color-page: var(--page);
-  --color-surface: var(--surface);
-  --color-raised: var(--raised);
-  --color-overlay: var(--overlay);
-  --color-hover: var(--hover);
-  --color-pressed: var(--pressed);
-  --color-line-faint: var(--line-faint);
-  --color-line: var(--line);
-  --color-line-strong: var(--line-strong);
-  --color-fg: var(--fg);
-  --color-fg-prose: var(--fg-prose);
-  --color-fg-secondary: var(--fg-secondary);
-  --color-fg-muted: var(--fg-muted);
-  --color-fg-faint: var(--fg-faint);
-  --color-positive: var(--positive);
-  --color-positive-soft: var(--positive-soft);
-  --color-negative: var(--negative);
-  --color-negative-soft: var(--negative-soft);
-  --color-warning: var(--warning);
-  --color-warning-soft: var(--warning-soft);
-  --color-info: var(--info);
-  --color-info-soft: var(--info-soft);
-  --color-neutral-soft: var(--neutral-soft);
-  --color-positive-tint: var(--positive-tint);
-  --color-negative-tint: var(--negative-tint);
-  --color-warning-tint: var(--warning-tint);
-  --color-info-tint: var(--info-tint);
-  --color-neutral-tint: var(--neutral-tint);
+  --container-page: 1180px;
 
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-
-  --shadow-popover: var(--popover-shadow-value);
-  --shadow-focus: var(--focus-ring-value);
+  --color-brand-violet: #b9a8ff;
+  --color-brand-pink: #e3a7c9;
+  --color-brand-peach: #f5b08a;
 
   --font-sans: 'Geist', -apple-system, 'Helvetica Neue', Arial, sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
-  --text-title-lg: var(--font-size-title-lg);
-  --text-title-lg--line-height: var(--line-height-title-lg);
-  --text-title-lg--font-weight: 600;
-  --text-title-lg--letter-spacing: -0.015em;
-  --text-title-md: var(--font-size-title-md);
-  --text-title-md--line-height: var(--line-height-title-md);
-  --text-title-md--font-weight: 600;
-  --text-title-md--letter-spacing: -0.01em;
-  --text-title-sm: var(--font-size-title-sm);
-  --text-title-sm--line-height: var(--line-height-title-sm);
-  --text-title-sm--font-weight: 600;
-  --text-body: var(--font-size-body);
-  --text-body--line-height: var(--line-height-body);
-  --text-body--font-weight: 400;
-  --text-body-sm: var(--font-size-body-sm);
-  --text-body-sm--line-height: var(--line-height-body-sm);
-  --text-body-sm--font-weight: 400;
-  --text-caption: var(--font-size-caption);
-  --text-caption--line-height: var(--line-height-caption);
-  --text-caption--font-weight: 500;
   --text-nav: 13px;
   --text-nav--line-height: 20px;
   --text-nav-sm: 12px;
   --text-nav-sm--line-height: 16px;
 
-  --ease-out-quint: var(--ease-out-quint-value);
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
 
   --animate-soft-pulse: soft-pulse 2s ease-in-out infinite;
   --animate-smoke-drift: smoke-drift 3.6s linear infinite;
-  --animate-status-pop: status-pop 0.45s var(--ease-out-quint-value);
 
   @keyframes status-pop {
     0% {
@@ -255,6 +188,89 @@
   }
 }
 
+/* Tokens that point at another variable. Inline puts that variable into the utility itself. */
+@theme inline {
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-overlay: var(--overlay);
+  --color-hover: var(--hover);
+  --color-pressed: var(--pressed);
+  --color-line-faint: var(--line-faint);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--fg);
+  --color-fg-prose: var(--fg-prose);
+  --color-fg-secondary: var(--fg-secondary);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-faint: var(--fg-faint);
+  --color-positive: var(--positive);
+  --color-positive-soft: var(--positive-soft);
+  --color-negative: var(--negative);
+  --color-negative-soft: var(--negative-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-neutral-soft: var(--neutral-soft);
+  --color-positive-tint: var(--positive-tint);
+  --color-negative-tint: var(--negative-tint);
+  --color-warning-tint: var(--warning-tint);
+  --color-info-tint: var(--info-tint);
+  --color-neutral-tint: var(--neutral-tint);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --shadow-popover: 0 12px 32px -8px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--line);
+  --shadow-focus: 0 0 0 1px var(--page), 0 0 0 3px rgba(255, 255, 255, 0.5);
+  --shadow-stripe-positive: inset 2px 0 0 var(--positive);
+  --shadow-stripe-negative: inset 2px 0 0 var(--negative);
+  --shadow-stripe-warning: inset 2px 0 0 var(--warning);
+  --shadow-stripe-info: inset 2px 0 0 var(--info);
+  --shadow-stripe-neutral: inset 2px 0 0 var(--fg-faint);
+  --shadow-outline-negative: 0 0 0 1.5px var(--negative);
+
+  --text-title-lg: var(--font-size-title-lg);
+  --text-title-lg--line-height: var(--line-height-title-lg);
+  --text-title-lg--font-weight: 600;
+  --text-title-lg--letter-spacing: -0.015em;
+  --text-title-md: var(--font-size-title-md);
+  --text-title-md--line-height: var(--line-height-title-md);
+  --text-title-md--font-weight: 600;
+  --text-title-md--letter-spacing: -0.01em;
+  --text-title-sm: var(--font-size-title-sm);
+  --text-title-sm--line-height: var(--line-height-title-sm);
+  --text-title-sm--font-weight: 600;
+  --text-body: var(--font-size-body);
+  --text-body--line-height: var(--line-height-body);
+  --text-body--font-weight: 400;
+  --text-body-sm: var(--font-size-body-sm);
+  --text-body-sm--line-height: var(--line-height-body-sm);
+  --text-body-sm--font-weight: 400;
+  --text-caption: var(--font-size-caption);
+  --text-caption--line-height: var(--line-height-caption);
+  --text-caption--font-weight: 500;
+
+  --animate-status-pop: status-pop 0.45s var(--ease-out-quint);
+}
+
 @layer base {
   * {
     @apply border-border;
@@ -276,7 +292,7 @@
   }
   :focus-visible {
     outline: none;
-    box-shadow: var(--focus-ring-value);
+    box-shadow: var(--shadow-focus);
   }
   ::selection {
     background: rgba(107, 156, 255, 0.35);
@@ -334,23 +350,23 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: --spacing(1.5);
     width: max-content;
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
   }
   .chip-medium {
-    height: calc(var(--line-height-body-sm) + 6px);
-    padding: 0 8px;
-    border-radius: 6px;
+    height: calc(var(--line-height-body-sm) + --spacing(1.5));
+    padding: 0 --spacing(2);
+    border-radius: var(--radius-md);
     font-size: var(--font-size-body-sm);
     line-height: var(--line-height-body-sm);
     font-weight: 500;
   }
   .chip-small {
-    height: calc(var(--line-height-caption) + 6px);
-    padding: 0 6px;
-    border-radius: 4px;
+    height: calc(var(--line-height-caption) + --spacing(1.5));
+    padding: 0 --spacing(1.5);
+    border-radius: var(--radius-sm);
     font-size: var(--font-size-caption);
     line-height: var(--line-height-caption);
     font-weight: 500;
@@ -399,6 +415,12 @@
     var(--app-header-height, 0px) + var(--page-header-height, 0px) +
       var(--section-header-height, 0px)
   );
+}
+
+/* A touch target on phones is 44px. The ::after reaches 8px past a 28px control on every side, so
+   the control answers taps there while its row stays as short as on desktop. */
+@utility tap-area {
+  @apply relative max-sm:after:absolute max-sm:after:-inset-2;
 }
 
 /* Turns the drawing inside the icon instead of the icon's box: a turning box that sits between

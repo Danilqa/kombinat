@@ -30,7 +30,10 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   time: [time, { scope: 'worker' }],
   kombinat: [
     async ({ daemon }, use) => {
-      await use(createKombinat(daemon.root));
+      const kombinat = createKombinat(daemon.root, daemon.url);
+      await use(kombinat);
+      // A run that a test started would otherwise end in the state of the next test.
+      await kombinat.waitForStartedRuns();
     },
     { auto: true },
   ],

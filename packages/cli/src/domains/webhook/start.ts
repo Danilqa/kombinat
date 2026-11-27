@@ -4,7 +4,7 @@ import type { RunRecord } from 'domains/run/types';
 import { checkCanContinueRun, checkIsRunActive } from 'domains/run/utils';
 
 import { writePayload } from '../run/payload';
-import { findStartingConversationRun, startDetachedReply, startDetachedRun } from '../run/runner';
+import { findStartingConversationRun, startDetachedReply, startDetachedRun } from '../run/launcher';
 import { listRuns } from '../run/storage';
 import { findQueuedConversation } from './queue';
 import type { WebhookRun } from './queue';

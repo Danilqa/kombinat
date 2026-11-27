@@ -4,7 +4,8 @@ import { CLAUDE_MODELS } from 'domains/agent/constants';
 import type { AccountName } from 'domains/agent/ids';
 import type { AgentOption } from 'domains/agent/types';
 import { checkHasAccount, listAccounts } from 'domains/agent/utils';
-import { buildCalendar } from 'domains/calendar/utils';
+import { CALENDAR_RANGE_ERROR } from 'domains/calendar/constants';
+import { buildCalendar, parseCalendarRange } from 'domains/calendar/utils';
 import type { AccountStatus, DaemonStatus, PlanUsage } from 'domains/daemon/types';
 import { NOTIFY_LEVELS } from 'domains/inbox/constants';
 import { markReadRequestSchema, notifyRequestSchema } from 'domains/inbox/schemas';
@@ -62,14 +63,9 @@ import { describeCron, nextCronRun } from 'utils/cron';
 
 import { HOME, STATE_DIR } from './constants';
 import { createDemoHistory } from './history';
-import {
-  demoRoutines,
-  PERSONAL,
-  WORK,
-  type DemoQueuedWebhook,
-  type DemoRoutine,
-  type DemoWebhookCall,
-} from './routines';
+import { demoRoutines } from './sample';
+import { PERSONAL, WORK } from './sample/shared';
+import type { DemoQueuedWebhook, DemoRoutine, DemoWebhookCall } from './sample/types';
 import { toTemplateRoutine } from './templates';
 
 export interface ApiResponse {
@@ -83,7 +79,6 @@ export interface DemoApi {
   respond(method: string, url: URL, body: string, now?: Date): ApiResponse;
 }
 
-const MAX_CALENDAR_DAYS = 32;
 const DAEMON_UPTIME_MS = (3 * 24 + 4) * 3_600_000;
 const TICK_MS = 30_000;
 const MINUTE_MS = 60_000;
@@ -624,17 +619,9 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
   }
 
   function getCalendar(url: URL, now: Date): ApiResponse {
-    const from = new Date(url.searchParams.get('from') ?? '');
-    const to = new Date(url.searchParams.get('to') ?? '');
-    const isValid =
-      !Number.isNaN(from.getTime()) &&
-      !Number.isNaN(to.getTime()) &&
-      to > from &&
-      to.getTime() - from.getTime() <= MAX_CALENDAR_DAYS * 86_400_000;
-    if (!isValid) {
-      return fail(400, `from and to must be ISO dates spanning at most ${MAX_CALENDAR_DAYS} days`);
-    }
-    return ok(buildCalendar(routines, listRuns(now), oneTimeRuns, from, to, now));
+    const range = parseCalendarRange(url.searchParams);
+    if (range === null) return fail(400, CALENDAR_RANGE_ERROR);
+    return ok(buildCalendar(routines, listRuns(now), oneTimeRuns, range.from, range.to, now));
   }
 
   function updateSettings(body: string): ApiResponse {

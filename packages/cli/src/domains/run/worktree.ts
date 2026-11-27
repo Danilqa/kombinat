@@ -30,7 +30,7 @@ interface KeptWorktree {
   outcome: 'has_changes';
 }
 
-export type WorktreeRemoval = RemovedWorktree | KeptWorktree;
+type WorktreeRemoval = RemovedWorktree | KeptWorktree;
 
 async function git(cwd: string, args: string[], timeout = GIT_TIMEOUT_MS): Promise<string> {
   try {
@@ -59,7 +59,7 @@ async function tryGit(cwd: string, args: string[], timeout?: number): Promise<st
 
 const splitNul = (output: string): string[] => output.split('\0').filter(Boolean);
 
-export function getWorktreePath(routine: RoutineName, id: RunId): string {
+function getWorktreePath(routine: RoutineName, id: RunId): string {
   return path.join(config.stateDir, 'worktrees', routine, id);
 }
 

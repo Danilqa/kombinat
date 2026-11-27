@@ -3,10 +3,10 @@ import { createRoot } from 'react-dom/client';
 import { App } from 'web-app/app';
 import { CHANGELOG_PATH } from './constants';
 import { installDemoApi } from './demo-api/install';
-import { ChangelogPage } from './features/changelog/changelog-page';
 import { SiteFooter } from './layout/site-footer';
 import { StarBar } from './layout/star-bar';
-import { WelcomeBanner } from './features/welcome/welcome-banner';
+import { WelcomeBanner } from './layout/welcome-banner';
+import { ChangelogPage } from './pages/changelog';
 import './index.css';
 
 installDemoApi();
