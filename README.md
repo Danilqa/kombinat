@@ -125,6 +125,13 @@ timeoutMinutes: 55
 
 To start from a ready routine instead, click New routine on the dashboard's Routines page, pick a template, set its name, folder and schedule, choose the agent and model, and change its prompt to fit your project. It writes the file for you. Commit it to keep it in git.
 
+To have Claude Code write routines for you, add the Kombinat plugin. Its skills write routines and webhook gates, find out why a run failed, review your routines and move your cron jobs over:
+
+```
+/plugin marketplace add Danilqa/kombinat
+/plugin install kombinat@kombinat
+```
+
 - `name` must match the file name.
 - `schedule` is a 5-field cron in local time, or `manual` to run only on demand.
 - `cwd` is where the agent starts.

@@ -15,6 +15,7 @@ Kombinat runs routines, markdown files in `routines/`, with AI agents on a sched
 | `utils`         | Business-agnostic helpers that more than one package uses: api, error, date-time, cron and search                                                                                    |
 | `e2e`           | Playwright config and fixtures. The specs live in `web-app` as `*.e2e.ts`, next to the page or component they cover                                                                  |
 | `promo`         | Source of the promo video and the README's dashboard GIF: scenes drawn with React, tours of the website and the scripts that record them, see [its README](packages/promo/README.md) |
+| `skills`        | The `kombinat` plugin for Claude Code, with the skills that teach an agent to work with Kombinat, see [its README](packages/skills/README.md)                                        |
 
 ## Package manager
 
@@ -89,6 +90,7 @@ packages/
     demo-api/                     The daemon's API, answered in the browser.
   promo/                          The promo video: src/ draws it, scripts/ record it.
   e2e/web-app/                    playwright.config.ts, index.ts and fixtures/.
+  skills/                         The Claude Code plugin: .claude-plugin/plugin.json and skills/<skill>/SKILL.md.
 ```
 
 ### A component folder
@@ -197,6 +199,12 @@ The domain map, definitions and invariants are in [packages/domains/README.md](p
 - Every component folder has a `<component>.stories.tsx`, titled `Components/<Component>`, and `styles/` has the token pages under `Foundations/`. A new component gets its stories too. Stories import components by relative path like the rest of the package, set `component` for the docs page of its props, and `subcomponents` for the parts of a namespace.
 - `pnpm --filter design-system storybook:build` builds the Storybook into `dist/`, which the website workflow publishes at `/design-system/`. The stylesheet leaves `.storybook/` and the stories out of the class scan of the apps, and `.storybook/preview.css` adds the stories back for Storybook alone. `.storybook/theme.ts` repeats the tokens for Storybook's own UI, which the stylesheet does not reach.
 - To add a shadcn component, run the shadcn CLI in `packages/design-system`, where `components.json` is; its aliases resolve through the tsconfig paths there. It writes `<name>.tsx` at the package root. Move it into `<name>/<name>.tsx` with an `index.ts`, rewrite the generated `design-system/...` imports to relative ones, such as `../utils`, name the props interfaces `<Function>Props`, end the file with an export block as described in Code style and add the folder to the root `index.ts`.
+
+### skills
+
+- `.claude-plugin/marketplace.json` at the repo root lists the plugin for `/plugin marketplace add`, and `packages/skills/.claude-plugin/plugin.json` describes it. Neither sets a version, so every commit is a new version of the plugin.
+- The skills repeat in short what the README and `docs/` say: `write-routines` the routine settings, `debug-runs` the statuses and errors of a run, `review-routines` what makes a routine costly or risky, `write-webhook-gates` the gate of `docs/webhook.md` and `migrate-to-routines` the cron syntax. A change to one of these goes into its skill too.
+- A skill is one `SKILL.md`, short and in simple English. An example in it must work as written, so validate a routine and run a script again after you change them.
 
 ## Code style
 

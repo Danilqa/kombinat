@@ -1,0 +1,10 @@
+{
+  "name": "kombinat",
+  "description": "Skills for Kombinat, such as writing routines",
+  "author": {
+    "name": "Daniil Sitdikov"
+  },
+  "homepage": "https://github.com/Danilqa/kombinat",
+  "repository": "https://github.com/Danilqa/kombinat",
+  "license": "MIT"
+}

@@ -1,0 +1,14 @@
+{
+  "name": "kombinat",
+  "description": "The Kombinat plugin for Claude Code",
+  "owner": {
+    "name": "Daniil Sitdikov"
+  },
+  "plugins": [
+    {
+      "name": "kombinat",
+      "source": "./packages/skills",
+      "description": "Skills for Kombinat, such as writing routines"
+    }
+  ]
+}
