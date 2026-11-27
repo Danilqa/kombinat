@@ -2,7 +2,7 @@
 
 > 🏃‍♀️ Run AI agents on a schedule or webhook, from markdown files in your repo. On your Mac or Linux machine, with the plan you already pay for.
 
-[Live demo](https://kombinat.tech/) · [80-second video](https://www.youtube.com/watch?v=P6f0QCEyr68) · [Quickstart](#-quickstart) · ⭐ [Star on GitHub](https://github.com/Danilqa/kombinat)
+[Live demo](https://kombinat.tech/) · [80-second video](https://www.youtube.com/watch?v=P6f0QCEyr68) · [Quickstart](#-quickstart) · [Design system](https://kombinat.tech/design-system/) · ⭐ [Star on GitHub](https://github.com/Danilqa/kombinat)
 
 ## ✨ Features
 
