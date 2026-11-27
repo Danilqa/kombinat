@@ -158,7 +158,7 @@ function readAgentSettings(data: Frontmatter, agent: AgentName): AgentSettings {
     maxBudgetTokens: readTokenCount(data, 'maxBudgetTokens'),
     onUsageLimit: readString(data, 'onUsageLimit'),
     account: parseAccountName(readString(data, 'account') ?? PRIMARY_ACCOUNT),
-    agentCanFail: readBoolean(data, 'agentCanFail') ?? false,
+    onAgentGiveUp: readString(data, 'onAgentGiveUp'),
   });
 }
 

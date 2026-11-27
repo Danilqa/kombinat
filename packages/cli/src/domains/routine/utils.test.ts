@@ -265,17 +265,23 @@ test('a claude routine can name fallback models', () => {
   );
 });
 
-test('a claude routine can let its agent fail the run', () => {
-  const canFail = (frontmatter: string) =>
-    buildRoutine('/tmp/demo.md', routineFile(frontmatter)).agentCanFail;
-  assert.equal(canFail('agentCanFail: true'), true);
-  assert.equal(canFail(''), false);
-  assert.equal(canFail('agent: codex\nagentCanFail: false'), false);
-  assert.throws(() => canFail('agentCanFail: yes'), /agentCanFail must be true or false/);
-  assert.throws(() => canFail('agent: codex\nagentCanFail: true'), /does not support agentCanFail/);
+test('a claude routine can fail the run when its agent gives up', () => {
+  const readGiveUp = (frontmatter: string) =>
+    buildRoutine('/tmp/demo.md', routineFile(frontmatter)).onAgentGiveUp;
+  assert.equal(readGiveUp('onAgentGiveUp: fail'), 'fail');
+  assert.equal(readGiveUp(''), 'succeed');
+  assert.equal(readGiveUp('agent: codex'), null);
   assert.throws(
-    () => canFail('agent: command\ncommand: echo hi\nagentCanFail: true'),
-    /does not support agentCanFail/,
+    () => readGiveUp('onAgentGiveUp: stop'),
+    /onAgentGiveUp must be one of succeed, fail/,
+  );
+  assert.throws(
+    () => readGiveUp('agent: codex\nonAgentGiveUp: fail'),
+    /does not support onAgentGiveUp/,
+  );
+  assert.throws(
+    () => readGiveUp('agent: command\ncommand: echo hi\nonAgentGiveUp: fail'),
+    /does not support onAgentGiveUp/,
   );
 });
 

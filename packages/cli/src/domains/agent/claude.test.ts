@@ -264,6 +264,18 @@ test('waits out usage limits unless the routine says fail', () => {
   );
 });
 
+test('a run succeeds when its agent gives up, unless the routine says fail', () => {
+  assert.equal(claudeAgent.resolveSettings(makeAgentTask()).onAgentGiveUp, 'succeed');
+  assert.equal(
+    claudeAgent.resolveSettings(makeAgentTask({ onAgentGiveUp: 'fail' })).onAgentGiveUp,
+    'fail',
+  );
+  assert.throws(
+    () => claudeAgent.resolveSettings(makeAgentTask({ onAgentGiveUp: 'retry' })),
+    /onAgentGiveUp must be one of succeed, fail/,
+  );
+});
+
 test('passes the routine settings to claude -p', () => {
   const { args, input, env } = claudeAgent.buildInvocation({
     routine: makeAgentTask({
@@ -413,9 +425,9 @@ const failedResult = {
   num_turns: 3,
 };
 
-test('a routine whose agent can fail asks claude -p for a status, in the run and in replies', () => {
+test('onAgentGiveUp: fail asks claude -p for a status, in the run and in replies', () => {
   const context = {
-    routine: makeAgentTask({ agentCanFail: true }),
+    routine: makeAgentTask({ onAgentGiveUp: 'fail' }),
     runId: runIdSchema.parse('r1'),
     trigger: 'schedule' as const,
   };
@@ -440,12 +452,15 @@ test('a routine whose agent can fail asks claude -p for a status, in the run and
     }) ?? assert.fail('claude continues sessions');
   assert.equal(reply.args.includes('--json-schema'), true);
 
-  const plain = claudeAgent.buildInvocation({ ...context, routine: makeAgentTask() }).args;
+  const plain = claudeAgent.buildInvocation({
+    ...context,
+    routine: makeAgentTask({ onAgentGiveUp: 'succeed' }),
+  }).args;
   assert.equal(plain.includes('--json-schema'), false);
   assert.doesNotMatch(plain[plain.indexOf('--append-system-prompt') + 1] ?? '', /failed/);
 });
 
-test('a failed status fails the run with the answer as its error and no retry', () => {
+test('an agent that gives up fails the run with its answer as the error and no retry', () => {
   const record = makeRunRecord();
   const answer = 'The query failed: column d.ocr_data does not exist.';
   assert.deepEqual(claudeAgent.readEvent(failedResult, record), {
@@ -456,7 +471,7 @@ test('a failed status fails the run with the answer as its error and no retry', 
     tokens: null,
     error: answer,
   });
-  assert.equal(claudeAgent.checkIsFailedByAgent([failedResult]), true);
+  assert.equal(claudeAgent.checkHasAgentGivenUp([failedResult]), true);
 
   const succeeded = {
     ...failedResult,
@@ -466,8 +481,8 @@ test('a failed status fails the run with the answer as its error and no retry', 
   const update = claudeAgent.readEvent(succeeded, record);
   assert.equal(update.resultText, 'Tagged 3 alerts.');
   assert.equal(update.error, undefined);
-  assert.equal(claudeAgent.checkIsFailedByAgent([succeeded]), false);
-  assert.equal(claudeAgent.checkIsFailedByAgent(events), false);
+  assert.equal(claudeAgent.checkHasAgentGivenUp([succeeded]), false);
+  assert.equal(claudeAgent.checkHasAgentGivenUp(events), false);
 });
 
 test('the transcript shows the status answer as the result, without its tool call', () => {

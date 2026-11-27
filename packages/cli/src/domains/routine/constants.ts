@@ -13,7 +13,7 @@ export const ROUTINE_SETTINGS = [
   'maxBudgetUsd',
   'maxBudgetTokens',
   'onUsageLimit',
-  'agentCanFail',
+  'onAgentGiveUp',
   'enabled',
   'webhook',
   'webhookGate',

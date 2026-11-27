@@ -34,7 +34,7 @@ export function rejectUnsupported(
   fields: ReadonlyArray<keyof AgentSettings>,
   agent: AgentName,
 ): void {
-  const used = fields.filter(field => raw[field] !== null && raw[field] !== false);
+  const used = fields.filter(field => raw[field] !== null);
   if (used.length > 0) throw new Error(`agent ${agent} does not support ${used.join(', ')}`);
 }
 

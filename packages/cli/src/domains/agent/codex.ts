@@ -238,7 +238,7 @@ export const codexAgent: Agent = {
         'maxBudgetUsd',
         'maxBudgetTokens',
         'onUsageLimit',
-        'agentCanFail',
+        'onAgentGiveUp',
       ],
       'codex',
     );
@@ -311,7 +311,7 @@ export const codexAgent: Agent = {
   readCallTokens: () => null,
   findUsageLimitStop: () => null,
   checkIsStoppedByBudget: () => false,
-  checkIsFailedByAgent: () => false,
+  checkHasAgentGivenUp: () => false,
   readBlockedActions: () => [],
 
   buildTranscript(events) {

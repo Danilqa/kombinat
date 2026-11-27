@@ -29,6 +29,7 @@ const DEFAULT_EFFORT = 'high';
 const DEFAULT_PERMISSION_MODE = 'auto';
 const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
 const USAGE_LIMIT_POLICIES = ['wait', 'fail'] as const;
+const GIVE_UP_POLICIES = ['succeed', 'fail'] as const;
 const PERMISSION_MODES = [
   'auto',
   'acceptEdits',
@@ -61,11 +62,11 @@ const agentOutcomeSchema = z.object({
 });
 type AgentOutcome = z.infer<typeof agentOutcomeSchema>;
 
-// Claude Code's validator knows draft-07 but not the draft 2020-12 that zod writes by default.
+// Claude Code rejects the draft 2020-12 schema that zod writes by default.
 const AGENT_OUTCOME_JSON_SCHEMA = JSON.stringify(
   z.toJSONSchema(agentOutcomeSchema, { target: 'draft-07' }),
 );
-const AGENT_CAN_FAIL_NOTE =
+const GIVE_UP_NOTE =
   'Your answer has a status. When you could not do what the prompt asks, set it to failed and say why, so the run shows as failed.';
 
 // Claude Code keeps a separate login in each config folder.
@@ -292,17 +293,20 @@ function toItems(
         ),
       ),
     )
-    .with({ type: 'result' }, (result): TranscriptItem[] => [
-      {
-        kind: 'result',
-        key: `result-${index}`,
-        text: readOutcome(result)?.result ?? result.result ?? '',
-        isError: result.is_error === true || isMatching({ status: 'failed' }, readOutcome(result)),
-        costUsd: result.total_cost_usd ?? null,
-        numTurns: result.num_turns ?? null,
-        durationMs: result.duration_ms ?? null,
-      },
-    ])
+    .with({ type: 'result' }, (result): TranscriptItem[] => {
+      const outcome = readOutcome(result);
+      return [
+        {
+          kind: 'result',
+          key: `result-${index}`,
+          text: outcome?.result ?? result.result ?? '',
+          isError: result.is_error === true || isMatching({ status: 'failed' }, outcome),
+          costUsd: result.total_cost_usd ?? null,
+          numTurns: result.num_turns ?? null,
+          durationMs: result.duration_ms ?? null,
+        },
+      ];
+    })
     .otherwise(() => []);
 }
 
@@ -363,6 +367,7 @@ function toUsageLimitKind(rateLimitType: string | undefined): UsageLimitKind {
 function buildArgs(context: RunContext, note: string): string[] {
   const { routine } = context;
   const fallbackModels = splitModels(routine.fallbackModel);
+  const isFailingOnGiveUp = routine.onAgentGiveUp === 'fail';
   const args = [
     '-p',
     '--output-format',
@@ -379,11 +384,11 @@ function buildArgs(context: RunContext, note: string): string[] {
     '--name',
     `routine/${routine.name}/${context.runId}`,
     '--append-system-prompt',
-    routine.agentCanFail ? `${note} ${AGENT_CAN_FAIL_NOTE}` : note,
+    isFailingOnGiveUp ? `${note} ${GIVE_UP_NOTE}` : note,
   ];
   if (fallbackModels.length > 0) args.push('--fallback-model', fallbackModels.join(','));
   if (routine.maxBudgetUsd !== null) args.push('--max-budget-usd', String(routine.maxBudgetUsd));
-  if (routine.agentCanFail) args.push('--json-schema', AGENT_OUTCOME_JSON_SCHEMA);
+  if (isFailingOnGiveUp) args.push('--json-schema', AGENT_OUTCOME_JSON_SCHEMA);
   return args;
 }
 
@@ -406,6 +411,8 @@ export const claudeAgent: Agent = {
         DEFAULT_PERMISSION_MODE,
       onUsageLimit:
         pickOne(raw.onUsageLimit, USAGE_LIMIT_POLICIES, 'onUsageLimit', 'claude') ?? 'wait',
+      onAgentGiveUp:
+        pickOne(raw.onAgentGiveUp, GIVE_UP_POLICIES, 'onAgentGiveUp', 'claude') ?? 'succeed',
     };
   },
 
@@ -506,7 +513,7 @@ export const claudeAgent: Agent = {
     return result?.subtype === 'error_max_budget_usd';
   },
 
-  checkIsFailedByAgent(events) {
+  checkHasAgentGivenUp(events) {
     const result = toClaudeEvents(events).findLast(event => event.type === 'result');
     return result !== undefined && isMatching({ status: 'failed' }, readOutcome(result));
   },
