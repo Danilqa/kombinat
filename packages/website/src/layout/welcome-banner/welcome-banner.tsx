@@ -17,12 +17,12 @@ import { CALENDAR_PATH, ROUTINES_PATH, RUNS_PATH, getRoutinePath } from 'web-app
 import { NPM_URL, REPO_URL } from '../../constants';
 import { demoRoutines } from '../../demo-api/sample';
 import { CodePanel } from './code-panel';
-import cyclops from './drawings/worker-cyclops.svg';
-import gears from './drawings/worker-gears.svg';
-import hardhat from './drawings/worker-hardhat.svg';
-import miner from './drawings/worker-miner.svg';
-import muffs from './drawings/worker-muffs.svg';
-import respirator from './drawings/worker-respirator.svg';
+import cyclops from './drawings/head-cyclops.svg';
+import gears from './drawings/head-gears.svg';
+import hardhat from './drawings/head-hardhat.svg';
+import miner from './drawings/head-miner.svg';
+import muffs from './drawings/head-muffs.svg';
+import respirator from './drawings/head-respirator.svg';
 import { WelcomeCard } from './welcome-card';
 import {
   AlertedWorker,

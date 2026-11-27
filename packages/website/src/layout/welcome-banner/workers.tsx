@@ -125,23 +125,7 @@ interface WorkerHeadProps {
   drawing: string;
 }
 
-// The head takes 260 by 215 of the drawing, from 25, 15.
+// A head is drawn 222 by 200 with its linework in the centre, so it lines up as an icon does.
 export function WorkerHead({ drawing }: WorkerHeadProps) {
-  return (
-    <span
-      aria-hidden="true"
-      className="relative block aspect-260/215 w-9 shrink-0 overflow-hidden sm:w-12"
-    >
-      <img
-        src={drawing}
-        alt=""
-        className="absolute max-w-none"
-        style={{
-          width: `${(300 / 260) * 100}%`,
-          left: `${(-25 / 260) * 100}%`,
-          top: `${(-15 / 215) * 100}%`,
-        }}
-      />
-    </span>
-  );
+  return <img src={drawing} alt="" className="aspect-111/100 w-8 shrink-0 sm:w-10.5" />;
 }
