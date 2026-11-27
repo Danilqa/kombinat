@@ -370,7 +370,7 @@ test('a chain is a problem when it names a missing routine or makes a loop', () 
   const names = ['review', 'notes', 'tidy', 'broken'].map(name => routineNameSchema.parse(name));
 
   assert.deepEqual(listChainProblems(routines, names), [
-    '/tmp/tidy.md: startsAfter names gone, but there is no routines/gone.md',
+    '/tmp/tidy.md: startsAfter names gone, but there is no routines/gone.md. Fix the name or add that routine',
     '/tmp/review.md, /tmp/notes.md: startsAfter makes a loop, notes → review → notes. Remove startsAfter from one of them',
   ]);
   assert.deepEqual(listChainProblems([chained('tidy', 'broken')], names), []);

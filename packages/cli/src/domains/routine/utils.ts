@@ -283,7 +283,9 @@ export function listChainProblems(routines: Routine[], names: RoutineName[]): st
   const missing = routines.flatMap(({ file, startsAfter }) =>
     startsAfter === null || names.includes(startsAfter)
       ? []
-      : [`${file}: startsAfter names ${startsAfter}, but there is no routines/${startsAfter}.md`],
+      : [
+          `${file}: startsAfter names ${startsAfter}, but there is no routines/${startsAfter}.md. Fix the name or add that routine`,
+        ],
   );
   const loops = listChainLoops(routines).map(loop => {
     const files = routines.filter(routine => loop.includes(routine.name)).map(({ file }) => file);

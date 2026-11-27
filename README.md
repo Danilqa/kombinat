@@ -174,7 +174,7 @@ startsWhen: succeeds
 ---
 ```
 
-`startsWhen` is `succeeds` (default), `fails`, `finishes`, which is either, or `has-findings`: the run succeeded and its result does not start with "No" or "Nothing", as the Inbox files it. The next run starts within 30 seconds and gets the result of the run before it below its prompt. A routine can keep its own `schedule` too.
+`startsWhen` is `succeeds` (default), `fails`, which also covers a run that timed out or was aborted, `finishes`, which is either, or `has-findings`: the run succeeded, nothing was blocked and its result does not start with "No" or "Nothing", as the Inbox files it. The next run starts within 30 seconds and gets the result of the run before it below its prompt. A routine can keep its own `schedule` too.
 
 - A run that ends while the next routine still runs makes it start once it is idle. Several such runs start it once, after the newest.
 - A disabled routine does not start. Only runs that end after you add `startsAfter` start the routine.
