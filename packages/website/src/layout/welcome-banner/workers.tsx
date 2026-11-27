@@ -26,6 +26,10 @@ const PEEK_CLASSES: Record<PeekSide, string> = {
 
 const POP_CLASS = 'group-data-active/slide:motion-safe:animate-worker-pop';
 
+// A slide comes into view before it is the active one, so its drawings wait out of sight until then.
+const SHOWN_WHILE_ACTIVE_CLASS =
+  'motion-safe:opacity-0 motion-safe:transition-opacity motion-safe:duration-150 group-data-active/slide:motion-safe:opacity-100';
+
 interface PeekingDrawingProps {
   drawing: string;
   shape: DrawingShape;
@@ -53,7 +57,7 @@ function PeekingDrawing({
       <img
         src={drawing}
         alt=""
-        className={cn('absolute max-w-none', PEEK_CLASSES[peeksFrom])}
+        className={cn('absolute max-w-none', SHOWN_WHILE_ACTIVE_CLASS, PEEK_CLASSES[peeksFrom])}
         style={{
           width,
           left: -width / 2,
@@ -106,7 +110,12 @@ export function Mark({ drawing, delay, className }: MarkProps) {
     <img
       src={drawing}
       alt=""
-      className={cn('absolute max-w-none -translate-1/2', POP_CLASS, className)}
+      className={cn(
+        'absolute max-w-none -translate-1/2',
+        SHOWN_WHILE_ACTIVE_CLASS,
+        POP_CLASS,
+        className,
+      )}
       style={{ animationDelay: `${delay}ms` }}
     />
   );
