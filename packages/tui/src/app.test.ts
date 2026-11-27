@@ -86,6 +86,8 @@ function makeRoutine(name: string, overrides: Partial<RoutineSummary> = {}): Rou
     lastSkip: null,
     tokenUsage: null,
     memory: false,
+    startsAfter: null,
+    startsWhen: null,
     ...overrides,
   };
 }
@@ -170,6 +172,7 @@ interface FakeOptions {
   webhookCalls?: RoutineDetail['webhookCalls'];
   memoryNotes?: RoutineDetail['memoryNotes'];
   queuedRuns?: RoutineDetail['queuedRuns'];
+  chain?: RoutineDetail['chain'];
 }
 
 function makeClient(overview: Overview, options: FakeOptions) {
@@ -206,6 +209,7 @@ function makeClient(overview: Overview, options: FakeOptions) {
         }),
         queuedRuns: options.queuedRuns ?? [],
         memoryNotes: options.memoryNotes ?? null,
+        chain: options.chain ?? [],
       };
       return Promise.resolve(detail);
     },
@@ -704,6 +708,33 @@ test('the routine page shows how many runs each start makes and the ones that wa
   const routineScreen = await press('enter');
   assert.match(routineScreen, /· 2 runs queued/);
   assert.match(routineScreen, /runs\s+3 each time, 2 at once/);
+  for (const line of app.render(60, 16)) assert.equal(lineWidth(line), 60);
+});
+
+test('the routine page names the routine it starts after and the ones it then runs', async () => {
+  const overview = makeOverview();
+  const smokeTest = routineNameSchema.parse('smoke-test');
+  const onCall = routineNameSchema.parse('on-call-monitoring');
+  const notes = routineNameSchema.parse('release-notes');
+  overview.routines = overview.routines.map(routine => ({
+    ...routine,
+    startsAfter: routine.name === onCall ? smokeTest : null,
+    startsWhen: routine.name === onCall ? 'fails' : null,
+  }));
+  const link = (name: typeof onCall, startsAfter: typeof onCall | null) => ({
+    name,
+    scheduleHuman: 'Manual',
+    startsAfter,
+    startsWhen: startsAfter === null ? null : ('has-findings' as const),
+    lastRun: null,
+  });
+  const { app, press } = await makeApp({
+    overview,
+    chain: [link(smokeTest, null), link(onCall, smokeTest), link(notes, onCall)],
+  });
+  const routineScreen = await press('enter');
+  assert.match(routineScreen, /after\s+smoke-test, when it fails/);
+  assert.match(routineScreen, /then\s+release-notes, when it has findings/);
   for (const line of app.render(60, 16)) assert.equal(lineWidth(line), 60);
 });
 

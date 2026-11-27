@@ -3,6 +3,8 @@ import path from 'node:path';
 
 import type { RoutineName } from 'domains/routine/ids';
 import type { RunId } from 'domains/run/ids';
+import type { RunRecord } from 'domains/run/types';
+import { getRunStatusLabel } from 'domains/run/utils';
 
 import { getRunsDir } from './storage';
 
@@ -49,13 +51,22 @@ export function takeCheckError(routine: RoutineName, runId: RunId): string | nul
   return takeInput(routine, runId, 'check-error');
 }
 
-// Longer than any backtick run in the payload, so the payload cannot close the fence.
+// Longer than any backtick run in the text. The text cannot close the fence.
+function fence(text: string): string {
+  const longestRun = (text.match(/`+/g) ?? []).reduce((max, run) => Math.max(max, run.length), 0);
+  const marks = '`'.repeat(Math.max(3, longestRun + 1));
+  return `${marks}\n${text.endsWith('\n') ? text : `${text}\n`}${marks}\n`;
+}
+
 export function appendPayload(prompt: string, payload: string): string {
-  const longestRun = (payload.match(/`+/g) ?? []).reduce(
-    (max, run) => Math.max(max, run.length),
-    0,
-  );
-  const fence = '`'.repeat(Math.max(3, longestRun + 1));
-  const body = payload.endsWith('\n') ? payload : `${payload}\n`;
-  return `${prompt}\n\nThis run was started by a webhook. Its request body:\n\n${fence}\n${body}${fence}\n`;
+  return `${prompt}\n\nThis run was started by a webhook. Its request body:\n\n${fence(payload)}`;
+}
+
+export function appendChainedRun(prompt: string, run: RunRecord): string {
+  const status = getRunStatusLabel(run.status).toLowerCase();
+  const intro = `${prompt}\n\nThis run started after run ${run.id} of ${run.routine} ended as ${status}.`;
+  const result = run.resultText ?? run.error;
+  return result === null || result.trim() === ''
+    ? `${intro} That run left no result.\n`
+    : `${intro} Its result:\n\n${fence(result)}`;
 }

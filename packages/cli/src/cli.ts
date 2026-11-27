@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
+import path from 'node:path';
 import { parseArgs } from 'node:util';
 
 import { isMatching, match } from 'ts-pattern';
@@ -13,7 +14,12 @@ import { describeCron } from 'utils/cron';
 
 import { config, DEFAULT_PORT } from './config';
 import { getRoutine, listRoutineFiles, loadRoutines } from './domains/routine/storage';
-import { getNextRun, listRoutineProblems } from './domains/routine/utils';
+import {
+  buildRoutine,
+  getNextRun,
+  listChainProblems,
+  listRoutineProblems,
+} from './domains/routine/utils';
 import { replyToRun, runRoutine } from './domains/run/runner';
 import { ensureStateDirs, listRuns, readRunRecord } from './domains/run/storage';
 import { readSchedulerState } from './domains/scheduler/storage';
@@ -46,8 +52,9 @@ const USAGE = `kombinat, run from the folder that holds routines/ (init, connect
                             routines with account: <account> run on its plan, for example
                             login personal; login primary signs in the machine's own account
   list                      show routines from ./routines with next run and last status
-  validate                  check every routine file: unknown settings, settings set twice
-                            and the first error in each file
+  validate                  check every routine file: unknown settings, settings set twice,
+                            the first error in each file and routines that start after a
+                            missing routine or in a loop
   readme                    regenerate the routines table in README.md
   run <name>                run one routine now in the foreground (what the scheduler spawns)
   reply <name> <run id>     continue the run's agent session with the last message sent to it
@@ -156,7 +163,19 @@ function listRoutines(): void {
 
 function validateRoutines(): void {
   const files = listRoutineFiles(config.routinesDir);
-  const problems = files.flatMap(file => listRoutineProblems(file, fs.readFileSync(file, 'utf8')));
+  const sources = files.map(file => ({ file, source: fs.readFileSync(file, 'utf8') }));
+  const routines = sources.flatMap(({ file, source }) => {
+    try {
+      return [buildRoutine(file, source)];
+    } catch {
+      return [];
+    }
+  });
+  const names = files.map(file => routineNameSchema.parse(path.basename(file, '.md')));
+  const problems = [
+    ...sources.flatMap(({ file, source }) => listRoutineProblems(file, source)),
+    ...listChainProblems(routines, names),
+  ];
   if (problems.length === 0) {
     console.log(`${files.length} routine(s) ok`);
     return;

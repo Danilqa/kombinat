@@ -4,6 +4,7 @@ import type { RoutineName } from '../routine/ids';
 import type { Transcript } from '../transcript/types';
 import type {
   blockedActionSchema,
+  chainConditionSchema,
   changedFileSchema,
   queuedRunSchema,
   runRecordSchema,
@@ -23,6 +24,7 @@ import type {
 } from './schemas';
 
 export type BlockedAction = z.infer<typeof blockedActionSchema>;
+export type ChainCondition = z.infer<typeof chainConditionSchema>;
 export type QueuedRun = z.infer<typeof queuedRunSchema>;
 export type RunStatus = z.infer<typeof runStatusSchema>;
 // The names are the variants of the design-system Badge, which draws a status in its tone.

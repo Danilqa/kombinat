@@ -15,7 +15,11 @@ import type {
   UsageLimitWaitAction,
 } from 'domains/run/types';
 import { RETRY_DELAY_MINUTES } from 'domains/run/constants';
-import { compareRunsByNewest, getWorktreeBranch } from 'domains/run/utils';
+import {
+  checkMeetsChainCondition,
+  compareRunsByNewest,
+  getWorktreeBranch,
+} from 'domains/run/utils';
 import { transcriptItemSchema } from 'domains/transcript/schemas';
 import type { Skip, SkipReason } from 'domains/scheduler/types';
 import type {
@@ -39,6 +43,8 @@ const DAY_MS = 86_400_000;
 const MAX_SKIPS = 50;
 // Short enough to watch a run started with Run now finish.
 const RUN_NOW_MINUTES = 0.5;
+// A chained routine starts at the first tick after the run before it ends.
+const CHAIN_DELAY_SECONDS = { min: 5, max: 30 };
 const REPLY_MS = 4000;
 const REPLY_TEXT =
   'This is the demo, so no agent runs here. On your machine, Kombinat resumes the session of this run with your message, and the reply streams into this transcript as the agent works.';
@@ -681,11 +687,43 @@ export function createDemoHistory(initialRoutines: DemoRoutine[], loadedAt: Date
     };
   }
 
+  function startAfter(routine: DemoRoutine, before: DemoRun, now: Date): DemoRun[] {
+    const endedAt = getEndTime(before, findPause(before));
+    const { status, resultText = null, blockedActions = [] } = before.outcome;
+    const isMet = checkMeetsChainCondition(
+      { status, resultText, blockedActions },
+      routine.startsWhen ?? 'succeeds',
+    );
+    if (endedAt > now.getTime() || !isMet) return [];
+    const random = createRandom(`${routine.name}:chain:${before.routine.name}:${before.id}`);
+    const delaySeconds = randomInt(random, CHAIN_DELAY_SECONDS.min, CHAIN_DELAY_SECONDS.max);
+    const startedAt = new Date(endedAt + delaySeconds * 1000);
+    if (startedAt > now) return [];
+    return [createRun(routine, pickOutcome(routine, random), 'chain', null, startedAt, random)];
+  }
+
+  // Each pass starts the routines after the runs of the pass before, one step of the chains at a time.
+  function listChainedRuns(runs: DemoRun[], now: Date): DemoRun[] {
+    const chained: DemoRun[] = [];
+    let added = runs;
+    for (let step = 0; step < routines.length && added.length > 0; step++) {
+      const previous = added;
+      added = routines.flatMap(routine =>
+        previous
+          .filter(run => run.routine.name === routine.startsAfter)
+          .flatMap(run => startAfter(routine, run, now)),
+      );
+      chained.push(...added);
+    }
+    return chained;
+  }
+
   function listDemoRuns(now: Date): DemoRun[] {
-    return [
+    const runs = [
       ...routines.flatMap(routine => getScheduledEvents(routine, now).runs),
       ...startedRuns.filter(run => run.startedAt <= now),
     ];
+    return [...runs, ...listChainedRuns(runs, now)];
   }
 
   function findDemoRun(routine: RoutineName, id: RunId, now: Date): DemoRun | undefined {

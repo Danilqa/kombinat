@@ -4,7 +4,12 @@ import { accountNameSchema } from '../agent/ids';
 import { agentNameSchema } from '../agent/schemas';
 import { MAX_RUNS } from '../run/constants';
 import { runIdSchema } from '../run/ids';
-import { queuedRunSchema, runRecordSchema, tokenUsageSchema } from '../run/schemas';
+import {
+  chainConditionSchema,
+  queuedRunSchema,
+  runRecordSchema,
+  tokenUsageSchema,
+} from '../run/schemas';
 import { oneTimeRunSchema, skipSchema } from '../scheduler/schemas';
 import { queuedWebhookSchema, webhookCallSchema } from '../webhook/schemas';
 import { MEMORY_MAX_LENGTH, ROUTINE_NAME_PATTERN } from './constants';
@@ -51,6 +56,18 @@ export const routineSummarySchema = z.object({
   tokenUsage: tokenUsageSchema.nullable().default(null),
   // Older daemons do not send it, and tui --url may talk to one.
   memory: z.boolean().default(false),
+  // The routine whose runs start this one, and how such a run must end. Older daemons do not send them.
+  startsAfter: routineNameSchema.nullable().default(null),
+  startsWhen: chainConditionSchema.nullable().default(null),
+});
+
+// A routine of the chain that a routine is part of, with its last run.
+export const chainLinkSchema = z.object({
+  name: routineNameSchema,
+  scheduleHuman: z.string(),
+  startsAfter: routineNameSchema.nullable(),
+  startsWhen: chainConditionSchema.nullable(),
+  lastRun: runRecordSchema.nullable(),
 });
 
 export const memoryAuthorSchema = z.enum(['run', 'user']);
@@ -82,6 +99,8 @@ export const routineDetailSchema = routineSummarySchema.extend({
   queuedRuns: z.array(queuedRunSchema).default([]),
   // null when the routine has no memory. Older daemons do not send it.
   memoryNotes: routineMemorySchema.nullable().default(null),
+  // Empty when no routine starts after it or before it. Older daemons do not send it.
+  chain: z.array(chainLinkSchema).default([]),
 });
 
 export const startedRunSchema = z.object({ ok: z.literal(true) });

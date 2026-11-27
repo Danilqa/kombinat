@@ -5,8 +5,11 @@ import { PRIMARY_ACCOUNT } from 'domains/agent/ids';
 import type { AgentName } from 'domains/agent/types';
 import { checkCanKeepMemory } from 'domains/agent/utils';
 import { ROUTINE_NAME_PATTERN } from 'domains/routine/constants';
-import { routineNameSchema } from 'domains/routine/ids';
+import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
+import { listChainLoops } from 'domains/routine/utils';
 import { MAX_RETRIES, MAX_RUNS } from 'domains/run/constants';
+import { chainConditionSchema } from 'domains/run/schemas';
+import type { ChainCondition } from 'domains/run/types';
 import { parseTokenCount } from 'domains/run/utils';
 import { describeCron, nextCronRun, parseCron } from 'utils/cron';
 import { getErrorMessage } from 'utils/error';
@@ -26,6 +29,8 @@ interface ParsedFrontmatter {
 }
 
 const DEFAULT_TIMEOUT_MINUTES = 55;
+
+const DEFAULT_CHAIN_CONDITION: ChainCondition = 'succeeds';
 
 const MAX_TYPO_DISTANCE = 2;
 
@@ -112,6 +117,28 @@ function readSchedule(data: Frontmatter): string | null {
   return schedule === 'manual' ? null : schedule;
 }
 
+interface ChainSettings {
+  startsAfter: RoutineName | null;
+  startsWhen: ChainCondition | null;
+}
+
+function readChain(data: Frontmatter): ChainSettings {
+  const startsAfter = readString(data, 'startsAfter');
+  const startsWhen = readString(data, 'startsWhen');
+  if (startsAfter === null) {
+    if (startsWhen !== null) throw new Error('startsWhen needs startsAfter');
+    return { startsAfter: null, startsWhen: null };
+  }
+  if (!ROUTINE_NAME_PATTERN.test(startsAfter)) {
+    throw new Error('startsAfter must be the name of a routine, in lowercase kebab-case');
+  }
+  const condition = chainConditionSchema.safeParse(startsWhen ?? DEFAULT_CHAIN_CONDITION);
+  if (!condition.success) {
+    throw new Error(`startsWhen must be one of ${chainConditionSchema.options.join(', ')}`);
+  }
+  return { startsAfter: routineNameSchema.parse(startsAfter), startsWhen: condition.data };
+}
+
 function withFile<T>(file: string, read: () => T): T {
   try {
     return read();
@@ -191,6 +218,7 @@ export function buildRoutine(file: string, source: string): Routine {
     check,
     before: readString(data, 'before'),
     after: readString(data, 'after'),
+    ...withFile(file, () => readChain(data)),
     prompt: body,
     file,
   };
@@ -248,6 +276,23 @@ export function listRoutineProblems(file: string, source: string): string[] {
     problems.push(getErrorMessage(error));
   }
   return problems;
+}
+
+// Files that do not load are left out of routines, but a routine may still start after one of them.
+export function listChainProblems(routines: Routine[], names: RoutineName[]): string[] {
+  const missing = routines.flatMap(({ file, startsAfter }) =>
+    startsAfter === null || names.includes(startsAfter)
+      ? []
+      : [
+          `${file}: startsAfter names ${startsAfter}, but there is no routines/${startsAfter}.md. Fix the name or add that routine`,
+        ],
+  );
+  const loops = listChainLoops(routines).map(loop => {
+    const files = routines.filter(routine => loop.includes(routine.name)).map(({ file }) => file);
+    const order = [...loop, ...loop.slice(0, 1)].join(' → ');
+    return `${files.join(', ')}: startsAfter makes a loop, ${order}. Remove startsAfter from one of them`;
+  });
+  return [...missing, ...loops];
 }
 
 export function describeSchedule(routine: Routine): string {

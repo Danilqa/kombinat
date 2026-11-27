@@ -1,7 +1,9 @@
+import type { RoutineName } from 'domains/routine/ids';
 import type { RoutineDetail, RoutineSummary } from 'domains/routine/types';
-import type { TokenUsage } from 'domains/run/types';
+import type { ChainCondition, TokenUsage } from 'domains/run/types';
 import {
   formatTokens,
+  getChainConditionLabel,
   formatTokenShare,
   getBudgetLabel,
   getQueuedRunsLabel,
@@ -26,6 +28,25 @@ function tokenUsageValue(usage: TokenUsage): Line {
       ` in 7 days · ${usage.runs} ${usage.runs === 1 ? 'run' : 'runs'} · ${formatTokenShare(usage.share)} of all routines`,
       S.dim,
     ),
+  ];
+}
+
+function chainValue(name: RoutineName, condition: ChainCondition): Line {
+  return [text(name, S.cyan), text(`, ${getChainConditionLabel(condition)}`, S.dim)];
+}
+
+function chainPairs(routine: RoutineSummary, detail: RoutineDetail | undefined): DetailPair[] {
+  const { startsAfter, startsWhen } = routine;
+  const nextRoutines = (detail?.chain ?? []).flatMap(link =>
+    link.startsAfter === routine.name && link.startsWhen !== null
+      ? [{ label: 'then', value: chainValue(link.name, link.startsWhen), isWide: true }]
+      : [],
+  );
+  return [
+    ...(startsAfter === null || startsWhen === null
+      ? []
+      : [{ label: 'after', value: chainValue(startsAfter, startsWhen), isWide: true }]),
+    ...nextRoutines,
   ];
 }
 
@@ -67,6 +88,7 @@ export function routineHeaderLines(
       ? []
       : [{ label: 'check', value: [text(routine.check, S.cyan)], isWide: true }]),
     { label: 'next run', value: timeValue(routine.nextRunAt, now), isWide: true },
+    ...chainPairs(routine, detail),
     ...(detail === undefined || detail.oneTimeRuns.length === 0
       ? []
       : [

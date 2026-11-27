@@ -17,13 +17,20 @@ export const skipSchema = z.object({
   checkOutput: z.string().nullable().default(null),
 });
 
+export const schedulerRoutineStateSchema = z.object({
+  lastScheduledFor: z.string().nullable(),
+  skips: z.array(skipSchema),
+  // The routine this one starts after, and the end of its newest run this one went past.
+  chainedAfter: z
+    .object({ routine: routineNameSchema, endedAt: z.string() })
+    .nullable()
+    .default(null),
+});
+
 export const schedulerStateSchema = z.object({
   startedAt: z.string(),
   lastTickAt: z.string(),
-  routines: z.record(
-    routineNameSchema,
-    z.object({ lastScheduledFor: z.string().nullable(), skips: z.array(skipSchema) }),
-  ),
+  routines: z.record(routineNameSchema, schedulerRoutineStateSchema),
 });
 
 export const oneTimeRunSchema = z.object({

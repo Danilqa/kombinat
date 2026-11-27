@@ -1,5 +1,6 @@
 import type { AgentName } from 'domains/agent/types';
 import type { RoutineName } from 'domains/routine/ids';
+import type { ChainCondition } from 'domains/run/types';
 
 import type { AgentSettings } from '../agent/types';
 import type { ROUTINE_SETTINGS } from './constants';
@@ -22,6 +23,9 @@ export interface Routine extends AgentSettings {
   check: string | null;
   before: string | null;
   after: string | null;
+  startsAfter: RoutineName | null;
+  // null when the routine does not start after another one.
+  startsWhen: ChainCondition | null;
   prompt: string;
   file: string;
 }

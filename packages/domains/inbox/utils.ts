@@ -2,7 +2,12 @@ import { isMatching, match } from 'ts-pattern';
 
 import type { RoutineName } from '../routine/ids';
 import type { RunRecord } from '../run/types';
-import { checkIsRunActive, getBlockedLabel, getRunStatusLabel } from '../run/utils';
+import {
+  checkHasFindings,
+  checkIsRunActive,
+  getBlockedLabel,
+  getRunStatusLabel,
+} from '../run/utils';
 import { DEFAULT_NOTIFY_LEVEL, INBOX_GROUPS, MAX_RUN_NOTIFICATIONS } from './constants';
 import { notifyLevelsSchema } from './schemas';
 import type {
@@ -15,8 +20,6 @@ import type {
   NotifyLevels,
   RunNotification,
 } from './types';
-
-const NOTHING_TO_REPORT = /^[\s#*_>`-]*(no|nothing)\b/i;
 
 function getRunEndTime(run: Pick<RunRecord, 'startedAt' | 'endedAt'>): number {
   return Date.parse(run.endedAt ?? run.startedAt);
@@ -50,30 +53,12 @@ export function addReadRuns(state: InboxState, keys: InboxRunKey[], runs: RunRec
   };
 }
 
-// Agents that found nothing tend to say so first, such as "No open incidents.".
-export function checkHasNothingToReport(resultText: string | null): boolean {
-  return resultText === null || resultText.trim() === '' || NOTHING_TO_REPORT.test(resultText);
-}
-
 type GroupedRun = Pick<RunRecord, 'status' | 'resultText' | 'blockedActions'>;
 
-// A run that was blocked from an action did less than it was asked to, whatever its status says.
 export function getInboxGroup(run: GroupedRun): InboxGroup {
-  if (run.blockedActions.length > 0) return 'needs_look';
-  return match(run.status)
-    .with('succeeded', (): InboxGroup =>
-      checkHasNothingToReport(run.resultText) ? 'quiet' : 'findings',
-    )
-    .with(
-      'running',
-      'waiting',
-      'retrying',
-      'failed',
-      'timed_out',
-      'aborted',
-      (): InboxGroup => 'needs_look',
-    )
-    .exhaustive();
+  if (checkHasFindings(run)) return 'findings';
+  const isQuiet = isMatching({ status: 'succeeded' }, run) && run.blockedActions.length === 0;
+  return isQuiet ? 'quiet' : 'needs_look';
 }
 
 export function getInboxGroupLabel(group: InboxGroup): string {

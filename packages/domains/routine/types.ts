@@ -1,10 +1,11 @@
 import type { z } from 'zod';
 
 import type { AgentName } from '../agent/types';
-import type { RoutineTemplateId } from './ids';
+import type { RoutineName, RoutineTemplateId } from './ids';
 import type {
   addRoutineRequestSchema,
   addedRoutineSchema,
+  chainLinkSchema,
   memoryChangeSchema,
   memoryRequestSchema,
   oneTimeRunRequestSchema,
@@ -16,6 +17,7 @@ import type {
 
 export type RoutineSummary = z.infer<typeof routineSummarySchema>;
 export type RoutineDetail = z.infer<typeof routineDetailSchema>;
+export type ChainLink = z.infer<typeof chainLinkSchema>;
 export type StartRunRequest = z.infer<typeof startRunRequestSchema>;
 export type OneTimeRunRequest = z.infer<typeof oneTimeRunRequestSchema>;
 export type MemoryChange = z.infer<typeof memoryChangeSchema>;
@@ -49,4 +51,10 @@ export interface RoutineTemplate {
   check: string | null;
   command: string | null;
   prompt: string;
+}
+
+// What a routine says about the chain it is part of.
+export interface ChainedRoutine {
+  name: RoutineName;
+  startsAfter: RoutineName | null;
 }

@@ -18,6 +18,7 @@ import { useDaemonStatus } from '@web-app/domains/daemon/queries';
 import { NotifyMenu } from '@web-app/domains/inbox/components';
 import {
   AddedRoutineNotice,
+  ChainSection,
   ChangePromptMenuItem,
   MemoryPanel,
   OneTimeRunsTable,
@@ -92,8 +93,13 @@ function RoutineView({ routine, runNowRef }: RoutineViewProps) {
   return (
     <div className="space-y-10">
       <Card.Root>
-        <RoutineDetailList routine={routine} hasAccount={hasAccount} />
+        <RoutineDetailList
+          routine={routine}
+          hasAccount={hasAccount}
+          nextRoutines={routine.chain.filter(link => link.startsAfter === routine.name)}
+        />
       </Card.Root>
+      {routine.chain.length > 0 && <ChainSection routine={routine.name} chain={routine.chain} />}
       {routine.tokenUsage && <TokenUsageSection usage={routine.tokenUsage} />}
       <Tabs.Root value={tab} onValueChange={setTab} className="gap-4">
         {/* Four tabs with long counts are wider than a phone, so the last one wraps. */}

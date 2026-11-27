@@ -9,6 +9,8 @@ export const writeReleaseNotes: DemoRoutine = {
   description: 'Drafts release notes from what was merged since the last tag',
   schedule: null,
   enabled: true,
+  startsAfter: routineNameSchema.parse('pr-review-sweep'),
+  startsWhen: 'has-findings',
   agent: 'claude',
   account: WORK,
   model: OPUS,
