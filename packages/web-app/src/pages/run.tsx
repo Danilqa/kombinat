@@ -9,19 +9,20 @@ import type { RunWithTranscript } from 'domains/run/types';
 import { checkIsRunActive, getCheckoutCwd } from 'domains/run/utils';
 import type { Transcript } from 'domains/transcript/types';
 import { useMarkRunsRead } from '@web-app/domains/inbox/queries';
-import { BlockedActionsCard } from '@web-app/domains/run/blocked-actions-card';
-import { BlockedBadge } from '@web-app/domains/run/blocked-badge';
+import {
+  BlockedActionsCard,
+  BlockedBadge,
+  RetryCard,
+  RunChat,
+  RunDetailList,
+  RunOutput,
+  RunStatusBadge,
+  UsageLimitCard,
+  WorktreeCard,
+} from '@web-app/domains/run/components';
 import { useRun } from '@web-app/domains/run/queries';
-import { RetryCard } from '@web-app/domains/run/retry-card';
-import { RunChat } from '@web-app/domains/run/run-chat';
-import { RunDetailList } from '@web-app/domains/run/run-detail-list';
-import { RunOutput } from '@web-app/domains/run/run-output';
-import { RunStatusBadge } from '@web-app/domains/run/run-status-badge';
-import { UsageLimitCard } from '@web-app/domains/run/usage-limit-card';
-import { WorktreeCard } from '@web-app/domains/run/worktree-card';
-import { useDocumentTitle } from '@web-app/hooks/use-document-title';
-import { useTabSearchParam } from '@web-app/hooks/use-tab-search-param';
-import { Breadcrumbs } from '@web-app/layout/breadcrumbs';
+import { useDocumentTitle, useTabSearchParam } from '@web-app/hooks';
+import { Breadcrumbs } from '@web-app/layout';
 import { RUNS_PATH, getRoutinePath } from '@web-app/paths';
 
 const TABS = ['information', 'transcript'] as const;

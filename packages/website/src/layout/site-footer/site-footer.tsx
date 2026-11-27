@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { AppFooter } from 'web-app/layout/app-footer';
+import { AppFooter } from 'web-app/layout';
 import { CHANGELOG_PATH } from '../../constants';
 
 export function SiteFooter() {

@@ -5,12 +5,11 @@ import {
   getRunBars,
   getTokenBars,
   DayChartSection,
-} from '@web-app/domains/insights/day-chart-section';
-import { InsightsRoutinesSection } from '@web-app/domains/insights/insights-routines-section';
-import { InsightsStats } from '@web-app/domains/insights/insights-stats';
+  InsightsRoutinesSection,
+  InsightsStats,
+} from '@web-app/domains/insights/components';
 import { useInsights } from '@web-app/domains/insights/queries';
-import { useDocumentTitle } from '@web-app/hooks/use-document-title';
-import { useTabSearchParam } from '@web-app/hooks/use-tab-search-param';
+import { useDocumentTitle, useTabSearchParam } from '@web-app/hooks';
 
 const PERIOD_TABS = ['7', '30'] as const;
 

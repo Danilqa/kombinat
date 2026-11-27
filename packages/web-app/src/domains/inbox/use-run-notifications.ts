@@ -5,7 +5,7 @@ import { isMatching } from 'ts-pattern';
 import type { RunNotification } from 'domains/inbox/types';
 import { buildRunNotifications, listRunsToNotify } from 'domains/inbox/utils';
 import type { RunRecord } from 'domains/run/types';
-import { readNotificationAccess } from '@web-app/hooks/use-notification-permission';
+import { readNotificationAccess } from '@web-app/hooks';
 import { getRunPath, INBOX_PATH } from '@web-app/paths';
 import { useInbox } from './queries';
 

@@ -15,25 +15,25 @@ import { checkHasSeveralAccounts } from 'domains/daemon/utils';
 import { routineNameSchema, type RoutineName } from 'domains/routine/ids';
 import type { RoutineDetail } from 'domains/routine/types';
 import { useDaemonStatus } from '@web-app/domains/daemon/queries';
-import { NotifyMenu } from '@web-app/domains/inbox/notify-menu';
-import { AddedRoutineNotice } from '@web-app/domains/routine/added-routine-notice';
-import { ChangePromptMenuItem } from '@web-app/domains/routine/change-prompt-menu-item';
-import { MemoryPanel } from '@web-app/domains/routine/memory-panel';
-import { OneTimeRunsTable } from '@web-app/domains/routine/one-time-runs-table';
+import { NotifyMenu } from '@web-app/domains/inbox/components';
+import {
+  AddedRoutineNotice,
+  ChangePromptMenuItem,
+  MemoryPanel,
+  OneTimeRunsTable,
+  QueuedRunsSection,
+  RoutineBadges,
+  RoutineDetailList,
+  RunNowButton,
+  WebhookQueueButton,
+} from '@web-app/domains/routine/components';
 import { useRoutine } from '@web-app/domains/routine/queries';
-import { QueuedRunsSection } from '@web-app/domains/routine/queued-runs-section';
-import { RoutineBadges } from '@web-app/domains/routine/routine-badges';
-import { RoutineDetailList } from '@web-app/domains/routine/routine-detail-list';
-import { RunNowButton } from '@web-app/domains/routine/run-now-button';
-import { WebhookQueueButton } from '@web-app/domains/routine/webhook-queue-button';
 import { useRuns } from '@web-app/domains/run/queries';
-import { RunsList } from '@web-app/domains/run/runs-list';
-import { TokenUsageSection } from '@web-app/domains/run/token-usage-section';
-import { SkipsTable } from '@web-app/domains/scheduler/skips-table';
-import { WebhookCallsList } from '@web-app/domains/webhook/webhook-calls-list';
-import { useDocumentTitle } from '@web-app/hooks/use-document-title';
-import { useTabSearchParam } from '@web-app/hooks/use-tab-search-param';
-import { Breadcrumbs } from '@web-app/layout/breadcrumbs';
+import { RunsList, TokenUsageSection } from '@web-app/domains/run/components';
+import { SkipsTable } from '@web-app/domains/scheduler/components';
+import { WebhookCallsList } from '@web-app/domains/webhook/components';
+import { useDocumentTitle, useTabSearchParam } from '@web-app/hooks';
+import { Breadcrumbs } from '@web-app/layout';
 import { ROUTINES_PATH } from '@web-app/paths';
 
 interface OneTimeRunsNoteProps {

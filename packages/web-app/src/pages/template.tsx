@@ -7,12 +7,14 @@ import { routineTemplateIdSchema } from 'domains/routine/ids';
 import { findRoutineTemplate } from 'domains/routine/templates';
 import type { RoutineTemplate } from 'domains/routine/types';
 import { useAgents } from '@web-app/domains/agent/queries';
-import { AddRoutineForm } from '@web-app/domains/routine/add-routine-form';
+import {
+  AddRoutineForm,
+  TemplateNeedBadge,
+  TemplateSettings,
+} from '@web-app/domains/routine/components';
 import { useAddRoutine, useRoutines } from '@web-app/domains/routine/queries';
-import { TemplateNeedBadge } from '@web-app/domains/routine/template-need-badge';
-import { TemplateSettings } from '@web-app/domains/routine/template-settings';
-import { useDocumentTitle } from '@web-app/hooks/use-document-title';
-import { Breadcrumbs } from '@web-app/layout/breadcrumbs';
+import { useDocumentTitle } from '@web-app/hooks';
+import { Breadcrumbs } from '@web-app/layout';
 import { ROUTINES_PATH, TEMPLATES_PATH, getRoutinePath } from '@web-app/paths';
 
 interface TemplateViewProps {

@@ -5,10 +5,9 @@
   "type": "module",
   "exports": {
     "./app": "./src/app.tsx",
-    "./layout/app-footer": "./src/layout/app-footer/index.ts",
+    "./layout": "./src/layout/index.ts",
     "./paths": "./src/paths.ts",
-    "./hooks/use-document-title": "./src/hooks/use-document-title.ts",
-    "./hooks/use-stored-boolean": "./src/hooks/use-stored-boolean.ts",
+    "./hooks": "./src/hooks/index.ts",
     "./index.css": "./src/index.css"
   },
   "scripts": {

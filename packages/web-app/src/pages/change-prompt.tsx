@@ -3,10 +3,10 @@ import { Loader, Play, RotateCcw } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router';
 import { Button, ErrorState, LoadingState, PageHeader } from 'design-system';
 import { routineNameSchema } from 'domains/routine/ids';
-import { PromptEditor } from '@web-app/domains/routine/prompt-editor';
+import { PromptEditor } from '@web-app/domains/routine/components';
 import { useRoutine, useStartRoutineRunWithPrompt } from '@web-app/domains/routine/queries';
-import { useDocumentTitle } from '@web-app/hooks/use-document-title';
-import { Breadcrumbs } from '@web-app/layout/breadcrumbs';
+import { useDocumentTitle } from '@web-app/hooks';
+import { Breadcrumbs } from '@web-app/layout';
 import { ROUTINES_PATH, getRoutinePath, getRunPath } from '@web-app/paths';
 
 const FORM_ID = 'change-prompt';

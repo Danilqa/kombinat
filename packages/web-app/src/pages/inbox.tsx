@@ -1,9 +1,9 @@
 import { CheckCheck } from 'lucide-react';
 import { Button, Card, EmptyState, ErrorState, LoadingState, PageHeader } from 'design-system';
 import { groupInboxRuns, toInboxRunKey } from 'domains/inbox/utils';
-import { InboxSection } from '@web-app/domains/inbox/inbox-section';
+import { InboxSection } from '@web-app/domains/inbox/components';
 import { useInbox, useMarkRunsRead } from '@web-app/domains/inbox/queries';
-import { useDocumentTitle } from '@web-app/hooks/use-document-title';
+import { useDocumentTitle } from '@web-app/hooks';
 
 export function InboxPage() {
   useDocumentTitle('Inbox');

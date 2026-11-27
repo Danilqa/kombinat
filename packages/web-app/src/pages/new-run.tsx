@@ -3,11 +3,10 @@ import { Loader, Play } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router';
 import { Button, ErrorState, LoadingState, PageHeader } from 'design-system';
 import type { RoutineName } from 'domains/routine/ids';
-import { PromptEditor } from '@web-app/domains/routine/prompt-editor';
+import { PromptEditor, RoutinePicker } from '@web-app/domains/routine/components';
 import { useRoutines, useStartRoutineRunWithPrompt } from '@web-app/domains/routine/queries';
-import { RoutinePicker } from '@web-app/domains/routine/routine-picker';
-import { useDocumentTitle } from '@web-app/hooks/use-document-title';
-import { Breadcrumbs } from '@web-app/layout/breadcrumbs';
+import { useDocumentTitle } from '@web-app/hooks';
+import { Breadcrumbs } from '@web-app/layout';
 import { RUNS_PATH, getRunPath } from '@web-app/paths';
 
 const FORM_ID = 'new-run';

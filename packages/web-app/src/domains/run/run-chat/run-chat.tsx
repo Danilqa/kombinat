@@ -3,10 +3,8 @@ import { Spinner, useDebouncedValue } from 'design-system';
 import { getAgentLabel } from 'domains/agent/utils';
 import type { RunWithTranscript } from 'domains/run/types';
 import { checkCanContinueRun, checkIsRunActive } from 'domains/run/utils';
-import { TranscriptList } from '@web-app/domains/transcript/transcript-list';
-import { TranscriptSearch } from '@web-app/domains/transcript/transcript-search';
-import { useStickToBottom } from '@web-app/hooks/use-stick-to-bottom';
-import { useTextSearch } from '@web-app/hooks/use-text-search';
+import { TranscriptList, TranscriptSearch } from '@web-app/domains/transcript/components';
+import { useStickToBottom, useTextSearch } from '@web-app/hooks';
 import { RunMessageForm } from '../run-message-form';
 
 const SEARCH_DELAY_MS = 150;

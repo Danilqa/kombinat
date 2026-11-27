@@ -8,7 +8,7 @@ import { formatRelativeCompact } from 'utils/date-time';
 import { checkMatchesSearch, getSearchExcerpt } from 'utils/search';
 import { useRoutines, useStartRoutineRunByName } from '@web-app/domains/routine/queries';
 import { useRunsSearch } from '@web-app/domains/run/queries';
-import { RunStatusBadge } from '@web-app/domains/run/run-status-badge';
+import { RunStatusBadge } from '@web-app/domains/run/components';
 import { getRoutinePath, getRunPath } from '@web-app/paths';
 import { navItems, type NavItem } from '../nav-items';
 

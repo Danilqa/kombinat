@@ -1,6 +1,6 @@
 import { Link } from 'react-router';
 import { PageHeader } from 'design-system';
-import { useDocumentTitle } from '@web-app/hooks/use-document-title';
+import { useDocumentTitle } from '@web-app/hooks';
 import { ROUTINES_PATH } from '@web-app/paths';
 
 export function NotFoundPage() {

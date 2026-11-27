@@ -5,11 +5,9 @@ import { useCustomization, type Customization } from '@web-app/customization';
 import { useLiveUpdates } from '@web-app/domains/daemon/queries';
 import { useInbox } from '@web-app/domains/inbox/queries';
 import { useRunNotifications } from '@web-app/domains/inbox/use-run-notifications';
-import { UpdateCard } from '@web-app/domains/release/update-card';
-import { useAppBadge } from '@web-app/hooks/use-app-badge';
-import { useFocusMainOnNavigate } from '@web-app/hooks/use-focus-main-on-navigate';
-import { AppFooter } from '@web-app/layout/app-footer';
-import { AppHeader } from '@web-app/layout/app-header';
+import { UpdateCard } from '@web-app/domains/release/components';
+import { useAppBadge, useFocusMainOnNavigate } from '@web-app/hooks';
+import { AppFooter, AppHeader } from '@web-app/layout';
 
 const MAIN_ID = 'main';
 

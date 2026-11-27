@@ -3,7 +3,7 @@ import { EmptyState, RelativeTime, Table, cn } from 'design-system';
 import type { RunRecord } from 'domains/run/types';
 import { formatTokens, getTokenTotal, getTriggerLabel } from 'domains/run/utils';
 import { formatDayTime } from 'utils/date-time';
-import { useRowLink } from '@web-app/hooks/use-row-link';
+import { useRowLink } from '@web-app/hooks';
 import { getRoutinePath, getRunPath } from '@web-app/paths';
 import { BlockedBadge } from '../blocked-badge';
 import { RunDuration } from '../run-duration';

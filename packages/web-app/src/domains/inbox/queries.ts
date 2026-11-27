@@ -6,7 +6,7 @@ import { getInbox, markRunsRead, setNotifyLevel } from 'domains/inbox/requests';
 import type { Inbox, InboxRunKey, NotifyLevel } from 'domains/inbox/types';
 import type { RoutineName } from 'domains/routine/ids';
 import { api } from '@web-app/api';
-import { readNotificationAccess } from '@web-app/hooks/use-notification-permission';
+import { readNotificationAccess } from '@web-app/hooks';
 import { getPollInterval } from '@web-app/polling';
 import { INBOX_QUERY_KEY } from '@web-app/query-keys';
 
