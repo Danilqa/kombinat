@@ -5,6 +5,9 @@
 @source '..';
 /* utils.ts lists token names for tailwind-merge, and some of them read as classes. */
 @source not '../utils.ts';
+/* Storybook's config and the stories are for Storybook's own stylesheet only. */
+@source not '../.storybook';
+@source not '../**/*.stories.tsx';
 
 @custom-variant dark (&:is(.dark *));
 /* Matches controls that can be used: neither disabled nor aria-disabled (which stays focusable). */

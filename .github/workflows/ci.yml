@@ -67,7 +67,7 @@ jobs:
       - name: Build the demo website
         run: pnpm --filter website build
       - name: Build the Storybook of the design system
-        run: pnpm --filter design-system-storybook build
+        run: pnpm --filter design-system storybook:build
 
   npm-package:
     name: 📦 npm package

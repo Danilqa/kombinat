@@ -4,7 +4,8 @@
     "paths": {
       "design-system": ["."],
       "design-system/*": ["./*"]
-    }
+    },
+    "types": ["node", "vite/client"]
   },
-  "include": ["**/*.ts", "**/*.tsx"]
+  "include": ["**/*.ts", "**/*.tsx", ".storybook/*.ts", ".storybook/*.tsx"]
 }

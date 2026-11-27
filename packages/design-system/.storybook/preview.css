@@ -1,0 +1,3 @@
+@import '../styles/index.css';
+/* The stylesheet leaves the stories out of the apps' class scan. */
+@source '../**/*.stories.tsx';

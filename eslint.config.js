@@ -54,7 +54,6 @@ const PACKAGE_NAMES = {
   tui: 'tui',
   cli: 'kombinat',
   website: 'website',
-  storybook: 'design-system-storybook',
 };
 
 // Matches 'tui' and '../../tui/src/app' alike.
@@ -459,15 +458,6 @@ export default defineConfig(
     },
     packagesByPath('utils', 'design-system', 'domains', 'e2e'),
   ),
-  restrictImports(
-    ['packages/storybook/**'],
-    {
-      ...packagesAbove('domains', 'web-app', 'tui', 'cli', 'website'),
-      message: 'storybook shows the design-system, so it imports nothing above it.',
-    },
-    NO_ROUTER,
-    packagesByPath('utils', 'design-system', 'e2e'),
-  ),
   restrictImports(['packages/domains/**'], ...DOMAINS_IMPORTS),
   ...restrictDomainOrder('packages/domains', SHARED_DOMAIN_LEVELS, sharedDomains, DOMAINS_IMPORTS),
   restrictImports(['packages/domains/*/ids.ts'], ONLY_ZOD_IN_IDS),
@@ -518,14 +508,6 @@ export default defineConfig(
       message:
         'queries.ts never imports react-router. What follows a request stays with the caller.',
     },
-  ),
-  // The stories and the preview run in the browser, main.ts in Node.
-  restrictImportsOfKind(
-    ['packages/storybook/**/*.{ts,tsx}'],
-    ['packages/storybook/.storybook/main.ts'],
-    NO_NODE,
-    ...TEST_ONLY_IMPORTS,
-    ONLY_UTILS_API_IMPORTS_KY,
   ),
   // The scenes run in the browser, the scripts that record them in Node.
   restrictImportsOfKind(
