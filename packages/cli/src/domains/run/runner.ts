@@ -286,7 +286,7 @@ async function runAgent({
     .exhaustive();
   if (stopExit !== null) return stopExit;
   const usageLimitStop = agent.findUsageLimitStop(events);
-  const canRetry = !agent.checkIsStoppedByBudget(events);
+  const canRetry = !agent.checkIsStoppedByBudget(events) && !agent.checkIsFailedByAgent(events);
   if (exitCode !== 0) {
     const stderr = stderrChunks.join('').trim().slice(-2000);
     return {

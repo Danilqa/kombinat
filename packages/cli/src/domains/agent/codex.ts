@@ -232,7 +232,14 @@ export const codexAgent: Agent = {
   resolveSettings(raw) {
     rejectUnsupported(
       raw,
-      ['command', 'fallbackModel', 'maxBudgetUsd', 'maxBudgetTokens', 'onUsageLimit'],
+      [
+        'command',
+        'fallbackModel',
+        'maxBudgetUsd',
+        'maxBudgetTokens',
+        'onUsageLimit',
+        'agentCanFail',
+      ],
       'codex',
     );
     return {
@@ -304,6 +311,7 @@ export const codexAgent: Agent = {
   readCallTokens: () => null,
   findUsageLimitStop: () => null,
   checkIsStoppedByBudget: () => false,
+  checkIsFailedByAgent: () => false,
   readBlockedActions: () => [],
 
   buildTranscript(events) {

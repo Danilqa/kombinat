@@ -22,6 +22,7 @@ export interface AgentSettings {
   maxBudgetTokens: number | null;
   onUsageLimit: string | null;
   account: AccountName | null;
+  agentCanFail: boolean;
 }
 
 export interface AgentTask extends AgentSettings {
@@ -105,6 +106,7 @@ export interface Agent {
   readCallTokens(event: unknown): CallTokens | null;
   findUsageLimitStop(events: unknown[]): UsageLimitStop | null;
   checkIsStoppedByBudget(events: unknown[]): boolean;
+  checkIsFailedByAgent(events: unknown[]): boolean;
   readBlockedActions(events: unknown[]): BlockedAction[];
   buildTranscript(events: unknown[]): TranscriptItem[];
   getResumeCommand(sessionId: SessionId, account: AccountName | null): string | null;

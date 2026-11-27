@@ -145,13 +145,13 @@ To start from a ready routine instead, click New routine on the dashboard's Rout
 
 `kombinat validate` checks every routine file. It reports settings it does not know, such as `scheduel`, settings set twice, the first wrong value in each file, and a `startsAfter` that names a missing routine or makes a loop. The daemon doesn't warn about unknown or repeated settings. Run `validate` after you edit a routine.
 
-Changes apply on the next check, no restart needed. Write the prompt so the agent never has to ask a question: nobody will answer. When there is nothing to do, have it start its answer with "No" or "Nothing", such as "No open incidents.", so the dashboard's Inbox files the run under Nothing to report.
+Changes apply on the next check, no restart needed. Write the prompt so the agent never has to ask a question: nobody will answer. When there is nothing to do, have it start its answer with "No" or "Nothing", such as "No open incidents.", so the dashboard's Inbox files the run under Nothing to report. When the agent may have to stop on an error, add [`agentCanFail: true`](#agents), so such a run fails instead of succeeding.
 
 ### Retries
 
 With `retries: 2`, a run that stops with an error, such as a stream idle timeout or a hang that hits `timeoutMinutes`, shows Retrying and tries again 5 minutes later, up to 2 more times. The next attempt continues the agent's session where it stopped. Without a session, such as for `command` or after a failed `before`, it starts over with `before`. Each attempt gets the whole `timeoutMinutes`.
 
-The run's page shows the error and when the next attempt starts, with Retry now and Stop retrying. Its transcript marks where each attempt stopped. A run that hits its `maxBudgetUsd`, its `maxBudgetTokens` or a usage limit is not retried, and neither is one whose `cwd` or agent is missing. The `after` hook and the Inbox see only how the last attempt ended.
+The run's page shows the error and when the next attempt starts, with Retry now and Stop retrying. Its transcript marks where each attempt stopped. A run that hits its `maxBudgetUsd`, its `maxBudgetTokens` or a usage limit is not retried, and neither is one whose `cwd` or agent is missing or whose agent failed it with [`agentCanFail`](#agents). The `after` hook and the Inbox see only how the last attempt ended.
 
 ### Several runs
 
@@ -211,12 +211,14 @@ The routine's Memory tab in the dashboard shows the notes and the run that chang
 | `maxBudgetUsd`    | optional                                                                          | -                                                              | -         |
 | `maxBudgetTokens` | optional, such as `500k`, `2M` or `3000000`                                       | -                                                              | -         |
 | `onUsageLimit`    | `wait` (default), `fail`                                                          | -                                                              | -         |
+| `agentCanFail`    | `true`, `false` (default)                                                         | -                                                              | -         |
 | `command`         | -                                                                                 | -                                                              | required  |
 
 - `claude` runs `claude -p`. Anything that needs approval is denied, and the run still succeeds. The dashboard marks such a run with how many actions were blocked, files it under Needs a look and lists each action with a rule that allows it, such as `Bash(git push *)`. Allow and continue resumes the session with those rules, for that reply only. To allow them in every run, add the rules to `permissions.allow` in `.claude/settings.json` in the routine's folder.
 - `fallbackModel` is the model Claude switches to when `model` is not available, overloaded or fails, such as `claude-sonnet-5-5`. A comma-separated list is tried in order. The run's transcript says when it switched.
 - `maxBudgetTokens` caps the tokens a run uses, counted as the dashboard counts them: input, output and cache. Kombinat stops the run after the model call that reaches it. A run can end over the budget by up to one call, since each call reads the whole conversation again. The run fails with the budget it reached and is not retried. Its next attempts and its turns after a usage limit share the budget, and each reply gets the whole budget. With `maxBudgetUsd` too, the run stops at whichever it reaches first.
 - `onUsageLimit` says what a run does when it hits the 5-hour or weekly limit of the Claude plan. With `wait`, the run shows Waiting for limit, and a minute after the reset, once a run slot is free, Kombinat continues its session where it stopped. The run's page has Continue now and Stop waiting, and its transcript marks the pause. With `fail`, the run fails at the limit.
+- `agentCanFail: true` lets Claude fail the run when it could not do the job, for example when a query or a login failed and it stopped. Claude then ends with a status next to its answer, through `claude -p --json-schema`. With `failed`, the run fails with the answer as its error: the Inbox files it under Needs a look, the `after` hook gets `failed` and routines with `startsWhen: fails` start. It is not retried, since another attempt would meet the same problem. Without it, a run whose agent gave up still succeeds.
 - `codex` runs `codex exec`. `permissionMode` sets its sandbox.
 - `command` runs any other CLI, for example `command: gemini --yolo`. It gets the prompt on stdin, and its output is the result.
 

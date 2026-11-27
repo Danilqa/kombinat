@@ -265,6 +265,20 @@ test('a claude routine can name fallback models', () => {
   );
 });
 
+test('a claude routine can let its agent fail the run', () => {
+  const canFail = (frontmatter: string) =>
+    buildRoutine('/tmp/demo.md', routineFile(frontmatter)).agentCanFail;
+  assert.equal(canFail('agentCanFail: true'), true);
+  assert.equal(canFail(''), false);
+  assert.equal(canFail('agent: codex\nagentCanFail: false'), false);
+  assert.throws(() => canFail('agentCanFail: yes'), /agentCanFail must be true or false/);
+  assert.throws(() => canFail('agent: codex\nagentCanFail: true'), /does not support agentCanFail/);
+  assert.throws(
+    () => canFail('agent: command\ncommand: echo hi\nagentCanFail: true'),
+    /does not support agentCanFail/,
+  );
+});
+
 test('rejects settings the agent does not support', () => {
   assert.throws(() => buildRoutine('/tmp/demo.md', routineFile('agent: gemini')), /agent must be/);
   assert.throws(

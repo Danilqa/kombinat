@@ -1,4 +1,4 @@
-import { match, P } from 'ts-pattern';
+import { isMatching, match, P } from 'ts-pattern';
 import { z } from 'zod';
 
 import { CLAUDE_OPUS } from 'domains/agent/constants';
@@ -44,6 +44,29 @@ const DROPPED_ENV = [
   'CLAUDECODE',
   'CLAUDE_CODE_ENTRYPOINT',
 ];
+
+const STRUCTURED_OUTPUT_TOOL = 'StructuredOutput';
+
+const agentOutcomeSchema = z.object({
+  status: z
+    .enum(['succeeded', 'failed'])
+    .describe(
+      'failed when you could not do what the prompt asks, such as when a query, a tool, a login or a service failed. succeeded otherwise, also when there was nothing to do.',
+    ),
+  result: z
+    .string()
+    .describe(
+      'Your final answer in markdown, as you would write it without this format. When the status is failed, start with what failed and why.',
+    ),
+});
+type AgentOutcome = z.infer<typeof agentOutcomeSchema>;
+
+// Claude Code's validator knows draft-07 but not the draft 2020-12 that zod writes by default.
+const AGENT_OUTCOME_JSON_SCHEMA = JSON.stringify(
+  z.toJSONSchema(agentOutcomeSchema, { target: 'draft-07' }),
+);
+const AGENT_CAN_FAIL_NOTE =
+  'Your answer has a status. When you could not do what the prompt asks, set it to failed and say why, so the run shows as failed.';
 
 // Claude Code keeps a separate login in each config folder.
 const ACCOUNT_HOME: AccountHome = { env: 'CLAUDE_CONFIG_DIR', folder: '.claude' };
@@ -145,6 +168,7 @@ const claudeEventSchema = z.object({
   usage: resultUsageSchema.optional(),
   modelUsage: z.record(z.string(), modelUsageSchema).optional(),
   permission_denials: z.array(permissionDenialSchema).optional(),
+  structured_output: z.unknown().optional(),
 });
 type ClaudeEvent = z.infer<typeof claudeEventSchema>;
 
@@ -162,6 +186,11 @@ function getContentBlocks(event: ClaudeEvent): ContentBlock[] {
     const parsed = contentBlockSchema.safeParse(block);
     return parsed.success ? [parsed.data] : [];
   });
+}
+
+function readOutcome(event: ClaudeEvent): AgentOutcome | null {
+  const parsed = agentOutcomeSchema.safeParse(event.structured_output);
+  return parsed.success ? parsed.data : null;
 }
 
 function getInputPreview(name: string, input: unknown): string {
@@ -206,6 +235,7 @@ function toBlockItems(
     .with({ type: 'text' }, ({ text }): TranscriptItem[] =>
       text?.trim() ? [{ kind: 'text', key, text, isSubagent }] : [],
     )
+    .with({ type: 'tool_use', name: STRUCTURED_OUTPUT_TOOL }, (): TranscriptItem[] => [])
     .with({ type: 'tool_use' }, (tool): TranscriptItem[] => {
       const name = tool.name ?? 'tool';
       return [
@@ -266,8 +296,8 @@ function toItems(
       {
         kind: 'result',
         key: `result-${index}`,
-        text: result.result ?? '',
-        isError: result.is_error === true,
+        text: readOutcome(result)?.result ?? result.result ?? '',
+        isError: result.is_error === true || isMatching({ status: 'failed' }, readOutcome(result)),
         costUsd: result.total_cost_usd ?? null,
         numTurns: result.num_turns ?? null,
         durationMs: result.duration_ms ?? null,
@@ -302,14 +332,16 @@ function readTokens({ usage, modelUsage }: ClaudeEvent): TokenCounts | null {
 }
 
 function readResult(event: ClaudeEvent): RunUpdate {
+  const outcome = readOutcome(event);
   const update: RunUpdate = {
-    resultText: event.result ?? null,
+    resultText: outcome?.result ?? event.result ?? null,
     costUsd: event.total_cost_usd ?? null,
     numTurns: event.num_turns ?? null,
     durationMs: event.duration_ms ?? null,
     tokens: readTokens(event),
   };
   if (event.is_error === true) update.error = event.result ?? 'Claude reported an error result';
+  else if (isMatching({ status: 'failed' }, outcome)) update.error = outcome.result;
   return update;
 }
 
@@ -347,10 +379,11 @@ function buildArgs(context: RunContext, note: string): string[] {
     '--name',
     `routine/${routine.name}/${context.runId}`,
     '--append-system-prompt',
-    note,
+    routine.agentCanFail ? `${note} ${AGENT_CAN_FAIL_NOTE}` : note,
   ];
   if (fallbackModels.length > 0) args.push('--fallback-model', fallbackModels.join(','));
   if (routine.maxBudgetUsd !== null) args.push('--max-budget-usd', String(routine.maxBudgetUsd));
+  if (routine.agentCanFail) args.push('--json-schema', AGENT_OUTCOME_JSON_SCHEMA);
   return args;
 }
 
@@ -471,6 +504,11 @@ export const claudeAgent: Agent = {
   checkIsStoppedByBudget(events) {
     const result = toClaudeEvents(events).findLast(event => event.type === 'result');
     return result?.subtype === 'error_max_budget_usd';
+  },
+
+  checkIsFailedByAgent(events) {
+    const result = toClaudeEvents(events).findLast(event => event.type === 'result');
+    return result !== undefined && isMatching({ status: 'failed' }, readOutcome(result));
   },
 
   // With nobody to answer a permission prompt, a call is denied and the run goes on without it.

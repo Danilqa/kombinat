@@ -22,6 +22,7 @@ export const commandAgent: Agent = {
         'maxBudgetTokens',
         'onUsageLimit',
         'account',
+        'agentCanFail',
       ],
       'command',
     );
@@ -61,6 +62,7 @@ export const commandAgent: Agent = {
   readCallTokens: () => null,
   findUsageLimitStop: () => null,
   checkIsStoppedByBudget: () => false,
+  checkIsFailedByAgent: () => false,
   readBlockedActions: () => [],
 
   buildTranscript(events) {

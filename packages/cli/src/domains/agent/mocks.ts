@@ -26,6 +26,7 @@ export function makeAgentTask(overrides: Partial<AgentTask> = {}): AgentTask {
     maxBudgetTokens: null,
     onUsageLimit: null,
     account: null,
+    agentCanFail: false,
     ...overrides,
   };
 }
