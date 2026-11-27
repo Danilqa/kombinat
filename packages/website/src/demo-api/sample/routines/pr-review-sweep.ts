@@ -1,6 +1,6 @@
 import { routineNameSchema } from 'domains/routine/ids';
 
-import { REPO, WORK, OPUS } from '../shared';
+import { REPO, OPUS } from '../shared';
 import { bash, hook, init, read, text } from '../steps';
 import type { DemoRoutine } from '../types';
 
@@ -18,7 +18,6 @@ export const prReviewSweep: DemoRoutine = {
   schedule: '15 9-17/2 * * *',
   enabled: true,
   agent: 'claude',
-  account: WORK,
   model: OPUS,
   effort: 'high',
   startsAfter: routineNameSchema.parse('night-agent-tasks'),

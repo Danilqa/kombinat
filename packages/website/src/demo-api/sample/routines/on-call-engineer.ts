@@ -1,6 +1,6 @@
 import { routineNameSchema } from 'domains/routine/ids';
 
-import { REPO, WORK, FABLE, fableInit } from '../shared';
+import { REPO, FABLE, fableInit } from '../shared';
 import { bash, mcp, read, text, webFetch, write } from '../steps';
 import type { DemoRoutine } from '../types';
 
@@ -12,7 +12,6 @@ export const onCallEngineer: DemoRoutine = {
   webhook: true,
   webhookGate: 'node scripts/verify-alert.ts',
   agent: 'claude',
-  account: WORK,
   model: FABLE,
   effort: 'max',
   permissionMode: 'auto',

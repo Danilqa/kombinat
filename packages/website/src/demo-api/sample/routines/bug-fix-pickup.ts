@@ -1,6 +1,6 @@
 import { routineNameSchema } from 'domains/routine/ids';
 
-import { REPO, WORK, OPUS, opusInit } from '../shared';
+import { REPO, OPUS, opusInit } from '../shared';
 import { bash, denied, edit, read, text, type TranscriptStep } from '../steps';
 import type { DemoRoutine } from '../types';
 
@@ -49,7 +49,6 @@ export const bugFixPickup: DemoRoutine = {
   schedule: '30 11,14 * * *',
   enabled: true,
   agent: 'claude',
-  account: WORK,
   model: OPUS,
   effort: 'high',
   permissionMode: 'auto',

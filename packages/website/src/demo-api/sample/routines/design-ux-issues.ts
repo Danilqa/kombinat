@@ -1,6 +1,6 @@
 import { routineNameSchema } from 'domains/routine/ids';
 
-import { REPO, WORK, SONNET, sonnetInit } from '../shared';
+import { REPO, SONNET, sonnetInit } from '../shared';
 import { bash, mcp, text, type TranscriptStep } from '../steps';
 import type { DemoRoutine } from '../types';
 
@@ -63,7 +63,6 @@ export const designUxIssues: DemoRoutine = {
   schedule: '30 3 * * *',
   enabled: true,
   agent: 'claude',
-  account: WORK,
   model: SONNET,
   effort: 'high',
   permissionMode: 'auto',

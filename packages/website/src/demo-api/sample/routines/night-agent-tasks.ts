@@ -1,6 +1,6 @@
 import { routineNameSchema } from 'domains/routine/ids';
 
-import { REPO, WORK, OPUS, SONNET } from '../shared';
+import { REPO, OPUS, SONNET } from '../shared';
 import { bash, edit, hook, init, modelFallback, read, text, type TranscriptStep } from '../steps';
 import type { DemoRoutine } from '../types';
 
@@ -72,7 +72,6 @@ export const nightAgentTasks: DemoRoutine = {
   schedule: '0 2 * * *',
   enabled: true,
   agent: 'claude',
-  account: WORK,
   model: OPUS,
   fallbackModel: SONNET,
   effort: 'xhigh',

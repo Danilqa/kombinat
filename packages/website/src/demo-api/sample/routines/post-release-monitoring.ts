@@ -1,6 +1,6 @@
 import { routineNameSchema } from 'domains/routine/ids';
 
-import { REPO, WORK, OPUS, opusInit } from '../shared';
+import { REPO, OPUS, opusInit } from '../shared';
 import { bash, edit, mcp, read, text } from '../steps';
 import type { DemoRoutine } from '../types';
 
@@ -10,7 +10,6 @@ export const postReleaseMonitoring: DemoRoutine = {
   schedule: '0 10,16 * * *',
   enabled: true,
   agent: 'claude',
-  account: WORK,
   model: OPUS,
   effort: 'high',
   permissionMode: 'auto',

@@ -1,7 +1,6 @@
 import { routineNameSchema } from 'domains/routine/ids';
 
 import { HOME } from '../../constants';
-import { PERSONAL } from '../shared';
 import { init, webFetch } from '../steps';
 import type { DemoRoutine } from '../types';
 
@@ -11,7 +10,6 @@ export const umbrellaCheck: DemoRoutine = {
   schedule: '0 8 * * 1-5',
   enabled: false,
   agent: 'claude',
-  account: PERSONAL,
   model: 'claude-haiku-4-5',
   effort: 'low',
   permissionMode: 'auto',

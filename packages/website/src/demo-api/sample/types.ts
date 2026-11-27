@@ -1,4 +1,3 @@
-import type { AccountName } from 'domains/agent/ids';
 import type { AgentName } from 'domains/agent/types';
 import type { RoutineName } from 'domains/routine/ids';
 import type { BlockedAction, ChainCondition, ChangedFile, RunStatus } from 'domains/run/types';
@@ -101,7 +100,6 @@ export interface DemoRoutine {
   webhookGate?: string;
   check?: DemoCheck;
   agent: AgentName;
-  account?: AccountName;
   model: string | null;
   fallbackModel?: string;
   effort: string | null;

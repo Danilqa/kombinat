@@ -1,7 +1,7 @@
 import { routineNameSchema } from 'domains/routine/ids';
 
 import { HOME } from '../../constants';
-import { WORK, SONNET } from '../shared';
+import { SONNET } from '../shared';
 import { bash, init, mcp, text, write } from '../steps';
 import type { DemoRoutine } from '../types';
 
@@ -11,7 +11,6 @@ export const supportSignals: DemoRoutine = {
   schedule: '0 18 * * *',
   enabled: true,
   agent: 'claude',
-  account: WORK,
   model: SONNET,
   effort: 'medium',
   permissionMode: 'auto',

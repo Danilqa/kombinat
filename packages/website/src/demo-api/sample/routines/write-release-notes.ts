@@ -1,6 +1,6 @@
 import { routineNameSchema } from 'domains/routine/ids';
 
-import { REPO, WORK, OPUS } from '../shared';
+import { REPO, OPUS } from '../shared';
 import { bash, init, text, write } from '../steps';
 import type { DemoRoutine } from '../types';
 
@@ -12,7 +12,6 @@ export const writeReleaseNotes: DemoRoutine = {
   startsAfter: routineNameSchema.parse('pr-review-sweep'),
   startsWhen: 'has-findings',
   agent: 'claude',
-  account: WORK,
   model: OPUS,
   effort: 'high',
   permissionMode: 'acceptEdits',
