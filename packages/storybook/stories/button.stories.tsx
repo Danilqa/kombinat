@@ -16,6 +16,8 @@ const meta = {
   argTypes: {
     variant: { control: 'inline-radio', options: ['primary', 'secondary', 'tertiary'] },
     size: { control: 'inline-radio', options: ['small', 'medium', 'icon-small'] },
+    isActive: { control: 'boolean' },
+    isGlass: { control: 'boolean' },
   },
 } satisfies Meta<typeof Button>;
 
