@@ -109,7 +109,7 @@ export function HidingWorkers({ children }: HidingWorkersProps) {
               width={150}
               facing="left"
               peeksFrom="right"
-              delay={450}
+              delay={0}
               tilt={-13}
               className="top-50.25 left-33.5"
             />
@@ -120,7 +120,7 @@ export function HidingWorkers({ children }: HidingWorkersProps) {
         <>
           <Hand delay={50} className="-top-0.75 left-65.5" />
           <FromBottomLeftCorner>
-            <Hand delay={300} className="-top-22.25 -left-px -rotate-90" />
+            <Hand delay={0} className="-top-22.25 -left-px -rotate-90" />
           </FromBottomLeftCorner>
         </>
       }
@@ -290,7 +290,7 @@ export function HidingWorkersOnPhone() {
         width={150}
         facing="left"
         peeksFrom="right"
-        delay={400}
+        delay={0}
         tilt={-16}
         className="top-18 right-3"
       />
