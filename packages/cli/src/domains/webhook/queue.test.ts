@@ -5,7 +5,6 @@ import path from 'node:path';
 import { test } from 'node:test';
 
 import { routineNameSchema } from 'domains/routine/ids';
-import { runIdSchema } from 'domains/run/ids';
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kombinat-test-'));
 process.env['KOMBINAT_STATE_DIR'] = path.join(tmp, 'state');
@@ -18,16 +17,11 @@ const {
   listQueuedWebhooks,
   takeQueuedWebhook,
 } = await import('./queue');
+const { makeWebhook } = await import('./mocks');
 
 const triage = routineNameSchema.parse('triage');
 const busy = routineNameSchema.parse('busy');
 const chat = routineNameSchema.parse('chat');
-
-const makeWebhook = (runId: string, payload: string, conversation: string | null = null) => ({
-  runId: runIdSchema.parse(runId),
-  payload,
-  conversation,
-});
 
 test('webhooks leave the queue oldest first, with their run id and payload', () => {
   assert.equal(takeQueuedWebhook(triage), null);

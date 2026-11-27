@@ -26,7 +26,7 @@ type StoredWebhookCall = z.infer<typeof storedWebhookCallSchema>;
 
 type LoggedOutcome = Pick<StoredWebhookCall, 'outcome' | 'runId' | 'reason'>;
 
-export interface WebhookCallEntry {
+interface WebhookCallEntry {
   receivedAt: Date;
   outcome: WebhookOutcome;
   status: number;

@@ -1,29 +1,23 @@
-import type { HttpClient } from 'utils/http';
+import type { Api } from 'utils/api';
 
 import type { RoutineName } from '../routine/ids';
 import { changedNotifyLevelSchema, inboxSchema, markedReadSchema } from './schemas';
 import type { Inbox, InboxRunKey, NotifyLevel } from './types';
 
-export async function getInbox(http: HttpClient): Promise<Inbox> {
-  return http.request('/api/inbox', inboxSchema);
+export async function getInbox(api: Api): Promise<Inbox> {
+  return api.get('/api/inbox').json(inboxSchema);
 }
 
-export async function markRunsRead(http: HttpClient, runs: InboxRunKey[]): Promise<void> {
-  await http.request('/api/inbox/read', markedReadSchema, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ runs }),
-  });
+export async function markRunsRead(api: Api, runs: InboxRunKey[]): Promise<void> {
+  await api.post('/api/inbox/read', { json: { runs } }).json(markedReadSchema);
 }
 
 export async function setNotifyLevel(
-  http: HttpClient,
+  api: Api,
   routine: RoutineName,
   level: NotifyLevel,
 ): Promise<void> {
-  await http.request(`/api/inbox/notify/${encodeURIComponent(routine)}`, changedNotifyLevelSchema, {
-    method: 'PUT',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ level }),
-  });
+  await api
+    .put(`/api/inbox/notify/${encodeURIComponent(routine)}`, { json: { level } })
+    .json(changedNotifyLevelSchema);
 }

@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import path from 'node:path';
 
 import type { z } from 'zod';
 
@@ -23,6 +24,7 @@ export function readJsonFile<T>(file: string, schema: z.ZodType<T>): T | null {
 
 // Runs that write the same file at once each rename their own temporary file.
 export function writeJsonFile(file: string, value: unknown): void {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
   const tmp = `${file}.${process.pid}.tmp`;
   fs.writeFileSync(tmp, JSON.stringify(value, null, 2));
   fs.renameSync(tmp, file);

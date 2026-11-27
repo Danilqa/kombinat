@@ -5,7 +5,7 @@ import type { DiskSpace } from 'domains/daemon/types';
 
 const CPU_SAMPLE_MS = 5_000;
 
-export interface CpuTimes {
+interface CpuTimes {
   idle: number;
   total: number;
 }

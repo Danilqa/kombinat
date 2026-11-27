@@ -16,7 +16,7 @@ const PALETTE = {
   accent: '#f07846',
 } as const;
 
-export type ThemeColor = keyof typeof PALETTE;
+type ThemeColor = keyof typeof PALETTE;
 
 interface Rgb {
   r: number;

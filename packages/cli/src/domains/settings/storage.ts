@@ -1,4 +1,3 @@
-import fs from 'node:fs';
 import path from 'node:path';
 
 import { DEFAULT_SETTINGS } from 'domains/settings/constants';
@@ -15,6 +14,5 @@ export function readSettings(): Settings {
 }
 
 export function writeSettings(settings: Settings): void {
-  fs.mkdirSync(config.stateDir, { recursive: true });
   writeJsonFile(settingsFile(), settings);
 }

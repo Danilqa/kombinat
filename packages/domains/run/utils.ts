@@ -15,6 +15,7 @@ import type {
   RunsPage,
   RunsPageQuery,
   RunStatus,
+  RunStatusTone,
   RunTrigger,
   RunWorktree,
   TokenCounts,
@@ -117,6 +118,16 @@ export function getRunStatusLabel(status: RunStatus): string {
     .with('failed', () => 'Failed')
     .with('timed_out', () => 'Timed out')
     .with('aborted', () => 'Aborted')
+    .exhaustive();
+}
+
+export function getRunStatusTone(status: RunStatus): RunStatusTone {
+  return match(status)
+    .with('running', () => 'warning' as const)
+    .with('waiting', 'retrying', () => 'info' as const)
+    .with('succeeded', () => 'positive' as const)
+    .with('failed', 'timed_out', () => 'negative' as const)
+    .with('aborted', () => 'ghost' as const)
     .exhaustive();
 }
 

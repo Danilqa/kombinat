@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { BrowserContext, Locator, Page } from 'playwright';
+import { easeInOutCubic } from '../src/motion';
 import { DEVICE_SCALE, VIEWPORT } from '../src/timeline';
 import { WEBSITE_SITE } from './serve-sites';
 import { TOUR_OVERLAY } from './tour-overlay';
@@ -29,10 +30,6 @@ interface CaptionFrame {
 interface Frame {
   file: string;
   timestamp: number;
-}
-
-function easeInOutCubic(progress: number) {
-  return progress < 0.5 ? 4 * progress ** 3 : 1 - (-2 * progress + 2) ** 3 / 2;
 }
 
 // Drives the mouse in real time with an eased path, so the screencast shows a smooth cursor.

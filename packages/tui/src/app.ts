@@ -1,124 +1,51 @@
 import { isMatching, match, P } from 'ts-pattern';
 
-import { getOfferedRelease } from 'domains/release/utils';
 import type { RoutineName } from 'domains/routine/ids';
 import type { RoutineDetail } from 'domains/routine/types';
 import type { RunId } from 'domains/run/ids';
-import type { RunRecord, RunsPage, RunWithTranscript } from 'domains/run/types';
+import type { RunsPage, RunWithTranscript } from 'domains/run/types';
 import { checkIsRunActive } from 'domains/run/utils';
-import type { RunLaterPreset } from 'domains/scheduler/types';
 import { getRunLaterPresets } from 'domains/scheduler/utils';
 import { RUN_RETENTION_DAYS_OPTIONS } from 'domains/settings/constants';
 import type { Settings } from 'domains/settings/types';
 import { getRunRetentionLabel } from 'domains/settings/utils';
-import type { TranscriptItem } from 'domains/transcript/types';
-import { formatDayTime, formatRelativeCompact } from 'utils/date-time';
+import { formatDayTime } from 'utils/date-time';
 import { getErrorMessage } from 'utils/error';
 
-import { box, overlayOnto } from './components/box';
-import { confirmPopup } from './components/confirm-popup';
-import { helpPopup } from './components/help-popup';
-import { hintsBar } from './components/hints-bar';
-import { runLaterPopup } from './components/run-later-popup';
-import { settingsPopup } from './components/settings-popup';
-import { formatCopyright, statusLines } from './components/status-panel';
+import { bottomBar } from './app-bottom-bar';
+import { formatCopyright } from './app-copyright';
+import { helpPopup } from './app-help-popup';
+import type {
+  Anchor,
+  Focus,
+  ListFocus,
+  Message,
+  Overlay,
+  Page,
+  RoutinePage,
+  RunData,
+  RunPage,
+  Viewport,
+} from './app-types';
 import type { DaemonClient, Overview } from './daemon-client';
-import { getRoutineTabs, routinePage } from './features/routines/routine-page';
-import type { RoutineTab } from './features/routines/routine-page';
-import { routineRow } from './features/routines/routine-row';
-import { runHeaderLines } from './features/runs/run-header';
-import { runRow } from './features/runs/run-row';
-import { checkIsExpandable, transcriptLines } from './features/runs/transcript';
-import type { Action, ContentLine, PageContent } from './page-content';
+import { statusLines } from './domains/daemon/status-panel';
+import { routineRow } from './domains/routine/routine-row';
+import { runLaterPopup } from './domains/routine/run-later-popup';
+import { runNowPopup } from './domains/routine/run-now-popup';
+import { runRow } from './domains/run/run-row';
+import { settingsPopup } from './domains/settings/settings-popup';
+import { checkIsExpandable } from './domains/transcript/transcript';
+import type { Action, PageContent } from './page-content';
+import { getRoutineTabs, routinePage } from './pages/routine-page';
+import type { RoutineTab } from './pages/routine-page';
+import { runPage } from './pages/run-page';
+import { box, overlayOnto } from './terminal/box';
 import { fitLine, S } from './terminal/text';
 import type { Line } from './terminal/text';
-
-type ListFocus = 'routines' | 'runs';
-type Focus = ListFocus | 'detail';
-
-// What the cursor was on at the last render, so it moves along when new lines show up above it.
-interface Anchor {
-  cursor: number;
-  key: string;
-  offset: number;
-}
-
-interface RoutinePage {
-  kind: 'routine';
-  name: RoutineName;
-  tab: RoutineTab;
-  cursor: number;
-  scroll: number;
-  anchor: Anchor | null;
-}
-
-interface RunPage {
-  kind: 'run';
-  routine: RoutineName;
-  id: RunId;
-  cursor: number;
-  scroll: number;
-  anchor: Anchor | null;
-  // Keeps the cursor on the last line while a run is still writing events.
-  follow: boolean;
-}
-
-type Page = RoutinePage | RunPage;
-
-interface HelpOverlay {
-  kind: 'help';
-}
-
-interface ConfirmRunOverlay {
-  kind: 'confirm-run';
-  routine: RoutineName;
-}
-
-interface SettingsOverlay {
-  kind: 'settings';
-  settings: Settings;
-}
-
-interface RunLaterOverlay {
-  kind: 'run-later';
-  routine: RoutineName;
-  presets: RunLaterPreset[];
-}
-
-type Overlay = HelpOverlay | ConfirmRunOverlay | RunLaterOverlay | SettingsOverlay;
-
-interface Message {
-  text: string;
-  tone: 'ok' | 'error';
-  at: number;
-}
-
-interface RenderedTranscript {
-  key: string;
-  lines: ContentLine[];
-}
-
-interface RunData {
-  run: RunRecord;
-  eventCount: number;
-  items: TranscriptItem[];
-  expanded: Set<string>;
-  expandedVersion: number;
-  transcript: RenderedTranscript | null;
-}
-
-interface Viewport {
-  content: PageContent;
-  height: number;
-  width: number;
-}
-
-type Hint = [string, string];
 
 const FOCUS_ORDER: Focus[] = ['routines', 'runs', 'detail'];
 const MIN_WIDTH = 60;
 const MIN_HEIGHT = 18;
-const MESSAGE_MS = 6000;
 const RUN_CACHE_SIZE = 4;
 const LOAD_MORE_ROWS = 10;
 
@@ -143,6 +70,15 @@ const getSelectTargets = (content: PageContent): number[] | null =>
 const messageContent = (text: string, isError = false): PageContent => ({
   mode: 'scroll',
   lines: [{ line: [{ text, style: isError ? S.red : S.dim }] }],
+});
+const openRunPage = (routine: RoutineName, id: RunId): RunPage => ({
+  kind: 'run',
+  routine,
+  id,
+  cursor: 0,
+  scroll: 0,
+  anchor: null,
+  follow: false,
 });
 
 function getAnchor(content: PageContent, line: number, cursor: number): Anchor | null {
@@ -195,7 +131,7 @@ function tooSmall(width: number, height: number): Line[] {
   );
 }
 
-export interface AppOptions {
+interface AppOptions {
   client: DaemonClient;
   now?: () => number;
   onChange?: () => void;
@@ -422,17 +358,7 @@ export class TuiApp {
       })
       .with('runs', (): Page | null => {
         const run = this.runs[this.cursors.runs];
-        return run
-          ? {
-              kind: 'run',
-              routine: run.routine,
-              id: run.id,
-              cursor: 0,
-              scroll: 0,
-              anchor: null,
-              follow: false,
-            }
-          : null;
+        return run ? openRunPage(run.routine, run.id) : null;
       })
       .exhaustive();
   }
@@ -635,15 +561,7 @@ export class TuiApp {
 
   private openRun(action: Action | undefined): void {
     if (!isMatching({ kind: 'open-run' }, action)) return;
-    this.stack.push({
-      kind: 'run',
-      routine: action.routine,
-      id: action.id,
-      cursor: 0,
-      scroll: 0,
-      anchor: null,
-      follow: false,
-    });
+    this.stack.push(openRunPage(action.routine, action.id));
     this.requestPageLoad();
   }
 
@@ -754,8 +672,7 @@ export class TuiApp {
     } catch (err) {
       this.flash(getErrorMessage(err), 'error');
     }
-    await this.refreshing;
-    await this.refresh();
+    await this.reload();
   }
 
   private flash(text: string, tone: Message['tone']): void {
@@ -768,7 +685,12 @@ export class TuiApp {
     const now = this.now();
     const leftWidth = clamp(Math.round(width * 0.36), 34, 56);
     const bodyHeight = height - 1;
-    const status = statusLines(this.overview, this.overviewError, this.loadedAt, now);
+    const status = statusLines(
+      this.overview?.status ?? null,
+      this.overviewError,
+      this.loadedAt,
+      now,
+    );
     const statusHeight = Math.max(4, status.length + 2);
     const listsHeight = bodyHeight - statusHeight;
     const routinesHeight = clamp(this.routines.length + 2, 4, Math.floor(listsHeight * 0.6));
@@ -799,11 +721,22 @@ export class TuiApp {
     ];
     const right = this.renderDetail(width - leftWidth, bodyHeight, now);
     const frame = left.map((line, index) => [...line, ...(right[index] ?? [])]);
-    frame.push(hintsBar(this.hints(), this.statusRight(now), width));
+    frame.push(
+      bottomBar({
+        focus: this.focus,
+        page: this.page,
+        message: this.message,
+        overviewError: this.overviewError,
+        loadedAt: this.loadedAt,
+        releaseUpdate: this.overview?.releaseUpdate ?? null,
+        width,
+        now,
+      }),
+    );
     if (!this.overlay) return frame;
     const popup = match(this.overlay)
       .with({ kind: 'help' }, () => helpPopup(width, height))
-      .with({ kind: 'confirm-run' }, ({ routine }) => confirmPopup(routine, width))
+      .with({ kind: 'confirm-run' }, ({ routine }) => runNowPopup(routine, width))
       .with({ kind: 'run-later' }, ({ routine, presets }) => runLaterPopup(routine, presets, width))
       .with({ kind: 'settings' }, ({ settings }) => settingsPopup(settings, width))
       .exhaustive();
@@ -927,23 +860,9 @@ export class TuiApp {
   ): PageContent {
     const data = this.runData.get(runKey(page.routine, page.id));
     if (!data) return messageContent(error ?? 'loading…', Boolean(error));
-    const isRunning = checkIsRunActive(data.run);
-    const cacheKey = `${width}|${data.eventCount}|${data.expandedVersion}|${String(isRunning)}`;
-    if (data.transcript?.key !== cacheKey) {
-      data.transcript = {
-        key: cacheKey,
-        lines: transcriptLines(data.items, data.eventCount, data.expanded, width, isRunning),
-      };
-    }
-    const cwd = data.items.flatMap(item =>
-      match(item)
-        .with({ kind: 'init' }, init => [init.cwd])
-        .otherwise(() => []),
-    )[0];
-    return {
-      mode: 'line',
-      lines: [...runHeaderLines(data.run, cwd ?? null, width, now), ...data.transcript.lines],
-    };
+    const { content, transcript } = runPage({ ...data, width, now });
+    data.transcript = transcript;
+    return content;
   }
 
   private clampPage(page: Page, content: PageContent, height: number, isFocused: boolean): void {
@@ -983,85 +902,5 @@ export class TuiApp {
     const shift = start + anchor.offset - page.cursor;
     page.cursor += shift;
     page.scroll += shift;
-  }
-
-  private hints(): Hint[] {
-    const tail: Hint[] = [
-      ['?', 'help'],
-      ['q', 'quit'],
-    ];
-    return match({ focus: this.focus, page: this.page })
-      .with({ focus: P.union('routines', 'runs') }, ({ focus }): Hint[] => [
-        ['↑↓', 'move'],
-        ['enter', 'open'],
-        [
-          'r',
-          match(focus)
-            .with('runs', () => 'run now')
-            .with('routines', () => 'run now')
-            .exhaustive(),
-        ],
-        ['L', 'run later'],
-        ['tab', 'panels'],
-        ['R', 'refresh'],
-        ...tail,
-      ])
-      .with({ page: { kind: 'run' } }, (): Hint[] => [
-        ['↑↓', 'move'],
-        ['enter', 'expand'],
-        ['e', 'expand all'],
-        ['{ }', 'items'],
-        ['G', 'follow'],
-        ['esc', 'back'],
-        ['r', 'run now'],
-        ['L', 'run later'],
-        ...tail,
-      ])
-      .with({ page: { kind: 'routine', tab: 'runs' } }, (): Hint[] => [
-        ['↑↓', 'move'],
-        ['enter', 'open run'],
-        ['[ ]', 'tabs'],
-        ['esc', 'back'],
-        ['r', 'run now'],
-        ['L', 'run later'],
-        ...tail,
-      ])
-      .otherwise((): Hint[] => [
-        ['↑↓', 'scroll'],
-        ['[ ]', 'tabs'],
-        ['esc', 'back'],
-        ['r', 'run now'],
-        ['L', 'run later'],
-        ...tail,
-      ]);
-  }
-
-  private statusRight(now: number): Line {
-    if (this.message && now - this.message.at < MESSAGE_MS)
-      return [
-        {
-          text: this.message.text,
-          style: match(this.message.tone)
-            .with('ok', () => S.boldGreen)
-            .with('error', () => S.boldRed)
-            .exhaustive(),
-        },
-      ];
-    if (this.overviewError) return [{ text: this.overviewError, style: S.red }];
-    if (this.loadedAt === null) return [];
-    const releaseUpdate = this.overview?.releaseUpdate;
-    const offered = releaseUpdate ? getOfferedRelease(releaseUpdate) : null;
-    return [
-      ...(offered === null
-        ? []
-        : [
-            { text: `kombinat ${offered.version} is available`, style: S.boldYellow },
-            { text: ' · ', style: S.dim },
-          ]),
-      {
-        text: `updated ${formatRelativeCompact(new Date(this.loadedAt).toISOString(), now)}`,
-        style: S.dim,
-      },
-    ];
   }
 }

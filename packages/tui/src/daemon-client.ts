@@ -17,7 +17,7 @@ import type { RunRecord, RunsCursor, RunsPage, RunWithTranscript } from 'domains
 import { DEFAULT_SETTINGS } from 'domains/settings/constants';
 import { getSettings, updateSettings } from 'domains/settings/requests';
 import type { Settings } from 'domains/settings/types';
-import { createHttpClient } from 'utils/http';
+import { createApi } from 'utils/api';
 
 export interface Overview {
   status: DaemonStatus;
@@ -41,7 +41,7 @@ export interface DaemonClient {
 }
 
 export function createDaemonClient(baseUrl: string): DaemonClient {
-  const http = createHttpClient({
+  const api = createApi({
     baseUrl,
     timeoutMs: 30_000,
     networkErrorMessage: `daemon not reachable at ${baseUrl}`,
@@ -50,26 +50,26 @@ export function createDaemonClient(baseUrl: string): DaemonClient {
   return {
     async getOverview() {
       const [status, routines, { runs }, settings, releaseUpdate] = await Promise.all([
-        getDaemonStatus(http),
-        getRoutines(http),
-        getRunsPage(http, null, null),
+        getDaemonStatus(api),
+        getRoutines(api),
+        getRunsPage(api, null, null),
         // Older daemons, which tui --url and connect may talk to, have no settings or releases endpoint.
-        getSettings(http).catch(() => DEFAULT_SETTINGS),
-        getReleaseUpdate(http).catch(() => null),
+        getSettings(api).catch(() => DEFAULT_SETTINGS),
+        getReleaseUpdate(api).catch(() => null),
       ]);
       return { status, routines, runs, settings, releaseUpdate };
     },
-    getRoutine: async name => getRoutine(http, name),
-    getRuns: async (routine, cursor) => getRunsPage(http, routine, cursor),
-    getRun: async (routine, id) => getRunWithTranscript(http, routine, id),
-    markRunRead: async (routine, id) => markRunsRead(http, [{ routine, id }]),
+    getRoutine: async name => getRoutine(api, name),
+    getRuns: async (routine, cursor) => getRunsPage(api, routine, cursor),
+    getRun: async (routine, id) => getRunWithTranscript(api, routine, id),
+    markRunRead: async (routine, id) => markRunsRead(api, [{ routine, id }]),
     async startRun(name) {
-      await startRoutineRun(http, name);
+      await startRoutineRun(api, name);
     },
-    scheduleOneTimeRun: async (name, at) => scheduleOneTimeRun(http, name, at.toISOString()),
+    scheduleOneTimeRun: async (name, at) => scheduleOneTimeRun(api, name, at.toISOString()),
     async updateSettings(settings) {
-      await updateSettings(http, settings);
+      await updateSettings(api, settings);
     },
-    watchChanges: async (onChange, signal) => watchDaemonChanges(http, onChange, signal),
+    watchChanges: async (onChange, signal) => watchDaemonChanges(api, onChange, signal),
   };
 }

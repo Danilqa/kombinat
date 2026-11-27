@@ -6,7 +6,7 @@ import { runIdSchema } from 'domains/run/ids';
 import { makeRunRecord } from 'domains/run/mocks';
 
 import { commandAgent } from './command';
-import { makeAgentTask } from './testing';
+import { makeAgentTask } from './mocks';
 
 test('pipes the prompt into a shell command', () => {
   const { command, args, input, env } = commandAgent.buildInvocation({

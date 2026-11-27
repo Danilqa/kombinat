@@ -13,17 +13,12 @@ process.env['KOMBINAT_STATE_DIR'] = path.join(tmp, 'state');
 
 const { getQueuedWebhookRunId } = await import('./start');
 const { enqueueWebhook } = await import('./queue');
+const { makeWebhook } = await import('./mocks');
 const { writeRunRecord } = await import('../run/storage');
-const { startDetachedRun } = await import('../run/runner');
+const { startDetachedRun } = await import('../run/launcher');
 const { makeRunRecord } = await import('domains/run/mocks');
 
 const chat = routineNameSchema.parse('chat');
-
-const makeWebhook = (runId: string, conversation: string | null) => ({
-  runId: runIdSchema.parse(runId),
-  payload: 'Hi',
-  conversation,
-});
 
 test('a queued webhook answers with the run its conversation continues or starts', () => {
   writeRunRecord(
@@ -53,13 +48,13 @@ test('a queued webhook answers with the run its conversation continues or starts
       conversation: 'issue-4',
     }),
   );
-  enqueueWebhook(chat, makeWebhook('q1', 'issue-2'));
+  enqueueWebhook(chat, makeWebhook('q1', 'Hi', 'issue-2'));
 
-  assert.equal(getQueuedWebhookRunId(chat, makeWebhook('new', null)), 'new');
-  assert.equal(getQueuedWebhookRunId(chat, makeWebhook('new', 'issue-1')), 'r1');
-  assert.equal(getQueuedWebhookRunId(chat, makeWebhook('new', 'issue-2')), 'q1');
-  assert.equal(getQueuedWebhookRunId(chat, makeWebhook('new', 'issue-3')), 'new');
-  assert.equal(getQueuedWebhookRunId(chat, makeWebhook('new', 'issue-4')), 'r3');
+  assert.equal(getQueuedWebhookRunId(chat, makeWebhook('new', 'Hi')), 'new');
+  assert.equal(getQueuedWebhookRunId(chat, makeWebhook('new', 'Hi', 'issue-1')), 'r1');
+  assert.equal(getQueuedWebhookRunId(chat, makeWebhook('new', 'Hi', 'issue-2')), 'q1');
+  assert.equal(getQueuedWebhookRunId(chat, makeWebhook('new', 'Hi', 'issue-3')), 'new');
+  assert.equal(getQueuedWebhookRunId(chat, makeWebhook('new', 'Hi', 'issue-4')), 'r3');
 });
 
 test('a queued webhook answers with the run of its conversation that is still starting', () => {
@@ -69,6 +64,6 @@ test('a queued webhook answers with the run of its conversation that is still st
     runId: runIdSchema.parse('s1'),
     conversation: 'issue-1',
   });
-  assert.equal(getQueuedWebhookRunId(starting, makeWebhook('new', 'issue-1')), 's1');
-  assert.equal(getQueuedWebhookRunId(starting, makeWebhook('new', 'issue-2')), 'new');
+  assert.equal(getQueuedWebhookRunId(starting, makeWebhook('new', 'Hi', 'issue-1')), 's1');
+  assert.equal(getQueuedWebhookRunId(starting, makeWebhook('new', 'Hi', 'issue-2')), 'new');
 });

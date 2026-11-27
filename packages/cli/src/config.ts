@@ -61,7 +61,6 @@ export const config = {
   pullBranch: env('KOMBINAT_PULL_BRANCH') ?? 'main',
   managed: env('KOMBINAT_MANAGED') === '1',
   keepAwake: env('KOMBINAT_KEEP_AWAKE'),
-  launchdLabel: 'com.kombinat.daemon',
 };
 
 export const getCliArgs = (...args: string[]): string[] => [config.cliBin, ...args];

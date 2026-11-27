@@ -15,6 +15,7 @@ import {
   findExpiredRuns,
   getBudgetLabel,
   getRunDurationMs,
+  getRunStatusTone,
   getTokenUsageDates,
   listBlockedRules,
   mergeBlockedActions,
@@ -113,6 +114,13 @@ test('a run that waits for a usage limit or its next attempt is active but not a
   assert.equal(checkIsRunActive(makeRunRecord({ status: 'retrying' })), true);
   assert.equal(checkIsRunAtWork(makeRunRecord({ status: 'retrying' })), false);
   assert.equal(checkIsRunAtWork(makeRunRecord({ status: 'succeeded', replyPid: 42 })), true);
+});
+
+test('a status has the tone of its outcome, and both kinds of failure share one', () => {
+  assert.equal(getRunStatusTone('succeeded'), 'positive');
+  assert.equal(getRunStatusTone('failed'), getRunStatusTone('timed_out'));
+  assert.equal(getRunStatusTone('waiting'), getRunStatusTone('retrying'));
+  assert.equal(getRunStatusTone('aborted'), 'ghost');
 });
 
 test('a running run lasts until now, and one that started after now has lasted nothing yet', () => {

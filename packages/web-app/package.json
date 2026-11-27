@@ -5,9 +5,8 @@
   "type": "module",
   "exports": {
     "./app": "./src/app.tsx",
-    "./components/app-footer": "./src/components/app-footer.tsx",
-    "./constants/links": "./src/constants/links.ts",
-    "./constants/path": "./src/constants/path.ts",
+    "./layout/app-footer": "./src/layout/app-footer/index.ts",
+    "./paths": "./src/paths.ts",
     "./hooks/use-document-title": "./src/hooks/use-document-title.ts",
     "./hooks/use-stored-boolean": "./src/hooks/use-stored-boolean.ts",
     "./index.css": "./src/index.css"
@@ -25,14 +24,14 @@
     "lucide-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "react-router": "7.18.4",
+    "react-router": "catalog:",
     "ts-pattern": "catalog:",
     "utils": "workspace:*"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "4.3.3",
-    "@vitejs/plugin-react": "6.1.1",
+    "@tailwindcss/vite": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
     "e2e": "workspace:*",
-    "vite": "8.3.1"
+    "vite": "catalog:"
   }
 }

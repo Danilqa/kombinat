@@ -7,7 +7,7 @@ import { match } from 'ts-pattern';
 import { createDaemonClient, runTui } from 'tui';
 import { getErrorMessage } from 'utils/error';
 
-export interface ConnectOptions {
+interface ConnectOptions {
   destination: string;
   remotePort: number;
   tui: boolean;
@@ -56,7 +56,7 @@ function getFreePort(): Promise<number> {
   });
 }
 
-function isListening(port: number): Promise<boolean> {
+function checkIsListening(port: number): Promise<boolean> {
   return new Promise(resolve => {
     const socket = net.connect(port, '127.0.0.1');
     socket.once('connect', () => {
@@ -107,7 +107,7 @@ function openTunnel(destination: string, localPort: number, remotePort: number):
 
 async function waitUntilListening(tunnel: SshTunnel, port: number): Promise<boolean> {
   while (tunnel.checkIsOpen()) {
-    if (await isListening(port)) return true;
+    if (await checkIsListening(port)) return true;
     await sleep(PROBE_INTERVAL_MS);
   }
   return false;

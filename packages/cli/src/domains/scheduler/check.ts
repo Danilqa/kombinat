@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import path from 'node:path';
 
 import type { RoutineName } from 'domains/routine/ids';
 import type { RunId } from 'domains/run/ids';
@@ -9,7 +8,7 @@ import type { Routine } from '../routine/types';
 import type { HookEvent } from '../run/event-log';
 import { appendHookEvent, getHookError, HOOK_TIMEOUT_MS, runHookCommand } from '../run/hooks';
 import { writeCheckError } from '../run/payload';
-import { getRunsDir } from '../run/storage';
+import { getRunLogFile, getRunsDir } from '../run/storage';
 
 // EX_CONFIG, as for the webhook gate: crashes exit with 1 or 2, never with this.
 const CHECK_SKIP_EXIT_CODE = 78;
@@ -26,7 +25,7 @@ interface SkipDecision {
   output: string | null;
 }
 
-export type CheckDecision = StartDecision | SkipDecision;
+type CheckDecision = StartDecision | SkipDecision;
 
 const checkingRoutines = new Set<RoutineName>();
 
@@ -68,9 +67,8 @@ export async function runCheck(
 export function prepareCheckedRun(routineName: RoutineName, decision: StartDecision): RunId {
   const runId = createRunId();
   if (decision.event === null) return runId;
-  const runsDir = getRunsDir(routineName);
-  fs.mkdirSync(runsDir, { recursive: true });
-  appendHookEvent(path.join(runsDir, `${runId}.jsonl`), decision.event);
+  fs.mkdirSync(getRunsDir(routineName), { recursive: true });
+  appendHookEvent(getRunLogFile(routineName, runId), decision.event);
   if (decision.error !== null) writeCheckError(routineName, runId, decision.error);
   return runId;
 }

@@ -1,4 +1,17 @@
 import { Route, Routes } from 'react-router';
+import { useCustomization } from '@web-app/customization';
+import { CalendarPage } from '@web-app/pages/calendar';
+import { ChangePromptPage } from '@web-app/pages/change-prompt';
+import { InboxPage } from '@web-app/pages/inbox';
+import { InsightsPage } from '@web-app/pages/insights';
+import { NewRunPage } from '@web-app/pages/new-run';
+import { NotFoundPage } from '@web-app/pages/not-found';
+import { RoutinePage } from '@web-app/pages/routine';
+import { RoutinesPage } from '@web-app/pages/routines';
+import { RunPage } from '@web-app/pages/run';
+import { RunsPage } from '@web-app/pages/runs';
+import { TemplatePage } from '@web-app/pages/template';
+import { TemplatesPage } from '@web-app/pages/templates';
 import {
   CALENDAR_PATH,
   INBOX_PATH,
@@ -11,20 +24,7 @@ import {
   RUN_PATH,
   TEMPLATES_PATH,
   TEMPLATE_PATH,
-} from '@web-app/constants/path';
-import { useCustomization } from '@web-app/contexts';
-import { CalendarPage } from '@web-app/features/calendar/calendar-page';
-import { InboxPage } from '@web-app/features/inbox/inbox-page';
-import { InsightsPage } from '@web-app/features/insights/insights-page';
-import { NotFoundPage } from '@web-app/features/not-found/not-found-page';
-import { ChangePromptPage } from '@web-app/features/routines/change-prompt-page';
-import { RoutinePage } from '@web-app/features/routines/routine-page';
-import { RoutinesPage } from '@web-app/features/routines/routines-page';
-import { NewRunPage } from '@web-app/features/runs/new-run-page';
-import { RunPage } from '@web-app/features/runs/run-page';
-import { RunsPage } from '@web-app/features/runs/runs-page';
-import { TemplatePage } from '@web-app/features/templates/template-page';
-import { TemplatesPage } from '@web-app/features/templates/templates-page';
+} from '@web-app/paths';
 
 export function AppRoutes() {
   const { routes = [] } = useCustomization();

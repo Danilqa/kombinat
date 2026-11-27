@@ -38,7 +38,7 @@ export interface RunContext {
 // A run that waited out a usage limit or retries after an error continues its session without a message.
 export type ReplySource = MessageSource | 'usage_limit' | 'retry';
 
-export interface ReplyMessage {
+interface ReplyMessage {
   text: string;
   source: ReplySource;
   // Permission rules that let the reply do what the run was blocked from.
@@ -51,7 +51,7 @@ export interface UsageLimitStop {
 }
 
 // The tokens of one model call, which the agent may report again as its message streams.
-export interface CallTokens {
+interface CallTokens {
   id: string;
   tokens: TokenCounts;
 }
@@ -84,7 +84,7 @@ export type RunUpdate = Partial<
 >;
 
 // jsonl: stdout is an event stream written to the log as is. text: plain output, one event per line.
-export type OutputFormat = 'jsonl' | 'text';
+type OutputFormat = 'jsonl' | 'text';
 
 export interface Agent {
   readonly name: AgentName;

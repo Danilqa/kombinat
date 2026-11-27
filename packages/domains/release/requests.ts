@@ -1,4 +1,4 @@
-import type { HttpClient } from 'utils/http';
+import type { Api } from 'utils/api';
 
 import { GITHUB_RELEASES_PATH } from './constants';
 import type { ReleaseVersion } from './ids';
@@ -6,17 +6,19 @@ import { githubReleasesSchema, releaseUpdateSchema, skippedReleaseSchema } from 
 import type { ChangelogRelease, ReleaseUpdate } from './types';
 import { parseChangelog } from './utils';
 
-export async function getReleaseUpdate(http: HttpClient): Promise<ReleaseUpdate> {
-  return http.request('/api/releases', releaseUpdateSchema);
+export async function getReleaseUpdate(api: Api): Promise<ReleaseUpdate> {
+  return api.get('/api/releases').json(releaseUpdateSchema);
 }
 
-export async function skipRelease(http: HttpClient, version: ReleaseVersion): Promise<void> {
-  await http.request(`/api/releases/${version}/skip`, skippedReleaseSchema, { method: 'POST' });
+export async function skipRelease(api: Api, version: ReleaseVersion): Promise<void> {
+  await api.post(`/api/releases/${version}/skip`).json(skippedReleaseSchema);
 }
 
-// Takes a client of https://api.github.com rather than of the daemon.
-export async function getChangelog(github: HttpClient): Promise<ChangelogRelease[]> {
+// Takes an api of https://api.github.com rather than of the daemon.
+export async function getChangelog(github: Api): Promise<ChangelogRelease[]> {
   return parseChangelog(
-    await github.request(`${GITHUB_RELEASES_PATH}?per_page=100`, githubReleasesSchema),
+    await github
+      .get(GITHUB_RELEASES_PATH, { searchParams: { per_page: 100 } })
+      .json(githubReleasesSchema),
   );
 }

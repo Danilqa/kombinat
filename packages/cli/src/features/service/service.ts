@@ -4,7 +4,7 @@ import type { InstallResult } from './daemon-setup';
 import * as launchd from './launchd';
 import * as systemd from './systemd';
 
-export interface DaemonService {
+interface DaemonService {
   install: () => InstallResult;
   uninstall: () => string;
   getStatus: () => string;

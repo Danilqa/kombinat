@@ -7,7 +7,7 @@ import type { ShellResult } from './shell';
 
 export const HOOK_TIMEOUT_MS = 3 * 60_000;
 
-export interface HookCommand {
+interface HookCommand {
   type: HookEvent['type'];
   command: string;
   cwd: string;
@@ -16,11 +16,11 @@ export interface HookCommand {
   timeoutMs: number;
 }
 
-export interface Hook extends HookCommand {
+interface Hook extends HookCommand {
   logFile: string;
 }
 
-export interface HookResult extends ShellResult {
+interface HookResult extends ShellResult {
   output: string;
   event: HookEvent;
 }

@@ -1,7 +1,4 @@
 @import 'design-system/styles.css';
-@source '../../domains';
-/* Words in the docs, such as "fixed", would otherwise become classes. */
-@source not '../../domains/**/*.md';
 
 @layer components {
   .skip-link {
@@ -17,7 +14,7 @@
     line-height: var(--line-height-body);
     font-weight: 500;
     transform: translateY(calc(-100% - 12px - env(safe-area-inset-top)));
-    transition: transform 0.2s var(--ease-out-quint-value);
+    transition: transform 0.2s var(--ease-out-quint);
   }
   .skip-link:focus-visible {
     transform: none;

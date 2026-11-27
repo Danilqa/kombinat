@@ -25,6 +25,8 @@ import type {
 export type BlockedAction = z.infer<typeof blockedActionSchema>;
 export type QueuedRun = z.infer<typeof queuedRunSchema>;
 export type RunStatus = z.infer<typeof runStatusSchema>;
+// The names are the variants of the design-system Badge, which draws a status in its tone.
+export type RunStatusTone = 'positive' | 'negative' | 'warning' | 'info' | 'ghost';
 export type RunTrigger = z.infer<typeof runTriggerSchema>;
 export type RunRecord = z.infer<typeof runRecordSchema>;
 export type RunRetry = z.infer<typeof runRetrySchema>;

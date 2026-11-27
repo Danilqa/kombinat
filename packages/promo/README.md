@@ -31,11 +31,11 @@ pnpm --filter promo readme-gif                # record the dashboard GIF of the 
 
 `src/timeline.ts` lists the segments in order with their lengths: the scenes and one dashboard tour.
 
-- A scene is a React component in `src/scenes/` that draws one moment from `time`, the seconds since it started. `src/motion.ts` turns time into progress and styles. The recorder seeks the scene to every frame and takes a screenshot, so a scene looks the same on any machine, CSS animations included.
+- A scene is a React component in its own folder in `src/scenes/`, next to the pieces only it draws, and it draws one moment from `time`, the seconds since it started. The pieces that several scenes draw have folders in `src/`, such as `code-window/` and `heading/`. `src/motion.ts` turns time into progress and styles. The recorder seeks the scene to every frame and takes a screenshot, so a scene looks the same on any machine, CSS animations included.
 - The dashboard tour, `scripts/capture-tour.ts`, clicks through the built website with a drawn cursor and captions, and records it in real time through the Chrome DevTools screencast.
 - `scripts/render-video.ts` encodes each segment and joins them with crossfades.
 
-To change a text, a timing or a layout, edit the scene, check it with `dev` or `snapshot`, then record that scene again. To add a scene, add its name and length to the timeline and its component to `src/scenes/index.ts`.
+To change a text, a timing or a layout, edit the scene, check it with `dev` or `snapshot`, then record that scene again. To add a scene, add its name and length to the timeline, its folder with an `index.ts` to `src/scenes/` and its component to `src/scenes/index.ts`.
 
 The tour shows the website's sample data, so a change there, such as a new routine, can move what the tour points at.
 

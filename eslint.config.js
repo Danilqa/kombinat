@@ -63,6 +63,13 @@ const packagesAbove = (...folders) => ({
     'Packages import only the packages below them: utils, design-system, domains, then web-app and tui, then cli and website.',
 });
 
+// For a package with a src/domains folder of its own, which its files reach in at most ownLevels
+// steps up: a path that climbs further is the domains package.
+const domainsPackageByPath = ownLevels => ({
+  regex: String.raw`^(\.\./){${ownLevels + 1},}domains/`,
+  message: 'Import other workspace packages by name, not by a relative path.',
+});
+
 const packagesByPath = (...folders) => ({
   regex: String.raw`^(\.\./)+(${folders.join('|')})/`,
   message: 'Import other workspace packages by name, not by a relative path.',
@@ -71,7 +78,7 @@ const packagesByPath = (...folders) => ({
 const daemonDomains = (...domains) => ({
   regex: String.raw`^(\.\./)+(domains/)?(${domains.join('|')})(/|$)`,
   message:
-    'Daemon domains import only the levels before their own: agent, settings and inbox, then routine, then run, then webhook, then scheduler.',
+    'Daemon domains import only the levels before their own: agent, settings, inbox and release, then routine, then run, then webhook, then scheduler.',
 });
 
 // Any domain may import the ids.ts of another, since ids.ts imports only zod.
@@ -81,13 +88,49 @@ const sharedDomains = (...domains) => ({
     'Shared domains import only the levels before their own, or the ids of any domain: agent, transcript, scheduler, daemon, webhook, settings and release, then run, then routine, calendar, inbox and insights.',
 });
 
+// web-app has a src/domains folder of its own, whose folders follow the shared order.
+const webAppDomains = (...domains) => ({
+  regex: String.raw`^(@web-app/domains/|(\.\./)+)(${domains.join('|')})(/|$)`,
+  message:
+    'A web-app domain imports only the domains on the levels before its own, as the shared domains do. Pages and the layout put domains of one level together.',
+});
+
+// tui has a src/domains folder too, and every import inside tui is a relative path.
+const tuiDomains = (...domains) => ({
+  regex: String.raw`^(\.\./)+(${domains.join('|')})/`,
+  message:
+    'A tui domain imports only the domains on the levels before its own, as the shared domains do. Pages and the app put domains of one level together.',
+});
+
+const NO_SHELL_IN_TUI_DOMAINS = {
+  regex: String.raw`^(\.\./)+(app(-[a-z-]+)?$|pages/)`,
+  message: 'The app and its pages build on the tui domains, so a domain never imports them.',
+};
+
+const NO_SHELL_IN_WEB_APP_DOMAINS = {
+  regex: String.raw`^(@web-app/|(\.\./)+)(app(-[a-z-]+)?$|layout(/|$)|pages(/|$))`,
+  message:
+    'The app, its layout and its pages build on the web-app domains, so a domain never imports them.',
+};
+
+const ONLY_WEB_APP_EXPORTS_IN_WEBSITE = {
+  regex: '^@web-app/',
+  message:
+    'website imports web-app through its package exports, such as web-app/app. The @web-app alias only resolves the imports of web-app itself.',
+};
+
+const ONLY_TERMINAL_IN_TERMINAL = {
+  regex: String.raw`^\.\./`,
+  message: 'terminal/ is the layer under the rest of tui, so it imports nothing else of tui.',
+};
+
 const ONLY_ZOD_IN_IDS = {
   regex: '^(?!zod$)',
   message: 'ids.ts imports only zod, so that any domain can import it without a cycle.',
 };
 
 const DAEMON_DOMAIN_LEVELS = [
-  ['agent', 'settings', 'inbox'],
+  ['agent', 'settings', 'inbox', 'release'],
   ['routine'],
   ['run'],
   ['webhook'],
@@ -101,8 +144,8 @@ const SHARED_DOMAIN_LEVELS = [
 ];
 
 const NO_UI_IN_TERMINAL = {
-  regex: String.raw`^(react|react-dom|react-router|@tanstack/react-query|lucide-react|design-system|domains/[^/]+/components)(/|$)`,
-  message: 'cli and tui never import React, React Query, design-system or domain components.',
+  regex: String.raw`^(react|react-dom|react-router|@tanstack/react-query|lucide-react|design-system)(/|$)`,
+  message: 'cli and tui never import React, React Query or design-system.',
 };
 
 const NO_ROUTER = {
@@ -115,16 +158,11 @@ const NO_NODE = {
   message: 'This code runs in the browser, so it never imports node:*.',
 };
 
-const UNIVERSAL_DOMAINS_MESSAGE =
-  'cli and tui import this code too, so only domain components/ import React, React Query, lucide-react and design-system.';
-
-const NO_UI_IN_UNIVERSAL_DOMAINS = [
-  {
-    regex: String.raw`^(react|react-dom|@tanstack/react-query|lucide-react|design-system)(/|$)`,
-    message: UNIVERSAL_DOMAINS_MESSAGE,
-  },
-  { regex: '(^|/)components(/|$)', message: UNIVERSAL_DOMAINS_MESSAGE },
-];
+const NO_UI_IN_DOMAINS = {
+  regex: String.raw`^(react|react-dom|@tanstack/react-query|lucide-react|design-system)(/|$)`,
+  message:
+    'domains is pure TypeScript that cli and tui import too, so it never imports React, React Query, lucide-react or design-system. Domain components live in web-app.',
+};
 
 const NO_REACT_IN_UTILS = {
   regex: '^(react|react-dom|@tanstack/react-query)(/|$)',
@@ -132,13 +170,15 @@ const NO_REACT_IN_UTILS = {
 };
 
 const NO_BARREL_INSIDE_DESIGN_SYSTEM = {
-  regex: String.raw`^\.{1,2}(/(components|layouts|icons))?(/index)?/?$`,
-  message: 'Inside design-system, import the file you need by relative path, never a barrel.',
+  regex: String.raw`^\.{1,2}(/index)?/?$`,
+  message:
+    'Inside design-system, import the component you need by relative path, such as ../tooltip, never the root barrel.',
 };
 
 const NO_SELF_IMPORT_INSIDE_DESIGN_SYSTEM = {
   regex: '^design-system(/|$)',
-  message: 'Inside design-system, import the file you need by relative path, not by package name.',
+  message:
+    'Inside design-system, import the component you need by relative path, not by package name.',
 };
 
 const ONLY_SPECS_IMPORT_E2E = {
@@ -157,6 +197,48 @@ const ONLY_TESTS_IMPORT_MOCKS = {
   message: 'Only *.test.ts, *.e2e.ts and packages/e2e import mocks.',
 };
 
+const NO_ENTRY_POINTS_IN_CLI = {
+  regex: String.raw`^(\.\./)+(server|cli|api/.+)$`,
+  message:
+    'cli.ts, server.ts and api/ wire the daemon together, so domains and features never import them.',
+};
+
+const NO_TRANSPORT_IN_CLI_API = {
+  regex: String.raw`^\.\./(server|cli)$`,
+  message: 'server.ts serves the handlers of api/, so api/ never imports it or cli.ts.',
+};
+
+const NO_FEATURES_IN_DAEMON_DOMAINS = {
+  regex: String.raw`^(\.\./)+features/`,
+  message: 'A feature builds on the daemon domains, so a domain never imports a feature.',
+};
+
+const ONLY_UTILS_API_IMPORTS_KY = {
+  regex: '^ky(/|$)',
+  message: 'Only utils/api.ts imports ky. Make a client with createApi from utils/api.',
+};
+
+const DATA_LAYER_MESSAGE =
+  'Only queries.ts files call the requests and React Query. Add a hook to the queries.ts of the domain and call it.';
+
+const ONLY_QUERIES_FETCH = [
+  { regex: String.raw`^domains/[^/]+/requests$`, message: DATA_LAYER_MESSAGE },
+  { regex: '^@web-app/api$', message: DATA_LAYER_MESSAGE },
+  {
+    regex: '^@tanstack/react-query$',
+    importNames: [
+      'useQuery',
+      'useQueries',
+      'useInfiniteQuery',
+      'useSuspenseQuery',
+      'useSuspenseQueries',
+      'useSuspenseInfiniteQuery',
+      'useMutation',
+    ],
+    message: DATA_LAYER_MESSAGE,
+  },
+];
+
 const TEST_ONLY_IMPORTS = [
   ONLY_SPECS_IMPORT_E2E,
   ONLY_E2E_IMPORTS_PLAYWRIGHT,
@@ -172,6 +254,18 @@ const CLI_IMPORTS = [
   packagesAbove('website'),
   NO_UI_IN_TERMINAL,
   packagesByPath('design-system', 'tui', 'e2e'),
+];
+
+const WEB_APP_IMPORTS = [
+  packagesAbove('tui', 'cli', 'website'),
+  packagesByPath('utils', 'design-system', 'domains', 'e2e'),
+];
+
+const TUI_IMPORTS = [
+  packagesAbove('web-app', 'cli', 'website'),
+  NO_UI_IN_TERMINAL,
+  packagesByPath('utils', 'design-system', 'e2e'),
+  domainsPackageByPath(1),
 ];
 
 const DOMAINS_IMPORTS = [
@@ -208,8 +302,6 @@ export default defineConfig(
   {
     linterOptions: {
       noInlineConfig: true,
-      reportUnusedDisableDirectives: 'error',
-      reportUnusedInlineConfigs: 'error',
     },
   },
   js.configs.recommended,
@@ -302,27 +394,30 @@ export default defineConfig(
   },
   // A later block replaces the options of an earlier one, so each lists them all.
   restrictImports(['packages/cli/**'], ...CLI_IMPORTS),
-  ...restrictDomainOrder(
-    'packages/cli/src/domains',
-    DAEMON_DOMAIN_LEVELS,
-    daemonDomains,
-    CLI_IMPORTS,
-  ),
-  restrictImports(
-    ['packages/tui/**'],
-    packagesAbove('web-app', 'cli', 'website'),
-    NO_UI_IN_TERMINAL,
-    packagesByPath('utils', 'design-system', 'domains', 'e2e'),
-  ),
-  restrictImports(
-    ['packages/web-app/**'],
-    packagesAbove('tui', 'cli', 'website'),
-    packagesByPath('utils', 'design-system', 'domains', 'e2e'),
-  ),
+  restrictImports(['packages/cli/src/features/**'], ...CLI_IMPORTS, NO_ENTRY_POINTS_IN_CLI),
+  restrictImports(['packages/cli/src/api/**'], ...CLI_IMPORTS, NO_TRANSPORT_IN_CLI_API),
+  ...restrictDomainOrder('packages/cli/src/domains', DAEMON_DOMAIN_LEVELS, daemonDomains, [
+    ...CLI_IMPORTS,
+    NO_ENTRY_POINTS_IN_CLI,
+    NO_FEATURES_IN_DAEMON_DOMAINS,
+  ]),
+  restrictImports(['packages/tui/**'], ...TUI_IMPORTS),
+  restrictImports(['packages/tui/src/terminal/**'], ...TUI_IMPORTS, ONLY_TERMINAL_IN_TERMINAL),
+  ...restrictDomainOrder('packages/tui/src/domains', SHARED_DOMAIN_LEVELS, tuiDomains, [
+    ...TUI_IMPORTS,
+    NO_SHELL_IN_TUI_DOMAINS,
+  ]),
+  restrictImports(['packages/web-app/**'], ...WEB_APP_IMPORTS),
+  ...restrictDomainOrder('packages/web-app/src/domains', SHARED_DOMAIN_LEVELS, webAppDomains, [
+    ...WEB_APP_IMPORTS,
+    NO_SHELL_IN_WEB_APP_DOMAINS,
+  ]),
   restrictImports(
     ['packages/website/**'],
     packagesAbove('tui', 'cli'),
-    packagesByPath('utils', 'design-system', 'domains', 'web-app', 'e2e'),
+    packagesByPath('utils', 'design-system', 'web-app', 'e2e'),
+    domainsPackageByPath(2),
+    ONLY_WEB_APP_EXPORTS_IN_WEBSITE,
   ),
   restrictImports(
     ['packages/promo/**'],
@@ -351,24 +446,65 @@ export default defineConfig(
     packagesByPath('e2e'),
   ),
   // The typescript-eslint copy of the rule, so these do not replace the blocks above.
-  restrictImportsOfKind(['packages/**/*.{ts,tsx}'], ['packages/e2e/**'], ...TEST_ONLY_IMPORTS),
   restrictImportsOfKind(
-    ['packages/{web-app,website,domains,design-system,utils}/**/*.{ts,tsx}'],
+    ['packages/**/*.{ts,tsx}'],
+    ['packages/e2e/**'],
+    ...TEST_ONLY_IMPORTS,
+    ONLY_UTILS_API_IMPORTS_KY,
+  ),
+  restrictImportsOfKind(
+    ['packages/{web-app,website,design-system}/**/*.{ts,tsx}'],
     ['packages/{web-app,website}/vite.config.ts'],
     NO_NODE,
     ...TEST_ONLY_IMPORTS,
+    ONLY_UTILS_API_IMPORTS_KY,
   ),
-  // The scenes run in the browser, the scripts that record them in Node.
-  restrictImportsOfKind(['packages/promo/src/**/*.{ts,tsx}'], [], NO_NODE, ...TEST_ONLY_IMPORTS),
   restrictImportsOfKind(
-    ['packages/domains/**/*.{ts,tsx}'],
-    ['packages/domains/*/components/**'],
-    ...NO_UI_IN_UNIVERSAL_DOMAINS,
+    ['packages/{web-app,website}/src/**/*.{ts,tsx}'],
+    ['packages/{web-app,website}/src/**/queries.ts', 'packages/web-app/src/api.ts'],
     NO_NODE,
     ...TEST_ONLY_IMPORTS,
+    ONLY_UTILS_API_IMPORTS_KY,
+    ...ONLY_QUERIES_FETCH,
+  ),
+  restrictImportsOfKind(
+    ['packages/{web-app,website}/src/**/queries.ts'],
+    [],
+    NO_NODE,
+    ...TEST_ONLY_IMPORTS,
+    ONLY_UTILS_API_IMPORTS_KY,
+    {
+      ...NO_ROUTER,
+      message:
+        'queries.ts never imports react-router. What follows a request stays with the caller.',
+    },
+  ),
+  // The scenes run in the browser, the scripts that record them in Node.
+  restrictImportsOfKind(
+    ['packages/promo/src/**/*.{ts,tsx}'],
+    [],
+    NO_NODE,
+    ...TEST_ONLY_IMPORTS,
+    ONLY_UTILS_API_IMPORTS_KY,
+  ),
+  restrictImportsOfKind(
+    ['packages/domains/**/*.ts'],
+    [],
+    NO_UI_IN_DOMAINS,
+    NO_NODE,
+    ...TEST_ONLY_IMPORTS,
+    ONLY_UTILS_API_IMPORTS_KY,
   ),
   restrictImportsOfKind(
     ['packages/utils/**/*.{ts,tsx}'],
+    ['packages/utils/api.ts'],
+    NO_REACT_IN_UTILS,
+    NO_NODE,
+    ...TEST_ONLY_IMPORTS,
+    ONLY_UTILS_API_IMPORTS_KY,
+  ),
+  restrictImportsOfKind(
+    ['packages/utils/api.ts'],
     [],
     NO_REACT_IN_UTILS,
     NO_NODE,
@@ -376,9 +512,21 @@ export default defineConfig(
   ),
   restrictImportsOfKind(
     ['packages/**/*.test.ts'],
-    ['packages/e2e/**'],
+    ['packages/e2e/**', 'packages/utils/api.test.ts'],
+    ONLY_SPECS_IMPORT_E2E,
+    ONLY_E2E_IMPORTS_PLAYWRIGHT,
+    ONLY_UTILS_API_IMPORTS_KY,
+  ),
+  restrictImportsOfKind(
+    ['packages/utils/api.test.ts'],
+    [],
     ONLY_SPECS_IMPORT_E2E,
     ONLY_E2E_IMPORTS_PLAYWRIGHT,
   ),
-  restrictImportsOfKind(['packages/**/*.e2e.ts'], ['packages/e2e/**'], ONLY_E2E_IMPORTS_PLAYWRIGHT),
+  restrictImportsOfKind(
+    ['packages/**/*.e2e.ts'],
+    ['packages/e2e/**'],
+    ONLY_E2E_IMPORTS_PLAYWRIGHT,
+    ONLY_UTILS_API_IMPORTS_KY,
+  ),
 );

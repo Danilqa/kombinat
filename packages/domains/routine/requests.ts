@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { HttpClient } from 'utils/http';
+import type { Api } from 'utils/api';
 
 import type { RunId } from '../run/ids';
 import type { RoutineName } from './ids';
@@ -24,104 +24,65 @@ import type {
   StartRunRequest,
 } from './types';
 
-export async function getRoutines(http: HttpClient): Promise<RoutineSummary[]> {
-  return http.request('/api/routines', z.array(routineSummarySchema));
+function getRoutineApiPath(name: RoutineName): string {
+  return `/api/routines/${encodeURIComponent(name)}`;
+}
+
+export async function getRoutines(api: Api): Promise<RoutineSummary[]> {
+  return api.get('/api/routines').json(z.array(routineSummarySchema));
 }
 
 // Writes routines/<name>.md from the template, and never replaces a file that exists.
-export async function addRoutine(http: HttpClient, body: AddRoutineRequest): Promise<AddedRoutine> {
-  return http.request('/api/routines', addedRoutineSchema, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+export async function addRoutine(api: Api, body: AddRoutineRequest): Promise<AddedRoutine> {
+  return api.post('/api/routines', { json: body }).json(addedRoutineSchema);
 }
 
-export async function getRoutine(http: HttpClient, name: RoutineName): Promise<RoutineDetail> {
-  return http.request(`/api/routines/${encodeURIComponent(name)}`, routineDetailSchema);
+export async function getRoutine(api: Api, name: RoutineName): Promise<RoutineDetail> {
+  return api.get(getRoutineApiPath(name)).json(routineDetailSchema);
 }
 
 // Without runs and maxParallel, the routine's own apply.
 export async function startRoutineRun(
-  http: HttpClient,
+  api: Api,
   name: RoutineName,
   body?: StartRunRequest,
 ): Promise<void> {
-  await http.request(
-    `/api/routines/${encodeURIComponent(name)}/run`,
-    startedRunSchema,
-    body === undefined
-      ? { method: 'POST' }
-      : {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(body),
-        },
-  );
+  await api.post(`${getRoutineApiPath(name)}/run`, { json: body }).json(startedRunSchema);
 }
 
-export async function cancelQueuedRuns(http: HttpClient, name: RoutineName): Promise<void> {
-  await http.request(
-    `/api/routines/${encodeURIComponent(name)}/queued-runs/cancel`,
-    cancelledQueuedRunsSchema,
-    { method: 'POST' },
-  );
+export async function cancelQueuedRuns(api: Api, name: RoutineName): Promise<void> {
+  await api.post(`${getRoutineApiPath(name)}/queued-runs/cancel`).json(cancelledQueuedRunsSchema);
 }
 
 export async function startRoutineRunWithPrompt(
-  http: HttpClient,
+  api: Api,
   name: RoutineName,
   prompt: string,
 ): Promise<RunId> {
   // A prompt written for this run runs once, whatever number of runs the routine makes.
   const body: StartRunRequest = { prompt, runs: 1 };
-  const { runId } = await http.request(
-    `/api/routines/${encodeURIComponent(name)}/run`,
-    startedRunWithIdSchema,
-    { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) },
-  );
+  const { runId } = await api
+    .post(`${getRoutineApiPath(name)}/run`, { json: body })
+    .json(startedRunWithIdSchema);
   return runId;
 }
 
-async function sendOneTimeRunRequest(http: HttpClient, path: string, at: string): Promise<void> {
+export async function scheduleOneTimeRun(api: Api, name: RoutineName, at: string): Promise<void> {
   const body: OneTimeRunRequest = { at };
-  await http.request(path, changedOneTimeRunsSchema, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  await api
+    .post(`${getRoutineApiPath(name)}/one-time-runs`, { json: body })
+    .json(changedOneTimeRunsSchema);
 }
 
-export async function scheduleOneTimeRun(
-  http: HttpClient,
-  name: RoutineName,
-  at: string,
-): Promise<void> {
-  await sendOneTimeRunRequest(http, `/api/routines/${encodeURIComponent(name)}/one-time-runs`, at);
-}
-
-export async function cancelOneTimeRun(
-  http: HttpClient,
-  name: RoutineName,
-  at: string,
-): Promise<void> {
-  await sendOneTimeRunRequest(
-    http,
-    `/api/routines/${encodeURIComponent(name)}/one-time-runs/cancel`,
-    at,
-  );
+export async function cancelOneTimeRun(api: Api, name: RoutineName, at: string): Promise<void> {
+  const body: OneTimeRunRequest = { at };
+  await api
+    .post(`${getRoutineApiPath(name)}/one-time-runs/cancel`, { json: body })
+    .json(changedOneTimeRunsSchema);
 }
 
 // Empty text clears the notes.
-export async function saveRoutineMemory(
-  http: HttpClient,
-  name: RoutineName,
-  text: string,
-): Promise<void> {
+export async function saveRoutineMemory(api: Api, name: RoutineName, text: string): Promise<void> {
   const body: MemoryRequest = { text };
-  await http.request(`/api/routines/${encodeURIComponent(name)}/memory`, savedMemorySchema, {
-    method: 'PUT',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  await api.put(`${getRoutineApiPath(name)}/memory`, { json: body }).json(savedMemorySchema);
 }

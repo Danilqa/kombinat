@@ -1,6 +1,7 @@
 import { match, P } from 'ts-pattern';
 import { z } from 'zod';
 
+import { CLAUDE_OPUS } from 'domains/agent/constants';
 import { sessionIdSchema } from 'domains/agent/ids';
 import type { PlanLimits, UsageLimit } from 'domains/daemon/types';
 import type { TokenCounts } from 'domains/run/types';
@@ -23,7 +24,7 @@ import {
 } from './settings';
 import type { AccountHome, Agent, RunContext, RunUpdate } from './types';
 
-const DEFAULT_MODEL = 'claude-opus-5-5';
+const DEFAULT_MODEL = CLAUDE_OPUS;
 const DEFAULT_EFFORT = 'high';
 const DEFAULT_PERMISSION_MODE = 'auto';
 const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;

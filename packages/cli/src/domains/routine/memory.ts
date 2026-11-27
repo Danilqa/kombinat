@@ -27,7 +27,7 @@ interface UserWriter {
   by: 'user';
 }
 
-export type MemoryWriter = RunWriter | UserWriter;
+type MemoryWriter = RunWriter | UserWriter;
 
 interface MemoryBlock {
   text: string;

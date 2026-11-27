@@ -30,8 +30,8 @@ import { cronRunsBetween } from 'utils/cron';
 
 import { STATE_DIR } from './constants';
 import { createRandom, randomId, randomInt, randomUuid, type Random } from './random';
-import type { DemoOutcome, DemoPin, DemoRoutine, DemoStartedRun } from './routines';
-import { check } from './transcript';
+import { check } from './sample/steps';
+import type { DemoOutcome, DemoPin, DemoRoutine, DemoStartedRun } from './sample/types';
 
 // Twice the longest period of the Insights page, so it has the days before to compare with.
 const HISTORY_DAYS = 60;

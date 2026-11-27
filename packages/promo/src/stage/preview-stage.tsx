@@ -61,7 +61,7 @@ export function PreviewStage({ segment }: PreviewStageProps) {
           <Stage scene={segment.scene} time={time} />
         </div>
       </div>
-      <div className="flex w-full max-w-[1280px] items-center gap-3">
+      <div className="flex w-full max-w-320 items-center gap-3">
         <button
           type="button"
           aria-label={isPlaying ? 'Pause' : 'Play'}

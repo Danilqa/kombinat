@@ -1,15 +1,18 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { setTimeout } from 'node:timers/promises';
 
 import { sessionIdSchema } from 'domains/agent/ids';
 import type { AgentName } from 'domains/agent/types';
+import { daemonStatusSchema } from 'domains/daemon/schemas';
 import type { PlanUsage } from 'domains/daemon/types';
 import type { InboxState } from 'domains/inbox/types';
 import { routineNameSchema } from 'domains/routine/ids';
 import type { MemoryChange } from 'domains/routine/types';
 import { makeRunRecord } from 'domains/run/mocks';
+import { runRecordSchema } from 'domains/run/schemas';
 import type { RunRecord, RunWorktree } from 'domains/run/types';
-import { createRunId } from 'domains/run/utils';
+import { checkIsRunActive, checkIsRunAtWork, createRunId } from 'domains/run/utils';
 import type { SchedulerState, SkipReason } from 'domains/scheduler/types';
 
 import { createWorktree, inspectWorktree } from './git';
@@ -66,6 +69,29 @@ export interface Kombinat {
   stallScheduler: () => void;
   // The plan usage of an account's latest Claude run, null for the primary login.
   addPlanUsage: (account: string | null, usage: PlanUsage) => void;
+  // Until the runs and replies that the daemon started have ended, the ones that have no record
+  // yet too. The runs of addRun do not count, and neither do queued runs, which nothing starts
+  // without the scheduler.
+  waitForStartedRuns: () => Promise<void>;
+}
+
+const STARTED_RUNS_TIMEOUT_MS = 30_000;
+const STARTED_RUNS_POLL_MS = 50;
+
+function listRunRecordFiles(runsDir: string): string[] {
+  return fs
+    .readdirSync(runsDir, { recursive: true, encoding: 'utf8' })
+    .filter(file => file.endsWith('.json'))
+    .map(file => path.join(runsDir, file));
+}
+
+function readRunRecord(file: string): RunRecord | null {
+  try {
+    return runRecordSchema.parse(JSON.parse(fs.readFileSync(file, 'utf8')));
+  } catch {
+    // The daemon is writing the record, or the test removed it.
+    return null;
+  }
 }
 
 function toRoutineSource({ prompt = 'Do the routine.', ...settings }: RoutineFile, cwd: string) {
@@ -85,12 +111,31 @@ function removeFiles(dir: string) {
   }
 }
 
-export function createKombinat(root: string): Kombinat {
+async function countRunsAtWork(daemonUrl: string): Promise<number> {
+  const response = await fetch(`${daemonUrl}/api/status`);
+  return daemonStatusSchema.parse(await response.json()).running;
+}
+
+export function createKombinat(root: string, daemonUrl: string): Kombinat {
   const routinesDir = path.join(root, 'routines');
   const stateDir = path.join(root, 'state');
   fs.mkdirSync(routinesDir, { recursive: true });
   fs.mkdirSync(path.join(stateDir, 'runs'), { recursive: true });
   for (const dir of [routinesDir, stateDir]) removeFiles(dir);
+
+  const addedRunFiles = new Set<string>();
+  const checkHasStartedRuns = async () => {
+    let addedRunsAtWork = 0;
+    for (const file of listRunRecordFiles(path.join(stateDir, 'runs'))) {
+      const record = readRunRecord(file);
+      if (record === null || record.replyPid !== null) return true;
+      if (!checkIsRunActive(record)) continue;
+      if (!addedRunFiles.has(file)) return true;
+      if (checkIsRunAtWork(record)) addedRunsAtWork += 1;
+    }
+    // The daemon alone knows of a run until its process writes the record.
+    return (await countRunsAtWork(daemonUrl)) > addedRunsAtWork;
+  };
 
   const now = new Date().toISOString();
   const scheduler: SchedulerState = { startedAt: now, lastTickAt: now, routines: {} };
@@ -121,8 +166,10 @@ export function createKombinat(root: string): Kombinat {
         startedAt,
         logFile: path.join(runsDir, `${id}.jsonl`),
       });
+      const recordFile = path.join(runsDir, `${id}.json`);
       fs.mkdirSync(runsDir, { recursive: true });
-      fs.writeFileSync(path.join(runsDir, `${id}.json`), JSON.stringify(record));
+      fs.writeFileSync(recordFile, JSON.stringify(record));
+      addedRunFiles.add(recordFile);
       fs.writeFileSync(record.logFile, events.map(event => `${JSON.stringify(event)}\n`).join(''));
       return record;
     },
@@ -174,6 +221,12 @@ export function createKombinat(root: string): Kombinat {
       fs.mkdirSync(dir, { recursive: true });
       const file = account === null ? 'claude.json' : `claude.${account}.json`;
       fs.writeFileSync(path.join(dir, file), JSON.stringify(usage));
+    },
+    waitForStartedRuns: async () => {
+      const deadline = Date.now() + STARTED_RUNS_TIMEOUT_MS;
+      while ((await checkHasStartedRuns()) && Date.now() < deadline) {
+        await setTimeout(STARTED_RUNS_POLL_MS);
+      }
     },
   };
 }

@@ -3,10 +3,9 @@ import type http from 'node:http';
 import path from 'node:path';
 
 import { config } from '../../config';
-import { NOTIFICATIONS_FILE } from '../../domains/inbox/notifications';
+import { NOTIFICATIONS_FILE } from '../../domains/inbox/storage';
 import { QUEUED_RUNS_FILE } from '../../domains/run/queued-runs';
-import { ONE_TIME_RUNS_FILE } from '../../domains/scheduler/one-time-runs';
-import { readSchedulerState } from '../../domains/scheduler/storage';
+import { ONE_TIME_RUNS_FILE, readSchedulerState } from '../../domains/scheduler/storage';
 
 const NOTIFY_DELAY_MS = 300;
 const SCHEDULER_FILE = 'scheduler.json';
@@ -22,7 +21,7 @@ const STATE_ENTRIES = [
   SCHEDULER_FILE,
 ];
 
-export interface LiveUpdates {
+interface LiveUpdates {
   follow: (req: http.IncomingMessage, res: http.ServerResponse) => void;
   stop: () => void;
 }
