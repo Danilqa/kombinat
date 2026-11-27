@@ -78,7 +78,7 @@ export function HidingWorkers({ children }: HidingWorkersProps) {
               width={135}
               facing="right"
               peeksFrom="below"
-              delay={500}
+              delay={0}
               className="bottom-1 left-28"
             />
             <Worker
@@ -86,7 +86,7 @@ export function HidingWorkers({ children }: HidingWorkersProps) {
               width={135}
               facing="left"
               peeksFrom="below"
-              delay={700}
+              delay={200}
               className="bottom-4 left-76.5"
             />
           </AboveTopEdge>
@@ -99,7 +99,7 @@ export function HidingWorkers({ children }: HidingWorkersProps) {
               width={150}
               facing="left"
               peeksFrom="right"
-              delay={950}
+              delay={450}
               tilt={-13}
               className="top-50.25 left-33.5"
             />
@@ -108,9 +108,9 @@ export function HidingWorkers({ children }: HidingWorkersProps) {
       }
       inFront={
         <>
-          <Hand delay={550} className="-top-0.75 left-65.5" />
+          <Hand delay={50} className="-top-0.75 left-65.5" />
           <FromBottomLeftCorner>
-            <Hand delay={800} className="-top-22.25 -left-px -rotate-90" />
+            <Hand delay={300} className="-top-22.25 -left-px -rotate-90" />
           </FromBottomLeftCorner>
         </>
       }
@@ -135,18 +135,18 @@ export function AlertedWorker({ children }: AlertedWorkerProps) {
             width={135}
             facing="left"
             peeksFrom="below"
-            delay={950}
+            delay={600}
             className="bottom-3.75 left-21"
           />
         </AboveTopEdge>
       }
       inFront={
         <>
-          <Hand delay={850} className="-top-0.75 left-33" />
+          <Hand delay={500} className="-top-0.75 left-33" />
           <div className="max-xl:hidden">
-            <Mark drawing={bolt} delay={350} className="top-6.5 -left-11.5 w-16 -rotate-14" />
-            <Mark drawing={burst} delay={500} className="top-23 -left-21 w-13.5 rotate-8" />
-            <Mark drawing={sparks} delay={650} className="top-39.5 -left-10.5 w-14.5 -rotate-70" />
+            <Mark drawing={bolt} delay={0} className="top-6.5 -left-11.5 w-16 -rotate-14" />
+            <Mark drawing={burst} delay={150} className="top-23 -left-21 w-13.5 rotate-8" />
+            <Mark drawing={sparks} delay={300} className="top-39.5 -left-10.5 w-14.5 -rotate-70" />
           </div>
         </>
       }
@@ -171,7 +171,7 @@ export function WorkersWithTools({ children }: WorkersWithToolsProps) {
             width={132}
             facing="right"
             peeksFrom="below"
-            delay={500}
+            delay={0}
             className="bottom-3.5 left-17.5"
           />
           <Worker
@@ -179,7 +179,7 @@ export function WorkersWithTools({ children }: WorkersWithToolsProps) {
             width={132}
             facing="left"
             peeksFrom="below"
-            delay={650}
+            delay={150}
             className="bottom-4 left-50"
           />
           <Worker
@@ -187,11 +187,11 @@ export function WorkersWithTools({ children }: WorkersWithToolsProps) {
             width={132}
             facing="left"
             peeksFrom="below"
-            delay={800}
+            delay={300}
             className="bottom-3.5 left-82.5"
           />
-          <Tool drawing={wrench} width={50} delay={950} tilt={-7} className="bottom-2 left-34" />
-          <Tool drawing={sledge} width={50} delay={1050} tilt={8} className="bottom-2 left-66.5" />
+          <Tool drawing={wrench} width={50} delay={450} tilt={-7} className="bottom-2 left-34" />
+          <Tool drawing={sledge} width={50} delay={550} tilt={8} className="bottom-2 left-66.5" />
         </AboveTopEdge>
       }
     >
@@ -215,7 +215,7 @@ export function UndercoverWorkers({ children }: UndercoverWorkersProps) {
             width={126}
             facing="right"
             peeksFrom="below"
-            delay={500}
+            delay={0}
             className="bottom-3 left-24.5"
           />
           <Worker
@@ -223,7 +223,7 @@ export function UndercoverWorkers({ children }: UndercoverWorkersProps) {
             width={126}
             facing="left"
             peeksFrom="below"
-            delay={650}
+            delay={150}
             className="bottom-5.5 left-66.75"
           />
           <Worker
@@ -231,7 +231,7 @@ export function UndercoverWorkers({ children }: UndercoverWorkersProps) {
             width={126}
             facing="left"
             peeksFrom="below"
-            delay={800}
+            delay={300}
             className="bottom-3 left-88.75"
           />
         </AboveTopEdge>
@@ -271,7 +271,7 @@ export function HidingWorkersOnPhone() {
         width={135}
         facing="right"
         peeksFrom="left"
-        delay={700}
+        delay={200}
         tilt={14}
         className="top-14.5 left-2.5"
       />
@@ -280,7 +280,7 @@ export function HidingWorkersOnPhone() {
         width={150}
         facing="left"
         peeksFrom="right"
-        delay={900}
+        delay={400}
         tilt={-16}
         className="top-18 right-3"
       />
@@ -289,7 +289,7 @@ export function HidingWorkersOnPhone() {
         width={180}
         facing="left"
         peeksFrom="below"
-        delay={500}
+        delay={0}
         className="top-32.5 left-1/2"
       />
     </PhoneScene>
@@ -299,15 +299,15 @@ export function HidingWorkersOnPhone() {
 export function AlertedWorkerOnPhone() {
   return (
     <PhoneScene className="h-23">
-      <Mark drawing={bolt} delay={350} className="top-9 left-[16%] w-14 -rotate-14" />
-      <Mark drawing={burst} delay={500} className="top-14 left-[36%] w-11 rotate-8" />
-      <Mark drawing={sparks} delay={650} className="top-9 left-[88%] w-12 rotate-30" />
+      <Mark drawing={bolt} delay={0} className="top-9 left-[16%] w-14 -rotate-14" />
+      <Mark drawing={burst} delay={150} className="top-14 left-[36%] w-11 rotate-8" />
+      <Mark drawing={sparks} delay={300} className="top-9 left-[88%] w-12 rotate-30" />
       <Worker
         drawing={cyclops}
         width={150}
         facing="left"
         peeksFrom="below"
-        delay={850}
+        delay={500}
         className="top-18 left-[62%]"
       />
     </PhoneScene>
@@ -322,7 +322,7 @@ export function WorkersWithToolsOnPhone() {
         width={120}
         facing="right"
         peeksFrom="below"
-        delay={500}
+        delay={0}
         className="top-24.5 left-[17%]"
       />
       <Worker
@@ -330,7 +330,7 @@ export function WorkersWithToolsOnPhone() {
         width={120}
         facing="left"
         peeksFrom="below"
-        delay={650}
+        delay={150}
         className="top-24 left-1/2"
       />
       <Worker
@@ -338,11 +338,11 @@ export function WorkersWithToolsOnPhone() {
         width={120}
         facing="left"
         peeksFrom="below"
-        delay={800}
+        delay={300}
         className="top-24.5 left-[83%]"
       />
-      <Tool drawing={wrench} width={46} delay={950} tilt={-7} className="top-28.5 left-[33.5%]" />
-      <Tool drawing={sledge} width={46} delay={1050} tilt={8} className="top-28.5 left-[66.5%]" />
+      <Tool drawing={wrench} width={46} delay={450} tilt={-7} className="top-28.5 left-[33.5%]" />
+      <Tool drawing={sledge} width={46} delay={550} tilt={8} className="top-28.5 left-[66.5%]" />
     </PhoneScene>
   );
 }
@@ -355,7 +355,7 @@ export function UndercoverWorkersOnPhone() {
         width={120}
         facing="right"
         peeksFrom="below"
-        delay={500}
+        delay={0}
         className="top-24.5 left-[18%]"
       />
       <Worker
@@ -363,7 +363,7 @@ export function UndercoverWorkersOnPhone() {
         width={120}
         facing="left"
         peeksFrom="below"
-        delay={650}
+        delay={150}
         className="top-22.5 left-1/2"
       />
       <Worker
@@ -371,7 +371,7 @@ export function UndercoverWorkersOnPhone() {
         width={120}
         facing="left"
         peeksFrom="below"
-        delay={800}
+        delay={300}
         className="top-24.5 left-[82%]"
       />
     </PhoneScene>
