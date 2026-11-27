@@ -1,6 +1,6 @@
 import { routineNameSchema } from 'domains/routine/ids';
 
-import { REPO, WORK, codexInit } from '../shared';
+import { REPO, codexInit } from '../shared';
 import { fileChange, mcp, shell, text } from '../steps';
 import type { DemoRoutine } from '../types';
 
@@ -10,7 +10,6 @@ export const deadCodeCleanup: DemoRoutine = {
   schedule: '0 10 * * 1',
   enabled: true,
   agent: 'codex',
-  account: WORK,
   model: null,
   effort: 'medium',
   permissionMode: 'workspace-write',

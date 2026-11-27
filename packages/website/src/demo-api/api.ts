@@ -1,9 +1,8 @@
-import { isMatching, match, P } from 'ts-pattern';
+import { match, P } from 'ts-pattern';
 
 import { CLAUDE_MODELS } from 'domains/agent/constants';
-import type { AccountName } from 'domains/agent/ids';
 import type { AgentOption } from 'domains/agent/types';
-import { checkHasAccount, listAccounts } from 'domains/agent/utils';
+import { checkHasAccount } from 'domains/agent/utils';
 import { CALENDAR_RANGE_ERROR } from 'domains/calendar/constants';
 import { buildCalendar, parseCalendarRange } from 'domains/calendar/utils';
 import type { AccountStatus, DaemonStatus, PlanUsage } from 'domains/daemon/types';
@@ -74,7 +73,6 @@ import { describeCron, nextCronRun } from 'utils/cron';
 import { HOME, STATE_DIR } from './constants';
 import { createDemoHistory } from './history';
 import { demoRoutines } from './sample';
-import { PERSONAL, WORK } from './sample/shared';
 import type { DemoQueuedWebhook, DemoRoutine, DemoWebhookCall } from './sample/types';
 import { toTemplateRoutine } from './templates';
 
@@ -180,7 +178,7 @@ function toRoutineSummary(
     check: routine.check?.command ?? null,
     queuedWebhooks: queue.length,
     agent: routine.agent,
-    account: routine.account ?? null,
+    account: null,
     model: routine.model,
     fallbackModel: routine.fallbackModel ?? null,
     effort: routine.effort,
@@ -347,40 +345,16 @@ export function createDemoApi(loadedAt = new Date()): DemoApi {
     return routine === undefined ? fail(404, `Unknown routine ${name}`) : respond(routine);
   }
 
-  // The work plan is nearly used up while the personal one has plenty left.
-  const planUsages = new Map<AccountName | null, PlanUsage>([
-    [
-      WORK,
-      {
-        updatedAt: fromLoad(-6),
-        session: { usedRatio: 0.93, resetsAt: fromLoad(2 * 60 + 14) },
-        week: { usedRatio: 0.58, resetsAt: fromLoad((3 * 24 + 5) * 60) },
-      },
-    ],
-    [
-      PERSONAL,
-      {
-        updatedAt: fromLoad(-19 * 60),
-        session: { usedRatio: 0.12, resetsAt: fromLoad(3 * 60 + 40) },
-        week: { usedRatio: 0.22, resetsAt: fromLoad((5 * 24 + 2) * 60) },
-      },
-    ],
-  ]);
+  // The demo team runs every routine on one Claude subscription, and its session is nearly used up.
+  const planUsage: PlanUsage = {
+    updatedAt: fromLoad(-6),
+    session: { usedRatio: 0.93, resetsAt: fromLoad(2 * 60 + 14) },
+    week: { usedRatio: 0.58, resetsAt: fromLoad((3 * 24 + 5) * 60) },
+  };
 
   function getAccountStatuses(): AccountStatus[] {
-    const users = routines.map(routine => ({ ...routine, account: routine.account ?? null }));
-    return listAccounts(users).map(account => {
-      const accountUsers = users.filter(
-        routine => checkHasAccount(routine.agent) && routine.account === account,
-      );
-      return {
-        name: account,
-        routines: accountUsers.length,
-        claudeUsage: accountUsers.some(isMatching({ agent: 'claude' }))
-          ? (planUsages.get(account) ?? null)
-          : null,
-      };
-    });
+    const users = routines.filter(routine => checkHasAccount(routine.agent));
+    return [{ name: null, routines: users.length, claudeUsage: planUsage }];
   }
 
   function getStatus(now: Date): DaemonStatus {

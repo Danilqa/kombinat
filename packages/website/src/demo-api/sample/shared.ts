@@ -1,11 +1,7 @@
-import { accountNameSchema } from 'domains/agent/ids';
-
 import { HOME } from '../constants';
 import { init } from './steps';
 
 export const REPO = `${HOME}/Projects/acme-web`;
-export const WORK = accountNameSchema.parse('work');
-export const PERSONAL = accountNameSchema.parse('personal');
 export const OPUS = 'claude-opus-5-5';
 export const SONNET = 'claude-sonnet-5-5';
 export const FABLE = 'claude-fable-5-1';

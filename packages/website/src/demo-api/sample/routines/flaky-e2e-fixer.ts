@@ -1,7 +1,7 @@
 import { routineNameSchema } from 'domains/routine/ids';
 import type { ChangedFile } from 'domains/run/types';
 
-import { REPO, WORK, OPUS, opusInit } from '../shared';
+import { REPO, OPUS, opusInit } from '../shared';
 import { bash, denied, edit, read, text, type TranscriptStep } from '../steps';
 import type { DemoRoutine } from '../types';
 
@@ -54,7 +54,6 @@ export const flakyE2eFixer: DemoRoutine = {
   schedule: '0 7 * * 1-5',
   enabled: true,
   agent: 'claude',
-  account: WORK,
   model: OPUS,
   effort: 'high',
   permissionMode: 'auto',
