@@ -11,7 +11,7 @@ Kombinat runs routines, markdown files in `routines/`, with AI agents on a sched
 | `tui`           | Terminal dashboard, an HTTP client of the daemon. Bundled into `cli`                                                                                                                 |
 | `website`       | Demo of the browser dashboard with sample data, deployed to GitHub Pages at https://kombinat.tech/                                                                                   |
 | `domains`       | Shared domain layer in pure TypeScript: schemas, types, requests, labels and mocks, see [its README](packages/domains/README.md)                                                     |
-| `design-system` | Tailwind tokens and styles, and the components that know no domain: shadcn/radix and generic layout pieces                                                                           |
+| `design-system` | Tailwind tokens and styles, and the components that know no domain: shadcn/radix and generic layout pieces, with their Storybook at https://kombinat.tech/design-system/             |
 | `utils`         | Business-agnostic helpers that more than one package uses: api, error, date-time, cron and search                                                                                    |
 | `e2e`           | Playwright config and fixtures. The specs live in `web-app` as `*.e2e.ts`, next to the page or component they cover                                                                  |
 | `promo`         | Source of the promo video and the README's dashboard GIF: scenes drawn with React, tours of the website and the scripts that record them, see [its README](packages/promo/README.md) |
@@ -32,6 +32,7 @@ pnpm test:e2e                      # Playwright against a real daemon from this 
 pnpm --filter e2e run web-app:ui   # the same in Playwright's UI mode
 pnpm cli <command>                 # the CLI from source, with example/routines as the routines folder
 pnpm --filter website dev          # the demo site at http://localhost:5174/
+pnpm --filter design-system storybook   # the Storybook of the design system at http://localhost:6006/
 pnpm --filter promo record          # the promo video in packages/promo/out, see its README
 ```
 
@@ -41,7 +42,7 @@ The checkout scripts (`cli`, `serve`, `dev`, `tui` and their `:local` variants) 
 
 To release, bump `version` in `packages/cli/package.json` and the `kombinat` version in `example/package.json`, and run `npm publish` in `packages/cli`. npm copies `package.json` as it is, so the `dependencies` of `cli` keep exact versions instead of `catalog:`.
 
-`.github/workflows/ci.yml` runs each check of `pnpm validate`, the website build, the npm package check and the e2e tests as parallel jobs on every PR. The ruleset of `main` requires every job by its name, so a PR merges only once they all pass. When you add or rename a job, update the ruleset too.
+`.github/workflows/ci.yml` runs each check of `pnpm validate`, the website and Storybook builds, the npm package check and the e2e tests as parallel jobs on every PR. The ruleset of `main` requires every job by its name, so a PR merges only once they all pass. When you add or rename a job, update the ruleset too.
 
 ## Structure
 
@@ -53,7 +54,9 @@ packages/
   design-system/                  UI that knows no domain.
     index.ts                      Re-exports every component and utils.ts. Other packages import `design-system`.
     utils.ts                      `cn` and the hooks the components share.
+    .storybook/                   The Storybook config, its theme and its logo.
     styles/index.css              The Tailwind entry: tokens, base styles and custom utilities.
+    styles/*.stories.tsx          The Storybook pages of the tokens: colours and type.
     <component>/                  One folder per component.
   domains/                        Pure TypeScript. No React.
     <domain>/                     ids.ts, types.ts, schemas.ts, requests.ts, constants.ts, utils.ts, mocks.ts.
@@ -96,6 +99,7 @@ run-status-badge/
   run-status-badge.tsx
   <part>.tsx                      A part only this component uses.
   run-status-badge.e2e.ts         Its spec, when it has one.
+  run-status-badge.stories.tsx    Its stories, for a design-system component.
 ```
 
 A part that two components use gets a folder of its own.
@@ -171,7 +175,7 @@ The domain map, definitions and invariants are in [packages/domains/README.md](p
 - `src/demo-api/` answers the dashboard's `/api` requests in the browser, as `cli/src/api/` does: `install.ts` puts it in front of `fetch`, `api.ts` holds the state and the route table, and `history.ts` builds runs and skips from the schedules relative to now. `sample/` holds the sample data: one file per routine in `routines/`, with its run outcomes and transcripts, the types, the values several routines share and the builders of transcript steps.
 - `public/og-image.gif` is the link preview image. `index.html` names it by its full URL in the Open Graph tags, since apps that unfurl links do not resolve relative paths.
 - The changelog page reads the releases from the GitHub API in the browser, so a new release shows there without a deploy, and draws them with the components of `src/domains/release/`. Only the website has it: the dashboard shows newer releases in its update card.
-- `.github/workflows/website.yml` deploys it on every push to `main`.
+- `.github/workflows/website.yml` deploys it on every push to `main`, with the Storybook of `design-system` copied into `dist/design-system/`.
 
 ### promo
 
@@ -190,6 +194,8 @@ The domain map, definitions and invariants are in [packages/domains/README.md](p
 - `prettier-plugin-tailwindcss` sorts the classes, in `className` and in the calls of `cn` and `cva`, so `pnpm format:check` fails on another order.
 - The base layer owns the focus ring and the outline of forced colours, so an element does not take `outline-none`, except one that scripts focus without a ring, such as `main`. The app is dark only, and `<html>` carries `class="dark"` for the `dark:` classes of generated shadcn code.
 - `Card.Root` has no padding or gap of its own. A status dot is a `StatusDot`, or a `PingingStatusDot` where it can ping, with the tone that `getRunStatusTone` of `domains/run/utils` gives a run. A phone tap target that is smaller than 44px takes `tap-area`.
+- Every component folder has a `<component>.stories.tsx`, titled `Components/<Component>`, and `styles/` has the token pages under `Foundations/`. A new component gets its stories too. Stories import components by relative path like the rest of the package, set `component` for the docs page of its props, and `subcomponents` for the parts of a namespace.
+- `pnpm --filter design-system storybook:build` builds the Storybook into `dist/`, which the website workflow publishes at `/design-system/`. The stylesheet leaves `.storybook/` and the stories out of the class scan of the apps, and `.storybook/preview.css` adds the stories back for Storybook alone. `.storybook/theme.ts` repeats the tokens for Storybook's own UI, which the stylesheet does not reach.
 - To add a shadcn component, run the shadcn CLI in `packages/design-system`, where `components.json` is; its aliases resolve through the tsconfig paths there. It writes `<name>.tsx` at the package root. Move it into `<name>/<name>.tsx` with an `index.ts`, rewrite the generated `design-system/...` imports to relative ones, such as `../utils`, name the props interfaces `<Function>Props`, end the file with an export block as described in Code style and add the folder to the root `index.ts`.
 
 ## Code style
