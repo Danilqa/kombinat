@@ -1,10 +1,10 @@
 import { ArrowUpRight } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { EmptyState, ErrorState, LoadingState, PageHeader } from 'design-system';
-import { useDocumentTitle } from 'web-app/hooks/use-document-title';
+import { useDocumentTitle } from 'web-app/hooks';
 import { RELEASES_URL } from '../constants';
 import { useChangelog } from '../domains/release/queries';
-import { ReleaseEntry } from '../domains/release/release-entry';
+import { ReleaseEntry } from '../domains/release/components';
 
 // Each release renders its markdown, so a long history opens a page at a time to stay quick on phones.
 const PAGE_SIZE = 10;

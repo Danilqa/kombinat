@@ -1,7 +1,7 @@
 import { Star, X } from 'lucide-react';
 import { useState, type TransitionEvent } from 'react';
 import { checkPrefersReducedMotion, cn } from 'design-system';
-import { useStoredBoolean } from 'web-app/hooks/use-stored-boolean';
+import { useStoredBoolean } from 'web-app/hooks';
 import { REPO_URL } from '../../constants';
 
 const CLOSED_KEY = 'kombinat-website:star-bar-closed';

@@ -5,10 +5,7 @@ import { Button, DropdownMenu, Tooltip } from 'design-system';
 import { DEFAULT_NOTIFY_LEVEL, NOTIFY_LEVELS } from 'domains/inbox/constants';
 import { getNotifyLevelLabel, getNotifyLevelShortLabel } from 'domains/inbox/utils';
 import type { RoutineName } from 'domains/routine/ids';
-import {
-  useNotificationPermission,
-  type NotificationAccess,
-} from '@web-app/hooks/use-notification-permission';
+import { useNotificationPermission, type NotificationAccess } from '@web-app/hooks';
 import { useInbox, useSetNotifyLevel } from '../queries';
 
 function getAccessNote(access: NotificationAccess): string {

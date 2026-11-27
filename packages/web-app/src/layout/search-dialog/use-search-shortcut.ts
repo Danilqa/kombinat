@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { isApplePlatform } from '@web-app/hooks/is-apple-platform';
+import { isApplePlatform } from '@web-app/hooks';
 
 export const SEARCH_SHORTCUT_LABEL = isApplePlatform ? '⌘K' : 'Ctrl K';
 export const SEARCH_SHORTCUT_ARIA = isApplePlatform ? 'Meta+K' : 'Control+K';

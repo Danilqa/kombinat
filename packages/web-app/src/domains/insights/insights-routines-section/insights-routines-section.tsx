@@ -3,7 +3,7 @@ import { Card, EmptyState, Table, SectionHeader, cn } from 'design-system';
 import type { Insights, InsightsRoutine } from 'domains/insights/types';
 import { formatTokens, formatTokenShare } from 'domains/run/utils';
 import { formatDuration } from 'utils/date-time';
-import { useRowLink } from '@web-app/hooks/use-row-link';
+import { useRowLink } from '@web-app/hooks';
 import { getRoutinePath } from '@web-app/paths';
 
 interface ShareBarProps {

@@ -1,6 +1,6 @@
 import type { KeyboardEvent, ReactNode, Ref } from 'react';
 import { Card, Kbd, cn } from 'design-system';
-import { isApplePlatform } from '@web-app/hooks/is-apple-platform';
+import { isApplePlatform } from '@web-app/hooks';
 
 const SUBMIT_SHORTCUT_LABEL = isApplePlatform ? '⌘↵' : 'Ctrl ↵';
 

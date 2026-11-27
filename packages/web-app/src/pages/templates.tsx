@@ -1,9 +1,9 @@
 import { PageHeader, SectionHeader } from 'design-system';
 import { ROUTINE_TEMPLATE_CATEGORIES, ROUTINE_TEMPLATES } from 'domains/routine/templates';
 import { getTemplateCategoryLabel } from 'domains/routine/utils';
-import { TemplateCard } from '@web-app/domains/routine/template-card';
-import { useDocumentTitle } from '@web-app/hooks/use-document-title';
-import { Breadcrumbs } from '@web-app/layout/breadcrumbs';
+import { TemplateCard } from '@web-app/domains/routine/components';
+import { useDocumentTitle } from '@web-app/hooks';
+import { Breadcrumbs } from '@web-app/layout';
 import { ROUTINES_PATH } from '@web-app/paths';
 
 export function TemplatesPage() {

@@ -1,17 +1,19 @@
 import { Route, Routes } from 'react-router';
 import { useCustomization } from '@web-app/customization';
-import { CalendarPage } from '@web-app/pages/calendar';
-import { ChangePromptPage } from '@web-app/pages/change-prompt';
-import { InboxPage } from '@web-app/pages/inbox';
-import { InsightsPage } from '@web-app/pages/insights';
-import { NewRunPage } from '@web-app/pages/new-run';
-import { NotFoundPage } from '@web-app/pages/not-found';
-import { RoutinePage } from '@web-app/pages/routine';
-import { RoutinesPage } from '@web-app/pages/routines';
-import { RunPage } from '@web-app/pages/run';
-import { RunsPage } from '@web-app/pages/runs';
-import { TemplatePage } from '@web-app/pages/template';
-import { TemplatesPage } from '@web-app/pages/templates';
+import {
+  CalendarPage,
+  ChangePromptPage,
+  InboxPage,
+  InsightsPage,
+  NewRunPage,
+  NotFoundPage,
+  RoutinePage,
+  RoutinesPage,
+  RunPage,
+  RunsPage,
+  TemplatePage,
+  TemplatesPage,
+} from '@web-app/pages';
 import {
   CALENDAR_PATH,
   INBOX_PATH,

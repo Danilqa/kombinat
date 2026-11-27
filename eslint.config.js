@@ -107,6 +107,24 @@ const NO_SHELL_IN_TUI_DOMAINS = {
   message: 'The app and its pages build on the tui domains, so a domain never imports them.',
 };
 
+// A domain's folders, hooks/, layout/ and pages/ are reached through their barrels.
+const ONLY_BARRELS_IN_WEB_APP = {
+  regex: String.raw`^@web-app/((hooks|layout|pages)/|domains/[^/]+/(?!(components|queries|use-[a-z-]+)$))`,
+  message:
+    'Import components through the barrel of their domain, such as @web-app/domains/run/components, and hooks, the layout and pages through @web-app/hooks, @web-app/layout and @web-app/pages.',
+};
+
+const noOwnWebAppBarrel = folder => ({
+  regex: String.raw`^(@web-app/${folder}|\.{1,2}(/index)?)/?$`,
+  message: `Inside ${folder}/, import the file you need by relative path, never its own barrel.`,
+});
+
+const noOwnDomainBarrel = domain => ({
+  regex: String.raw`^(@web-app/domains/${domain}/|(\./|\.\./))components$`,
+  message:
+    'Inside a domain, folders import each other by relative path, such as ../run-duration, never their own barrel.',
+});
+
 const NO_SHELL_IN_WEB_APP_DOMAINS = {
   regex: String.raw`^(@web-app/|(\.\./)+)(app(-[a-z-]+)?$|layout(/|$)|pages(/|$))`,
   message:
@@ -259,6 +277,7 @@ const CLI_IMPORTS = [
 const WEB_APP_IMPORTS = [
   packagesAbove('tui', 'cli', 'website'),
   packagesByPath('utils', 'design-system', 'domains', 'e2e'),
+  ONLY_BARRELS_IN_WEB_APP,
 ];
 
 const TUI_IMPORTS = [
@@ -279,13 +298,14 @@ const restrictImports = (files, ...patterns) => ({
   rules: { 'no-restricted-imports': ['error', { patterns }] },
 });
 
-const restrictDomainOrder = (folder, levels, domainsPattern, imports) =>
+const restrictDomainOrder = (folder, levels, domainsPattern, imports, ownPatterns = () => []) =>
   levels.flatMap((level, index) => {
     const notBelow = levels.slice(index).flat();
     return level.map(domain =>
       restrictImports(
         [`${folder}/${domain}/**`],
         ...imports,
+        ...ownPatterns(domain),
         domainsPattern(...notBelow.filter(other => other !== domain)),
       ),
     );
@@ -408,10 +428,20 @@ export default defineConfig(
     NO_SHELL_IN_TUI_DOMAINS,
   ]),
   restrictImports(['packages/web-app/**'], ...WEB_APP_IMPORTS),
-  ...restrictDomainOrder('packages/web-app/src/domains', SHARED_DOMAIN_LEVELS, webAppDomains, [
-    ...WEB_APP_IMPORTS,
-    NO_SHELL_IN_WEB_APP_DOMAINS,
-  ]),
+  ...['hooks', 'layout', 'pages'].map(folder =>
+    restrictImports(
+      [`packages/web-app/src/${folder}/**`],
+      ...WEB_APP_IMPORTS,
+      noOwnWebAppBarrel(folder),
+    ),
+  ),
+  ...restrictDomainOrder(
+    'packages/web-app/src/domains',
+    SHARED_DOMAIN_LEVELS,
+    webAppDomains,
+    [...WEB_APP_IMPORTS, NO_SHELL_IN_WEB_APP_DOMAINS],
+    domain => [noOwnDomainBarrel(domain)],
+  ),
   restrictImports(
     ['packages/website/**'],
     packagesAbove('tui', 'cli'),

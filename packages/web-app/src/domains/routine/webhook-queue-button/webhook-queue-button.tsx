@@ -4,7 +4,7 @@ import { match } from 'ts-pattern';
 
 import { Badge, Button, Popover, Spinner } from 'design-system';
 import type { RoutineName } from 'domains/routine/ids';
-import { WebhookQueueList } from '@web-app/domains/webhook/webhook-queue-list';
+import { WebhookQueueList } from '@web-app/domains/webhook/components';
 import { useRoutine } from '../queries';
 
 type WebhookQueueButtonLook = 'button' | 'chip';

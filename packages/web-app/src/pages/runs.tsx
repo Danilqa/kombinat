@@ -2,9 +2,9 @@ import { Plus } from 'lucide-react';
 import { Link } from 'react-router';
 import { Button, PageHeader } from 'design-system';
 import { useRuns } from '@web-app/domains/run/queries';
-import { RunsList } from '@web-app/domains/run/runs-list';
-import { RunRetentionMenu } from '@web-app/domains/settings/run-retention-menu';
-import { useDocumentTitle } from '@web-app/hooks/use-document-title';
+import { RunsList } from '@web-app/domains/run/components';
+import { RunRetentionMenu } from '@web-app/domains/settings/components';
+import { useDocumentTitle } from '@web-app/hooks';
 import { NEW_RUN_PATH } from '@web-app/paths';
 
 export function RunsPage() {

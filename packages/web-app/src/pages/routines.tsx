@@ -3,8 +3,8 @@ import { Link } from 'react-router';
 import { Button, Card, ErrorState, LoadingState, PageHeader } from 'design-system';
 import { useCustomization } from '@web-app/customization';
 import { useRoutines } from '@web-app/domains/routine/queries';
-import { RoutinesTable } from '@web-app/domains/routine/routines-table';
-import { useDocumentTitle } from '@web-app/hooks/use-document-title';
+import { RoutinesTable } from '@web-app/domains/routine/components';
+import { useDocumentTitle } from '@web-app/hooks';
 import { TEMPLATES_PATH } from '@web-app/paths';
 
 export function RoutinesPage() {

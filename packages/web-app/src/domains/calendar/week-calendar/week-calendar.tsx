@@ -5,7 +5,7 @@ import { Button, ErrorState } from 'design-system';
 import type { CalendarEntry } from 'domains/calendar/types';
 import { countOverlapPairs } from 'domains/calendar/utils';
 import { formatDayMonth } from 'utils/date-time';
-import { useStoredBoolean } from '@web-app/hooks/use-stored-boolean';
+import { useStoredBoolean } from '@web-app/hooks';
 import { useCalendarWeek } from '../queries';
 import {
   addDays,

@@ -4,8 +4,7 @@ import { RelativeTime, StatusDot, type StatusDotTone } from 'design-system';
 import type { InboxGroup } from 'domains/inbox/types';
 import { getInboxRunSummary } from 'domains/inbox/utils';
 import type { RunRecord } from 'domains/run/types';
-import { BlockedBadge } from '@web-app/domains/run/blocked-badge';
-import { RunStatusBadge } from '@web-app/domains/run/run-status-badge';
+import { BlockedBadge, RunStatusBadge } from '@web-app/domains/run/components';
 import { getRunPath } from '@web-app/paths';
 
 interface RowAppearance {

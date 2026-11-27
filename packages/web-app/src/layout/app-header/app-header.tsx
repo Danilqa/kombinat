@@ -2,11 +2,9 @@ import { Search } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router';
 import { Button, Kbd, SlidingPill, BrandMark, cn, useHeightProperty } from 'design-system';
-import { DaemonStatusIndicator } from '@web-app/domains/daemon/daemon-status-indicator';
-import { PlanUsageIndicator } from '@web-app/domains/daemon/plan-usage-indicator';
-import { InboxIconLink } from '@web-app/domains/inbox/inbox-icon-link';
+import { DaemonStatusIndicator, PlanUsageIndicator } from '@web-app/domains/daemon/components';
+import { InboxIconLink, UnreadBadge } from '@web-app/domains/inbox/components';
 import { useInbox } from '@web-app/domains/inbox/queries';
-import { UnreadBadge } from '@web-app/domains/inbox/unread-badge';
 import { INBOX_PATH, INSIGHTS_PATH, ROUTINES_PATH } from '@web-app/paths';
 import { navItems, type NavItem } from '../nav-items';
 import {
