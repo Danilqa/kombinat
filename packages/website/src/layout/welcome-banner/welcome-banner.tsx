@@ -1,12 +1,5 @@
 import {
   ArrowRight,
-  Feather,
-  GitMerge,
-  PiggyBank,
-  Plug,
-  Scale,
-  ScrollText,
-  Timer,
   ArrowUpRight,
   CalendarDays,
   ChevronLeft,
@@ -14,8 +7,6 @@ import {
   History,
   MoonStar,
   Play,
-  SquareTerminal,
-  Webhook,
   type LucideIcon,
 } from 'lucide-react';
 import { useRef, useState, type ComponentProps, type ReactNode } from 'react';
@@ -26,9 +17,24 @@ import { CALENDAR_PATH, ROUTINES_PATH, RUNS_PATH, getRoutinePath } from 'web-app
 import { NPM_URL, REPO_URL } from '../../constants';
 import { demoRoutines } from '../../demo-api/sample';
 import { CodePanel } from './code-panel';
-import { GLASS_CLASS } from './glass';
+import cyclops from './drawings/worker-cyclops.svg';
+import gears from './drawings/worker-gears.svg';
+import hardhat from './drawings/worker-hardhat.svg';
+import miner from './drawings/worker-miner.svg';
+import muffs from './drawings/worker-muffs.svg';
+import respirator from './drawings/worker-respirator.svg';
 import { WelcomeCard } from './welcome-card';
-import { SandBucket, WavingHand } from './welcome-icons';
+import {
+  AlertedWorker,
+  AlertedWorkerOnPhone,
+  HidingWorkers,
+  HidingWorkersOnPhone,
+  UndercoverWorkers,
+  UndercoverWorkersOnPhone,
+  WorkersWithTools,
+  WorkersWithToolsOnPhone,
+} from './worker-scenes';
+import { WorkerHead } from './workers';
 
 interface Slide {
   label: string;
@@ -60,39 +66,39 @@ const EXPLORE_LINKS: ExploreLink[] = [
 ];
 
 interface Reason {
-  icon: LucideIcon;
+  worker: string;
   title: string;
   text: string;
 }
 
 const REASONS: Reason[] = [
   {
-    icon: GitMerge,
+    worker: hardhat,
     title: 'Merging is the deploy',
     text: 'A routine goes through review like code and is live within 5 minutes.',
   },
   {
-    icon: Plug,
+    worker: muffs,
     title: 'Your setup, as is',
     text: 'Agents run with your logins, skills, MCP servers and CLAUDE.md.',
   },
   {
-    icon: PiggyBank,
+    worker: cyclops,
     title: 'No API bill',
     text: 'Claude Code and Codex use the subscription you already pay for.',
   },
   {
-    icon: ScrollText,
+    worker: gears,
     title: 'Every run on record',
     text: 'Full transcripts in the browser, in the terminal and on your phone.',
   },
   {
-    icon: Timer,
+    worker: miner,
     title: 'It stops when it should',
     text: 'Timeouts, an optional budget cap and no overlapping runs.',
   },
   {
-    icon: Feather,
+    worker: respirator,
     title: 'Small',
     text: 'One command, two dependencies, no cloud and no database.',
   },
@@ -168,16 +174,9 @@ function InstallCommands() {
 function ReasonList() {
   return (
     <ul className="grid items-start gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
-      {REASONS.map(({ icon: Icon, title, text }) => (
+      {REASONS.map(({ worker, title, text }) => (
         <li key={title} className="flex items-center gap-3">
-          <span
-            className={cn(
-              'flex size-7 shrink-0 items-center justify-center rounded-lg text-fg-secondary',
-              GLASS_CLASS,
-            )}
-          >
-            <Icon aria-hidden="true" className="size-3.5" />
-          </span>
+          <WorkerHead drawing={worker} />
           <span className="flex flex-col gap-0.5">
             <span className="text-body font-medium text-fg">{title}</span>
             <span className="text-body-sm text-fg-muted max-sm:hidden">{text}</span>
@@ -243,12 +242,14 @@ export function WelcomeBanner() {
       label: 'Welcome',
       content: (
         <WelcomeCard
-          label="Welcome"
-          icon={WavingHand}
-          iconClassName="origin-[70%_80%] group-data-active/slide:motion-safe:animate-hand-wave"
           glow="lavender"
           title="Run agents on a schedule"
-          aside={<RoutineFile />}
+          aside={
+            <HidingWorkers>
+              <RoutineFile />
+            </HidingWorkers>
+          }
+          scene={<HidingWorkersOnPhone />}
           actions={
             <>
               <Button asChild size="small">
@@ -275,14 +276,7 @@ export function WelcomeBanner() {
     {
       label: 'Why another tool?',
       content: (
-        <WelcomeCard
-          label="Why Kombinat"
-          icon={Scale}
-          iconClassName="group-data-active/slide:motion-safe:animate-scale-tip"
-          glow="sky"
-          title="Why another tool?"
-          details={<ReasonList />}
-        >
+        <WelcomeCard glow="sky" title="Why another tool?" details={<ReasonList />}>
           <p>
             A cron job, a CI workflow or a hosted agent platform can run a prompt too. Here is what
             Kombinat does differently.
@@ -294,12 +288,14 @@ export function WelcomeBanner() {
       label: 'Webhooks',
       content: (
         <WelcomeCard
-          label="Webhooks"
-          icon={Webhook}
-          iconClassName="group-data-active/slide:motion-safe:animate-webhook-spin"
           glow="mint"
           title="Runs when something happens"
-          aside={<WebhookRoutineFile />}
+          aside={
+            <AlertedWorker>
+              <WebhookRoutineFile />
+            </AlertedWorker>
+          }
+          scene={<AlertedWorkerOnPhone />}
           actions={
             <>
               <Button asChild size="small">
@@ -332,12 +328,14 @@ export function WelcomeBanner() {
       label: 'Install',
       content: (
         <WelcomeCard
-          label="Install"
-          icon={SquareTerminal}
-          iconClassName="group-data-active/slide:motion-safe:animate-icon-pop group-data-active/slide:[&>path:nth-of-type(2)]:animate-cursor-blink"
           glow="peach"
           title="Running in a minute"
-          aside={<InstallCommands />}
+          aside={
+            <WorkersWithTools>
+              <InstallCommands />
+            </WorkersWithTools>
+          }
+          scene={<WorkersWithToolsOnPhone />}
           actions={
             <>
               <Button asChild size="small">
@@ -362,12 +360,14 @@ export function WelcomeBanner() {
       label: 'Playground',
       content: (
         <WelcomeCard
-          label="Playground"
-          icon={SandBucket}
-          iconClassName="group-data-active/slide:motion-safe:animate-bucket-hop"
           glow="mint"
           title="Make yourself at home"
-          aside={<ExploreLinks />}
+          aside={
+            <UndercoverWorkers>
+              <ExploreLinks />
+            </UndercoverWorkers>
+          }
+          scene={<UndercoverWorkersOnPhone />}
         >
           <p>
             Click around, open any run and press <strong>Run now</strong>: it finishes in 30
