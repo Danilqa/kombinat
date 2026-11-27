@@ -20,7 +20,7 @@ jobs:
       - uses: ./.github/actions/setup
       - run: pnpm --filter website build
       - run: pnpm --filter design-system-storybook build
-      - run: cp -R packages/storybook/dist packages/website/dist/storybook
+      - run: cp -R packages/storybook/dist packages/website/dist/design-system
       - uses: actions/upload-pages-artifact@v5
         with:
           path: packages/website/dist

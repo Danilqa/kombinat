@@ -14,7 +14,7 @@ Kombinat runs routines, markdown files in `routines/`, with AI agents on a sched
 | `design-system` | Tailwind tokens and styles, and the components that know no domain: shadcn/radix and generic layout pieces                                                                           |
 | `utils`         | Business-agnostic helpers that more than one package uses: api, error, date-time, cron and search                                                                                    |
 | `e2e`           | Playwright config and fixtures. The specs live in `web-app` as `*.e2e.ts`, next to the page or component they cover                                                                  |
-| `storybook`     | Storybook of the design-system components, deployed with the website at https://kombinat.tech/storybook/                                                                             |
+| `storybook`     | Storybook of the design-system components, deployed with the website at https://kombinat.tech/design-system/                                                                         |
 | `promo`         | Source of the promo video and the README's dashboard GIF: scenes drawn with React, tours of the website and the scripts that record them, see [its README](packages/promo/README.md) |
 
 ## Package manager
@@ -174,14 +174,14 @@ The domain map, definitions and invariants are in [packages/domains/README.md](p
 - `src/demo-api/` answers the dashboard's `/api` requests in the browser, as `cli/src/api/` does: `install.ts` puts it in front of `fetch`, `api.ts` holds the state and the route table, and `history.ts` builds runs and skips from the schedules relative to now. `sample/` holds the sample data: one file per routine in `routines/`, with its run outcomes and transcripts, the types, the values several routines share and the builders of transcript steps.
 - `public/og-image.gif` is the link preview image. `index.html` names it by its full URL in the Open Graph tags, since apps that unfurl links do not resolve relative paths.
 - The changelog page reads the releases from the GitHub API in the browser, so a new release shows there without a deploy, and draws them with the components of `src/domains/release/`. Only the website has it: the dashboard shows newer releases in its update card.
-- `.github/workflows/website.yml` deploys it on every push to `main`, with the Storybook build copied into `dist/storybook/`.
+- `.github/workflows/website.yml` deploys it on every push to `main`, with the Storybook build copied into `dist/design-system/`.
 
 ### storybook
 
 - `stories/` holds one `<component>.stories.tsx` for each folder of `design-system`, titled `Components/<Component>`, and the token pages under `Foundations/`. A new design-system component gets its stories here.
 - Stories import the components from `design-system`, like any other package. Docs pages come from the components' props, so a story sets `component`, and `subcomponents` for the parts of a namespace.
 - `.storybook/preview.css` imports the design-system stylesheet and scans `stories/` for the classes of the stories. `.storybook/theme.ts` repeats the dashboard's tokens for Storybook's own UI, which the stylesheet does not reach, and `public/kombinat-logo.svg` is the logo of its sidebar.
-- The build goes to `dist/`, which the website workflow publishes at `/storybook/`.
+- The build goes to `dist/`, which the website workflow publishes at `/design-system/`.
 
 ### promo
 
